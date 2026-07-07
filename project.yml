@@ -1,0 +1,35 @@
+name: JamConnect
+options:
+  bundleIdPrefix: com.ludovicmarie
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: YYJU63HSD4
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  JamConnect:
+    type: application
+    platform: iOS
+    sources:
+      - JamConnect
+    info:
+      path: JamConnect/Info.plist
+      properties:
+        CFBundleDisplayName: JamConnect
+        CFBundleShortVersionString: "0.1.0"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSLocationWhenInUseUsageDescription: "JamConnect utilise votre position pour trouver des musiciens proches de vous."
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ludovicmarie.jamconnect
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        GENERATE_INFOPLIST_FILE: false

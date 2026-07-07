@@ -1,0 +1,373 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2D5B702ECB411D3C18D6FF2D /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E06DD22EC730939A25A843F /* ChatListView.swift */; };
+		37EE437EC3C2AD2FAF5467EA /* MusicianDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 328466268794994F9BCFD141 /* MusicianDetailView.swift */; };
+		4341AF039E69FFC05E354A96 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4E806800255D2D76F9F2AB /* ChatView.swift */; };
+		5BCB26B5A1F9B5A3E804B811 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AAC67142500684FFF14F48 /* AppStore.swift */; };
+		5DBC765C1151FEA08050CA80 /* SeedData.json in Resources */ = {isa = PBXBuildFile; fileRef = 7C3F2D84DF5CB4D0B4370797 /* SeedData.json */; };
+		7FF5CEAEB9FB083238F7CD7E /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 262BFFC74AF046664EC96E63 /* DiscoveryView.swift */; };
+		8841EA08A6D7ECF07C2B8273 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F427F409E0A731C1D5C2783B /* PaywallView.swift */; };
+		93192FF266A90A3565FA62B3 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4E4CA715D47B53D3298603 /* Models.swift */; };
+		9ADD00390F9907974819A98E /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C651D79F899D5B3E8B3BCDA /* EventsView.swift */; };
+		B1ABE87EDE9D3E3AE70F24FD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8D25F0E4226F0F03262C112 /* Assets.xcassets */; };
+		BEB9532A64BD4CD507BCF245 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */; };
+		CF2835F8810B635473DED0D5 /* JamConnectApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */; };
+		D52B44EAA5D51541BA4C32E8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D6EE827A078334EFDA5F7D /* OnboardingView.swift */; };
+		DE03DF3651AF45A26C107B54 /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A60D8E71BC4FA9EE791D2AE /* MyProfileView.swift */; };
+		E6C11FA53DA2429CF933AC9E /* FilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F489393E23CE084974EC35A /* FilterSheet.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		05D6EE827A078334EFDA5F7D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		0E06DD22EC730939A25A843F /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
+		262BFFC74AF046664EC96E63 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
+		328466268794994F9BCFD141 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
+		5F489393E23CE084974EC35A /* FilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSheet.swift; sourceTree = "<group>"; };
+		6C651D79F899D5B3E8B3BCDA /* EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsView.swift; sourceTree = "<group>"; };
+		7A60D8E71BC4FA9EE791D2AE /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
+		7C3F2D84DF5CB4D0B4370797 /* SeedData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SeedData.json; sourceTree = "<group>"; };
+		7F4E806800255D2D76F9F2AB /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JamConnectApp.swift; sourceTree = "<group>"; };
+		BC3D79B0C5E80B96FE7FE9DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C8D25F0E4226F0F03262C112 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E0E04E33E5F02657B1131DEF /* JamConnect.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JamConnect.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F2AAC67142500684FFF14F48 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateEventView.swift; sourceTree = "<group>"; };
+		F427F409E0A731C1D5C2783B /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		FF4E4CA715D47B53D3298603 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		148165438510A6000E79D268 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0E06DD22EC730939A25A843F /* ChatListView.swift */,
+				7F4E806800255D2D76F9F2AB /* ChatView.swift */,
+				F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */,
+				262BFFC74AF046664EC96E63 /* DiscoveryView.swift */,
+				6C651D79F899D5B3E8B3BCDA /* EventsView.swift */,
+				5F489393E23CE084974EC35A /* FilterSheet.swift */,
+				328466268794994F9BCFD141 /* MusicianDetailView.swift */,
+				7A60D8E71BC4FA9EE791D2AE /* MyProfileView.swift */,
+				05D6EE827A078334EFDA5F7D /* OnboardingView.swift */,
+				F427F409E0A731C1D5C2783B /* PaywallView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		2192FE1B6A27C8EFEC9DD3CD /* JamConnect */ = {
+			isa = PBXGroup;
+			children = (
+				F2AAC67142500684FFF14F48 /* AppStore.swift */,
+				C8D25F0E4226F0F03262C112 /* Assets.xcassets */,
+				BC3D79B0C5E80B96FE7FE9DA /* Info.plist */,
+				94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */,
+				FF4E4CA715D47B53D3298603 /* Models.swift */,
+				7C3F2D84DF5CB4D0B4370797 /* SeedData.json */,
+				148165438510A6000E79D268 /* Views */,
+			);
+			path = JamConnect;
+			sourceTree = "<group>";
+		};
+		2C150817F6104F7FD22F0DAC = {
+			isa = PBXGroup;
+			children = (
+				2192FE1B6A27C8EFEC9DD3CD /* JamConnect */,
+				839365ED823A3652E6F7488E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		839365ED823A3652E6F7488E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E0E04E33E5F02657B1131DEF /* JamConnect.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DCF18EBB5A0DE597A597B650 /* JamConnect */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 80CBD8F4AA3EA740D077A7D5 /* Build configuration list for PBXNativeTarget "JamConnect" */;
+			buildPhases = (
+				7F2F02C1A6C4FDABCB672F2F /* Sources */,
+				5567659FCF3D0D36E8DBB129 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JamConnect;
+			packageProductDependencies = (
+			);
+			productName = JamConnect;
+			productReference = E0E04E33E5F02657B1131DEF /* JamConnect.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7640670F7C94E324BA0B47BB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					DCF18EBB5A0DE597A597B650 = {
+						DevelopmentTeam = YYJU63HSD4;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 3A7FB1099092A171F200E695 /* Build configuration list for PBXProject "JamConnect" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 2C150817F6104F7FD22F0DAC;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 839365ED823A3652E6F7488E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DCF18EBB5A0DE597A597B650 /* JamConnect */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5567659FCF3D0D36E8DBB129 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1ABE87EDE9D3E3AE70F24FD /* Assets.xcassets in Resources */,
+				5DBC765C1151FEA08050CA80 /* SeedData.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7F2F02C1A6C4FDABCB672F2F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5BCB26B5A1F9B5A3E804B811 /* AppStore.swift in Sources */,
+				2D5B702ECB411D3C18D6FF2D /* ChatListView.swift in Sources */,
+				4341AF039E69FFC05E354A96 /* ChatView.swift in Sources */,
+				BEB9532A64BD4CD507BCF245 /* CreateEventView.swift in Sources */,
+				7FF5CEAEB9FB083238F7CD7E /* DiscoveryView.swift in Sources */,
+				9ADD00390F9907974819A98E /* EventsView.swift in Sources */,
+				E6C11FA53DA2429CF933AC9E /* FilterSheet.swift in Sources */,
+				CF2835F8810B635473DED0D5 /* JamConnectApp.swift in Sources */,
+				93192FF266A90A3565FA62B3 /* Models.swift in Sources */,
+				37EE437EC3C2AD2FAF5467EA /* MusicianDetailView.swift in Sources */,
+				DE03DF3651AF45A26C107B54 /* MyProfileView.swift in Sources */,
+				D52B44EAA5D51541BA4C32E8 /* OnboardingView.swift in Sources */,
+				8841EA08A6D7ECF07C2B8273 /* PaywallView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2AA4B542FC6A6F8D07E4E7CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = YYJU63HSD4;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		2B4AA7CDE58D182E94F9676E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = YYJU63HSD4;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		621CFEF984D7B9A31F9BF523 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JamConnect/Info.plist;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ludovicmarie.jamconnect;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		DA37140984B3B071F72DBF5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JamConnect/Info.plist;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ludovicmarie.jamconnect;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3A7FB1099092A171F200E695 /* Build configuration list for PBXProject "JamConnect" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2AA4B542FC6A6F8D07E4E7CD /* Debug */,
+				2B4AA7CDE58D182E94F9676E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		80CBD8F4AA3EA740D077A7D5 /* Build configuration list for PBXNativeTarget "JamConnect" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				621CFEF984D7B9A31F9BF523 /* Debug */,
+				DA37140984B3B071F72DBF5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7640670F7C94E324BA0B47BB /* Project object */;
+}
