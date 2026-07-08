@@ -10,6 +10,7 @@
 		2D5B702ECB411D3C18D6FF2D /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E06DD22EC730939A25A843F /* ChatListView.swift */; };
 		37EE437EC3C2AD2FAF5467EA /* MusicianDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 328466268794994F9BCFD141 /* MusicianDetailView.swift */; };
 		4341AF039E69FFC05E354A96 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4E806800255D2D76F9F2AB /* ChatView.swift */; };
+		59B885F1C4446D5D3DA04972 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 066545BD669B66AD44A0A4B6 /* AuthGateView.swift */; };
 		5BCB26B5A1F9B5A3E804B811 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AAC67142500684FFF14F48 /* AppStore.swift */; };
 		5DBC765C1151FEA08050CA80 /* SeedData.json in Resources */ = {isa = PBXBuildFile; fileRef = 7C3F2D84DF5CB4D0B4370797 /* SeedData.json */; };
 		700DA7D773326978F2F90412 /* BackendConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55040740713ABEF0D3EECB3D /* BackendConfig.swift */; };
@@ -32,6 +33,7 @@
 
 /* Begin PBXFileReference section */
 		05D6EE827A078334EFDA5F7D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		066545BD669B66AD44A0A4B6 /* AuthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthGateView.swift; sourceTree = "<group>"; };
 		0E06DD22EC730939A25A843F /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
 		17005F240478D1B0E79E091F /* Dispo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Dispo.entitlements; sourceTree = "<group>"; };
 		262BFFC74AF046664EC96E63 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
@@ -72,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				A89B8E98106DE603864131A8 /* AccountSheet.swift */,
+				066545BD669B66AD44A0A4B6 /* AuthGateView.swift */,
 				0E06DD22EC730939A25A843F /* ChatListView.swift */,
 				7F4E806800255D2D76F9F2AB /* ChatView.swift */,
 				F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */,
@@ -210,6 +213,7 @@
 			files = (
 				F9BFE41D65072E88C9C1AE4D /* AccountSheet.swift in Sources */,
 				5BCB26B5A1F9B5A3E804B811 /* AppStore.swift in Sources */,
+				59B885F1C4446D5D3DA04972 /* AuthGateView.swift in Sources */,
 				700DA7D773326978F2F90412 /* BackendConfig.swift in Sources */,
 				2D5B702ECB411D3C18D6FF2D /* ChatListView.swift in Sources */,
 				4341AF039E69FFC05E354A96 /* ChatView.swift in Sources */,

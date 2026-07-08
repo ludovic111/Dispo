@@ -41,6 +41,9 @@ final class AppStore: ObservableObject {
     @Published var liveEmail: String?
     /// Erreur backend à montrer à l'utilisateur (bannière discrète).
     @Published var backendError: String?
+    /// true une fois la restauration de session terminée — évite d'afficher
+    /// l'écran de connexion pendant la vérification au lancement.
+    @Published var sessionChecked: Bool = false
     /// true quand l'app affiche les données du serveur et non la démo locale.
     var isLive: Bool { liveUserID != nil }
     private var messageChannel: RealtimeChannelV2?
@@ -110,7 +113,10 @@ final class AppStore: ObservableObject {
         armEarlyAccessTeaser()
 
         // Reprend la session backend si l'utilisateur était déjà connecté.
-        Task { await restoreLiveSession() }
+        Task {
+            await restoreLiveSession()
+            sessionChecked = true
+        }
 
         if let saved: Set<String> = Self.load(key: Self.favoritesKey) {
             favorites = saved
@@ -132,7 +138,7 @@ final class AppStore: ObservableObject {
             genres: [.latin, .jazz],
             level: .avance,
             bio: "Pianiste latin jazz à Genève. Toujours partant pour une descarga !",
-            availability: .tonight
+            availableDates: [Date(), Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()]
         )
     }
 
@@ -195,7 +201,7 @@ final class AppStore: ObservableObject {
                     genres: mine.genres.compactMap(Genre.init(rawValue:)),
                     level: Level(rawValue: mine.level) ?? .intermediaire,
                     bio: mine.bio,
-                    availability: Availability(rawValue: mine.availability) ?? .onRequest
+                    availableDates: mine.parsedDates
                 )
             }
             isPremium = mine.isPremium

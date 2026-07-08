@@ -15,13 +15,11 @@ struct MyProfileView: View {
                     VStack(spacing: 16) {
                         heroCard
                         if store.isAdmin { adminCard }
-                        if store.backend != nil { accountCard }
                         availabilityCard
                         viewersCard
-                        premiumCard
-                        videoCard
+                        if !store.showsPremium { premiumCard }
+                        if store.backend != nil { accountCard }
                         appearanceCard
-                        editButton
                         resetButton
                     }
                     .padding(.horizontal, 18)
@@ -78,23 +76,22 @@ struct MyProfileView: View {
                         .opacity(0.88)
                         .multilineTextAlignment(.center)
                 }
-
-                HStack(spacing: 0) {
-                    profileStat(value: "12", label: "concerts")
-                    divider
-                    profileStat(value: "142", label: "notes")
-                    divider
-                    profileStat(value: "87", label: "abonnés")
-                }
-                .padding(.vertical, 12)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
             }
             .foregroundStyle(.white)
             .padding(20)
+        }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                showEdit = true
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(10)
+                    .background(.white.opacity(0.18), in: Circle())
+            }
+            .buttonStyle(PressableStyle(scale: 0.92))
+            .padding(10)
         }
     }
 
@@ -102,18 +99,6 @@ struct MyProfileView: View {
         let instruments = store.profile.instruments.map(\.rawValue).joined(separator: " · ")
         let genres = store.profile.genres.map(\.rawValue).joined(separator: ", ")
         return "\(instruments) · \(genres) · Genève"
-    }
-
-    private var divider: some View {
-        Rectangle().fill(.white.opacity(0.25)).frame(width: 1, height: 26)
-    }
-
-    private func profileStat(value: String, label: String) -> some View {
-        VStack(spacing: 1) {
-            Text(value).font(.headline.weight(.heavy))
-            Text(label).font(.caption2).opacity(0.85)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private var appearanceCard: some View {
@@ -157,65 +142,58 @@ struct MyProfileView: View {
         .buttonStyle(PressableStyle())
     }
 
-    private var availabilityCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Ma dispo dépannage", systemImage: "bolt.fill")
-                    .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(JC.coral)
-                Text("Quand peux-tu remplacer un musicien pour un concert ?")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                VStack(spacing: 6) {
-                    ForEach(Availability.allCases) { option in
-                        availabilityRow(option)
-                    }
-                }
-            }
-        }
-    }
-
-    private func availabilityRow(_ option: Availability) -> some View {
-        let isSelected = store.profile.availability == option
-        return Button {
-            withAnimation(.snappy) {
-                store.profile.availability = option
+    /// Sélection des dates de dispo dans un vrai calendrier. Le statut
+    /// affiché aux autres (🚨 Ce soir, 📅 Cette semaine…) en est dérivé.
+    private var dateSelection: Binding<Set<DateComponents>> {
+        Binding(
+            get: {
+                Set(store.profile.availableDates.map {
+                    Calendar.current.dateComponents([.calendar, .era, .year, .month, .day], from: $0)
+                })
+            },
+            set: { components in
+                store.profile.availableDates = components
+                    .compactMap { Calendar.current.date(from: $0) }
+                    .sorted()
                 store.saveProfile()
             }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(option.color.opacity(isSelected ? 0.18 : 0.08))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: option.symbol)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(option.color)
+        )
+    }
+
+    private var availabilityCard: some View {
+        let derived = store.profile.availability
+        return JCCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Mes dates de dispo", systemImage: "bolt.fill")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(JC.coral)
+                    Spacer()
+                    AvailabilityBadge(availability: derived)
                 }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(option.rawValue)
-                        .font(.subheadline.weight(isSelected ? .bold : .regular))
-                        .foregroundStyle(.primary)
-                    Text(option.explanation)
+                Text("Coche les jours où tu peux dépanner un concert.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                MultiDatePicker(
+                    "Mes dates de dispo",
+                    selection: dateSelection,
+                    in: Calendar.current.startOfDay(for: Date())...
+                )
+                .tint(JC.coral)
+                .frame(maxHeight: 330)
+
+                if derived == .unavailable {
+                    Label("Aucune date cochée — tu apparais comme indisponible.", systemImage: "moon.fill")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                } else {
+                    Label("Les autres te voient : \(derived.emoji) \(derived.badgeLabel)", systemImage: "eye")
+                        .font(.caption2)
+                        .foregroundStyle(derived.color)
                 }
-                Spacer()
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? option.color : .secondary.opacity(0.35))
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
-            .background(
-                isSelected ? option.color.opacity(0.1) : .clear,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? option.color.opacity(0.4) : .clear, lineWidth: 1)
-            )
         }
-        .buttonStyle(PressableStyle(scale: 0.99))
     }
 
     /// Lentille admin : prévisualiser l'app comme un utilisateur gratuit ou
@@ -332,42 +310,6 @@ struct MyProfileView: View {
                 ? "Alertes dépannage prioritaires · gérer mon abonnement"
                 : "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois"
         ) { store.showPaywall = true }
-    }
-
-    private var videoCard: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(
-                    LinearGradient(colors: [JC.violet.opacity(0.5), JC.magenta.opacity(0.4)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                )
-                .frame(height: 120)
-            VStack(spacing: 6) {
-                Image(systemName: "video.badge.plus")
-                    .font(.system(size: 30))
-                Text("Filme ta vidéo de présentation (60–90 sec)")
-                    .font(.caption.weight(.bold))
-                Text("Disponible en phase 2 — upload et streaming")
-                    .font(.caption2)
-                    .opacity(0.6)
-            }
-            .foregroundStyle(.white)
-        }
-    }
-
-    private var editButton: some View {
-        Button {
-            showEdit = true
-        } label: {
-            Label("Modifier mon profil", systemImage: "pencil")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
-                .foregroundStyle(.primary)
-        }
-        .buttonStyle(PressableStyle())
     }
 
     private var resetButton: some View {

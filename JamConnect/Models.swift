@@ -72,8 +72,9 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Disponibilité
 
-/// Statut de disponibilité pour dépanner un concert. Un seul statut à la
-/// fois, du plus urgent (ce soir) au plus souple (sur demande).
+/// Statut de disponibilité affiché (badges, tri, filtres). Depuis la v0.3,
+/// il est **dérivé** des dates concrètes cochées par le musicien dans son
+/// calendrier — plus personne ne choisit un statut abstrait à la main.
 enum Availability: String, Codable, CaseIterable, Identifiable {
     case tonight = "Ce soir"
     case thisWeek = "Cette semaine"
@@ -127,6 +128,24 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
     }
 
     var isAvailable: Bool { self != .unavailable }
+
+    /// Dérive le statut affiché depuis les dates cochées : aujourd'hui →
+    /// « Ce soir » ; première date sous 7 jours → « Cette semaine » (ou
+    /// « Ce week-end » si elle tombe un samedi/dimanche) ; plus loin →
+    /// « Sur demande » ; rien → « Indisponible ».
+    static func derived(from dates: [Date], now: Date = Date()) -> Availability {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        let upcoming = dates.map { calendar.startOfDay(for: $0) }.filter { $0 >= today }.sorted()
+        guard let first = upcoming.first else { return .unavailable }
+        if first == today { return .tonight }
+        let days = calendar.dateComponents([.day], from: today, to: first).day ?? 99
+        if days <= 7 {
+            let weekday = calendar.component(.weekday, from: first)
+            return (weekday == 7 || weekday == 1) ? .weekend : .thisWeek
+        }
+        return .onRequest
+    }
 
     /// Rang d'urgence — sert au tri du feed (ce soir en premier).
     var urgencyRank: Int {
@@ -299,8 +318,11 @@ struct Musician: Codable, Identifiable, Hashable {
     var genres: [Genre]
     var level: Level
     var bio: String
-    /// Statut de dispo pour un dépannage concert.
+    /// Statut de dispo affiché (dérivé des dates en mode live ; le seed
+    /// fournit directement un statut).
     var availability: Availability
+    /// Dates concrètes de dispo (mode live ; vide pour le seed).
+    var availableDates: [Date] = []
     var repertoire: [String] // standards, morceaux, répertoire selon le genre
     var reviews: [Review]
     /// Nom de l'asset photo de profil (photos libres de droit bundlées).
@@ -459,8 +481,10 @@ struct MyProfile: Codable {
     var genres: [Genre]
     var level: Level
     var bio: String
-    /// Statut de dispo pour un dépannage concert.
-    var availability: Availability
+    /// Dates concrètes où je peux dépanner un concert (cochées au calendrier).
+    var availableDates: [Date] = []
 
+    /// Statut affiché aux autres, dérivé des dates.
+    var availability: Availability { .derived(from: availableDates) }
     var isAvailable: Bool { availability.isAvailable }
 }

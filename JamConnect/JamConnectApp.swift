@@ -41,6 +41,24 @@ struct RootView: View {
             .toolbarBackground(.visible, for: .tabBar)
             .sheet(isPresented: $store.showPaywall) { PaywallView() }
 
+            // Connexion obligatoire dès qu'un backend est configuré.
+            if store.backend != nil && !store.isLive {
+                if store.sessionChecked {
+                    AuthGateView()
+                        .transition(.opacity)
+                        .zIndex(0.5)
+                } else {
+                    ZStack {
+                        JCBackground()
+                        VStack(spacing: 16) {
+                            LogoView(markSize: 40)
+                            ProgressView()
+                        }
+                    }
+                    .zIndex(0.5)
+                }
+            }
+
             if !store.hasOnboarded {
                 OnboardingView()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -75,6 +93,8 @@ struct RootView: View {
         }
         .animation(.snappy(duration: 0.4), value: store.hasOnboarded)
         .animation(.snappy(duration: 0.3), value: store.backendError)
+        .animation(.snappy(duration: 0.35), value: store.liveUserID)
+        .animation(.snappy(duration: 0.35), value: store.sessionChecked)
     }
 }
 

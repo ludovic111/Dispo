@@ -100,19 +100,44 @@ struct MusicianDetailView: View {
     }
 
     private var identity: some View {
-        HStack(spacing: 14) {
-            AvatarView(name: musician.name, size: 62, photo: musician.photo)
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(musician.name).font(.title3.weight(.heavy))
-                    AvailabilityBadge(availability: musician.availability)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                AvatarView(name: musician.name, size: 62, photo: musician.photo)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(musician.name).font(.title3.weight(.heavy))
+                        AvailabilityBadge(availability: musician.availability)
+                    }
+                    Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Spacer()
             }
-            Spacer()
+            if !upcomingDates.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    ForEach(upcomingDates, id: \.self) { date in
+                        TagView(
+                            text: date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
+                            color: musician.availability.color
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    /// Prochaines dates de dispo (mode live — le seed n'en a pas).
+    private var upcomingDates: [Date] {
+        let today = Calendar.current.startOfDay(for: Date())
+        return musician.availableDates
+            .filter { Calendar.current.startOfDay(for: $0) >= today }
+            .sorted()
+            .prefix(3)
+            .map { $0 }
     }
 
     private var statsRow: some View {

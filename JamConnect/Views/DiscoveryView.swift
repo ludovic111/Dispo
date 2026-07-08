@@ -56,13 +56,6 @@ struct HomeView: View {
         store.musicians.filter { $0.availability == .tonight }
     }
 
-    /// Dispo prochainement (semaine, week-end, sur demande).
-    private var availableSoon: [Musician] {
-        store.musicians
-            .filter { $0.isAvailable && $0.availability != .tonight }
-            .sorted { $0.availability.urgencyRank > $1.availability.urgencyRank }
-    }
-
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
         return (hour >= 17 || hour < 5) ? "Bonsoir" : "Salut"
@@ -77,7 +70,6 @@ struct HomeView: View {
                     VStack(spacing: 22) {
                         header
                         tonightRow
-                        soonRow
                         actionBar
 
                         if showMap {
@@ -85,12 +77,14 @@ struct HomeView: View {
                                 .frame(height: 480)
                                 .clipShape(RoundedRectangle(cornerRadius: 24))
                         } else {
-                            if !store.showsPremium { premiumBanner }
                             feed
                         }
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
+                }
+                .refreshable {
+                    await store.refreshLiveData()
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -103,32 +97,30 @@ struct HomeView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            LogoView(markSize: 24)
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(greeting), \(store.profile.name.split(separator: " ").first.map(String.init) ?? store.profile.name)")
-                        .font(.system(size: 26, weight: .bold))
-                        .tracking(-0.3)
-                    HStack(spacing: 6) {
-                        Image(systemName: "bolt.fill")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(JC.coral)
-                        Text("\(availableTonight.count) musiciens mobilisables ce soir")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                LogoView(markSize: 20)
+                Text("\(greeting), \(store.profile.name.split(separator: " ").first.map(String.init) ?? store.profile.name)")
+                    .font(.system(size: 25, weight: .bold))
+                    .tracking(-0.3)
+                HStack(spacing: 6) {
+                    Image(systemName: "bolt.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(JC.coral)
+                    Text("\(availableTonight.count) musiciens mobilisables ce soir")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                Spacer(minLength: 0)
-                ZStack(alignment: .topTrailing) {
-                    AvatarView(name: store.profile.name, size: 48)
-                    if store.profile.isAvailable {
-                        Circle()
-                            .fill(store.profile.availability.color)
-                            .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(JC.bg, lineWidth: 2))
-                            .offset(x: 2, y: -2)
-                    }
+            }
+            Spacer(minLength: 0)
+            ZStack(alignment: .topTrailing) {
+                AvatarView(name: store.profile.name, size: 48)
+                if store.profile.isAvailable {
+                    Circle()
+                        .fill(store.profile.availability.color)
+                        .frame(width: 12, height: 12)
+                        .overlay(Circle().stroke(JC.bg, lineWidth: 2))
+                        .offset(x: 2, y: -2)
                 }
             }
         }
@@ -157,27 +149,6 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
             } else {
                 storiesScroller(availableTonight, ringColors: [JC.coral, JC.magenta])
-            }
-        }
-    }
-
-    /// Rangée secondaire : dispo cette semaine, le week-end ou sur demande.
-    private var soonRow: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "calendar")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text("Dispo prochainement")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            if availableSoon.isEmpty {
-                Text("Aucun musicien disponible dans les prochains jours.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            } else {
-                storiesScroller(availableSoon, ringColors: [JC.gold, .teal], avatarSize: 52)
             }
         }
     }
@@ -232,14 +203,6 @@ struct HomeView: View {
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.tertiary)
         }
-    }
-
-    private var premiumBanner: some View {
-        JCPromoBanner(
-            icon: "crown.fill",
-            title: "Ne rate plus un cachet",
-            subtitle: "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois"
-        ) { store.showPaywall = true }
     }
 
     private var feed: some View {
@@ -338,9 +301,10 @@ struct MusicianCard: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(musician.name)
                             .font(.headline)
-                        Text(musician.instruments.map(\.rawValue).joined(separator: " · "))
+                        Text("\(musician.instruments.map(\.rawValue).joined(separator: " · ")) · \(musician.level.rawValue)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                     VStack(alignment: .trailing, spacing: 2) {
@@ -365,24 +329,13 @@ struct MusicianCard: View {
                     ForEach(musician.genres.prefix(2)) { genre in
                         TagView(text: genre.rawValue, color: genre.color)
                     }
-                    TagView(text: musician.level.rawValue, color: .teal)
-                }
-
-                HStack {
+                    Spacer()
                     Label(
-                        String(format: "%.1f km · %@", musician.distance(from: AppStore.geneva), musician.neighborhood),
+                        String(format: "%.1f km", musician.distance(from: AppStore.geneva)),
                         systemImage: "location.fill"
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        Text("Voir le profil")
-                            .font(.caption.weight(.bold))
-                        Image(systemName: "arrow.right")
-                            .font(.caption2.weight(.bold))
-                    }
-                    .foregroundStyle(JC.coral)
                 }
             }
             .padding(16)

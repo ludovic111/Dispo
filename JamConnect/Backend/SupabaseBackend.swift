@@ -76,7 +76,8 @@ final class SupabaseBackend: Sendable {
         var genres: [String]
         var level: String
         var bio: String
-        var availability: String
+        /// Dates de dispo au format Postgres « yyyy-MM-dd ».
+        var availableDates: [String]
         var repertoire: [String]
         var photoUrl: String?
         var isPremium: Bool
@@ -84,10 +85,15 @@ final class SupabaseBackend: Sendable {
 
         enum CodingKeys: String, CodingKey {
             case id, name, age, neighborhood, latitude, longitude
-            case instruments, genres, level, bio, availability, repertoire
+            case instruments, genres, level, bio, repertoire
+            case availableDates = "available_dates"
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
             case isAdmin = "is_admin"
+        }
+
+        var parsedDates: [Date] {
+            availableDates.compactMap { SupabaseBackend.dayFormatter.date(from: $0) }
         }
 
         /// Un profil apparaît dans le feed dès qu'il est réellement rempli.
@@ -97,6 +103,7 @@ final class SupabaseBackend: Sendable {
 
         func asMusician(reviews: [Review]) -> Musician? {
             guard isComplete, let latitude, let longitude else { return nil }
+            let dates = parsedDates
             return Musician(
                 id: id,
                 name: name,
@@ -108,7 +115,8 @@ final class SupabaseBackend: Sendable {
                 genres: genres.compactMap(Genre.init(rawValue:)),
                 level: Level(rawValue: level) ?? .intermediaire,
                 bio: bio,
-                availability: Availability(rawValue: availability) ?? .onRequest,
+                availability: .derived(from: dates),
+                availableDates: dates,
                 repertoire: repertoire,
                 reviews: reviews,
                 photo: photoUrl
@@ -235,6 +243,14 @@ final class SupabaseBackend: Sendable {
             .compactMap { $0.asMusician(reviews: reviewsByReceiver[$0.id] ?? []) }
     }
 
+    /// Formateur des colonnes Postgres `date` (« 2026-07-08 »).
+    static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
+
     /// Pousse mon profil local vers le backend.
     func saveProfile(_ profile: MyProfile, userID: UUID) async throws {
         struct Update: Encodable {
@@ -243,7 +259,7 @@ final class SupabaseBackend: Sendable {
             let genres: [String]
             let level: String
             let bio: String
-            let availability: String
+            let available_dates: [String]
             // Position par défaut : centre de Genève (vraie géoloc en phase 2b).
             let latitude: Double
             let longitude: Double
@@ -254,7 +270,7 @@ final class SupabaseBackend: Sendable {
             genres: profile.genres.map(\.rawValue),
             level: profile.level.rawValue,
             bio: profile.bio,
-            availability: profile.availability.rawValue,
+            available_dates: profile.availableDates.map { Self.dayFormatter.string(from: $0) },
             latitude: AppStore.geneva.latitude,
             longitude: AppStore.geneva.longitude
         )
