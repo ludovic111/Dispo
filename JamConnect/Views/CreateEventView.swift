@@ -5,16 +5,25 @@ struct CreateEventView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var title = ""
-    @State private var place = ""
+    @State private var title: String
+    @State private var place: String
     @State private var neighborhood = "Carouge"
-    @State private var date = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
+    @State private var date: Date
     @State private var genre: Genre = .latin
     @State private var wanted: Set<Instrument> = []
     @State private var feeText = ""
     @State private var descriptionText = ""
     /// L'annonce venant d'être publiée — déclenche l'écran de matching.
     @State private var published: GigRequest?
+
+    /// Pré-remplissage (ex. SOS lancé depuis un concert de groupe).
+    init(prefillTitle: String = "", prefillPlace: String = "", prefillDate: Date? = nil) {
+        _title = State(initialValue: prefillTitle)
+        _place = State(initialValue: prefillPlace)
+        _date = State(initialValue: prefillDate
+            ?? Calendar.current.date(byAdding: .day, value: 2, to: Date())
+            ?? Date())
+    }
 
     private let neighborhoods = [
         "Carouge", "Eaux-Vives", "Plainpalais", "Pâquis", "Champel",

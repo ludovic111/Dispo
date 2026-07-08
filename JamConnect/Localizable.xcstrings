@@ -161,6 +161,46 @@
         }
       }
     },
+    "%lld membres · %lld partitions · %lld concerts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Mitglieder · %lld Noten · %lld Gigs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld members · %lld scores · %lld gigs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld miembros · %lld partituras · %lld bolos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld membri · %lld spartiti · %lld concerti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバー%lld人 · 楽譜%lld · ライブ%lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld名成员 · %lld份乐谱 · %lld场演出"
+          }
+        }
+      }
+    },
     "%lld musiciens mobilisables ce soir": {
       "localizations": {
         "de": {
@@ -197,6 +237,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "今晚有%lld位音乐人可応召"
+          }
+        }
+      }
+    },
+    "%lld musiciens sous le coude": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Musiker griffbereit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld musicians on hand"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld músicos a mano"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld musicisti a portata di mano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld人のミュージシャンをキープ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld位音乐人随时待命"
           }
         }
       }
@@ -721,82 +801,122 @@
         }
       }
     },
-    "7 jours offerts, puis CHF 59/an · annulable à tout moment": {
+    "6 vidéos de démo": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 Tage gratis, dann CHF 59/Jahr · jederzeit kündbar"
+            "value": "6 Demo-Videos"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 days free, then CHF 59/yr · cancel anytime"
+            "value": "6 demo videos"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 días gratis, luego 59 CHF/año · cancela cuando quieras"
+            "value": "6 vídeos de demo"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 giorni gratis, poi 59 CHF/anno · annullabile in ogni momento"
+            "value": "6 video demo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "7日間無料、その後CHF 59/年 · いつでも解約可"
+            "value": "デモ動画6本"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "免费7天，之后每年59瑞郎 · 随时可取消"
+            "value": "6个演示视频"
           }
         }
       }
     },
-    "7 jours offerts, puis CHF 6.90/mois · annulable à tout moment": {
+    "7 jours offerts, puis CHF 79/an · annulable à tout moment": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 Tage gratis, dann CHF 6.90/Monat · jederzeit kündbar"
+            "value": "7 Tage gratis, dann CHF 79/Jahr · jederzeit kündbar"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 days free, then CHF 6.90/mo · cancel anytime"
+            "value": "7 days free, then CHF 79/yr · cancel anytime"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 días gratis, luego 6,90 CHF/mes · cancela cuando quieras"
+            "value": "7 días gratis, luego 79 CHF/año · cancela cuando quieras"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "7 giorni gratis, poi 6,90 CHF/mese · annullabile in ogni momento"
+            "value": "7 giorni gratis, poi 79 CHF/anno · annullabile in ogni momento"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "7日間無料、その後CHF 6.90/月 · いつでも解約可"
+            "value": "7日間無料、その後CHF 79/年 · いつでも解約可"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "免费7天，之后每月6.90瑞郎 · 随时可取消"
+            "value": "免费7天，之后每年79瑞郎 · 随时可取消"
+          }
+        }
+      }
+    },
+    "7 jours offerts, puis CHF 9.90/mois · annulable à tout moment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 Tage gratis, dann CHF 9.90/Monat · jederzeit kündbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 days free, then CHF 9.90/mo · cancel anytime"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 días gratis, luego 9,90 CHF/mes · cancela cuando quieras"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 giorni gratis, poi 9,90 CHF/mese · annullabile in ogni momento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7日間無料、その後CHF 9.90/月 · いつでも解約可"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费7天，之后每月9.90瑞郎 · 随时可取消"
           }
         }
       }
@@ -1121,6 +1241,46 @@
         }
       }
     },
+    "Ajoute les dates du groupe — et si un membre lâche, publie un SOS pré-rempli en un tap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trag die Termine der Band ein — und wenn jemand absagt, poste mit einem Tipp ein vorausgefülltes SOS."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add the band's dates — and if a member bails, post a pre-filled SOS in one tap."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade las fechas de la banda — y si un miembro falla, publica un SOS prellenado en un toque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi le date della band — e se un membro molla, pubblica un SOS precompilato con un tap."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バンドの日程を登録。メンバーが抜けたらワンタップで事前入力済みSOSを投稿。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加乐队日程——如有成员放鸽子，一键发布预填好的SOS。"
+          }
+        }
+      }
+    },
     "Ajoute un instrument proche (ex. synthé en plus du piano)": {
       "localizations": {
         "de": {
@@ -1201,6 +1361,46 @@
         }
       }
     },
+    "Ajouter un concert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gig hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a gig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir bolo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi concerto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブを追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加演出"
+          }
+        }
+      }
+    },
     "Ajouter une date": {
       "localizations": {
         "de": {
@@ -1237,6 +1437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加日期"
+          }
+        }
+      }
+    },
+    "Ajouter une partition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noten hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add sheet music"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir partitura"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi spartito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽譜を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加乐谱"
           }
         }
       }
@@ -1321,46 +1561,6 @@
         }
       }
     },
-    "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prioritäts-Alerts + Profil ganz oben · ab CHF 4.90/Monat"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Priority gig alerts + profile on top · from CHF 4.90/mo"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alertas prioritarias + perfil arriba · desde 4,90 CHF/mes"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avvisi prioritari + profilo in cima · da 4,90 CHF/mese"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "優先アラート＋プロフィール上位表示 · 月CHF 4.90〜"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "优先提醒＋档案置顶 · 每月4.90瑞郎起"
-          }
-        }
-      }
-    },
     "Alertes dépannage prioritaires · gérer mon abonnement": {
       "localizations": {
         "de": {
@@ -1397,6 +1597,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "优先救场提醒 · 管理订阅"
+          }
+        }
+      }
+    },
+    "Alertes en priorité, groupes, 6 vidéos · dès CHF 6.60/mois": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prioritäts-Alerts, Gruppen, 6 Videos · ab CHF 6.60/Monat"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Priority alerts, groups, 6 videos · from CHF 6.60/mo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alertas prioritarias, grupos, 6 vídeos · desde 6,60 CHF/mes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi prioritari, gruppi, 6 video · da 6,60 CHF/mese"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "優先アラート・グループ・動画6本 · 月CHF 6.60〜"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "优先提醒、群组、6个视频 · 每月6.60瑞郎起"
           }
         }
       }
@@ -1881,6 +2121,86 @@
         }
       }
     },
+    "Aucun concert planifié": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Gigs geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No gigs planned"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin bolos planificados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun concerto in programma"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定されたライブはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无演出安排"
+          }
+        }
+      }
+    },
+    "Aucun favori": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Favoriten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No favorites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin favoritos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun preferito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お気に入りはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无收藏"
+          }
+        }
+      }
+    },
     "Aucun musicien %@ n'est dispo autour du %@ en ce moment. Ton annonce est en ligne et visible par tous : dès que quelqu'un de compatible coche cette date dans son calendrier, il la verra en tête du feed.": {
       "localizations": {
         "de": {
@@ -2081,6 +2401,46 @@
         }
       }
     },
+    "Aucune partition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Noten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sheet music"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin partituras"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno spartito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽譜がありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无乐谱"
+          }
+        }
+      }
+    },
     "Autriche": {
       "localizations": {
         "de": {
@@ -2277,46 +2637,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "需提前通知"
-          }
-        }
-      }
-    },
-    "Badge Premium": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premium-Badge"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premium badge"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Insignia Premium"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Badge Premium"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premiumバッジ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premium徽章"
           }
         }
       }
@@ -3121,82 +3441,82 @@
         }
       }
     },
-    "CHF 59/an": {
+    "CHF 79/an": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "CHF 59/Jahr"
+            "value": "CHF 79/Jahr"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "CHF 59/yr"
+            "value": "CHF 79/yr"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "59 CHF/año"
+            "value": "79 CHF/año"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "59 CHF/anno"
+            "value": "79 CHF/anno"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "CHF 59/年"
+            "value": "CHF 79/年"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "59瑞郎/年"
+            "value": "79瑞郎/年"
           }
         }
       }
     },
-    "CHF 6.90/mois": {
+    "CHF 9.90/mois": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "CHF 6.90/Monat"
+            "value": "CHF 9.90/Monat"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "CHF 6.90/mo"
+            "value": "CHF 9.90/mo"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "6,90 CHF/mes"
+            "value": "9,90 CHF/mes"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "6,90 CHF/mese"
+            "value": "9,90 CHF/mese"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "CHF 6.90/月"
+            "value": "CHF 9.90/月"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "6.90瑞郎/月"
+            "value": "9.90瑞郎/月"
           }
         }
       }
@@ -4361,6 +4681,46 @@
         }
       }
     },
+    "Concerts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gigs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gigs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演出"
+          }
+        }
+      }
+    },
     "Congas": {
       "localizations": {
         "de": {
@@ -4881,6 +5241,46 @@
         }
       }
     },
+    "Conversations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterhaltungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversaciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会話"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会话"
+          }
+        }
+      }
+    },
     "Cor": {
       "localizations": {
         "de": {
@@ -5117,6 +5517,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法创建账号——请检查网络。"
+          }
+        }
+      }
+    },
+    "Crée ton groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstelle deine Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create your group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea tu grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea il tuo gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループを作ろう"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建你的群组"
+          }
+        }
+      }
+    },
+    "Créer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建"
           }
         }
       }
@@ -6761,46 +7241,6 @@
         }
       }
     },
-    "Filtre par niveau, répertoire et type de dispo.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtere nach Level, Repertoire und Verfügbarkeit."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter by level, repertoire and availability type."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtra por nivel, repertorio y tipo de dispo."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtra per livello, repertorio e tipo di disponibilità."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "レベル・レパートリー・空き状況で絞り込み。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按水平、曲目和空闲类型筛选。"
-          }
-        }
-      }
-    },
     "Filtrer par niveau": {
       "localizations": {
         "de": {
@@ -6877,46 +7317,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "筛选"
-          }
-        }
-      }
-    },
-    "Filtres avancés": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erweiterte Filter"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Advanced filters"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtros avanzados"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtri avanzati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高度なフィルタ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高级筛选"
           }
         }
       }
@@ -7397,6 +7797,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "律动"
+          }
+        }
+      }
+    },
+    "Groupes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组"
+          }
+        }
+      }
+    },
+    "Groupes (Premium) : messages d'équipe, partitions partagées, agenda des concerts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen (Premium): Team-Nachrichten, geteilte Noten, Gig-Kalender"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups (Premium): team messages, shared sheet music, gig agenda"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos (Premium): mensajes de equipo, partituras compartidas, agenda de bolos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppi (Premium): messaggi di gruppo, spartiti condivisi, agenda concerti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ（Premium）：チーム連絡・楽譜共有・ライブ日程"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组（Premium）：队内消息、共享乐谱、演出日程"
+          }
+        }
+      }
+    },
+    "Groupes illimités": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbegrenzte Gruppen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlimited groups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos ilimitados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppi illimitati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ無制限"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无限群组"
+          }
+        }
+      }
+    },
+    "Groupes, réseaux sociaux & grand ménage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen, Social Links & Großputz"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups, social links & big cleanup"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos, redes sociales y gran limpieza"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppi, social e grandi pulizie"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ・SNSリンク・大掃除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组、社交链接与大扫除"
           }
         }
       }
@@ -8761,6 +9321,46 @@
         }
       }
     },
+    "Lance la discussion": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starte die Unterhaltung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the conversation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia la conversación"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia la conversazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会話を始めよう"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始聊天"
+          }
+        }
+      }
+    },
     "Langue": {
       "localizations": {
         "de": {
@@ -8921,46 +9521,6 @@
         }
       }
     },
-    "Le badge doré qui dit « fiable, dispo, pro ».": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das goldene Badge für „zuverlässig, verfügbar, Profi“."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The golden badge that says “reliable, available, pro”."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La insignia dorada que dice «fiable, libre, pro»."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il badge dorato che dice «affidabile, libero, pro»."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「頼れる・空いてる・プロ」を示す金バッジ。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金色徽章，代表“可靠、有空、专业”。"
-          }
-        }
-      }
-    },
     "Le concert": {
       "localizations": {
         "de": {
@@ -9001,42 +9561,122 @@
         }
       }
     },
-    "Le filtre par niveau fait partie de Dispo Premium (dès CHF 4.90/mois).": {
+    "Le document n'a pas pu être importé.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Level-Filter gehört zu Dispo Premium (ab CHF 4.90/Monat)."
+            "value": "Das Dokument konnte nicht importiert werden."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Level filtering is part of Dispo Premium (from CHF 4.90/mo)."
+            "value": "The document couldn't be imported."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El filtro por nivel es parte de Dispo Premium (desde 4,90 CHF/mes)."
+            "value": "El documento no se pudo importar."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il filtro per livello fa parte di Dispo Premium (da 4,90 CHF/mese)."
+            "value": "Il documento non è stato importato."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "レベルフィルタはDispo Premiumの機能です（月CHF 4.90〜）。"
+            "value": "ドキュメントを読み込めませんでした。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "按水平筛选是Dispo Premium功能（每月4.90瑞郎起）。"
+            "value": "文档导入失败。"
+          }
+        }
+      }
+    },
+    "Le filtre par niveau fait partie de Dispo Premium (dès CHF 6.60/mois).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Level-Filter gehört zu Dispo Premium (ab CHF 6.60/Monat)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level filtering is part of Dispo Premium (from CHF 6.60/mo)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El filtro por nivel es parte de Dispo Premium (desde 6,60 CHF/mes)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il filtro per livello fa parte di Dispo Premium (da 6,60 CHF/mese)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レベルフィルタはDispo Premiumの機能です（月CHF 6.60〜）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按水平筛选是Dispo Premium功能（每月6.60瑞郎起）。"
+          }
+        }
+      }
+    },
+    "Le groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ情報"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组信息"
           }
         }
       }
@@ -9237,6 +9877,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "别人看到你的状态：%@ %@"
+          }
+        }
+      }
+    },
+    "Les meilleurs profils en haut, leur niveau affiché.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die besten Profile oben, ihr Level sichtbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best profiles on top, their level visible."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los mejores perfiles arriba, con su nivel visible."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I profili migliori in alto, col livello visibile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上位プロフィールを上に、レベルも表示。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最佳档案置顶，水平一目了然。"
           }
         }
       }
@@ -9521,42 +10201,42 @@
         }
       }
     },
-    "MEILLEURE OFFRE · −29 %": {
+    "MEILLEURE OFFRE · −33 %": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "BESTES ANGEBOT · −29 %"
+            "value": "BESTES ANGEBOT · −33 %"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "BEST DEAL · −29%"
+            "value": "BEST DEAL · −33%"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "MEJOR OFERTA · −29 %"
+            "value": "MEJOR OFERTA · −33 %"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "MIGLIOR OFFERTA · −29 %"
+            "value": "MIGLIOR OFFERTA · −33 %"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ベストプラン · −29%"
+            "value": "ベストプラン · −33%"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最划算 · −29%"
+            "value": "最划算 · −33%"
           }
         }
       }
@@ -9681,6 +10361,46 @@
         }
       }
     },
+    "Membres (%lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitglieder (%lld)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Members (%lld)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miembros (%lld)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membri (%lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバー（%lld）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员（%lld）"
+          }
+        }
+      }
+    },
     "Mensuel": {
       "localizations": {
         "de": {
@@ -9797,6 +10517,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的空闲日期"
+          }
+        }
+      }
+    },
+    "Mes favoris": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Favoriten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My favorites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis favoritos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I miei preferiti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お気に入り"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的收藏"
           }
         }
       }
@@ -10001,6 +10761,46 @@
         }
       }
     },
+    "Message au groupe…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht an die Gruppe …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message to the group…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensaje al grupo…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaggio al gruppo…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループへメッセージ…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送群消息……"
+          }
+        }
+      }
+    },
     "Messages": {
       "localizations": {
         "de": {
@@ -10037,6 +10837,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "消息"
+          }
+        }
+      }
+    },
+    "Messages d'équipe, partitions partagées, agenda des concerts — et SOS pré-rempli si un membre lâche.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Nachrichten, geteilte Noten, Gig-Kalender — und ein vorausgefülltes SOS, wenn jemand absagt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team messages, shared sheet music, gig agenda — and a pre-filled SOS if a member bails."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensajes de equipo, partituras compartidas, agenda de bolos — y SOS prellenado si un miembro falla."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaggi di gruppo, spartiti condivisi, agenda dei concerti — e SOS precompilato se un membro molla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チーム連絡・楽譜共有・ライブ日程、メンバーが抜けたら事前入力SOSも。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "队内消息、共享乐谱、演出日程——成员放鸽子还有预填SOS。"
+          }
+        }
+      }
+    },
+    "Messages d'équipe, partitions partagées, dates de concert — avec Premium": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Nachrichten, geteilte Noten, Konzerttermine — mit Premium"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team messages, shared sheet music, concert dates — with Premium"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensajes de equipo, partituras compartidas, fechas de concierto — con Premium"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaggi di gruppo, spartiti condivisi, date dei concerti — con Premium"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チーム連絡・楽譜共有・ライブ日程 — Premiumで"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "队内消息、共享乐谱、演出日程——Premium专享"
+          }
+        }
+      }
+    },
+    "Mets un cœur aux musiciens fiables pour les retrouver ici en un tap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib zuverlässigen Musikern ein Herz, um sie hier mit einem Tipp zu finden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart reliable musicians to find them here in one tap."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da un corazón a los músicos fiables para encontrarlos aquí en un toque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metti un cuore ai musicisti affidabili per ritrovarli qui con un tap."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "頼れるミュージシャンにハートを。ワンタップでここから開けます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "给靠谱的音乐人点个心，一键在这里找到他们。"
           }
         }
       }
@@ -10357,6 +11277,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的水平"
+          }
+        }
+      }
+    },
+    "Montre plusieurs styles — un seul extrait en gratuit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeig mehrere Stile — gratis nur ein Clip."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show several styles — just one clip on the free plan."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra varios estilos — solo un clip en el plan gratis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra più stili — un solo estratto col piano gratuito."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複数のスタイルをアピール。無料版は1本のみ。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展示多种风格——免费版只有1个片段。"
           }
         }
       }
@@ -11081,6 +12041,46 @@
         }
       }
     },
+    "Nom — ex. Latin Vibes Quartet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name — z. B. Latin Vibes Quartet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name — e.g. Latin Vibes Quartet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre — ej. Latin Vibes Quartet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome — es. Latin Vibes Quartet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前 — 例：Latin Vibes Quartet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称——例如Latin Vibes Quartet"
+          }
+        }
+      }
+    },
     "Nom, instruments, niveau — le reste se complète plus tard.": {
       "localizations": {
         "de": {
@@ -11281,6 +12281,46 @@
         }
       }
     },
+    "Nouveau groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuovo gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規グループ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建群组"
+          }
+        }
+      }
+    },
     "Nouveautés": {
       "localizations": {
         "de": {
@@ -11321,42 +12361,42 @@
         }
       }
     },
-    "Nouveaux SOS compatibles avec tes instruments et messages reçus.": {
+    "Nouveaux prix Premium : CHF 9.90/mois ou CHF 79/an (−33 %)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neue SOS passend zu deinen Instrumenten sowie eingehende Nachrichten."
+            "value": "Neue Premium-Preise: CHF 9.90/Monat oder CHF 79/Jahr (−33 %)"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "New SOS matching your instruments, plus incoming messages."
+            "value": "New Premium pricing: CHF 9.90/mo or CHF 79/yr (−33%)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nuevos SOS compatibles con tus instrumentos y mensajes recibidos."
+            "value": "Nuevos precios Premium: 9,90 CHF/mes o 79 CHF/año (−33 %)"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nuovi SOS compatibili con i tuoi strumenti e messaggi ricevuti."
+            "value": "Nuovi prezzi Premium: 9,90 CHF/mese o 79 CHF/anno (−33 %)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "担当パートに合う新着SOSと受信メッセージをお知らせ。"
+            "value": "新Premium価格：月CHF 9.90または年CHF 79（−33%）"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "与你乐器匹配的新SOS，以及收到的消息。"
+            "value": "全新Premium价格：每月9.90瑞郎或每年79瑞郎（−33%）"
           }
         }
       }
@@ -11397,6 +12437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "全新引导、通知和更新日志"
+          }
+        }
+      }
+    },
+    "Nouvel écran profil : réglages regroupés et liste de favoris": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Profil-Screen: gebündelte Einstellungen und Favoritenliste"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New profile screen: grouped settings and favorites list"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva pantalla de perfil: ajustes agrupados y lista de favoritos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuova schermata profilo: impostazioni raggruppate e lista preferiti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新プロフィール画面：設定をまとめてお気に入り一覧も"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全新档案页：整合的设置与收藏列表"
           }
         }
       }
@@ -11477,6 +12557,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "为你展示附近的音乐人和演出。"
+          }
+        }
+      }
+    },
+    "Onglet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pestaña"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheda"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タブ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签"
           }
         }
       }
@@ -11637,6 +12757,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "介绍一下自己……"
+          }
+        }
+      }
+    },
+    "Partage les PDF du répertoire — tout le groupe les retrouve ici.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teile die Repertoire-PDFs — die ganze Band findet sie hier."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share the repertoire PDFs — the whole band finds them here."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparte los PDF del repertorio — toda la banda los encuentra aquí."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Condividi i PDF del repertorio — tutta la band li trova qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レパートリーのPDFを共有。バンド全員がここで見られます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享曲目PDF——全队都能在这里找到。"
           }
         }
       }
@@ -12357,6 +13517,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "提高成功率的小建议："
+          }
+        }
+      }
+    },
+    "Premier message au groupe — répé, setlist, horaires…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erste Nachricht an die Gruppe — Probe, Setlist, Zeiten …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First message to the group — rehearsal, setlist, schedule…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primer mensaje al grupo — ensayo, setlist, horarios…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primo messaggio al gruppo — prove, scaletta, orari…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループへの最初のメッセージ — リハ・セットリスト・時間…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "给群组发第一条消息——排练、曲目单、时间安排……"
           }
         }
       }
@@ -14161,6 +15361,46 @@
         }
       }
     },
+    "Réseaux sociaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soziale Netzwerke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Social networks"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redes sociales"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Social"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SNS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "社交网络"
+          }
+        }
+      }
+    },
     "Résilier l'abonnement": {
       "localizations": {
         "de": {
@@ -14197,6 +15437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消订阅"
+          }
+        }
+      }
+    },
+    "Réunis ton groupe : messages, partitions et agenda des concerts au même endroit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hol deine Band zusammen: Nachrichten, Noten und Konzertkalender an einem Ort."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bring your band together: messages, sheet music and concert agenda in one place."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reúne a tu banda: mensajes, partituras y agenda de conciertos en un solo lugar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riunisci la tua band: messaggi, spartiti e agenda dei concerti in un unico posto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バンドをひとつに：連絡・楽譜・ライブ日程をまとめて管理。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把乐队聚到一起：消息、乐谱和演出日程都在这里。"
           }
         }
       }
@@ -14681,46 +15961,6 @@
         }
       }
     },
-    "Si l'interrupteur retombe, autorise Dispo dans Réglages > Notifications.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Springt der Schalter zurück, erlaube Dispo unter Einstellungen > Mitteilungen."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "If the switch flips back, allow Dispo in Settings > Notifications."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Si el interruptor se apaga, permite Dispo en Ajustes > Notificaciones."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se l'interruttore torna indietro, autorizza Dispo in Impostazioni > Notifiche."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スイッチが戻る場合は、設定 > 通知でDispoを許可してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果开关自动关闭，请在设置 > 通知中允许Dispo。"
-          }
-        }
-      }
-    },
     "Singer-songwriter": {
       "localizations": {
         "de": {
@@ -15081,6 +16321,126 @@
         }
       }
     },
+    "Supprimer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
+          }
+        }
+      }
+    },
+    "Supprimer ce groupe (messages, partitions et concerts) ?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Gruppe löschen (Nachrichten, Noten und Gigs)?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this group (messages, sheet music and gigs)?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar este grupo (mensajes, partituras y bolos)?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare questo gruppo (messaggi, spartiti e concerti)?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このグループを削除しますか（メッセージ・楽譜・ライブ）？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除该群组（消息、乐谱和演出）？"
+          }
+        }
+      }
+    },
+    "Supprimer le groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppe löschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループを削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除群组"
+          }
+        }
+      }
+    },
     "Sur demande": {
       "localizations": {
         "de": {
@@ -15401,6 +16761,46 @@
         }
       }
     },
+    "Tes liens Instagram, TikTok, YouTube et X cliquables sur ton profil": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Instagram-, TikTok-, YouTube- und X-Links klickbar im Profil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Instagram, TikTok, YouTube and X links clickable on your profile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus enlaces de Instagram, TikTok, YouTube y X clicables en tu perfil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi link Instagram, TikTok, YouTube e X cliccabili sul profilo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instagram・TikTok・YouTube・Xのリンクをプロフィールに表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的Instagram、TikTok、YouTube和X链接可在档案上点击"
+          }
+        }
+      }
+    },
     "Tes relations d'abord, puis les meilleurs niveaux": {
       "localizations": {
         "de": {
@@ -15597,6 +16997,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "标题——例如：找钢琴手，salsa之夜"
+          }
+        }
+      }
+    },
+    "Titre — ex. Soirée salsa": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel — z. B. Salsa-Abend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title — e.g. Salsa night"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Título — ej. Noche de salsa"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titolo — es. Serata salsa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトル — 例：サルサナイト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标题——例如salsa之夜"
           }
         }
       }
@@ -15961,6 +17401,46 @@
         }
       }
     },
+    "Ton pseudo suffit (sans @) — il devient un lien cliquable sur ton profil.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Handle genügt (ohne @) — es wird ein klickbarer Link auf deinem Profil."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your handle is enough (no @) — it becomes a clickable link on your profile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con tu alias basta (sin @) — se convierte en un enlace en tu perfil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basta il tuo nome (senza @) — diventa un link cliccabile sul tuo profilo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名だけでOK（@不要）。プロフィールのリンクになります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填用户名即可（不用@）——会变成你档案上的可点击链接。"
+          }
+        }
+      }
+    },
     "Ton réseau d'abord": {
       "localizations": {
         "de": {
@@ -16077,6 +17557,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有人都能被找到——即使没有定位、乐器或空闲时间"
+          }
+        }
+      }
+    },
+    "Tri et niveau des musiciens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortierung und Level der Musiker"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musician sorting and levels"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orden y nivel de los músicos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordinamento e livello dei musicisti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "並び替えとレベル表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐人排序与水平"
           }
         }
       }
@@ -16481,6 +18001,86 @@
         }
       }
     },
+    "Un membre lâche ? Publier un SOS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jemand sagt ab? SOS posten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A member bailed? Post an SOS"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Un miembro falla? Publica un SOS"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un membro molla? Pubblica un SOS"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバーが抜けた？SOSを投稿"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有成员放鸽子？发布SOS"
+          }
+        }
+      }
+    },
+    "Un membre lâche ? SOS pré-rempli depuis le concert du groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jemand sagt ab? Vorausgefülltes SOS direkt vom Gig der Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A member bailed? Pre-filled SOS from the group's gig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Un miembro falla? SOS prellenado desde el bolo del grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un membro molla? SOS precompilato dal concerto del gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバーが抜けたら、ライブ情報から事前入力SOS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员放鸽子？从群组演出一键生成预填SOS"
+          }
+        }
+      }
+    },
     "Un musicien te lâche ?": {
       "localizations": {
         "de": {
@@ -16561,42 +18161,42 @@
         }
       }
     },
-    "Un seul concert dépanné (CHF 100–300) rembourse **largement ton année** d'abonnement.": {
+    "Un seul concert dépanné (CHF 100–300) rembourse **ton année entière** d'abonnement — dès le premier cachet.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein einziger Einsatz (CHF 100–300) zahlt **dein ganzes Abo-Jahr locker** zurück."
+            "value": "Ein einziger Einsatz (CHF 100–300) zahlt **dein ganzes Jahr** — ab der ersten Gage."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A single covered gig (CHF 100–300) **more than pays for your year** of subscription."
+            "value": "A single covered gig (CHF 100–300) pays for **your entire year** — from the very first fee."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un solo bolo cubierto (100–300 CHF) **paga de sobra tu año** de suscripción."
+            "value": "Un solo bolo cubierto (100–300 CHF) paga **tu año entero** — desde el primer caché."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una sola sostituzione (100–300 CHF) **ripaga ampiamente il tuo anno** di abbonamento."
+            "value": "Una sola sostituzione (100–300 CHF) ripaga **il tuo intero anno** — dal primo compenso."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "1回の代役（CHF 100–300）で**年間サブスク代は余裕で回収**。"
+            "value": "1回の代役（CHF 100–300）で**年間分を回収**。最初のギャラで元が取れます。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "只要救场一次（100–300瑞郎），就**远超一年**的订阅费。"
+            "value": "只要救场一次（100–300瑞郎），第一笔酬劳就**赚回全年**订阅。"
           }
         }
       }
@@ -17321,6 +18921,46 @@
         }
       }
     },
+    "pseudo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Handle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "handle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "alias"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nome"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户名"
+          }
+        }
+      }
+    },
     "sans engagement": {
       "localizations": {
         "de": {
@@ -17361,42 +19001,42 @@
         }
       }
     },
-    "soit CHF 4.90/mois · économise CHF 24": {
+    "soit CHF 6.60/mois · économise CHF 40": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "nur CHF 4.90/Monat · spare CHF 24"
+            "value": "nur CHF 6.60/Monat · spare CHF 40"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "that's CHF 4.90/mo · save CHF 24"
+            "value": "that's CHF 6.60/mo · save CHF 40"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "sale a 4,90 CHF/mes · ahorra 24 CHF"
+            "value": "sale a 6,60 CHF/mes · ahorra 40 CHF"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "cioè 4,90 CHF/mese · risparmi 24 CHF"
+            "value": "cioè 6,60 CHF/mese · risparmi 40 CHF"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "月あたりCHF 4.90 · CHF 24お得"
+            "value": "月あたりCHF 6.60 · CHF 40お得"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "相当于每月4.90瑞郎 · 省24瑞郎"
+            "value": "相当于每月6.60瑞郎 · 省40瑞郎"
           }
         }
       }

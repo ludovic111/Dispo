@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.6.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.7.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|
@@ -101,8 +101,35 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 - **Fiche musicien** — hero vidéo (60–90 s, lecteur réel en phase 2), stats sociales, genres avec leurs codes (standards jazz, clave latine…), répertoire, boutons favori + « Demander un dépannage ».
 - **Système d'appréciation positif** — après un concert, on donne une **note de musique** (« j'ai aimé ») ou une **note dorée animée** (« coup de cœur ») ; pas de note négative possible.
 - **Messages** — conversations avec réponse automatique scriptée (démo).
+- **Groupes (Premium)** — messagerie d'équipe avec trois onglets : messages, **partitions partagées** (import PDF/image depuis Fichiers, aperçu QuickLook) et **agenda des concerts** — chaque concert a un bouton « Un membre lâche ? Publier un SOS » qui pré-remplit l'annonce (titre, lieu, date). Local pour l'instant, synchro serveur en phase 2b.
+- **Réseaux sociaux** — chaque profil peut renseigner ses pseudos Instagram, TikTok, YouTube et X (*Modifier mon profil → Réseaux sociaux*, colonne `socials` jsonb côté serveur) ; ils s'affichent en liens cliquables sur la page profil.
+- **Favoris** — liste dédiée dans le profil pour retrouver ses musiciens fiables en un tap.
 - **Profil** — carte hero avec photo, compteurs abonnés/suivis, calendrier de dispo (statut 🚨/📅/🌙 dérivé des dates cochées), vidéos de démo, teaser « qui a vu ton profil » (avatars floutés → paywall), langue & région, thème clair/sombre, édition complète.
-- **Monétisation** — abonnement **Dispo Premium à CHF 6.90/mois ou CHF 59/an** (annuel mis en avant : « soit CHF 4.90/mois, −29 % ») : alertes dépannage 30 min avant tout le monde, profil en tête, filtres avancés, qui a vu ton profil, badge doré. Essai 7 jours. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
+- **Monétisation** — abonnement **Dispo Premium à CHF 9.90/mois ou CHF 79/an** (annuel mis en avant : « soit CHF 6.60/mois, −33 % ») : alertes dépannage 30 min avant tout le monde, profil en tête, **groupes illimités**, 6 vidéos de démo, tri/affichage du niveau, qui a vu ton profil. Essai 7 jours. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
+
+## Prix & marge (calcul v0.7)
+
+**Coûts fixes mensuels** (indépendants du nombre d'utilisateurs) :
+
+| Poste | CHF/mois |
+|---|---|
+| Supabase Pro | ~22 |
+| Apple Developer Program (99 $/an) | ~8 |
+| SMTP (Resend) + domaine | ~7 |
+| **Total fixe** | **~37** |
+
+**Coût variable par abonné actif** : stockage vidéos (6 × ~50 Mo) + egress + push ≈ **CHF 0.30–0.50/mois**. Commission Apple : **15 %** (App Store Small Business Program, < 1 M$ de CA).
+
+**Marge par abonné** :
+
+| Plan | Prix | Net après Apple | Coût/an | Marge |
+|---|---|---|---|---|
+| Annuel CHF 79 | 79.00 | 67.15 | ~5 | **~92 %** |
+| Mensuel CHF 9.90 | 118.80/an | 100.98 | ~5 | **~95 %** |
+
+**Point mort** : ~7 abonnés annuels couvrent les coûts fixes. À 100 abonnés (mix 70 % annuel) : ~CHF 6 700/an net, coûts ~CHF 950 → **~85 % de marge nette**.
+
+**Stratégie de conversion** : un seul niveau Premium (un menu de formules tue la conversion), deux périodicités. Le mensuel à 9.90 sert d'**ancre** : l'annuel paraît imbattable (−33 %, « un seul cachet rembourse l'année »). Essai 7 jours sans friction, et le paywall est alimenté par des verrous *visibles* dans l'app (SOS en avant-première, niveau masqué, 1 vidéo, groupes).
 
 Les données sont fictives et rechargeables : *Profil → Réinitialiser la démo*.
 
@@ -133,5 +160,6 @@ cd JamConnect && xcodegen generate
 3. **Vidéo réelle** : enregistrement in-app, upload Supabase Storage ou Mux (~5 $/1000 min).
 4. ~~Notifications~~ ✅ notifications locales faites (SOS compatibles + messages) — reste : **push serveur APNs** (« un SOS piano à 2 km, cachet CHF 150 »), le cœur de la promesse Premium, dès le Developer Program.
 5. **StoreKit 2** : brancher le paywall sur de vrais abonnements App Store + `is_premium` serveur.
+5b. **Groupes serveur** : tables Supabase (groupes, membres, messages temps réel, Storage pour les partitions).
 6. **Géolocalisation réelle** (aujourd'hui : position fixée au centre de Genève) et synchronisation serveur des favoris, appréciations, follows, photo et vidéos.
 7. **TestFlight** pour les 20–30 premiers musiciens genevois (AMR, Conservatoire, Chat Noir…).

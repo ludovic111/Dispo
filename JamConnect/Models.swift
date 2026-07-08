@@ -233,8 +233,6 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var symbol: String { category.symbol }
-
     /// Instruments d'une catégorie, dans l'ordre de déclaration.
     static func instruments(in category: InstrumentCategory) -> [Instrument] {
         allCases.filter { $0.category == category }
@@ -276,6 +274,60 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
         case .choeurs: return ["choriste"]
         case .beatbox: return ["beatboxer"]
         case .dj: return ["deejay", "platines"]
+        }
+    }
+}
+
+// MARK: - Réseaux sociaux
+
+/// Réseaux sociaux affichés en liens cliquables sur les profils.
+enum SocialNetwork: String, Codable, CaseIterable, Identifiable {
+    case instagram
+    case tiktok
+    case youtube
+    case x
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .instagram: return "Instagram"
+        case .tiktok: return "TikTok"
+        case .youtube: return "YouTube"
+        case .x: return "X"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .instagram: return "camera.fill"
+        case .tiktok: return "music.note"
+        case .youtube: return "play.rectangle.fill"
+        case .x: return "at"
+        }
+    }
+
+    /// Nettoie ce que l'utilisateur colle (@, URL complète…) → pseudo nu.
+    func cleanHandle(_ raw: String) -> String {
+        var handle = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in ["https://", "http://", "www.", "instagram.com/", "tiktok.com/",
+                       "youtube.com/", "x.com/", "twitter.com/"] {
+            if handle.lowercased().hasPrefix(prefix) {
+                handle = String(handle.dropFirst(prefix.count))
+            }
+        }
+        return handle.trimmingCharacters(in: CharacterSet(charactersIn: "@/ "))
+    }
+
+    /// Lien du profil sur ce réseau.
+    func url(for handle: String) -> URL? {
+        let clean = cleanHandle(handle)
+        guard !clean.isEmpty else { return nil }
+        switch self {
+        case .instagram: return URL(string: "https://instagram.com/\(clean)")
+        case .tiktok: return URL(string: "https://tiktok.com/@\(clean)")
+        case .youtube: return URL(string: "https://youtube.com/@\(clean)")
+        case .x: return URL(string: "https://x.com/\(clean)")
         }
     }
 }
@@ -339,17 +391,6 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
         case .weekend: return "Ce week-end"
         case .onRequest: return "Sur demande"
         case .unavailable: return "Indispo"
-        }
-    }
-
-    /// Explication affichée dans le sélecteur du profil.
-    var explanation: String {
-        switch self {
-        case .tonight: return "Prêt à foncer ce soir, instrument sous le bras"
-        case .thisWeek: return "Dispo dans les prochains jours"
-        case .weekend: return "Plutôt du vendredi au dimanche"
-        case .onRequest: return "Dispo avec un peu de préavis"
-        case .unavailable: return "Pas de dépannage en ce moment"
         }
     }
 
@@ -422,8 +463,11 @@ enum Level: String, Codable, CaseIterable, Identifiable, Comparable {
 
 // MARK: - Premium
 
-/// Plans d'abonnement Premium. L'annuel est l'offre mise en avant :
-/// CHF 59 au lieu de 82.80 (−29 %) pour maximiser la rétention.
+/// Plans d'abonnement Premium (v0.7). Stratégie : le mensuel sert d'ancre
+/// (CHF 9.90) pour pousser vers l'annuel CHF 79 (−33 %), qui maximise la
+/// rétention et le revenu par utilisateur. Un seul niveau Premium — deux
+/// périodicités : la simplicité convertit mieux qu'un menu de formules.
+/// Marge : ~90 % après commission Apple (calcul détaillé dans le README).
 enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     case annual
     case monthly
@@ -440,15 +484,15 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     /// Prix affiché en gros sur la carte du plan.
     var priceLine: String {
         switch self {
-        case .annual: return "CHF 59/an"
-        case .monthly: return "CHF 6.90/mois"
+        case .annual: return "CHF 79/an"
+        case .monthly: return "CHF 9.90/mois"
         }
     }
 
     /// Équivalent mensuel + argument, affiché sous le prix.
     var detailLine: String {
         switch self {
-        case .annual: return "soit CHF 4.90/mois · économise CHF 24"
+        case .annual: return "soit CHF 6.60/mois · économise CHF 40"
         case .monthly: return "sans engagement"
         }
     }
@@ -456,7 +500,7 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     /// Étiquette promo (bandeau sur la carte du plan).
     var promoTag: String? {
         switch self {
-        case .annual: return "MEILLEURE OFFRE · −29 %"
+        case .annual: return "MEILLEURE OFFRE · −33 %"
         case .monthly: return nil
         }
     }
@@ -655,9 +699,9 @@ struct Review: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey { case author, appreciation, comment }
 }
 
-// MARK: - Rateable (musiciens & groupes partagent notes + favoris)
+// MARK: - Rateable (appréciations)
 
-/// Toute entité pouvant recevoir des appréciations (musicien solo ou groupe).
+/// Entité pouvant recevoir des appréciations (musicien).
 protocol Rateable {
     var name: String { get }
     var reviews: [Review] { get }
@@ -692,10 +736,20 @@ struct Musician: Codable, Identifiable, Hashable {
     var reviews: [Review]
     /// Nom de l'asset photo de profil (photos libres de droit bundlées).
     var photo: String?
+    /// Pseudos réseaux sociaux (clé = SocialNetwork.rawValue).
+    var socials: [String: String]?
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
         case instruments, genres, level, bio, availability, repertoire, reviews, photo
+        case socials
+    }
+
+    /// Pseudo sur un réseau, s'il est renseigné.
+    func socialHandle(_ network: SocialNetwork) -> String? {
+        guard let handle = socials?[network.rawValue],
+              !handle.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return handle
     }
 
     var isAvailable: Bool { availability.isAvailable }
@@ -761,56 +815,55 @@ extension Musician {
     }
 }
 
-// MARK: - Groupe / formation
+// MARK: - Groupes (messagerie d'équipe — Premium)
 
-/// Un groupe de musique (formation, band) présent sur JamConnect. Comme les
-/// musiciens solo, un groupe a un niveau d'expérience et un système de notes.
-struct Band: Codable, Identifiable, Hashable {
+/// Un message dans un groupe.
+struct GroupMessage: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
-    var name: String
-    var neighborhood: String
-    var latitude: Double
-    var longitude: Double
-    var genres: [Genre]
-    /// Niveau d'expérience de la formation (comme pour les musiciens solo).
-    var level: Level
-    var bio: String
-    /// Statut de dispo pour jouer / répéter.
-    var availability: Availability
-    var memberCount: Int
-    /// Année de formation du groupe (optionnel).
-    var foundedYear: Int?
-    /// Instruments recherchés pour compléter le groupe (recrutement).
-    var lookingFor: [Instrument]
-    var repertoire: [String]
-    var reviews: [Review]
-    /// Nom de l'asset photo du groupe ; à défaut, pastille dégradée avec initiales.
-    var photo: String?
-
-    enum CodingKeys: String, CodingKey {
-        case name, neighborhood, latitude, longitude, genres, level, bio
-        case availability, memberCount, foundedYear, lookingFor, repertoire, reviews, photo
-    }
-
-    var isAvailable: Bool { availability.isAvailable }
-    var isRecruiting: Bool { !lookingFor.isEmpty }
-
-    var coordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-
-    var initials: String {
-        name.split(separator: " ").compactMap { $0.first.map(String.init) }.prefix(2).joined()
-    }
-
-    func distance(from origin: CLLocationCoordinate2D) -> Double {
-        let a = CLLocation(latitude: latitude, longitude: longitude)
-        let b = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
-        return a.distance(from: b) / 1000
-    }
+    var sender: String
+    var isFromMe: Bool
+    var text: String
+    var date: Date
 }
 
-extension Band: Rateable {}
+/// Une partition (ou tout document) partagée dans un groupe.
+struct GroupDoc: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    /// Fichier copié dans Documents (PDF, image…).
+    var fileName: String
+    var title: String
+    var addedBy: String
+    var date: Date
+}
+
+/// Une date de concert planifiée par le groupe. Reliée aux SOS : si un
+/// membre lâche, on publie un SOS pré-rempli depuis le concert.
+struct GroupConcert: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var title: String
+    var venue: String
+    var date: Date
+}
+
+/// Un groupe de discussion (Premium) : messages d'équipe, partitions
+/// partagées et agenda des concerts. Local pour l'instant — synchronisation
+/// serveur en phase 2b.
+struct GroupChat: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var name: String
+    var emoji: String = "🎶"
+    /// Membres (par nom, comme les favoris) — moi en plus, implicitement.
+    var memberNames: [String]
+    var messages: [GroupMessage] = []
+    var docs: [GroupDoc] = []
+    var concerts: [GroupConcert] = []
+
+    var lastMessage: GroupMessage? { messages.max(by: { $0.date < $1.date }) }
+    /// Concerts à venir, les plus proches d'abord.
+    var upcomingConcerts: [GroupConcert] {
+        concerts.filter { $0.date > Date() }.sorted { $0.date < $1.date }
+    }
+}
 
 // MARK: - Annonce SOS dépannage
 
@@ -904,6 +957,8 @@ struct MyProfile: Codable {
     var videoFileNames: [String]?
     /// Vidéos de démo datées — 1 en gratuit, 6 en Premium.
     var demoVideos: [DemoVideo]?
+    /// Pseudos réseaux sociaux (clé = SocialNetwork.rawValue).
+    var socials: [String: String]?
 
     /// Statut affiché aux autres, dérivé des dates.
     var availability: Availability { .derived(from: availableDates) }
@@ -918,6 +973,24 @@ struct MyProfile: Codable {
     }
     /// Identifiant @ de l'utilisateur (dérivé du nom).
     var handle: String { "@" + name.handleized }
+
+    /// Pseudo sur un réseau, s'il est renseigné.
+    func socialHandle(_ network: SocialNetwork) -> String? {
+        guard let handle = socials?[network.rawValue],
+              !handle.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return handle
+    }
+
+    mutating func setSocialHandle(_ handle: String, for network: SocialNetwork) {
+        var updated = socials ?? [:]
+        let clean = network.cleanHandle(handle)
+        if clean.isEmpty {
+            updated.removeValue(forKey: network.rawValue)
+        } else {
+            updated[network.rawValue] = clean
+        }
+        socials = updated
+    }
     /// Vidéos de démo — migre à la volée l'ancien format sans dates.
     var videos: [DemoVideo] {
         demoVideos ?? (videoFileNames ?? []).map { DemoVideo(fileName: $0, date: nil) }

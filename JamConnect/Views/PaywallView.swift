@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Paywall Premium, centré sur la promesse n°1 : ne jamais rater un cachet
-/// de dépannage. Annuel CHF 59 (−29 %) mis en avant, mensuel CHF 6.90.
+/// de dépannage. Annuel CHF 79 (−33 %) mis en avant, mensuel CHF 9.90 en
+/// ancre — calcul des coûts et de la marge dans le README.
 /// Paiement simulé dans la démo ; StoreKit / App Store en phase 2.
 struct PaywallView: View {
     @EnvironmentObject private var store: AppStore
@@ -21,12 +22,14 @@ struct PaywallView: View {
              highlight: true),
         Perk(icon: "arrow.up.circle.fill", title: "Profil en tête des recherches",
              text: "Quand un orga cherche en urgence, ton profil sort en premier."),
-        Perk(icon: "slider.horizontal.3", title: "Filtres avancés",
-             text: "Filtre par niveau, répertoire et type de dispo."),
+        Perk(icon: "person.3.fill", title: "Groupes illimités",
+             text: "Messages d'équipe, partitions partagées, agenda des concerts — et SOS pré-rempli si un membre lâche."),
+        Perk(icon: "video.fill", title: "6 vidéos de démo",
+             text: "Montre plusieurs styles — un seul extrait en gratuit."),
+        Perk(icon: "medal.fill", title: "Tri et niveau des musiciens",
+             text: "Les meilleurs profils en haut, leur niveau affiché."),
         Perk(icon: "eye.fill", title: "Qui a vu ton profil",
-             text: "Vois quels groupes et musiciens ont regardé ta vidéo."),
-        Perk(icon: "crown.fill", title: "Badge Premium",
-             text: "Le badge doré qui dit « fiable, dispo, pro ».")
+             text: "Vois quels groupes et musiciens ont regardé ta vidéo.")
     ]
 
     var body: some View {
@@ -86,7 +89,7 @@ struct PaywallView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(JC.gold)
             }
-            Text("Un seul concert dépanné (CHF 100–300) rembourse **largement ton année** d'abonnement.")
+            Text("Un seul concert dépanné (CHF 100–300) rembourse **ton année entière** d'abonnement — dès le premier cachet.")
                 .font(.footnote)
                 .foregroundStyle(.primary.opacity(0.9))
             Spacer(minLength: 0)
@@ -202,8 +205,8 @@ struct PaywallView: View {
                 .buttonStyle(PressableStyle())
 
                 Text(selectedPlan == .annual
-                     ? "7 jours offerts, puis CHF 59/an · annulable à tout moment"
-                     : "7 jours offerts, puis CHF 6.90/mois · annulable à tout moment")
+                     ? "7 jours offerts, puis CHF 79/an · annulable à tout moment"
+                     : "7 jours offerts, puis CHF 9.90/mois · annulable à tout moment")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

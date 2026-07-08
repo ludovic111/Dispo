@@ -82,10 +82,12 @@ final class SupabaseBackend: Sendable {
         var photoUrl: String?
         var isPremium: Bool
         var isAdmin: Bool
+        /// Pseudos réseaux sociaux (jsonb côté serveur).
+        var socials: [String: String]?
 
         enum CodingKeys: String, CodingKey {
             case id, name, age, neighborhood, latitude, longitude
-            case instruments, genres, level, bio, repertoire
+            case instruments, genres, level, bio, repertoire, socials
             case availableDates = "available_dates"
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
@@ -123,7 +125,8 @@ final class SupabaseBackend: Sendable {
                 availableDates: dates,
                 repertoire: repertoire,
                 reviews: reviews,
-                photo: photoUrl
+                photo: photoUrl,
+                socials: socials
             )
         }
     }
@@ -264,6 +267,7 @@ final class SupabaseBackend: Sendable {
             let level: String
             let bio: String
             let available_dates: [String]
+            let socials: [String: String]
             // Position par défaut : centre de Genève (vraie géoloc en phase 2b).
             let latitude: Double
             let longitude: Double
@@ -275,6 +279,7 @@ final class SupabaseBackend: Sendable {
             level: profile.level.rawValue,
             bio: profile.bio,
             available_dates: profile.availableDates.map { Self.dayFormatter.string(from: $0) },
+            socials: profile.socials ?? [:],
             latitude: AppStore.geneva.latitude,
             longitude: AppStore.geneva.longitude
         )

@@ -24,7 +24,6 @@ final class AppStore: ObservableObject {
     nonisolated static let geneva = CLLocationCoordinate2D(latitude: 46.2044, longitude: 6.1432)
 
     @Published var musicians: [Musician] = []
-    @Published var bands: [Band] = []
     @Published var events: [GigRequest] = []
     @Published var conversations: [Conversation] = []
     @Published var profile: MyProfile
@@ -51,6 +50,8 @@ final class AppStore: ObservableObject {
     private let notificationDelegate = NotificationDelegate()
     /// SOS déjà vus — pour ne notifier que les vraies nouveautés.
     private var seenGigIDs: Set<UUID> = []
+    /// Groupes (messagerie d'équipe Premium) — locaux, serveur en phase 2b.
+    @Published var groups: [GroupChat] = []
 
     // MARK: - Backend (mode live)
 
@@ -108,12 +109,12 @@ final class AppStore: ObservableObject {
     private static let followingKey = "jamconnect.following"
     private static let notificationsKey = "jamconnect.notifications"
     private static let seenGigsKey = "jamconnect.seenGigs"
+    private static let groupsKey = "jamconnect.groups"
 
     init() {
         backend = BackendConfig.load().map(SupabaseBackend.init)
         let seed = Self.loadSeed()
         musicians = seed.musicians
-        bands = seed.bands
 
         // Un concert passé n'a plus besoin de dépannage : on ne garde que l'avenir.
         let savedEvents: [GigRequest]? = Self.load(key: Self.eventsKey)
@@ -159,6 +160,9 @@ final class AppStore: ObservableObject {
         notificationsEnabled = UserDefaults.standard.bool(forKey: Self.notificationsKey)
         if let saved: Set<UUID> = Self.load(key: Self.seenGigsKey) {
             seenGigIDs = saved
+        }
+        if let saved: [GroupChat] = Self.load(key: Self.groupsKey) {
+            groups = saved
         }
         UNUserNotificationCenter.current().delegate = notificationDelegate
     }
@@ -258,7 +262,6 @@ final class AppStore: ObservableObject {
             conversations = c.sorted {
                 ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
-            bands = [] // les groupes ne font pas partie du mode live (résidu jam)
             backendError = nil
         } catch {
             backendError = tr("Connexion au serveur impossible — vérifie le réseau.")
@@ -286,7 +289,6 @@ final class AppStore: ObservableObject {
     private func reloadDemoData() {
         let seed = Self.loadSeed()
         musicians = seed.musicians
-        bands = seed.bands
         let savedEvents: [GigRequest]? = Self.load(key: Self.eventsKey)
         if let upcoming = savedEvents?.filter({ $0.date > Date() }), !upcoming.isEmpty {
             events = upcoming.sorted { $0.date < $1.date }
@@ -410,12 +412,10 @@ final class AppStore: ObservableObject {
 
     // MARK: - Social & Premium
 
-    /// Photo d'un musicien ou groupe seed par nom (avis, conversations).
+    /// Photo d'un musicien seed par nom (avis, conversations).
     func photo(forName name: String) -> String? {
         if let exact = musicians.first(where: { $0.name == name }) { return exact.photo }
-        if let musician = musicians.first(where: { $0.name.hasPrefix(name + " ") }) { return musician.photo }
-        if let band = bands.first(where: { $0.name == name }) { return band.photo }
-        return bands.first(where: { $0.name.hasPrefix(name + " ") })?.photo
+        return musicians.first(where: { $0.name.hasPrefix(name + " ") })?.photo
     }
 
     /// Favori (musicien ou groupe — géré par nom).
@@ -584,6 +584,98 @@ final class AppStore: ObservableObject {
                 return rank(a.musician, b.musician)
             }
     }
+
+    // MARK: - Groupes (Premium)
+
+    private func persistGroups() {
+        Self.save(groups, key: Self.groupsKey)
+    }
+
+    /// Crée un groupe — l'appelant vérifie le statut Premium (paywall sinon).
+    func createGroup(name: String, emoji: String, members: [String]) {
+        let group = GroupChat(name: name, emoji: emoji, memberNames: members)
+        groups.insert(group, at: 0)
+        persistGroups()
+    }
+
+    func deleteGroup(_ group: GroupChat) {
+        for doc in group.docs {
+            try? FileManager.default.removeItem(at: Self.mediaURL(for: doc.fileName))
+        }
+        groups.removeAll { $0.id == group.id }
+        persistGroups()
+    }
+
+    private func updateGroup(_ id: GroupChat.ID, _ transform: (inout GroupChat) -> Void) {
+        guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
+        transform(&groups[index])
+        persistGroups()
+    }
+
+    /// Envoie un message dans le groupe. En démo, un membre répond pour
+    /// rendre la conversation vivante (temps réel serveur en phase 2b).
+    func sendGroupMessage(_ text: String, in group: GroupChat) {
+        updateGroup(group.id) {
+            $0.messages.append(GroupMessage(sender: profile.name, isFromMe: true, text: text, date: Date()))
+        }
+        guard let replier = group.memberNames.randomElement() else { return }
+        let reply = Self.scriptedGroupReplies.randomElement() ?? "Ça marche !"
+        let groupID = group.id
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Double.random(in: 1.5...3)))
+            guard let self else { return }
+            withAnimation {
+                self.updateGroup(groupID) {
+                    $0.messages.append(GroupMessage(sender: replier, isFromMe: false, text: reply, date: Date()))
+                }
+            }
+        }
+    }
+
+    /// Ajoute une partition (fichier importé) au groupe.
+    func addDoc(from sourceURL: URL, title: String, to group: GroupChat) {
+        let ext = sourceURL.pathExtension.isEmpty ? "pdf" : sourceURL.pathExtension
+        let fileName = "group_doc_\(Int(Date().timeIntervalSince1970)).\(ext)"
+        // Fichier hors sandbox (Fichiers / iCloud) : accès sécurisé requis.
+        let secured = sourceURL.startAccessingSecurityScopedResource()
+        defer { if secured { sourceURL.stopAccessingSecurityScopedResource() } }
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
+            updateGroup(group.id) {
+                $0.docs.insert(
+                    GroupDoc(fileName: fileName, title: title, addedBy: profile.name, date: Date()),
+                    at: 0
+                )
+            }
+        } catch {
+            backendError = tr("Le document n'a pas pu être importé.")
+        }
+    }
+
+    func removeDoc(_ doc: GroupDoc, from group: GroupChat) {
+        try? FileManager.default.removeItem(at: Self.mediaURL(for: doc.fileName))
+        updateGroup(group.id) { $0.docs.removeAll { $0.id == doc.id } }
+    }
+
+    func addConcert(_ concert: GroupConcert, to group: GroupChat) {
+        updateGroup(group.id) {
+            $0.concerts.append(concert)
+            $0.concerts.sort { $0.date < $1.date }
+        }
+    }
+
+    func removeConcert(_ concert: GroupConcert, from group: GroupChat) {
+        updateGroup(group.id) { $0.concerts.removeAll { $0.id == concert.id } }
+    }
+
+    private static let scriptedGroupReplies: [String] = [
+        "Ça marche pour moi 👍",
+        "Reçu ! Je bosse la partition ce soir.",
+        "Parfait, je note la date.",
+        "On cale une répé avant ?",
+        "Top. Balance l'heure du soundcheck quand tu l'as.",
+        "Je peux amener la sono si besoin."
+    ]
 
     // MARK: - Médias du profil (photo + vidéos de démo)
 
@@ -924,14 +1016,15 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.premiumKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
         UserDefaults.standard.removeObject(forKey: Self.followingKey)
+        UserDefaults.standard.removeObject(forKey: Self.groupsKey)
         favorites = []
         following = []
+        groups = []
         myAppreciations = [:]
         isPremium = false
         premiumPlan = nil
         let seed = Self.loadSeed()
         musicians = seed.musicians
-        bands = seed.bands
         events = Self.projectedSeedEvents(seed.events).sorted { $0.date < $1.date }
         conversations = seed.conversations
         profile = Self.defaultProfile
@@ -966,25 +1059,24 @@ final class AppStore: ObservableObject {
 
     private struct Seed: Decodable {
         var musicians: [Musician]
-        var bands: [Band]?
         var events: [GigRequest]
         var conversations: [Conversation]
     }
 
-    private static func loadSeed() -> (musicians: [Musician], bands: [Band], events: [GigRequest], conversations: [Conversation]) {
+    private static func loadSeed() -> (musicians: [Musician], events: [GigRequest], conversations: [Conversation]) {
         guard let url = Bundle.main.url(forResource: "SeedData", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
             assertionFailure("SeedData.json introuvable dans le bundle")
-            return ([], [], [], [])
+            return ([], [], [])
         }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         do {
             let seed = try decoder.decode(Seed.self, from: data)
-            return (seed.musicians, seed.bands ?? [], seed.events, seed.conversations)
+            return (seed.musicians, seed.events, seed.conversations)
         } catch {
             assertionFailure("SeedData.json invalide : \(error)")
-            return ([], [], [], [])
+            return ([], [], [])
         }
     }
 

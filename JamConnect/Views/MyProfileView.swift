@@ -67,7 +67,8 @@ struct MyProfileView: View {
     @State private var playingVideo: PlayableVideo?
     @State private var importingVideo = false
     @State private var showPatchNotes = false
-    @State private var showCityPicker = false
+    @State private var showLanguageRegion = false
+    @State private var showFavorites = false
     /// Vidéo dont on est en train d'éditer la date.
     @State private var datingVideo: DemoVideo?
 
@@ -82,14 +83,11 @@ struct MyProfileView: View {
                         if store.isAdmin { adminCard }
                         availabilityCard
                         videosCard
+                        favoritesCard
                         viewersCard
                         if !store.showsPremium { premiumCard }
-                        if store.backend != nil { accountCard }
-                        notificationsCard
-                        languageCard
-                        appearanceCard
-                        patchNotesCard
-                        resetButton
+                        settingsCard
+                        footer
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
@@ -106,17 +104,11 @@ struct MyProfileView: View {
             .sheet(isPresented: $showPatchNotes) {
                 PatchNotesView()
             }
-            .sheet(isPresented: $showCityPicker) {
-                CityPickerSheet(
-                    country: store.profile.resolvedCountry,
-                    selected: store.profile.resolvedCountry.cities.first {
-                        $0.name == store.profile.resolvedCity
-                    }
-                ) { city in
-                    store.profile.city = city.name
-                    store.profile.postalCode = city.postalCode
-                    store.saveProfile()
-                }
+            .sheet(isPresented: $showLanguageRegion) {
+                LanguageRegionSheet()
+            }
+            .sheet(isPresented: $showFavorites) {
+                FavoritesSheet()
             }
             .sheet(item: $playingVideo) { video in
                 VideoPlayer(player: AVPlayer(url: video.url))
@@ -207,6 +199,7 @@ struct MyProfileView: View {
                     .font(.caption)
                     .opacity(0.92)
                     .padding(.top, 2)
+                    socialChips
                 }
             }
             .foregroundStyle(.white)
@@ -231,6 +224,213 @@ struct MyProfileView: View {
         let instruments = store.profile.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")
         let genres = store.profile.genres.map { store.tr($0.rawValue) }.joined(separator: ", ")
         return "\(instruments) · \(genres) · \(store.profile.resolvedCity)"
+    }
+
+    /// Liens réseaux sociaux du hero — cliquables.
+    @ViewBuilder
+    private var socialChips: some View {
+        let links: [(SocialNetwork, URL)] = SocialNetwork.allCases.compactMap { network in
+            guard let handle = store.profile.socialHandle(network),
+                  let url = network.url(for: handle) else { return nil }
+            return (network, url)
+        }
+        if !links.isEmpty {
+            HStack(spacing: 8) {
+                ForEach(links, id: \.0) { network, url in
+                    Link(destination: url) {
+                        Image(systemName: network.icon)
+                            .font(.caption.weight(.bold))
+                            .padding(8)
+                            .background(.white.opacity(0.18), in: Circle())
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Favoris
+
+    /// Mes musiciens favoris (cœurs) — accès rapide à leurs profils.
+    private var favoritesCard: some View {
+        Button { showFavorites = true } label: {
+            JCCard {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(JC.magenta.opacity(0.14))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(JC.magenta)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Mes favoris")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                        Text("\(store.favorites.count) musiciens sous le coude")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .buttonStyle(PressableStyle())
+    }
+
+    // MARK: - Réglages (regroupés)
+
+    /// Tous les réglages au même endroit : compte, notifications, langue &
+    /// région, apparence, nouveautés, réinitialisation.
+    private var settingsCard: some View {
+        JCCard(padding: 8) {
+            VStack(spacing: 0) {
+                if store.backend != nil {
+                    settingsRow(
+                        icon: store.isLive ? "checkmark.icloud.fill" : "icloud",
+                        color: store.isLive ? .green : JC.violet,
+                        title: store.isLive ? Text("Mode live") : Text("Rejoindre le réseau"),
+                        detail: store.isLive ? Text(verbatim: store.liveEmail ?? "") : nil
+                    ) { showAccount = true }
+                    Divider().padding(.leading, 52)
+                }
+
+                // Notifications — l'interrupteur reste inline.
+                HStack(spacing: 12) {
+                    settingsIcon("bell.badge.fill", JC.coral)
+                    Toggle(isOn: Binding(
+                        get: { store.notificationsEnabled },
+                        set: { enabled in Task { await store.setNotifications(enabled) } }
+                    )) {
+                        Text("Notifications")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .tint(JC.coral)
+                }
+                .padding(10)
+                if store.notificationsEnabled {
+                    Button {
+                        store.sendTestNotification()
+                    } label: {
+                        Label("Envoyer une notification de test", systemImage: "paperplane.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(JC.coral)
+                    }
+                    .buttonStyle(PressableStyle())
+                    .padding(.bottom, 10)
+                }
+                Divider().padding(.leading, 52)
+
+                settingsRow(
+                    icon: "globe",
+                    color: JC.violet,
+                    title: Text("Langue & région"),
+                    detail: Text(verbatim: "\(store.language.flag) \(store.profile.cityLabel)")
+                ) { showLanguageRegion = true }
+                Divider().padding(.leading, 52)
+
+                // Apparence — menu direct, pas d'écran intermédiaire.
+                HStack(spacing: 12) {
+                    settingsIcon(store.theme.symbol, JC.gold)
+                    Text("Apparence")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer(minLength: 0)
+                    Menu {
+                        ForEach(AppTheme.allCases) { option in
+                            Button {
+                                withAnimation(.snappy) { store.setTheme(option) }
+                            } label: {
+                                if store.theme == option {
+                                    Label(LocalizedStringKey(option.label), systemImage: "checkmark")
+                                } else {
+                                    Text(LocalizedStringKey(option.label))
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(LocalizedStringKey(store.theme.label))
+                                .font(.subheadline.weight(.semibold))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(JC.gold)
+                    }
+                }
+                .padding(10)
+                Divider().padding(.leading, 52)
+
+                settingsRow(
+                    icon: "sparkles",
+                    color: JC.violet,
+                    title: Text("Nouveautés"),
+                    detail: Text(verbatim: "v\(Bundle.main.appVersion) · ") + Text("BÊTA")
+                ) { showPatchNotes = true }
+                Divider().padding(.leading, 52)
+
+                settingsRow(
+                    icon: "arrow.counterclockwise",
+                    color: .red,
+                    title: Text("Réinitialiser la démo"),
+                    detail: nil,
+                    destructive: true
+                ) { showResetConfirmation = true }
+            }
+        }
+    }
+
+    private func settingsIcon(_ symbol: String, _ color: Color) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(color.opacity(0.14))
+                .frame(width: 34, height: 34)
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+        }
+    }
+
+    private func settingsRow(
+        icon: String,
+        color: Color,
+        title: Text,
+        detail: Text?,
+        destructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                settingsIcon(icon, color)
+                title
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(destructive ? Color.red : Color.primary)
+                Spacer(minLength: 0)
+                if let detail {
+                    detail
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+    }
+
+    private var footer: some View {
+        Text("Dispo v\(Bundle.main.appVersion) (bêta) — données de démo réinitialisables.")
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .padding(.top, 4)
     }
 
     /// Vidéos de démo : 1 en gratuit, jusqu'à 6 en Premium. C'est la vitrine
@@ -336,192 +536,6 @@ struct MyProfileView: View {
 
     /// Notifications locales : nouveaux SOS compatibles et messages reçus.
     /// Les alertes serveur (push APNs) arrivent avec TestFlight en phase 2b.
-    private var notificationsCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 10) {
-                Toggle(isOn: Binding(
-                    get: { store.notificationsEnabled },
-                    set: { enabled in Task { await store.setNotifications(enabled) } }
-                )) {
-                    Label("Notifications", systemImage: "bell.badge.fill")
-                        .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(JC.coral)
-                }
-                .tint(JC.coral)
-                Text("Nouveaux SOS compatibles avec tes instruments et messages reçus.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                if store.notificationsEnabled {
-                    Button {
-                        store.sendTestNotification()
-                    } label: {
-                        Label("Envoyer une notification de test", systemImage: "paperplane.fill")
-                            .font(.caption.weight(.bold))
-                    }
-                    .buttonStyle(PressableStyle())
-                } else {
-                    Text("Si l'interrupteur retombe, autorise Dispo dans Réglages > Notifications.")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-    }
-
-    /// Historique des mises à jour (bêta) — le numéro de version est cliquable.
-    private var patchNotesCard: some View {
-        Button { showPatchNotes = true } label: {
-            JCCard {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(JC.violet.opacity(0.14))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(JC.violet)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text("Nouveautés")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(.primary)
-                            TagView(text: "BÊTA", color: JC.coral)
-                        }
-                        Text(verbatim: "v\(Bundle.main.appVersion)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .buttonStyle(PressableStyle())
-    }
-
-    /// Langue de l'app + pays et ville — modifiables à tout moment.
-    private var languageCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Langue & région", systemImage: "globe")
-                    .font(.subheadline.weight(.heavy))
-
-                HStack {
-                    Text("Langue")
-                        .font(.subheadline)
-                    Spacer()
-                    Menu {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Button {
-                                store.setLanguage(lang)
-                            } label: {
-                                if store.language == lang {
-                                    Label("\(lang.flag) \(lang.nativeName)", systemImage: "checkmark")
-                                } else {
-                                    Text("\(lang.flag) \(lang.nativeName)")
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text("\(store.language.flag) \(store.language.nativeName)")
-                                .font(.subheadline.weight(.semibold))
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2.weight(.bold))
-                        }
-                        .foregroundStyle(JC.violet)
-                    }
-                }
-
-                Divider()
-
-                HStack {
-                    Text("Pays")
-                        .font(.subheadline)
-                    Spacer()
-                    Picker("Pays", selection: Binding(
-                        get: { store.profile.resolvedCountry },
-                        set: { newCountry in
-                            store.profile.country = newCountry
-                            // La ville doit appartenir au pays choisi.
-                            if !newCountry.cities.contains(where: { $0.name == store.profile.resolvedCity }) {
-                                store.profile.city = newCountry.cities[0].name
-                                store.profile.postalCode = newCountry.cities[0].postalCode
-                            }
-                            store.saveProfile()
-                        }
-                    )) {
-                        ForEach(Country.allCases) { country in
-                            Text("\(country.flag) \(store.tr(country.nameKey))").tag(country)
-                        }
-                    }
-                    .tint(JC.violet)
-                }
-
-                // Ville précise (avec code postal) — recherche dans la liste.
-                Button { showCityPicker = true } label: {
-                    HStack {
-                        Text("Ville / région")
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(store.profile.cityLabel)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(JC.violet)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(JC.violet)
-                    }
-                }
-                .buttonStyle(PressableStyle())
-            }
-        }
-    }
-
-    private var appearanceCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Apparence", systemImage: "circle.lefthalf.filled")
-                    .font(.subheadline.weight(.heavy))
-                HStack(spacing: 8) {
-                    ForEach(AppTheme.allCases) { option in
-                        themeChip(option)
-                    }
-                }
-            }
-        }
-    }
-
-    private func themeChip(_ option: AppTheme) -> some View {
-        let isSelected = store.theme == option
-        return Button {
-            withAnimation(.snappy) { store.setTheme(option) }
-        } label: {
-            VStack(spacing: 6) {
-                Image(systemName: option.symbol)
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? JC.violet : Color.secondary)
-                Text(LocalizedStringKey(option.label))
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                isSelected ? JC.violet.opacity(0.14) : JC.inset,
-                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? JC.violet.opacity(0.5) : JC.cardStroke, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressableStyle())
-    }
-
     /// Sélection des dates de dispo dans un vrai calendrier. Le statut
     /// affiché aux autres (🚨 Ce soir, 📅 Cette semaine…) en est dérivé.
     private var dateSelection: Binding<Set<DateComponents>> {
@@ -620,39 +634,6 @@ struct MyProfileView: View {
     }
 
     /// Compte réseau (mode live) — connexion au backend Supabase.
-    private var accountCard: some View {
-        Button { showAccount = true } label: {
-            JCCard {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill((store.isLive ? Color.green : JC.violet).opacity(0.14))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: store.isLive ? "checkmark.icloud.fill" : "icloud")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(store.isLive ? .green : JC.violet)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(store.isLive ? "Mode live" : "Rejoindre le réseau")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                        Text(store.isLive
-                             ? (store.liveEmail ?? "Connecté au serveur")
-                             : "Profil visible + annonces et messages en temps réel")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .buttonStyle(PressableStyle())
-    }
-
     /// « Qui a vu ton profil » — teaser Premium : avatars floutés pour les
     /// non-abonnés, noms révélés pour les membres Premium.
     private var viewersCard: some View {
@@ -698,22 +679,10 @@ struct MyProfileView: View {
             title: store.showsPremium ? "Premium actif" : "Ne rate plus un cachet",
             subtitle: store.showsPremium
                 ? "Alertes dépannage prioritaires · gérer mon abonnement"
-                : "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois"
+                : "Alertes en priorité, groupes, 6 vidéos · dès CHF 6.60/mois"
         ) { store.showPaywall = true }
     }
 
-    private var resetButton: some View {
-        VStack(spacing: 6) {
-            Button("Réinitialiser la démo", role: .destructive) {
-                showResetConfirmation = true
-            }
-            .font(.caption)
-            Text("Dispo v\(Bundle.main.appVersion) (bêta) — données de démo réinitialisables.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.top, 6)
-    }
 }
 
 // MARK: - Date d'une vidéo de démo
@@ -854,6 +823,34 @@ struct EditProfileSheet: View {
                     ), axis: .vertical)
                     .lineLimit(2...5)
                 }
+
+                Section {
+                    ForEach(SocialNetwork.allCases) { network in
+                        HStack(spacing: 10) {
+                            Image(systemName: network.icon)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(JC.violet)
+                                .frame(width: 24)
+                            Text(verbatim: network.label)
+                                .font(.subheadline)
+                            TextField("pseudo", text: Binding(
+                                get: { store.profile.socialHandle(network) ?? "" },
+                                set: { newValue in
+                                    store.profile.setSocialHandle(newValue, for: network)
+                                    store.saveProfile()
+                                }
+                            ))
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Réseaux sociaux")
+                } footer: {
+                    Text("Ton pseudo suffit (sans @) — il devient un lien cliquable sur ton profil.")
+                }
             }
             .scrollContentBackground(.hidden)
             .background(JC.bg)
@@ -876,6 +873,137 @@ struct EditProfileSheet: View {
                 if isOn {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(JC.coral)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Langue & région (réglages)
+
+/// Réglage de la langue de l'interface + pays et ville (code postal).
+struct LanguageRegionSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var showCityPicker = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Langue") {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Button {
+                            store.setLanguage(lang)
+                        } label: {
+                            HStack {
+                                Text(verbatim: "\(lang.flag) \(lang.nativeName)")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if store.language == lang {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(JC.coral)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section("Ville / région") {
+                    Picker("Pays", selection: Binding(
+                        get: { store.profile.resolvedCountry },
+                        set: { newCountry in
+                            store.profile.country = newCountry
+                            if !newCountry.cities.contains(where: { $0.name == store.profile.resolvedCity }) {
+                                store.profile.city = newCountry.cities[0].name
+                                store.profile.postalCode = newCountry.cities[0].postalCode
+                            }
+                            store.saveProfile()
+                        }
+                    )) {
+                        ForEach(Country.allCases) { country in
+                            Text(verbatim: "\(country.flag) \(store.tr(country.nameKey))").tag(country)
+                        }
+                    }
+                    Button {
+                        showCityPicker = true
+                    } label: {
+                        HStack {
+                            Text("Ville / région")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(store.profile.cityLabel)
+                                .foregroundStyle(JC.violet)
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Langue & région")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+            .sheet(isPresented: $showCityPicker) {
+                CityPickerSheet(
+                    country: store.profile.resolvedCountry,
+                    selected: store.profile.resolvedCountry.cities.first {
+                        $0.name == store.profile.resolvedCity
+                    }
+                ) { city in
+                    store.profile.city = city.name
+                    store.profile.postalCode = city.postalCode
+                    store.saveProfile()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Mes favoris
+
+/// Liste des musiciens mis en favori (cœur) — accès direct aux profils.
+struct FavoritesSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+
+    private var favoriteMusicians: [Musician] {
+        store.musicians
+            .filter { store.favorites.contains($0.name) }
+            .sorted { store.rank($0, $1) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                ScrollView {
+                    VStack(spacing: 12) {
+                        if favoriteMusicians.isEmpty {
+                            JCEmptyState(
+                                icon: "heart",
+                                title: "Aucun favori",
+                                message: "Mets un cœur aux musiciens fiables pour les retrouver ici en un tap."
+                            )
+                        }
+                        ForEach(favoriteMusicians) { musician in
+                            NavigationLink(value: musician) {
+                                SearchMusicianRow(musician: musician)
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                    .padding(18)
+                }
+            }
+            .navigationTitle("Mes favoris")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
                 }
             }
         }

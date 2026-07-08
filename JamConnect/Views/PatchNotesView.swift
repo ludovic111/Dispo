@@ -11,6 +11,17 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.7.0",
+            title: "Groupes, réseaux sociaux & grand ménage",
+            points: [
+                "Groupes (Premium) : messages d'équipe, partitions partagées, agenda des concerts",
+                "Un membre lâche ? SOS pré-rempli depuis le concert du groupe",
+                "Tes liens Instagram, TikTok, YouTube et X cliquables sur ton profil",
+                "Nouvel écran profil : réglages regroupés et liste de favoris",
+                "Nouveaux prix Premium : CHF 9.90/mois ou CHF 79/an (−33 %)"
+            ]
+        ),
+        PatchNote(
             version: "0.6.1",
             title: "Recherche plus futée",
             points: [

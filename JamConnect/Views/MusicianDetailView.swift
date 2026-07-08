@@ -247,7 +247,38 @@ struct MusicianDetailView: View {
                 Text(musician.bio)
                     .font(.subheadline)
                     .foregroundStyle(.primary.opacity(0.9))
+                socialLinksRow(for: musician)
             }
+        }
+    }
+
+    /// Liens réseaux sociaux cliquables (si le musicien les a renseignés).
+    @ViewBuilder
+    private func socialLinksRow(for musician: Musician) -> some View {
+        let links: [(SocialNetwork, URL)] = SocialNetwork.allCases.compactMap { network in
+            guard let handle = musician.socialHandle(network),
+                  let url = network.url(for: handle) else { return nil }
+            return (network, url)
+        }
+        if !links.isEmpty {
+            HStack(spacing: 8) {
+                ForEach(links, id: \.0) { network, url in
+                    Link(destination: url) {
+                        HStack(spacing: 5) {
+                            Image(systemName: network.icon)
+                                .font(.caption.weight(.bold))
+                            Text(verbatim: network.label)
+                                .font(.caption.weight(.semibold))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(JC.violet.opacity(0.12), in: Capsule())
+                        .foregroundStyle(JC.violet)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 4)
         }
     }
 
