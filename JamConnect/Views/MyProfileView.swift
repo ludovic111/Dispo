@@ -8,11 +8,12 @@ struct MyProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                JC.bg.ignoresSafeArea()
+                JCBackground()
 
                 ScrollView {
                     VStack(spacing: 16) {
                         heroCard
+                        appearanceCard
                         availabilityCard
                         premiumCard
                         videoCard
@@ -40,7 +41,7 @@ struct MyProfileView: View {
 
     private var heroCard: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 28)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(JC.hero)
             VStack(spacing: 12) {
                 ZStack(alignment: .bottomTrailing) {
@@ -97,6 +98,47 @@ struct MyProfileView: View {
             Text(label).font(.caption2).opacity(0.85)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var appearanceCard: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Apparence", systemImage: "circle.lefthalf.filled")
+                    .font(.subheadline.weight(.heavy))
+                HStack(spacing: 8) {
+                    ForEach(AppTheme.allCases) { option in
+                        themeChip(option)
+                    }
+                }
+            }
+        }
+    }
+
+    private func themeChip(_ option: AppTheme) -> some View {
+        let isSelected = store.theme == option
+        return Button {
+            withAnimation(.snappy) { store.setTheme(option) }
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: option.symbol)
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? JC.violet : Color.secondary)
+                Text(option.label)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                isSelected ? JC.violet.opacity(0.14) : JC.inset,
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? JC.violet.opacity(0.5) : JC.cardStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableStyle())
     }
 
     private var availabilityCard: some View {
@@ -172,9 +214,9 @@ struct MyProfileView: View {
             }
             .foregroundStyle(.black)
             .padding(16)
-            .background(JC.premium, in: RoundedRectangle(cornerRadius: 20))
+            .background(JC.premium, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
     }
 
     private var videoCard: some View {
@@ -206,11 +248,11 @@ struct MyProfileView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(JC.card, in: RoundedRectangle(cornerRadius: 18))
-                .overlay(RoundedRectangle(cornerRadius: 18).stroke(JC.cardStroke, lineWidth: 1))
-                .foregroundStyle(.white)
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
+                .foregroundStyle(.primary)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
     }
 
     private var resetButton: some View {

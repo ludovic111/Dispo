@@ -6,7 +6,7 @@ struct ChatListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                JC.bg.ignoresSafeArea()
+                JCBackground()
 
                 ScrollView {
                     VStack(spacing: 14) {
@@ -64,7 +64,7 @@ struct ChatListView: View {
                                     }
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressableStyle())
                         }
                     }
                     .padding(.horizontal, 18)

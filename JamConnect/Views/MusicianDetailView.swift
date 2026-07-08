@@ -12,7 +12,7 @@ struct MusicianDetailView: View {
 
     var body: some View {
         ZStack {
-            JC.bg.ignoresSafeArea()
+            JCBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -39,12 +39,12 @@ struct MusicianDetailView: View {
                 } label: {
                     Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(store.isFavorite(musician) ? JC.magenta : .white)
+                        .foregroundStyle(store.isFavorite(musician) ? JC.magenta : Color.primary)
                         .padding(15)
                         .background(JC.card, in: Circle())
                         .overlay(Circle().stroke(JC.cardStroke, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableStyle())
 
                 Button {
                     openedConversation = store.conversation(with: musician)
@@ -56,10 +56,10 @@ struct MusicianDetailView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 15)
-                    .background(JC.hero, in: RoundedRectangle(cornerRadius: 18))
+                    .background(JC.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .foregroundStyle(.white)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableStyle())
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
@@ -221,24 +221,24 @@ struct MusicianDetailView: View {
                 } else {
                     Image(systemName: "music.note")
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(isSelected ? JC.violet : .white)
+                        .foregroundStyle(isSelected ? JC.violet : Color.primary)
                 }
                 Text(isGolden ? "J'ai adoré" : "J'ai aimé")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(isSelected ? accent : .primary)
+                    .foregroundStyle(isSelected ? accent : Color.primary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
-                isSelected ? accent.opacity(0.16) : JC.bg.opacity(0.6),
-                in: RoundedRectangle(cornerRadius: 16)
+                isSelected ? accent.opacity(0.16) : JC.inset,
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(isSelected ? accent.opacity(0.6) : JC.cardStroke, lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
     }
 
     private var reviewsCard: some View {
@@ -274,7 +274,7 @@ struct MusicianDetailView: View {
                         }
                         .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(JC.bg.opacity(0.6), in: RoundedRectangle(cornerRadius: 14))
+                        .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                 }
             }

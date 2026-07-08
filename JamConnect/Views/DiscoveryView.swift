@@ -70,7 +70,7 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                JC.bg.ignoresSafeArea()
+                JCBackground()
 
                 ScrollView {
                     VStack(spacing: 22) {
@@ -238,9 +238,9 @@ struct HomeView: View {
             }
             .foregroundStyle(.black)
             .padding(16)
-            .background(JC.premium, in: RoundedRectangle(cornerRadius: 20))
+            .background(JC.premium, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
     }
 
     private var feed: some View {
@@ -265,7 +265,7 @@ struct HomeView: View {
                 NavigationLink(value: musician) {
                     MusicianCard(musician: musician)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableStyle())
             }
         }
     }
@@ -369,8 +369,9 @@ struct MusicianCard: View {
             .padding(14)
             .background(JC.card)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(JC.cardStroke, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
+        .shadow(color: JC.cardShadow, radius: 16, x: 0, y: 10)
     }
 }
 

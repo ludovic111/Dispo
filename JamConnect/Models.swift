@@ -205,6 +205,33 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Thème (clair / sombre)
+
+/// Préférence d'apparence de l'utilisateur.
+enum AppTheme: String, Codable, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .system: return "Système"
+        case .light: return "Clair"
+        case .dark: return "Sombre"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .system: return "circle.lefthalf.filled"
+        case .light: return "sun.max.fill"
+        case .dark: return "moon.stars.fill"
+        }
+    }
+}
+
 // MARK: - Appréciation post-concert
 
 /// Système d'appréciation positif : soit une note de musique (« j'ai aimé »),

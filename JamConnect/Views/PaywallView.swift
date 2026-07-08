@@ -31,7 +31,7 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack {
-            JC.bg.ignoresSafeArea()
+            JCBackground()
 
             ScrollView {
                 VStack(spacing: 22) {
@@ -50,7 +50,7 @@ struct PaywallView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
             }
             .padding()
         }
@@ -154,13 +154,13 @@ struct PaywallView: View {
             .padding(.vertical, 14)
             .padding(.horizontal, 8)
             .background(isSelected ? JC.gold.opacity(0.14) : JC.card,
-                        in: RoundedRectangle(cornerRadius: 18))
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 18)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(isSelected ? JC.gold : JC.cardStroke, lineWidth: isSelected ? 2 : 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
     }
 
     @ViewBuilder
@@ -190,10 +190,10 @@ struct PaywallView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(JC.premium, in: RoundedRectangle(cornerRadius: 18))
+                        .background(JC.premium, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .foregroundStyle(.black)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableStyle())
 
                 Text(selectedPlan == .annual
                      ? "7 jours offerts, puis CHF 39/an · annulable à tout moment"

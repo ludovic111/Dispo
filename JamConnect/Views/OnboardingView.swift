@@ -35,7 +35,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 0) {
                 HStack {
-                    LogoView(markSize: 34)
+                    LogoView(markSize: 34, wordmarkColor: .white)
                         .padding(.leading)
                     Spacer()
                     if page < pages.count - 1 {
@@ -87,9 +87,10 @@ struct OnboardingView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 18))
+                        .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .foregroundStyle(.black)
                 }
+                .buttonStyle(PressableStyle())
                 .padding(.horizontal, 28)
                 .padding(.bottom, 30)
             }

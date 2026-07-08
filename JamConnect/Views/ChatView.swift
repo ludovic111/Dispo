@@ -11,7 +11,7 @@ struct ChatView: View {
 
     var body: some View {
         ZStack {
-            JC.bg.ignoresSafeArea()
+            JCBackground()
 
             VStack(spacing: 0) {
                 ScrollViewReader { proxy in
@@ -89,9 +89,9 @@ struct MessageBubble: View {
                         message.isFromMe
                             ? AnyShapeStyle(JC.hero)
                             : AnyShapeStyle(JC.card),
-                        in: RoundedRectangle(cornerRadius: 19)
+                        in: RoundedRectangle(cornerRadius: 19, style: .continuous)
                     )
-                    .foregroundStyle(.white)
+                    .foregroundStyle(message.isFromMe ? Color.white : Color.primary)
                 Text(message.date.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)

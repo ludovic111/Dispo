@@ -27,6 +27,8 @@ final class AppStore: ObservableObject {
     @Published var premiumPlan: PremiumPlan?
     @Published var showPaywall: Bool = false
     @Published var hasOnboarded: Bool = false
+    /// Préférence d'apparence (système / clair / sombre).
+    @Published var theme: AppTheme = .system
 
     private static let eventsKey = "jamconnect.events"
     private static let conversationsKey = "jamconnect.conversations"
@@ -36,6 +38,7 @@ final class AppStore: ObservableObject {
     private static let premiumKey = "jamconnect.premium"
     private static let premiumPlanKey = "jamconnect.premiumPlan"
     private static let onboardedKey = "jamconnect.onboarded"
+    private static let themeKey = "jamconnect.theme"
 
     init() {
         let seed = Self.loadSeed()
@@ -81,6 +84,13 @@ final class AppStore: ObservableObject {
         isPremium = UserDefaults.standard.bool(forKey: Self.premiumKey)
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
+        theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .system
+    }
+
+    /// Change et persiste la préférence d'apparence.
+    func setTheme(_ newTheme: AppTheme) {
+        theme = newTheme
+        UserDefaults.standard.set(newTheme.rawValue, forKey: Self.themeKey)
     }
 
     // MARK: - Social & Premium

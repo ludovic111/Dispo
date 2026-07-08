@@ -7,7 +7,7 @@ struct EventsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                JC.bg.ignoresSafeArea()
+                JCBackground()
 
                 ScrollView {
                     VStack(spacing: 16) {
@@ -29,7 +29,7 @@ struct EventsView: View {
                             NavigationLink(value: event) {
                                 EventCard(event: event)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressableStyle())
                         }
                     }
                     .padding(.horizontal, 18)
@@ -64,9 +64,9 @@ struct EventsView: View {
             }
             .foregroundStyle(.white)
             .padding(16)
-            .background(JC.hero, in: RoundedRectangle(cornerRadius: 20))
+            .background(JC.hero, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle())
     }
 }
 
@@ -122,8 +122,9 @@ struct EventCard: View {
             .background(JC.card)
         }
         .fixedSize(horizontal: false, vertical: true)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
+        .shadow(color: JC.cardShadow, radius: 14, x: 0, y: 8)
     }
 }
 
@@ -138,7 +139,7 @@ struct EventDetailView: View {
     var body: some View {
         if let event {
             ZStack {
-                JC.bg.ignoresSafeArea()
+                JCBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
@@ -218,11 +219,11 @@ struct EventDetailView: View {
                             event.applied
                                 ? AnyShapeStyle(JC.card)
                                 : AnyShapeStyle(JC.hero),
-                            in: RoundedRectangle(cornerRadius: 18)
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                         )
-                        .foregroundStyle(.white)
+                        .foregroundStyle(event.applied ? Color.primary : Color.white)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableStyle())
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial)
