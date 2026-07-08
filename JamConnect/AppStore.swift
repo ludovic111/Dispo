@@ -622,24 +622,128 @@ final class AppStore: ObservableObject {
         saveProfile()
     }
 
-    /// Ajoute une vidéo de démo (données déjà copiées depuis la photothèque).
-    /// Respecte la limite gratuit / Premium — vérifier `canAddVideo` avant.
+    /// Ajoute une vidéo de démo (données déjà copiées depuis la photothèque),
+    /// datée du jour par défaut. Vérifier `canAddVideo` avant.
     func addDemoVideo(from sourceURL: URL) {
         guard canAddVideo else { return }
         let fileName = "demo_video_\(Int(Date().timeIntervalSince1970)).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)"
         do {
             try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
-            profile.videoFileNames = profile.videos + [fileName]
-            saveProfile()
+            saveVideos(profile.videos + [DemoVideo(fileName: fileName, date: Date())])
         } catch {
             backendError = tr("La vidéo n'a pas pu être enregistrée.")
         }
     }
 
-    func removeDemoVideo(_ fileName: String) {
-        try? FileManager.default.removeItem(at: Self.mediaURL(for: fileName))
-        profile.videoFileNames = profile.videos.filter { $0 != fileName }
+    /// Change la date d'une vidéo (date du concert / de l'enregistrement).
+    func setVideoDate(_ date: Date?, for video: DemoVideo) {
+        saveVideos(profile.videos.map {
+            $0.id == video.id ? DemoVideo(id: $0.id, fileName: $0.fileName, date: date) : $0
+        })
+    }
+
+    func removeDemoVideo(_ video: DemoVideo) {
+        try? FileManager.default.removeItem(at: Self.mediaURL(for: video.fileName))
+        saveVideos(profile.videos.filter { $0.id != video.id })
+    }
+
+    /// Écrit la liste au nouveau format daté (migre l'ancien au passage).
+    private func saveVideos(_ videos: [DemoVideo]) {
+        profile.demoVideos = videos
+        profile.videoFileNames = nil
         saveProfile()
+    }
+
+    // MARK: - Abonnés d'un musicien
+
+    /// Nombre d'abonnés affiché pour un musicien : base stable de démo
+    /// (le vrai compteur viendra du graphe serveur en phase 2b) + moi si
+    /// je le suis.
+    func followerCount(of musician: Musician) -> Int {
+        40 + abs(musician.name.stableHash) % 320 + (isFollowing(musician) ? 1 : 0)
+    }
+
+    // MARK: - Recherche universelle
+
+    /// Résultats de la recherche libre (musiciens + annonces SOS).
+    struct SearchResults {
+        var musicians: [Musician] = []
+        var gigs: [GigRequest] = []
+        var isEmpty: Bool { musicians.isEmpty && gigs.isEmpty }
+    }
+
+    /// Mots vides ignorés — « cherche un pianiste sur Carouge » marche.
+    private static let searchStopWords: Set<String> = [
+        "un", "une", "le", "la", "les", "de", "du", "des", "d", "l",
+        "a", "à", "au", "aux", "en", "sur", "et", "ou", "pour", "avec",
+        "qui", "je", "cherche", "recherche", "trouve", "besoin", "veux"
+    ]
+
+    /// Sans accents ni majuscules — « anieres » trouve « Anières ».
+    nonisolated private static func normalized(_ string: String) -> String {
+        string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr"))
+            .lowercased()
+    }
+
+    /// Recherche libre : chaque mot de la requête doit matcher (préfixe)
+    /// un mot du profil / de l'annonce. « @marco », « pianiste Carouge »,
+    /// « salsa ce soir », « 1227 »…
+    func search(_ query: String) -> SearchResults {
+        let tokens = Self.normalized(query)
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "@" })
+            .map { String($0).replacingOccurrences(of: "@", with: "") }
+            .filter { !$0.isEmpty && !Self.searchStopWords.contains($0) }
+        guard !tokens.isEmpty else { return SearchResults() }
+
+        let musicians = self.musicians
+            .filter { matches(tokens, in: haystack(for: $0)) }
+            .sorted { rank($0, $1) }
+        let gigs = events
+            .filter { matches(tokens, in: haystack(for: $0)) }
+            .sorted { $0.date < $1.date }
+        return SearchResults(musicians: musicians, gigs: gigs)
+    }
+
+    /// true si chaque mot de la requête matche un mot du texte (préfixe).
+    private func matches(_ tokens: [String], in words: [String]) -> Bool {
+        tokens.allSatisfy { token in
+            words.contains { word in
+                word.hasPrefix(token) || (token.count >= 4 && token.hasPrefix(word) && word.count >= 4)
+            }
+        }
+    }
+
+    /// Tout ce qui décrit un musicien, en mots normalisés.
+    private func haystack(for musician: Musician) -> [String] {
+        var parts: [String] = [musician.name, musician.name.handleized, musician.neighborhood]
+        for instrument in musician.instruments {
+            parts.append(instrument.rawValue)
+            parts.append(tr(instrument.rawValue))
+            parts.append(contentsOf: instrument.searchAliases)
+        }
+        for genre in musician.genres {
+            parts.append(genre.rawValue)
+            parts.append(tr(genre.rawValue))
+            parts.append(genre.family.rawValue)
+        }
+        parts.append(musician.level.rawValue)
+        parts.append(musician.availability.badgeLabel)
+        return parts.flatMap { Self.normalized($0).split(separator: " ").map(String.init) }
+            .flatMap { $0.split(separator: ".").map(String.init) }
+    }
+
+    /// Tout ce qui décrit une annonce SOS, en mots normalisés.
+    private func haystack(for gig: GigRequest) -> [String] {
+        var parts: [String] = [gig.title, gig.place, gig.neighborhood, gig.hostName, "sos"]
+        for instrument in gig.wantedInstruments {
+            parts.append(instrument.rawValue)
+            parts.append(tr(instrument.rawValue))
+            parts.append(contentsOf: instrument.searchAliases)
+        }
+        parts.append(gig.genre.rawValue)
+        parts.append(tr(gig.genre.rawValue))
+        parts.append(gig.genre.family.rawValue)
+        return parts.flatMap { Self.normalized($0).split(separator: " ").map(String.init) }
     }
 
     // MARK: - Actions

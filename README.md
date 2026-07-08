@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.5.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.6.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|
@@ -89,11 +89,12 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 - **Lieux précis** — **14 pays** (CH, FR, US, DE, IT, ES, PT, BE, NL, LU, AT, GB, IE, CA) et **300+ villes avec code postal** (`Locations.swift`), sélecteur avec recherche par nom ou code postal.
 - **42 genres musicaux** en 9 familles (jazz, latin & world, classique, rock & pop, blues & country, soul & funk, hip-hop & urbain, électronique, folk) avec sous-genres — et **33 instruments** triés par catégories (claviers, cordes, vents & cuivres, batterie & percussions, voix, DJ & électro).
 - **7 langues** — français (source), anglais, espagnol, allemand, italien, mandarin, japonais. ~330 chaînes dans `Localizable.xcstrings`, bascule immédiate depuis *Profil → Langue & région*.
+- **Recherche universelle** — barre de recherche sur l'accueil : requêtes libres (« pianiste Carouge », « salsa ce soir », un nom, un @pseudo, un code postal), normalisation des accents, alias par instrument (« batteur » → Batterie), résultats musiciens + annonces SOS. Chaque musicien a un **@pseudo** dérivé de son nom, et son **nombre d'abonnés** s'affiche sur son profil et dans la recherche.
 - **Accueil** — rangée « Dispo ce soir » (les mobilisables immédiatement), rangée « Dispo prochainement », feed de cartes avec couverture vidéo, cœur favori, notes de musique reçues, pilules Filtres/Carte, bascule carte MapKit centrée sur Genève.
 - **SOS dépannage** — tableau d'annonces : un concert cherche un musicien (date, lieu, instrument, cachet CHF — cachet et description optionnels). Publication de son propre SOS en 30 secondes, bouton « Je peux dépanner ! ». Les annonces passées sont purgées automatiquement.
 - **Matching SOS** — à la publication, l'app affiche immédiatement les musiciens compatibles (bon instrument + date du concert cochée dans leur calendrier en premier, puis profils « sur demande ») ; sans match, message honnête + conseils. Section « Musiciens compatibles » persistante sur ses propres annonces.
 - **Amis & abonnés** — bouton suivre sur chaque fiche, ami = suivi mutuel, badges Ami/Suivi/Te suit. Le feed et les matchs classent les relations en premier ; le **tri par niveau** (et l'affichage du niveau) est réservé aux membres Premium — les comptes gratuits voient une invitation à s'abonner.
-- **Photo de profil & vidéos de démo** — photo depuis la photothèque ; vidéos de démo lisibles in-app : **1 en gratuit, jusqu'à 6 en Premium** (stockage local, Supabase Storage en phase 2b).
+- **Photo de profil & vidéos de démo** — photo depuis la photothèque ; vidéos de démo lisibles in-app, **datées** (date du concert / de l'enregistrement, modifiable) : **1 en gratuit, jusqu'à 6 en Premium** (stockage local, Supabase Storage en phase 2b).
 - **Notifications** — notifications locales : nouveaux SOS compatibles avec ses instruments et messages reçus, avec bouton de test (*Profil → Notifications*). Les push serveur (APNs) arrivent avec le Developer Program.
 - **Patchnotes in-app** — *Profil → Nouveautés* : historique des versions avec bandeau bêta.
 - **Avant-première Premium** — les SOS fraîchement publiés (< 30 min) sont réservés aux membres Premium : les non-abonnés voient le cachet et l'instrument mais pas le lieu, avec un compte à rebours en direct → c'est la démonstration in-app de la killer feature.

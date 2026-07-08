@@ -1,6 +1,86 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "%lld abonnés": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Follower"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld followers"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld seguidores"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld follower"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォロワー%lld人"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld位粉丝"
+          }
+        }
+      }
+    },
+    "%lld annonces": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld listings"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld anuncios"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld annunci"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件の投稿"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld条信息"
+          }
+        }
+      }
+    },
     "%lld ans · %@ · %@": {
       "localizations": {
         "de": {
@@ -1081,6 +1161,86 @@
         }
       }
     },
+    "Ajoute une date à tes vidéos de démo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib deinen Demo-Videos ein Datum"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a date to your demo videos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade fecha a tus vídeos de demo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi una data ai tuoi video demo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモ動画に日付を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为你的演示视频添加日期"
+          }
+        }
+      }
+    },
+    "Ajouter une date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datum hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a date"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir fecha"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi una data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加日期"
+          }
+        }
+      }
+    },
     "Ajouter une vidéo": {
       "localizations": {
         "de": {
@@ -1797,6 +1957,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有找到音乐人"
+          }
+        }
+      }
+    },
+    "Aucun résultat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Ergebnisse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No results"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin resultados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun risultato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果がありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有结果"
           }
         }
       }
@@ -3641,6 +3841,46 @@
         }
       }
     },
+    "Cherche tout, librement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Such alles, frei formuliert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search anything, freely"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Busca lo que sea, libremente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca tutto, liberamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "何でも自由に検索"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由搜索任何内容"
+          }
+        }
+      }
+    },
     "Choisir une ville": {
       "localizations": {
         "de": {
@@ -4037,6 +4277,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音室合作"
+          }
+        }
+      }
+    },
+    "Combine ce que tu veux : instrument, quartier, genre, nom ou @pseudo.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kombiniere frei: Instrument, Viertel, Genre, Name oder @Handle."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combine anything: instrument, neighborhood, genre, name or @handle."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combina lo que quieras: instrumento, barrio, género, nombre o @alias."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combina quello che vuoi: strumento, quartiere, genere, nome o @nome."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽器・エリア・ジャンル・名前・@ユーザー名を自由に組み合わせて。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "随意组合：乐器、街区、风格、名字或@用户名。"
           }
         }
       }
@@ -4997,6 +5277,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "DJ/打碟"
+          }
+        }
+      }
+    },
+    "Date de la vidéo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datum des Videos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video date"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fecha del vídeo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data del video"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画の日付"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频日期"
           }
         }
       }
@@ -6197,6 +6517,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "西班牙"
+          }
+        }
+      }
+    },
+    "Essaie un instrument (« pianiste »), un quartier, un genre ou un @pseudo.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versuch ein Instrument („Pianist“), ein Viertel, ein Genre oder ein @Handle."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try an instrument (“pianist”), a neighborhood, a genre or a @handle."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prueba un instrumento («pianista»), un barrio, un género o un @alias."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova uno strumento («pianista»), un quartiere, un genere o un @nome."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽器（「ピアニスト」）、エリア、ジャンル、@ユーザー名で試してみて。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试试乐器（“钢琴手”）、街区、风格或@用户名。"
           }
         }
       }
@@ -10201,6 +10561,86 @@
         }
       }
     },
+    "Musicien, @pseudo, instrument, lieu…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiker, @Handle, Instrument, Ort …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musician, @handle, instrument, place…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Músico, @alias, instrumento, lugar…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musicista, @nome, strumento, luogo…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミュージシャン・@ユーザー名・楽器・場所…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐人、@用户名、乐器、地点……"
+          }
+        }
+      }
+    },
+    "Musiciens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiker"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musicians"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Músicos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musicisti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミュージシャン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐人"
+          }
+        }
+      }
+    },
     "Musiciens compatibles": {
       "localizations": {
         "de": {
@@ -10677,6 +11117,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "姓名、乐器、水平——其他的以后再填。"
+          }
+        }
+      }
+    },
+    "Nombre d'abonnés affiché sur chaque profil et dans la recherche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follower-Zahl auf jedem Profil und in der Suche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follower count shown on every profile and in search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Número de seguidores visible en cada perfil y en la búsqueda"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numero di follower su ogni profilo e nella ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィールと検索にフォロワー数を表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个档案和搜索结果都显示粉丝数"
           }
         }
       }
@@ -12801,6 +13281,46 @@
         }
       }
     },
+    "Recherche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索"
+          }
+        }
+      }
+    },
     "Recherche de ville par nom ou code postal": {
       "localizations": {
         "de": {
@@ -12837,6 +13357,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "按名称或邮编搜索城市"
+          }
+        }
+      }
+    },
+    "Recherche libre : « pianiste Carouge », « salsa ce soir », un nom, un @pseudo…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freie Suche: „Pianist Carouge“, „Salsa heute Abend“, ein Name, ein @Handle …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free search: “pianist Carouge”, “salsa tonight”, a name, a @handle…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda libre: «pianista Carouge», «salsa esta noche», un nombre, un @alias…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca libera: «pianista Carouge», «salsa stasera», un nome, un @nome…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由検索：「ピアニスト カルージュ」「今夜サルサ」、名前や@ユーザー名…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由搜索：“钢琴手Carouge”、“今晚salsa”、名字、@用户名……"
+          }
+        }
+      }
+    },
+    "Recherche, @pseudos & vidéos datées": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche, @Handles & datierte Videos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search, @handles & dated videos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda, @alias y vídeos con fecha"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca, @nomi e video datati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索・@ユーザー名・動画の日付"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索、@用户名与视频日期"
           }
         }
       }
@@ -12957,6 +13557,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入Dispo网络"
+          }
+        }
+      }
+    },
+    "Retirer la date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datum entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the date"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar la fecha"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi la data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付を削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除日期"
           }
         }
       }
@@ -15557,6 +16197,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "尤克里里"
+          }
+        }
+      }
+    },
+    "Un @pseudo pour chaque musicien, visible sur les profils": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein @Handle für jeden Musiker, sichtbar im Profil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A @handle for every musician, visible on profiles"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un @alias para cada músico, visible en los perfiles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un @nome per ogni musicista, visibile sui profili"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全ミュージシャンに@ユーザー名、プロフィールに表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每位音乐人都有@用户名，显示在档案上"
           }
         }
       }

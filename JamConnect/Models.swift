@@ -239,6 +239,61 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
     static func instruments(in category: InstrumentCategory) -> [Instrument] {
         allCases.filter { $0.category == category }
     }
+
+    /// Termes de recherche associés — « pianiste » doit trouver les pianos.
+    var searchAliases: [String] {
+        switch self {
+        case .piano: return ["pianiste", "claviériste", "keys"]
+        case .synthe: return ["claviériste", "producteur", "beatmaker", "mao"]
+        case .orgue: return ["organiste"]
+        case .accordeon: return ["accordéoniste"]
+        case .guitare: return ["guitariste"]
+        case .guitareElectrique: return ["guitariste"]
+        case .basse: return ["bassiste"]
+        case .contrebasse: return ["contrebassiste"]
+        case .violon: return ["violoniste"]
+        case .alto: return ["altiste"]
+        case .violoncelle: return ["violoncelliste", "celliste"]
+        case .harpe: return ["harpiste"]
+        case .banjo: return ["banjoïste"]
+        case .mandoline: return ["mandoliniste"]
+        case .ukulele: return []
+        case .saxophone: return ["saxophoniste", "sax", "saxo"]
+        case .trompette: return ["trompettiste"]
+        case .trombone: return ["tromboniste"]
+        case .clarinette: return ["clarinettiste"]
+        case .flute: return ["flûtiste"]
+        case .cor: return ["corniste"]
+        case .tuba: return ["tubiste"]
+        case .harmonica: return ["harmoniciste"]
+        case .batterie: return ["batteur", "batteuse", "drummer"]
+        case .percussions: return ["percussionniste", "percu"]
+        case .cajon: return ["percussionniste"]
+        case .congas: return ["conguero", "percussionniste"]
+        case .timbales: return ["timbalero", "percussionniste"]
+        case .vibraphone: return ["vibraphoniste"]
+        case .voix: return ["chanteur", "chanteuse", "vocaliste", "voix"]
+        case .choeurs: return ["choriste"]
+        case .beatbox: return ["beatboxer"]
+        case .dj: return ["deejay", "platines"]
+        }
+    }
+}
+
+// MARK: - Identifiant @ (handle)
+
+extension String {
+    /// « Marco Silva » → « marco.silva » — l'identifiant @ des profils.
+    var handleized: String {
+        let base = folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr"))
+            .lowercased()
+        let allowed = base.map { char -> Character in
+            (char.isLetter || char.isNumber) ? char : " "
+        }
+        return String(allowed)
+            .split(separator: " ")
+            .joined(separator: ".")
+    }
 }
 
 // MARK: - Disponibilité
@@ -645,6 +700,10 @@ struct Musician: Codable, Identifiable, Hashable {
 
     var isAvailable: Bool { availability.isAvailable }
 
+    /// Identifiant @ affiché sous le nom (dérivé du nom — unique côté
+    /// serveur en phase 2b).
+    var handle: String { "@" + name.handleized }
+
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
@@ -840,8 +899,11 @@ struct MyProfile: Codable {
     var postalCode: String?
     /// Photo de profil choisie par l'utilisateur (fichier dans Documents).
     var photoFileName: String?
-    /// Vidéos de démo (fichiers dans Documents) — 1 en gratuit, 6 en Premium.
+    /// Vidéos de démo (fichiers dans Documents) — ancien format v0.4, sans
+    /// date. Conservé pour décoder les profils existants ; voir demoVideos.
     var videoFileNames: [String]?
+    /// Vidéos de démo datées — 1 en gratuit, 6 en Premium.
+    var demoVideos: [DemoVideo]?
 
     /// Statut affiché aux autres, dérivé des dates.
     var availability: Availability { .derived(from: availableDates) }
@@ -854,7 +916,20 @@ struct MyProfile: Codable {
         if let postalCode { return "\(postalCode) \(resolvedCity)" }
         return resolvedCity
     }
-    var videos: [String] { videoFileNames ?? [] }
+    /// Identifiant @ de l'utilisateur (dérivé du nom).
+    var handle: String { "@" + name.handleized }
+    /// Vidéos de démo — migre à la volée l'ancien format sans dates.
+    var videos: [DemoVideo] {
+        demoVideos ?? (videoFileNames ?? []).map { DemoVideo(fileName: $0, date: nil) }
+    }
+}
+
+/// Une vidéo de démo du profil, avec sa date (enregistrement / concert).
+struct DemoVideo: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var fileName: String
+    /// Date de la vidéo, affichée sous le titre (nil = non renseignée).
+    var date: Date?
 }
 
 // MARK: - Relations (amis / abonnés)

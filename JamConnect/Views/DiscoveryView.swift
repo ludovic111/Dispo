@@ -65,6 +65,7 @@ struct HomeView: View {
                 ScrollView {
                     VStack(spacing: 22) {
                         header
+                        searchBar
                         tonightRow
                         actionBar
 
@@ -85,6 +86,7 @@ struct HomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
+            .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
             .sheet(isPresented: $showFilters) {
                 FilterSheet(filters: $filters)
                     .presentationDetents([.medium, .large])
@@ -120,6 +122,31 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// Barre de recherche libre — complète les filtres structurés.
+    private var searchBar: some View {
+        NavigationLink {
+            SearchView()
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: "magnifyingglass")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("Musicien, @pseudo, instrument, lieu…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(JC.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(JC.cardStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableStyle())
     }
 
     /// Rangée principale : mobilisables immédiatement, le cœur de l'app.

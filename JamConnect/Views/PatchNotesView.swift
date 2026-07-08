@@ -11,6 +11,16 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.6.0",
+            title: "Recherche, @pseudos & vidéos datées",
+            points: [
+                "Recherche libre : « pianiste Carouge », « salsa ce soir », un nom, un @pseudo…",
+                "Un @pseudo pour chaque musicien, visible sur les profils",
+                "Nombre d'abonnés affiché sur chaque profil et dans la recherche",
+                "Ajoute une date à tes vidéos de démo"
+            ]
+        ),
+        PatchNote(
             version: "0.5.0",
             title: "Lieux précis, genres & instruments",
             points: [

@@ -6,8 +6,7 @@ struct MusicianDetailView: View {
     @State private var openedConversation: Conversation?
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
-    /// Stats sociales fictives, stables entre lancements.
-    private var followers: Int { 40 + abs(musician.name.stableHash) % 320 }
+    /// Stat sociale fictive, stable entre lancements (backend en phase 2b).
     private var jamsPlayed: Int { 3 + abs(musician.name.stableHash) % 40 }
 
     /// Durée fictive de la vidéo (60–90 s) — la même que sur la carte du feed.
@@ -121,6 +120,9 @@ struct MusicianDetailView: View {
                         AvailabilityBadge(availability: musician.availability)
                         SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
+                    Text(verbatim: musician.handle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(JC.violet)
                     Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -157,7 +159,7 @@ struct MusicianDetailView: View {
         HStack(spacing: 10) {
             statBox(value: "\(jamsPlayed)", label: "concerts")
             statBox(value: store.noteCount(for: musician) == 0 ? "—" : "\(store.noteCount(for: musician))", label: "notes")
-            statBox(value: "\(followers + (store.isFollowing(musician) ? 1 : 0))", label: "abonnés")
+            statBox(value: "\(store.followerCount(of: musician))", label: "abonnés")
             // Le niveau est réservé aux membres Premium — la case verrouillée
             // mène au paywall.
             if store.showsPremium {

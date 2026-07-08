@@ -68,6 +68,8 @@ struct MyProfileView: View {
     @State private var importingVideo = false
     @State private var showPatchNotes = false
     @State private var showCityPicker = false
+    /// Vidéo dont on est en train d'éditer la date.
+    @State private var datingVideo: DemoVideo?
 
     var body: some View {
         NavigationStack {
@@ -120,6 +122,10 @@ struct MyProfileView: View {
                 VideoPlayer(player: AVPlayer(url: video.url))
                     .ignoresSafeArea()
                     .presentationDetents([.large])
+            }
+            .sheet(item: $datingVideo) { video in
+                VideoDateSheet(video: video)
+                    .presentationDetents([.medium])
             }
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
@@ -187,6 +193,9 @@ struct MyProfileView: View {
                             .font(.title2.weight(.bold))
                         if store.showsPremium { PremiumBadge() }
                     }
+                    Text(verbatim: store.profile.handle)
+                        .font(.caption.weight(.semibold))
+                        .opacity(0.85)
                     Text(subtitle)
                         .font(.caption.weight(.medium))
                         .opacity(0.88)
@@ -242,7 +251,7 @@ struct MyProfileView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                ForEach(store.profile.videos, id: \.self) { fileName in
+                ForEach(store.profile.videos) { video in
                     HStack(spacing: 11) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -252,11 +261,31 @@ struct MyProfileView: View {
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(JC.violet)
                         }
-                        Text("Vidéo \((store.profile.videos.firstIndex(of: fileName) ?? 0) + 1)")
-                            .font(.subheadline.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Vidéo \((store.profile.videos.firstIndex(of: video) ?? 0) + 1)")
+                                .font(.subheadline.weight(.semibold))
+                            // Date de la vidéo — un tap pour la changer.
+                            Button {
+                                datingVideo = video
+                            } label: {
+                                if let date = video.date {
+                                    Label(
+                                        date.formatted(date: .abbreviated, time: .omitted),
+                                        systemImage: "calendar"
+                                    )
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(JC.violet)
+                                } else {
+                                    Label("Ajouter une date", systemImage: "calendar.badge.plus")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
                         Spacer(minLength: 0)
                         Button {
-                            store.removeDemoVideo(fileName)
+                            store.removeDemoVideo(video)
                         } label: {
                             Image(systemName: "trash")
                                 .font(.caption.weight(.bold))
@@ -267,7 +296,7 @@ struct MyProfileView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        playingVideo = PlayableVideo(url: AppStore.mediaURL(for: fileName))
+                        playingVideo = PlayableVideo(url: AppStore.mediaURL(for: video.fileName))
                     }
                 }
 
@@ -684,6 +713,61 @@ struct MyProfileView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.top, 6)
+    }
+}
+
+// MARK: - Date d'une vidéo de démo
+
+/// Petite feuille pour dater une vidéo (date du concert / enregistrement).
+struct VideoDateSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let video: DemoVideo
+    @State private var date: Date = Date()
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                VStack(spacing: 14) {
+                    DatePicker(
+                        "Date de la vidéo",
+                        selection: $date,
+                        in: ...Date(),
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .tint(JC.violet)
+                    .padding(.horizontal, 12)
+
+                    if video.date != nil {
+                        Button(role: .destructive) {
+                            store.setVideoDate(nil, for: video)
+                            dismiss()
+                        } label: {
+                            Text("Retirer la date")
+                                .font(.caption.weight(.bold))
+                        }
+                    }
+                }
+                .padding(.top, 6)
+            }
+            .navigationTitle("Date de la vidéo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        store.setVideoDate(date, for: video)
+                        dismiss()
+                    }
+                    .font(.headline)
+                }
+            }
+            .onAppear { date = video.date ?? Date() }
+        }
     }
 }
 
