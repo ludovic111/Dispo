@@ -171,7 +171,7 @@ struct PaywallView: View {
 
     @ViewBuilder
     private var ctaSection: some View {
-        if store.isPremium {
+        if store.showsPremium {
             VStack(spacing: 10) {
                 Label(
                     store.premiumPlan == .annual

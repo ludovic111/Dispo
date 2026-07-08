@@ -85,7 +85,7 @@ struct HomeView: View {
                                 .frame(height: 480)
                                 .clipShape(RoundedRectangle(cornerRadius: 24))
                         } else {
-                            if !store.isPremium { premiumBanner }
+                            if !store.showsPremium { premiumBanner }
                             feed
                         }
                     }

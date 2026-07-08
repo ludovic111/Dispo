@@ -26,7 +26,7 @@ struct EventsView: View {
                         TimelineView(.periodic(from: .now, by: 30)) { context in
                             VStack(spacing: 18) {
                                 ForEach(store.events) { event in
-                                    if event.isEarlyAccess(now: context.date) && !store.isPremium {
+                                    if event.isEarlyAccess(now: context.date) && !store.showsPremium {
                                         Button { store.showPaywall = true } label: {
                                             LockedEventCard(event: event, now: context.date)
                                         }

@@ -14,6 +14,7 @@ struct MyProfileView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         heroCard
+                        if store.isAdmin { adminCard }
                         if store.backend != nil { accountCard }
                         availabilityCard
                         viewersCard
@@ -57,7 +58,7 @@ struct MyProfileView: View {
                     AvatarView(name: store.profile.name, size: 84)
                         .padding(4)
                         .background(.white.opacity(0.2), in: Circle())
-                    if store.isPremium {
+                    if store.showsPremium {
                         Image(systemName: "crown.fill")
                             .font(.caption2.weight(.bold))
                             .padding(6)
@@ -70,7 +71,7 @@ struct MyProfileView: View {
                     HStack(spacing: 8) {
                         Text(store.profile.name)
                             .font(.title2.weight(.bold))
-                        if store.isPremium { PremiumBadge() }
+                        if store.showsPremium { PremiumBadge() }
                     }
                     Text(subtitle)
                         .font(.caption.weight(.medium))
@@ -217,6 +218,39 @@ struct MyProfileView: View {
         .buttonStyle(PressableStyle(scale: 0.99))
     }
 
+    /// Lentille admin : prévisualiser l'app comme un utilisateur gratuit ou
+    /// premium. N'affecte que l'affichage — le compte et les droits serveur
+    /// ne changent pas.
+    private var adminCard: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Label("Mode admin", systemImage: "eye.fill")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(JC.violet)
+                    Spacer()
+                    if store.adminLens != .reel {
+                        TagView(text: "Aperçu \(store.adminLens.rawValue)", color: JC.violet)
+                    }
+                }
+                Text("Voir l'app comme…")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Picker("Lentille", selection: $store.adminLens) {
+                    ForEach(AppStore.AdminLens.allCases) { lens in
+                        Text(lens.rawValue).tag(lens)
+                    }
+                }
+                .pickerStyle(.segmented)
+                if store.adminLens != .reel {
+                    Text("Aperçu visuel seulement : tes droits réels (Premium, annonces débloquées côté serveur) restent inchangés.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
     /// Compte réseau (mode live) — connexion au backend Supabase.
     private var accountCard: some View {
         Button { showAccount = true } label: {
@@ -256,7 +290,7 @@ struct MyProfileView: View {
     private var viewersCard: some View {
         let viewers = store.profileViewers
         return Button {
-            if !store.isPremium { store.showPaywall = true }
+            if !store.showsPremium { store.showPaywall = true }
         } label: {
             JCCard {
                 HStack(spacing: 14) {
@@ -264,7 +298,7 @@ struct MyProfileView: View {
                         ForEach(viewers.prefix(3)) { viewer in
                             AvatarView(name: viewer.name, size: 40, photo: viewer.photo)
                                 .overlay(Circle().stroke(JC.card, lineWidth: 2))
-                                .blur(radius: store.isPremium ? 0 : 4)
+                                .blur(radius: store.showsPremium ? 0 : 4)
                                 .clipShape(Circle())
                         }
                     }
@@ -272,14 +306,14 @@ struct MyProfileView: View {
                         Text("\(viewers.count + 7) pros ont vu ton profil cette semaine")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.primary)
-                        Text(store.isPremium
+                        Text(store.showsPremium
                              ? "Dont \(viewers.prefix(2).map { $0.name.split(separator: " ").first.map(String.init) ?? $0.name }.joined(separator: ", ")) — contacte-les !"
                              : "Découvre qui avec Premium")
                             .font(.caption)
-                            .foregroundStyle(store.isPremium ? .secondary : JC.gold)
+                            .foregroundStyle(store.showsPremium ? .secondary : JC.gold)
                     }
                     Spacer(minLength: 0)
-                    if !store.isPremium {
+                    if !store.showsPremium {
                         Image(systemName: "lock.fill")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(JC.gold)
@@ -293,8 +327,8 @@ struct MyProfileView: View {
     private var premiumCard: some View {
         JCPromoBanner(
             icon: "crown.fill",
-            title: store.isPremium ? "Premium actif" : "Ne rate plus un cachet",
-            subtitle: store.isPremium
+            title: store.showsPremium ? "Premium actif" : "Ne rate plus un cachet",
+            subtitle: store.showsPremium
                 ? "Alertes dépannage prioritaires · gérer mon abonnement"
                 : "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois"
         ) { store.showPaywall = true }

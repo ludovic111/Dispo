@@ -46,6 +46,32 @@ final class AppStore: ObservableObject {
     private var messageChannel: RealtimeChannelV2?
     private var messageTask: Task<Void, Never>?
 
+    // MARK: - Admin
+
+    /// Rôle admin — accordé côté serveur uniquement (trigger anti-triche).
+    @Published var isAdmin: Bool = false
+
+    /// Lentille admin : prévisualiser l'app comme un utilisateur normal.
+    enum AdminLens: String, CaseIterable, Identifiable {
+        case reel = "Réel"
+        case gratuit = "Gratuit"
+        case premium = "Premium"
+        var id: String { rawValue }
+    }
+    @Published var adminLens: AdminLens = .reel
+
+    /// Statut Premium tel que l'interface doit l'afficher. Pour un admin,
+    /// la lentille peut simuler un compte gratuit ou premium ; l'état réel
+    /// (`isPremium`) et les droits serveur ne changent pas.
+    var showsPremium: Bool {
+        guard isAdmin else { return isPremium }
+        switch adminLens {
+        case .reel: return isPremium
+        case .gratuit: return false
+        case .premium: return true
+        }
+    }
+
     private static let eventsKey = "jamconnect.events"
     private static let conversationsKey = "jamconnect.conversations"
     private static let profileKey = "jamconnect.profile"
@@ -133,11 +159,8 @@ final class AppStore: ObservableObject {
 
     /// Restaure la session au lancement et charge les données serveur.
     func restoreLiveSession() async {
-        guard let backend, let userID = await backend.currentUserID() else { return }
-        liveUserID = userID
-        liveEmail = await backend.currentUserEmail()
-        await refreshLiveData()
-        await startMessageStream()
+        guard let userID = await backend?.currentUserID() else { return }
+        await didSignIn(userID: userID)
     }
 
     /// Termine la connexion par lien magique (e-mail → dispo://login-callback).
@@ -159,7 +182,8 @@ final class AppStore: ObservableObject {
         backendError = nil
 
         // Premier passage : si le profil serveur est vide, on pousse le
-        // profil local ; sinon le serveur fait foi.
+        // profil local ; sinon le serveur fait foi. Premium et admin
+        // viennent toujours du serveur.
         if let rows = try? await backend.fetchProfiles(),
            let mine = rows.first(where: { $0.id == userID }) {
             if mine.name.isEmpty {
@@ -173,8 +197,9 @@ final class AppStore: ObservableObject {
                     bio: mine.bio,
                     availability: Availability(rawValue: mine.availability) ?? .onRequest
                 )
-                isPremium = mine.isPremium
             }
+            isPremium = mine.isPremium
+            isAdmin = mine.isAdmin
         }
         await refreshLiveData()
         await startMessageStream()
@@ -206,6 +231,8 @@ final class AppStore: ObservableObject {
         liveUserID = nil
         liveEmail = nil
         backendError = nil
+        isAdmin = false
+        adminLens = .reel
         messageTask?.cancel()
         messageTask = nil
         if let channel = messageChannel {

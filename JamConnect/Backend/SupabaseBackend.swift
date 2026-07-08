@@ -80,12 +80,14 @@ final class SupabaseBackend: Sendable {
         var repertoire: [String]
         var photoUrl: String?
         var isPremium: Bool
+        var isAdmin: Bool
 
         enum CodingKeys: String, CodingKey {
             case id, name, age, neighborhood, latitude, longitude
             case instruments, genres, level, bio, availability, repertoire
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
+            case isAdmin = "is_admin"
         }
 
         /// Un profil apparaît dans le feed dès qu'il est réellement rempli.

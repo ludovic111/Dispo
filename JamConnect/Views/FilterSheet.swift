@@ -51,7 +51,7 @@ struct FilterSheet: View {
 
                 // Filtre avancé — réservé Premium
                 Section {
-                    if store.isPremium {
+                    if store.showsPremium {
                         Picker("Niveau minimum", selection: $filters.minLevel) {
                             Text("Tous").tag(Level?.none)
                             ForEach(Level.allCases) { level in
@@ -75,7 +75,7 @@ struct FilterSheet: View {
                 } header: {
                     Text("Niveau minimum")
                 } footer: {
-                    if !store.isPremium {
+                    if !store.showsPremium {
                         Text("Le filtre par niveau fait partie de Dispo Premium (dès CHF 4.90/mois).")
                     }
                 }
