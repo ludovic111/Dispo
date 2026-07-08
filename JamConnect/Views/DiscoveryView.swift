@@ -40,15 +40,11 @@ struct HomeView: View {
     @State private var showMap = false
 
     private var filtered: [Musician] {
+        // Amis / suivis / abonnés d'abord, puis niveau (Premium seulement),
+        // puis urgence de dispo et distance — voir AppStore.rank.
         store.musicians
             .filter { filters.matches($0) }
-            .sorted {
-                // Les plus vite mobilisables d'abord (ce soir → sur demande), puis distance.
-                if $0.availability.urgencyRank != $1.availability.urgencyRank {
-                    return $0.availability.urgencyRank > $1.availability.urgencyRank
-                }
-                return $0.distance(from: AppStore.geneva) < $1.distance(from: AppStore.geneva)
-            }
+            .sorted { store.rank($0, $1) }
     }
 
     /// Mobilisables immédiatement — la rangée d'urgence.
@@ -56,7 +52,7 @@ struct HomeView: View {
         store.musicians.filter { $0.availability == .tonight }
     }
 
-    private var greeting: String {
+    private var greeting: LocalizedStringKey {
         let hour = Calendar.current.component(.hour, from: Date())
         return (hour >= 17 || hour < 5) ? "Bonsoir" : "Salut"
     }
@@ -100,7 +96,7 @@ struct HomeView: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
                 LogoView(markSize: 20)
-                Text("\(greeting), \(store.profile.name.split(separator: " ").first.map(String.init) ?? store.profile.name)")
+                (Text(greeting) + Text(verbatim: ", \(store.profile.name.split(separator: " ").first.map(String.init) ?? store.profile.name)"))
                     .font(.system(size: 25, weight: .bold))
                     .tracking(-0.3)
                 HStack(spacing: 6) {
@@ -173,7 +169,7 @@ struct HomeView: View {
                             Text(musician.name.split(separator: " ").first.map(String.init) ?? "")
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.primary)
-                            Text(musician.instruments.first?.rawValue ?? "")
+                            Text(LocalizedStringKey(musician.instruments.first?.rawValue ?? ""))
                                 .font(.system(size: 9))
                                 .foregroundStyle(.secondary)
                         }
@@ -209,8 +205,13 @@ struct HomeView: View {
         LazyVStack(spacing: 18) {
             SectionHeader(
                 title: "Près de chez toi",
-                subtitle: "Les musiciens les plus proches, dispo en premier"
+                subtitle: store.showsPremium
+                    ? "Tes relations d'abord, puis les meilleurs niveaux"
+                    : "Tes relations d'abord, puis les plus proches"
             )
+            if !store.showsPremium {
+                levelUpsellBox
+            }
             if filtered.isEmpty {
                 JCEmptyState(
                     icon: "person.2.slash",
@@ -224,6 +225,52 @@ struct HomeView: View {
                 }
                 .buttonStyle(PressableStyle())
             }
+        }
+    }
+
+    /// Encart Premium : le tri et l'affichage du niveau sont réservés aux
+    /// abonnés — les comptes gratuits ne voient que le tri par relations.
+    private var levelUpsellBox: some View {
+        Button { store.showPaywall = true } label: {
+            HStack(spacing: 11) {
+                Image(systemName: "medal.fill")
+                    .font(.title3)
+                    .foregroundStyle(JC.gold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Vois le niveau des musiciens")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("Avec Premium, les profils sont triés par niveau — les meilleurs en haut.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "lock.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(JC.gold)
+            }
+            .padding(12)
+            .background(JC.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(JC.gold.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PressableStyle())
+    }
+}
+
+/// Petit badge du lien social avec un musicien (ami / suivi / te suit).
+struct SocialLinkBadge: View {
+    let link: SocialLink
+
+    var body: some View {
+        switch link {
+        case .friend: TagView(text: "Ami", color: JC.magenta)
+        case .following: TagView(text: "Suivi", color: JC.violet)
+        case .follower: TagView(text: "Te suit", color: .teal)
+        case .none: EmptyView()
         }
     }
 }
@@ -299,9 +346,16 @@ struct MusicianCard: View {
                 HStack(spacing: 12) {
                     AvatarView(name: musician.name, size: 44, photo: musician.photo)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(musician.name)
-                            .font(.headline)
-                        Text("\(musician.instruments.map(\.rawValue).joined(separator: " · ")) · \(musician.level.rawValue)")
+                        HStack(spacing: 6) {
+                            Text(musician.name)
+                                .font(.headline)
+                                .lineLimit(1)
+                            SocialLinkBadge(link: store.socialLink(with: musician.name))
+                        }
+                        // Le niveau est un avantage Premium — masqué en gratuit.
+                        Text(verbatim: store.showsPremium
+                             ? "\(musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")) · \(store.tr(musician.level.rawValue))"
+                             : musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · "))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)

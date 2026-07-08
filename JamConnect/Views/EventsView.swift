@@ -50,6 +50,7 @@ struct EventsView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
+            .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .sheet(isPresented: $showCreate) {
                 CreateEventView()
             }
@@ -153,7 +154,7 @@ struct LockedEventCard: View {
 
                 VStack(alignment: .leading, spacing: 7) {
                     HStack {
-                        Text("Nouveau SOS \(event.genre.rawValue)")
+                        Text("Nouveau SOS \(String(localized: String.LocalizationValue(event.genre.rawValue)))")
                             .font(.subheadline.weight(.bold))
                             .lineLimit(1)
                         Spacer(minLength: 0)
@@ -257,8 +258,8 @@ struct EventDetailView: View {
                             VStack(alignment: .leading, spacing: 11) {
                                 Label(event.date.formatted(date: .complete, time: .shortened), systemImage: "calendar")
                                 Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
-                                Label("\(event.genre.rawValue) — \(event.genre.codes.joined(separator: ", "))", systemImage: "music.quarternote.3")
-                                Label("Cachet : \(event.feeLabel)", systemImage: "banknote")
+                                Label("\(store.tr(event.genre.rawValue)) — \(event.genre.codes.map { store.tr($0) }.joined(separator: ", "))", systemImage: "music.quarternote.3")
+                                Label("Cachet : \(store.tr(event.feeLabel))", systemImage: "banknote")
                                     .foregroundStyle(JC.gold)
                             }
                             .font(.subheadline)
@@ -277,15 +278,21 @@ struct EventDetailView: View {
                             }
                         }
 
-                        JCCard {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Description")
-                                    .font(.subheadline.weight(.heavy))
-                                    .foregroundStyle(JC.coral)
-                                Text(event.descriptionText)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary.opacity(0.9))
+                        if !event.descriptionText.isEmpty {
+                            JCCard {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Description")
+                                        .font(.subheadline.weight(.heavy))
+                                        .foregroundStyle(JC.coral)
+                                    Text(event.descriptionText)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary.opacity(0.9))
+                                }
                             }
+                        }
+
+                        if event.isMine {
+                            matchesCard(for: event)
                         }
                     }
                     .padding(.horizontal, 18)
@@ -296,6 +303,42 @@ struct EventDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(JC.bg, for: .navigationBar)
             .safeAreaInset(edge: .bottom) {
+                bottomBar(for: event)
+            }
+    }
+
+    /// Musiciens compatibles avec mon annonce — le matching reste consultable
+    /// après la publication. Vide : on assume l'attente et on explique quand
+    /// des matchs apparaîtront.
+    private func matchesCard(for event: GigRequest) -> some View {
+        let matches = store.matches(for: event)
+        return JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Musiciens compatibles")
+                    .font(.subheadline.weight(.heavy))
+                    .foregroundStyle(JC.coral)
+                if matches.isEmpty {
+                    Label {
+                        Text("Personne ne matche pour l'instant. Dès qu'un musicien compatible coche le \(event.date.formatted(.dateTime.day().month(.wide))) dans son calendrier, il apparaîtra ici.")
+                    } icon: {
+                        Image(systemName: "hourglass")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                } else {
+                    ForEach(matches.prefix(5)) { match in
+                        NavigationLink(value: match.musician) {
+                            SOSMatchRow(match: match, gig: event)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func bottomBar(for event: GigRequest) -> some View {
                 if !event.isMine {
                     Button {
                         store.toggleApply(event)
@@ -319,7 +362,6 @@ struct EventDetailView: View {
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial)
-                }
-            }
+        }
     }
 }

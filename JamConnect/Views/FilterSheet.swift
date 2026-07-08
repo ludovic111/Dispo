@@ -12,7 +12,7 @@ struct FilterSheet: View {
                     Picker("Instrument", selection: $filters.instrument) {
                         Text("Tous").tag(Instrument?.none)
                         ForEach(Instrument.allCases) { instrument in
-                            Text(instrument.rawValue).tag(Instrument?.some(instrument))
+                            Text(LocalizedStringKey(instrument.rawValue)).tag(Instrument?.some(instrument))
                         }
                     }
                 }
@@ -21,7 +21,7 @@ struct FilterSheet: View {
                     Picker("Genre", selection: $filters.genre) {
                         Text("Tous").tag(Genre?.none)
                         ForEach(Genre.allCases) { genre in
-                            Text("\(genre.emoji) \(genre.rawValue)").tag(Genre?.some(genre))
+                            (Text(genre.emoji + " ") + Text(LocalizedStringKey(genre.rawValue))).tag(Genre?.some(genre))
                         }
                     }
                 }
@@ -55,7 +55,7 @@ struct FilterSheet: View {
                         Picker("Niveau minimum", selection: $filters.minLevel) {
                             Text("Tous").tag(Level?.none)
                             ForEach(Level.allCases) { level in
-                                Text(level.rawValue).tag(Level?.some(level))
+                                Text(LocalizedStringKey(level.rawValue)).tag(Level?.some(level))
                             }
                         }
                         .pickerStyle(.segmented)

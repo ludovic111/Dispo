@@ -236,6 +236,112 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Langue de l'app
+
+/// Langues proposées dans l'app (onboarding + profil). Le français est la
+/// langue source ; les autres viennent du catalogue Localizable.xcstrings.
+enum AppLanguage: String, Codable, CaseIterable, Identifiable {
+    case french = "fr"
+    case english = "en"
+    case spanish = "es"
+    case german = "de"
+    case italian = "it"
+    case mandarin = "zh-Hans"
+    case japanese = "ja"
+
+    var id: String { rawValue }
+
+    /// Nom de la langue, dans cette langue (jamais traduit).
+    var nativeName: String {
+        switch self {
+        case .french: return "Français"
+        case .english: return "English"
+        case .spanish: return "Español"
+        case .german: return "Deutsch"
+        case .italian: return "Italiano"
+        case .mandarin: return "中文"
+        case .japanese: return "日本語"
+        }
+    }
+
+    var flag: String {
+        switch self {
+        case .french: return "🇫🇷"
+        case .english: return "🇬🇧"
+        case .spanish: return "🇪🇸"
+        case .german: return "🇩🇪"
+        case .italian: return "🇮🇹"
+        case .mandarin: return "🇨🇳"
+        case .japanese: return "🇯🇵"
+        }
+    }
+
+    var locale: Locale { Locale(identifier: rawValue) }
+
+    /// Langue par défaut : celle du téléphone si on la propose, sinon anglais.
+    static var systemDefault: AppLanguage {
+        let preferred = Locale.preferredLanguages.first ?? "en"
+        if preferred.hasPrefix("zh") { return .mandarin }
+        if let match = AppLanguage.allCases.first(where: { preferred.hasPrefix($0.rawValue) }) {
+            return match
+        }
+        return .english
+    }
+
+    /// Bundle de traductions de cette langue (repli : bundle principal).
+    var bundle: Bundle {
+        guard let path = Bundle.main.path(forResource: rawValue, ofType: "lproj"),
+              let bundle = Bundle(path: path) else { return .main }
+        return bundle
+    }
+
+    /// Traduit une clé du catalogue dans cette langue (pour les chaînes
+    /// construites en code — les `Text` littéraux passent par la locale).
+    func tr(_ key: String) -> String {
+        bundle.localizedString(forKey: key, value: key, table: nil)
+    }
+}
+
+// MARK: - Pays & villes
+
+/// Pays proposés au lancement (Suisse, France, USA pour l'instant).
+enum Country: String, Codable, CaseIterable, Identifiable {
+    case switzerland = "CH"
+    case france = "FR"
+    case usa = "US"
+
+    var id: String { rawValue }
+
+    var flag: String {
+        switch self {
+        case .switzerland: return "🇨🇭"
+        case .france: return "🇫🇷"
+        case .usa: return "🇺🇸"
+        }
+    }
+
+    /// Clé de traduction du nom du pays.
+    var nameKey: String {
+        switch self {
+        case .switzerland: return "Suisse"
+        case .france: return "France"
+        case .usa: return "États-Unis"
+        }
+    }
+
+    /// Villes / régions proposées (noms propres, non traduits).
+    var cities: [String] {
+        switch self {
+        case .switzerland:
+            return ["Genève", "Lausanne", "Zurich", "Bâle", "Berne", "Lucerne", "Lugano", "Fribourg", "Neuchâtel", "Sion"]
+        case .france:
+            return ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg", "Nice", "Annecy"]
+        case .usa:
+            return ["New York", "Los Angeles", "Chicago", "Miami", "San Francisco", "Austin", "Nashville", "New Orleans", "Seattle", "Boston"]
+        }
+    }
+}
+
 // MARK: - Thème (clair / sombre)
 
 /// Préférence d'apparence de l'utilisateur.
@@ -352,6 +458,45 @@ struct Musician: Codable, Identifiable, Hashable {
 }
 
 extension Musician: Rateable {}
+
+// MARK: - Matching SOS ↔ musiciens
+
+/// Un musicien compatible avec un SOS. `dateConfirmed` distingue ceux qui ont
+/// explicitement coché la date du concert dans leur calendrier de ceux qui
+/// sont seulement joignables « sur demande ».
+struct SOSMatch: Identifiable, Hashable {
+    let musician: Musician
+    let dateConfirmed: Bool
+    var id: Musician.ID { musician.id }
+}
+
+extension Musician {
+    /// true si le musicien joue au moins un des instruments recherchés.
+    func plays(any wanted: [Instrument]) -> Bool {
+        !Set(instruments).isDisjoint(with: wanted)
+    }
+
+    /// true si la date du concert est couverte par le calendrier du musicien.
+    /// Sans dates cochées (profils seed), on se rabat sur le statut dérivé :
+    /// « ce soir » couvre aujourd'hui, « cette semaine » les 7 prochains
+    /// jours, « ce week-end » un samedi/dimanche sous 7 jours.
+    func isAvailable(on gigDate: Date, now: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        let gigDay = calendar.startOfDay(for: gigDate)
+        if !availableDates.isEmpty {
+            return availableDates.contains { calendar.startOfDay(for: $0) == gigDay }
+        }
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: gigDay).day ?? 99
+        switch availability {
+        case .tonight: return days == 0
+        case .thisWeek: return days <= 7
+        case .weekend:
+            let weekday = calendar.component(.weekday, from: gigDay)
+            return days <= 7 && (weekday == 7 || weekday == 1)
+        case .onRequest, .unavailable: return false
+        }
+    }
+}
 
 // MARK: - Groupe / formation
 
@@ -483,8 +628,32 @@ struct MyProfile: Codable {
     var bio: String
     /// Dates concrètes où je peux dépanner un concert (cochées au calendrier).
     var availableDates: [Date] = []
+    // Champs ajoutés après la v0.3 — optionnels pour décoder les anciens
+    // profils sauvegardés sans les perdre.
+    var country: Country?
+    var city: String?
+    /// Photo de profil choisie par l'utilisateur (fichier dans Documents).
+    var photoFileName: String?
+    /// Vidéos de démo (fichiers dans Documents) — 1 en gratuit, 6 en Premium.
+    var videoFileNames: [String]?
 
     /// Statut affiché aux autres, dérivé des dates.
     var availability: Availability { .derived(from: availableDates) }
     var isAvailable: Bool { availability.isAvailable }
+
+    var resolvedCountry: Country { country ?? .switzerland }
+    var resolvedCity: String { city ?? resolvedCountry.cities[0] }
+    var videos: [String] { videoFileNames ?? [] }
+}
+
+// MARK: - Relations (amis / abonnés)
+
+/// Lien social entre moi et un musicien. « Ami » = on se suit mutuellement.
+enum SocialLink: Int, Comparable {
+    case none = 0
+    case follower = 1   // il me suit
+    case following = 2  // je le suis
+    case friend = 3     // on se suit mutuellement
+
+    static func < (lhs: SocialLink, rhs: SocialLink) -> Bool { lhs.rawValue < rhs.rawValue }
 }

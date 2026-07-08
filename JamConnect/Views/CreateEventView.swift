@@ -13,6 +13,8 @@ struct CreateEventView: View {
     @State private var wanted: Set<Instrument> = []
     @State private var feeText = ""
     @State private var descriptionText = ""
+    /// L'annonce venant d'être publiée — déclenche l'écran de matching.
+    @State private var published: GigRequest?
 
     private let neighborhoods = [
         "Carouge", "Eaux-Vives", "Plainpalais", "Pâquis", "Champel",
@@ -27,13 +29,22 @@ struct CreateEventView: View {
 
     var body: some View {
         NavigationStack {
+            if let published {
+                SOSMatchView(gig: published) { dismiss() }
+            } else {
+                form
+            }
+        }
+    }
+
+    private var form: some View {
             Form {
                 Section("Le concert") {
                     TextField("Titre — ex. Cherche pianiste, soirée salsa", text: $title)
                     DatePicker("Date et heure", selection: $date, in: Date()...)
                     Picker("Genre", selection: $genre) {
                         ForEach(Genre.allCases) { genre in
-                            Text("\(genre.emoji) \(genre.rawValue)").tag(genre)
+                            (Text(genre.emoji + " ") + Text(LocalizedStringKey(genre.rawValue))).tag(genre)
                         }
                     }
                 }
@@ -55,7 +66,7 @@ struct CreateEventView: View {
                             }
                         } label: {
                             HStack {
-                                Text(instrument.rawValue)
+                                Text(LocalizedStringKey(instrument.rawValue))
                                     .foregroundStyle(.primary)
                                 Spacer()
                                 if wanted.contains(instrument) {
@@ -76,13 +87,15 @@ struct CreateEventView: View {
                     Text("Laisse vide pour « à discuter ». Un cachet affiché reçoit plus de candidatures.")
                 }
 
-                Section("Description") {
+                Section {
                     TextField(
                         "Ex. Notre pianiste est malade — setlist envoyée à l'avance, balance 18h30…",
                         text: $descriptionText,
                         axis: .vertical
                     )
                     .lineLimit(3...6)
+                } header: {
+                    Text("Description (optionnel)")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -104,17 +117,14 @@ struct CreateEventView: View {
                             genre: genre,
                             wantedInstruments: Array(wanted).sorted { $0.rawValue < $1.rawValue },
                             fee: Int(feeText.trimmingCharacters(in: .whitespaces)),
-                            descriptionText: descriptionText.isEmpty
-                                ? "On cherche quelqu'un de fiable pour nous dépanner — setlist envoyée à l'avance."
-                                : descriptionText,
+                            descriptionText: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
                             isMine: true
                         )
                         store.addEvent(gig)
-                        dismiss()
+                        withAnimation { published = gig }
                     }
                     .disabled(!isValid)
                 }
             }
-        }
     }
 }

@@ -62,7 +62,7 @@ struct AccountSheet: View {
                 HStack(spacing: 12) {
                     Circle().fill(.green).frame(width: 10, height: 10)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(store.liveEmail ?? "Connecté")
+                        Text(store.liveEmail ?? store.tr("Connecté"))
                             .font(.subheadline.weight(.bold))
                         Text("Mode live — données du serveur")
                             .font(.caption)

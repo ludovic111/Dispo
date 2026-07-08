@@ -53,6 +53,18 @@ struct MusicianDetailView: View {
                 .buttonStyle(PressableStyle())
 
                 Button {
+                    withAnimation(.snappy) { store.toggleFollow(musician) }
+                } label: {
+                    Image(systemName: store.isFollowing(musician) ? "person.fill.checkmark" : "person.badge.plus")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(store.isFollowing(musician) ? JC.violet : Color.primary)
+                        .padding(15)
+                        .background(JC.card, in: Circle())
+                        .overlay(Circle().stroke(store.isFollowing(musician) ? JC.violet.opacity(0.5) : JC.cardStroke, lineWidth: 1))
+                }
+                .buttonStyle(PressableStyle())
+
+                Button {
                     Task { openedConversation = await store.conversation(with: musician) }
                 } label: {
                     Label(
@@ -107,6 +119,7 @@ struct MusicianDetailView: View {
                     HStack(spacing: 8) {
                         Text(musician.name).font(.title3.weight(.heavy))
                         AvailabilityBadge(availability: musician.availability)
+                        SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
                     Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
                         .font(.caption)
@@ -144,12 +157,32 @@ struct MusicianDetailView: View {
         HStack(spacing: 10) {
             statBox(value: "\(jamsPlayed)", label: "concerts")
             statBox(value: store.noteCount(for: musician) == 0 ? "—" : "\(store.noteCount(for: musician))", label: "notes")
-            statBox(value: "\(followers)", label: "abonnés")
-            statBox(value: musician.level.rawValue, label: "niveau", compact: true)
+            statBox(value: "\(followers + (store.isFollowing(musician) ? 1 : 0))", label: "abonnés")
+            // Le niveau est réservé aux membres Premium — la case verrouillée
+            // mène au paywall.
+            if store.showsPremium {
+                statBox(value: store.tr(musician.level.rawValue), label: "niveau", compact: true)
+            } else {
+                Button { store.showPaywall = true } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "lock.fill")
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(JC.gold)
+                        Text("niveau")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(JC.card, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(JC.gold.opacity(0.4), lineWidth: 1))
+                }
+                .buttonStyle(PressableStyle())
+            }
         }
     }
 
-    private func statBox(value: String, label: String, compact: Bool = false) -> some View {
+    private func statBox(value: String, label: LocalizedStringKey, compact: Bool = false) -> some View {
         VStack(spacing: 3) {
             Text(value)
                 .font(compact ? .caption.weight(.heavy) : .headline.weight(.heavy))
@@ -324,7 +357,7 @@ struct MusicianDetailView: View {
         }
     }
 
-    private func sectionTitle(_ title: String, systemImage: String) -> some View {
+    private func sectionTitle(_ title: LocalizedStringKey, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
             .font(.subheadline.weight(.heavy))
             .foregroundStyle(JC.coral)

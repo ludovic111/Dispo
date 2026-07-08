@@ -64,7 +64,7 @@ struct ChatView: View {
                 .background(.ultraThinMaterial)
             }
         }
-        .navigationTitle(conversation?.contactName ?? "Conversation")
+        .navigationTitle(conversation?.contactName ?? store.tr("Conversation"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(JC.bg, for: .navigationBar)
     }

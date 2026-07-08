@@ -1,10 +1,72 @@
 import SwiftUI
+import PhotosUI
+import AVKit
+
+/// Vidéo prête à être lue (wrapper Identifiable pour sheet(item:)).
+struct PlayableVideo: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+extension UIImage {
+    /// Redimensionne et compresse en JPEG (photo de profil).
+    func resizedJPEG(maxSide: CGFloat, quality: CGFloat = 0.85) -> Data? {
+        let scale = min(1, maxSide / max(size.width, size.height))
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.image { _ in
+            draw(in: CGRect(origin: .zero, size: newSize))
+        }
+        return resized.jpegData(compressionQuality: quality)
+    }
+}
+
+/// Vidéo importée depuis la photothèque (copie temporaire sur disque).
+struct PickedVideo: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { video in
+            SentTransferredFile(video.url)
+        } importing: { received in
+            let copy = URL.temporaryDirectory.appendingPathComponent("import_\(UUID().uuidString).mov")
+            try? FileManager.default.removeItem(at: copy)
+            try FileManager.default.copyItem(at: received.file, to: copy)
+            return Self(url: copy)
+        }
+    }
+}
+
+/// Avatar de l'utilisateur : sa photo choisie si elle existe, sinon la
+/// pastille dégradée avec initiales.
+struct MyAvatarView: View {
+    let profile: MyProfile
+    var size: CGFloat = 84
+
+    var body: some View {
+        if let fileName = profile.photoFileName,
+           let image = UIImage(contentsOfFile: AppStore.mediaURL(for: fileName).path) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else {
+            AvatarView(name: profile.name, size: size)
+        }
+    }
+}
 
 struct MyProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showEdit = false
     @State private var showResetConfirmation = false
     @State private var showAccount = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var videoItem: PhotosPickerItem?
+    @State private var playingVideo: PlayableVideo?
+    @State private var importingVideo = false
+    @State private var showPatchNotes = false
 
     var body: some View {
         NavigationStack {
@@ -16,10 +78,14 @@ struct MyProfileView: View {
                         heroCard
                         if store.isAdmin { adminCard }
                         availabilityCard
+                        videosCard
                         viewersCard
                         if !store.showsPremium { premiumCard }
                         if store.backend != nil { accountCard }
+                        notificationsCard
+                        languageCard
                         appearanceCard
+                        patchNotesCard
                         resetButton
                     }
                     .padding(.horizontal, 18)
@@ -33,6 +99,36 @@ struct MyProfileView: View {
             }
             .sheet(isPresented: $showAccount) {
                 AccountSheet()
+            }
+            .sheet(isPresented: $showPatchNotes) {
+                PatchNotesView()
+            }
+            .sheet(item: $playingVideo) { video in
+                VideoPlayer(player: AVPlayer(url: video.url))
+                    .ignoresSafeArea()
+                    .presentationDetents([.large])
+            }
+            .onChange(of: photoItem) { _, item in
+                guard let item else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let jpeg = UIImage(data: data)?.resizedJPEG(maxSide: 800) {
+                        store.setProfilePhoto(jpeg)
+                    }
+                    photoItem = nil
+                }
+            }
+            .onChange(of: videoItem) { _, item in
+                guard let item else { return }
+                importingVideo = true
+                Task {
+                    if let video = try? await item.loadTransferable(type: PickedVideo.self) {
+                        store.addDemoVideo(from: video.url)
+                        try? FileManager.default.removeItem(at: video.url)
+                    }
+                    videoItem = nil
+                    importingVideo = false
+                }
             }
             .confirmationDialog(
                 "Réinitialiser toutes les données de la démo ?",
@@ -52,19 +148,26 @@ struct MyProfileView: View {
                 .stroke(.white.opacity(0.15), lineWidth: 1)
 
             VStack(spacing: 14) {
-                ZStack(alignment: .bottomTrailing) {
-                    AvatarView(name: store.profile.name, size: 84)
-                        .padding(4)
-                        .background(.white.opacity(0.2), in: Circle())
-                    if store.showsPremium {
-                        Image(systemName: "crown.fill")
+                // La photo de profil se change d'un tap sur l'avatar.
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    ZStack(alignment: .bottomTrailing) {
+                        MyAvatarView(profile: store.profile, size: 84)
+                            .padding(4)
+                            .background(.white.opacity(0.2), in: Circle())
+                        Image(systemName: store.showsPremium ? "crown.fill" : "camera.fill")
                             .font(.caption2.weight(.bold))
                             .padding(6)
-                            .background(JC.premium, in: Circle())
+                            .background(
+                                store.showsPremium
+                                    ? AnyShapeStyle(JC.premium)
+                                    : AnyShapeStyle(.white.opacity(0.9)),
+                                in: Circle()
+                            )
                             .foregroundStyle(.black)
                             .offset(x: 4, y: 4)
                     }
                 }
+                .buttonStyle(PressableStyle())
                 VStack(spacing: 4) {
                     HStack(spacing: 8) {
                         Text(store.profile.name)
@@ -75,6 +178,13 @@ struct MyProfileView: View {
                         .font(.caption.weight(.medium))
                         .opacity(0.88)
                         .multilineTextAlignment(.center)
+                    HStack(spacing: 14) {
+                        Text("**\(store.followersCount)** abonnés")
+                        Text("**\(store.followingCount)** suivis")
+                    }
+                    .font(.caption)
+                    .opacity(0.92)
+                    .padding(.top, 2)
                 }
             }
             .foregroundStyle(.white)
@@ -96,9 +206,232 @@ struct MyProfileView: View {
     }
 
     private var subtitle: String {
-        let instruments = store.profile.instruments.map(\.rawValue).joined(separator: " · ")
-        let genres = store.profile.genres.map(\.rawValue).joined(separator: ", ")
-        return "\(instruments) · \(genres) · Genève"
+        let instruments = store.profile.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")
+        let genres = store.profile.genres.map { store.tr($0.rawValue) }.joined(separator: ", ")
+        return "\(instruments) · \(genres) · \(store.profile.resolvedCity)"
+    }
+
+    /// Vidéos de démo : 1 en gratuit, jusqu'à 6 en Premium. C'est la vitrine
+    /// du profil — on écoute avant d'engager.
+    private var videosCard: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Mes vidéos de démo", systemImage: "video.fill")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(JC.violet)
+                    Spacer()
+                    Text("\(store.profile.videos.count)/\(store.videoLimit)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
+                Text("C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                ForEach(store.profile.videos, id: \.self) { fileName in
+                    HStack(spacing: 11) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(JC.violet.opacity(0.14))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "play.fill")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(JC.violet)
+                        }
+                        Text("Vidéo \((store.profile.videos.firstIndex(of: fileName) ?? 0) + 1)")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 0)
+                        Button {
+                            store.removeDemoVideo(fileName)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .padding(8)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        playingVideo = PlayableVideo(url: AppStore.mediaURL(for: fileName))
+                    }
+                }
+
+                if store.canAddVideo {
+                    PhotosPicker(selection: $videoItem, matching: .videos) {
+                        Label(
+                            importingVideo ? "Import en cours…" : "Ajouter une vidéo",
+                            systemImage: importingVideo ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
+                        )
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.violet)
+                    }
+                    .disabled(importingVideo)
+                } else if !store.showsPremium {
+                    // Limite gratuite atteinte : l'ajout passe par Premium.
+                    Button { store.showPaywall = true } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "crown.fill")
+                            Text("Jusqu'à 6 vidéos avec Premium")
+                                .font(.caption.weight(.bold))
+                            Spacer(minLength: 0)
+                            Image(systemName: "lock.fill")
+                        }
+                        .font(.caption.weight(.bold))
+                        .padding(11)
+                        .background(JC.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.gold)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+        }
+    }
+
+    /// Notifications locales : nouveaux SOS compatibles et messages reçus.
+    /// Les alertes serveur (push APNs) arrivent avec TestFlight en phase 2b.
+    private var notificationsCard: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(isOn: Binding(
+                    get: { store.notificationsEnabled },
+                    set: { enabled in Task { await store.setNotifications(enabled) } }
+                )) {
+                    Label("Notifications", systemImage: "bell.badge.fill")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(JC.coral)
+                }
+                .tint(JC.coral)
+                Text("Nouveaux SOS compatibles avec tes instruments et messages reçus.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if store.notificationsEnabled {
+                    Button {
+                        store.sendTestNotification()
+                    } label: {
+                        Label("Envoyer une notification de test", systemImage: "paperplane.fill")
+                            .font(.caption.weight(.bold))
+                    }
+                    .buttonStyle(PressableStyle())
+                } else {
+                    Text("Si l'interrupteur retombe, autorise Dispo dans Réglages > Notifications.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    /// Historique des mises à jour (bêta) — le numéro de version est cliquable.
+    private var patchNotesCard: some View {
+        Button { showPatchNotes = true } label: {
+            JCCard {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(JC.violet.opacity(0.14))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(JC.violet)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("Nouveautés")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                            TagView(text: "BÊTA", color: JC.coral)
+                        }
+                        Text(verbatim: "v\(Bundle.main.appVersion)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .buttonStyle(PressableStyle())
+    }
+
+    /// Langue de l'app + pays et ville — modifiables à tout moment.
+    private var languageCard: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Langue & région", systemImage: "globe")
+                    .font(.subheadline.weight(.heavy))
+
+                HStack {
+                    Text("Langue")
+                        .font(.subheadline)
+                    Spacer()
+                    Menu {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Button {
+                                store.setLanguage(lang)
+                            } label: {
+                                if store.language == lang {
+                                    Label("\(lang.flag) \(lang.nativeName)", systemImage: "checkmark")
+                                } else {
+                                    Text("\(lang.flag) \(lang.nativeName)")
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("\(store.language.flag) \(store.language.nativeName)")
+                                .font(.subheadline.weight(.semibold))
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(JC.violet)
+                    }
+                }
+
+                Divider()
+
+                HStack {
+                    Text("Pays")
+                        .font(.subheadline)
+                    Spacer()
+                    Picker("Pays", selection: Binding(
+                        get: { store.profile.resolvedCountry },
+                        set: { newCountry in
+                            store.profile.country = newCountry
+                            // La ville doit appartenir au pays choisi.
+                            if !newCountry.cities.contains(store.profile.resolvedCity) {
+                                store.profile.city = newCountry.cities[0]
+                            }
+                            store.saveProfile()
+                        }
+                    )) {
+                        ForEach(Country.allCases) { country in
+                            Text("\(country.flag) \(store.tr(country.nameKey))").tag(country)
+                        }
+                    }
+                    .tint(JC.violet)
+                }
+
+                HStack {
+                    Text("Ville / région")
+                        .font(.subheadline)
+                    Spacer()
+                    Picker("Ville / région", selection: Binding(
+                        get: { store.profile.resolvedCity },
+                        set: { store.profile.city = $0; store.saveProfile() }
+                    )) {
+                        ForEach(store.profile.resolvedCountry.cities, id: \.self) { Text($0) }
+                    }
+                    .tint(JC.violet)
+                }
+            }
+        }
     }
 
     private var appearanceCard: some View {
@@ -124,7 +457,7 @@ struct MyProfileView: View {
                 Image(systemName: option.symbol)
                     .font(.title3)
                     .foregroundStyle(isSelected ? JC.violet : Color.secondary)
-                Text(option.label)
+                Text(LocalizedStringKey(option.label))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(isSelected ? Color.primary : Color.secondary)
             }
@@ -188,7 +521,7 @@ struct MyProfileView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 } else {
-                    Label("Les autres te voient : \(derived.emoji) \(derived.badgeLabel)", systemImage: "eye")
+                    Label("Les autres te voient : \(derived.emoji) \(store.tr(derived.badgeLabel))", systemImage: "eye")
                         .font(.caption2)
                         .foregroundStyle(derived.color)
                 }
@@ -225,6 +558,16 @@ struct MyProfileView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
+                Divider()
+                // Retester le parcours d'accueil sans toucher aux données.
+                Button {
+                    store.replayOnboarding()
+                } label: {
+                    Label("Revoir l'onboarding", systemImage: "arrow.counterclockwise.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(JC.violet)
+                }
+                .buttonStyle(PressableStyle())
             }
         }
     }
@@ -318,7 +661,7 @@ struct MyProfileView: View {
                 showResetConfirmation = true
             }
             .font(.caption)
-            Text("Dispo v0.3 — données de démo réinitialisables.")
+            Text("Dispo v\(Bundle.main.appVersion) (bêta) — données de démo réinitialisables.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -345,7 +688,7 @@ struct EditProfileSheet: View {
                 Section("Mes instruments") {
                     ForEach(Instrument.allCases) { instrument in
                         toggleRow(
-                            label: instrument.rawValue,
+                            label: LocalizedStringKey(instrument.rawValue),
                             isOn: store.profile.instruments.contains(instrument)
                         ) {
                             if let index = store.profile.instruments.firstIndex(of: instrument) {
@@ -361,7 +704,8 @@ struct EditProfileSheet: View {
                 Section("Mes genres") {
                     ForEach(Genre.allCases) { genre in
                         toggleRow(
-                            label: "\(genre.emoji) \(genre.rawValue)",
+                            emoji: genre.emoji,
+                            label: LocalizedStringKey(genre.rawValue),
                             isOn: store.profile.genres.contains(genre)
                         ) {
                             if let index = store.profile.genres.firstIndex(of: genre) {
@@ -379,7 +723,7 @@ struct EditProfileSheet: View {
                         get: { store.profile.level },
                         set: { store.profile.level = $0; store.saveProfile() }
                     )) {
-                        ForEach(Level.allCases) { Text($0.rawValue).tag($0) }
+                        ForEach(Level.allCases) { Text(LocalizedStringKey($0.rawValue)).tag($0) }
                     }
                     .pickerStyle(.segmented)
                 }
@@ -405,10 +749,10 @@ struct EditProfileSheet: View {
         }
     }
 
-    private func toggleRow(label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+    private func toggleRow(emoji: String? = nil, label: LocalizedStringKey, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack {
-                Text(label).foregroundStyle(.primary)
+                ((emoji.map { Text($0 + " ") } ?? Text("")) + Text(label)).foregroundStyle(.primary)
                 Spacer()
                 if isOn {
                     Image(systemName: "checkmark.circle.fill")

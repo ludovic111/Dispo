@@ -2,6 +2,17 @@ import Foundation
 import CoreLocation
 import SwiftUI
 import Supabase
+import UserNotifications
+
+/// Affiche les notifications en bannière même quand l'app est au premier plan.
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
+    }
+}
 
 /// État global de la démo. Charge les données fictives depuis SeedData.json
 /// et persiste les actions de l'utilisateur (événements créés, messages,
@@ -31,6 +42,15 @@ final class AppStore: ObservableObject {
     @Published var hasOnboarded: Bool = false
     /// Préférence d'apparence (système / clair / sombre).
     @Published var theme: AppTheme = .system
+    /// Langue de l'interface, choisie dans l'onboarding ou le profil.
+    @Published var language: AppLanguage = .systemDefault
+    /// Musiciens que je suis (par nom, comme les favoris).
+    @Published var following: Set<String> = []
+    /// Notifications locales activées (nouveaux SOS compatibles, messages).
+    @Published var notificationsEnabled: Bool = false
+    private let notificationDelegate = NotificationDelegate()
+    /// SOS déjà vus — pour ne notifier que les vraies nouveautés.
+    private var seenGigIDs: Set<UUID> = []
 
     // MARK: - Backend (mode live)
 
@@ -84,6 +104,10 @@ final class AppStore: ObservableObject {
     private static let premiumPlanKey = "jamconnect.premiumPlan"
     private static let onboardedKey = "jamconnect.onboarded"
     private static let themeKey = "jamconnect.theme"
+    private static let languageKey = "jamconnect.language"
+    private static let followingKey = "jamconnect.following"
+    private static let notificationsKey = "jamconnect.notifications"
+    private static let seenGigsKey = "jamconnect.seenGigs"
 
     init() {
         backend = BackendConfig.load().map(SupabaseBackend.init)
@@ -128,6 +152,15 @@ final class AppStore: ObservableObject {
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
         theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .system
+        language = UserDefaults.standard.string(forKey: Self.languageKey).flatMap(AppLanguage.init) ?? .systemDefault
+        if let saved: Set<String> = Self.load(key: Self.followingKey) {
+            following = saved
+        }
+        notificationsEnabled = UserDefaults.standard.bool(forKey: Self.notificationsKey)
+        if let saved: Set<UUID> = Self.load(key: Self.seenGigsKey) {
+            seenGigIDs = saved
+        }
+        UNUserNotificationCenter.current().delegate = notificationDelegate
     }
 
     /// Profil par défaut de la démo.
@@ -176,7 +209,7 @@ final class AppStore: ObservableObject {
             let userID = try await backend.handleAuthCallback(url)
             await didSignIn(userID: userID)
         } catch {
-            backendError = "Lien de connexion invalide ou expiré."
+            backendError = tr("Lien de connexion invalide ou expiré.")
         }
     }
 
@@ -221,13 +254,14 @@ final class AppStore: ObservableObject {
             let (m, g, c) = try await (musiciansTask, gigsTask, conversationsTask)
             musicians = m
             events = g.sorted { $0.date < $1.date }
+            notifyNewGigs(g)
             conversations = c.sorted {
                 ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
             bands = [] // les groupes ne font pas partie du mode live (résidu jam)
             backendError = nil
         } catch {
-            backendError = "Connexion au serveur impossible — vérifie le réseau."
+            backendError = tr("Connexion au serveur impossible — vérifie le réseau.")
         }
     }
 
@@ -288,8 +322,15 @@ final class AppStore: ObservableObject {
         guard let userID = liveUserID else { return }
         if let index = conversations.firstIndex(where: { $0.id == row.conversationId }) {
             guard !conversations[index].messages.contains(where: { $0.id == row.id }) else { return }
+            let message = row.asMessage(myID: userID)
             withAnimation {
-                conversations[index].messages.append(row.asMessage(myID: userID))
+                conversations[index].messages.append(message)
+            }
+            if !message.isFromMe {
+                pushLocal(
+                    title: conversations[index].contactName,
+                    body: message.text
+                )
             }
         } else {
             // Conversation inconnue : quelqu'un vient de m'écrire pour la première fois.
@@ -301,6 +342,70 @@ final class AppStore: ObservableObject {
     func setTheme(_ newTheme: AppTheme) {
         theme = newTheme
         UserDefaults.standard.set(newTheme.rawValue, forKey: Self.themeKey)
+    }
+
+    // MARK: - Langue
+
+    /// Change la langue de l'interface. L'effet est immédiat sur les vues
+    /// (locale d'environnement) et complet au prochain lancement
+    /// (AppleLanguages : dates, formats système…).
+    func setLanguage(_ newLanguage: AppLanguage) {
+        language = newLanguage
+        UserDefaults.standard.set(newLanguage.rawValue, forKey: Self.languageKey)
+        UserDefaults.standard.set([newLanguage.rawValue], forKey: "AppleLanguages")
+    }
+
+    /// Traduit une clé du catalogue dans la langue choisie — pour les
+    /// chaînes construites en code (les `Text` littéraux suivent la locale).
+    func tr(_ key: String) -> String { language.tr(key) }
+
+    // MARK: - Relations (amis / abonnés)
+
+    /// Musiciens qui me suivent. Simulation stable côté démo (le vrai graphe
+    /// social viendra du backend en phase 2b).
+    var myFollowers: Set<String> {
+        Set(musicians.filter { abs($0.name.stableHash) % 3 == 0 }.map(\.name))
+    }
+
+    func socialLink(with name: String) -> SocialLink {
+        let followed = following.contains(name)
+        let followsMe = myFollowers.contains(name)
+        if followed && followsMe { return .friend }
+        if followed { return .following }
+        if followsMe { return .follower }
+        return .none
+    }
+
+    func isFollowing(_ musician: Musician) -> Bool {
+        following.contains(musician.name)
+    }
+
+    func toggleFollow(_ musician: Musician) {
+        if following.contains(musician.name) {
+            following.remove(musician.name)
+        } else {
+            following.insert(musician.name)
+        }
+        Self.save(following, key: Self.followingKey)
+    }
+
+    var followingCount: Int { following.count }
+    var followersCount: Int { myFollowers.count }
+
+    // MARK: - Classement des musiciens
+
+    /// Ordre du feed et des matchs : les amis / suivis / abonnés d'abord,
+    /// puis — pour les membres Premium — les meilleurs niveaux en haut.
+    /// Les comptes gratuits n'ont ni le tri ni l'affichage du niveau
+    /// (c'est un argument d'abonnement).
+    func rank(_ a: Musician, _ b: Musician) -> Bool {
+        let linkA = socialLink(with: a.name), linkB = socialLink(with: b.name)
+        if linkA != linkB { return linkA > linkB }
+        if showsPremium, a.level != b.level { return a.level > b.level }
+        if a.availability.urgencyRank != b.availability.urgencyRank {
+            return a.availability.urgencyRank > b.availability.urgencyRank
+        }
+        return a.distance(from: Self.geneva) < b.distance(from: Self.geneva)
     }
 
     // MARK: - Social & Premium
@@ -397,6 +502,146 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.set(true, forKey: Self.onboardedKey)
     }
 
+    /// Rejoue l'onboarding (outil admin — le profil et les données restent).
+    func replayOnboarding() {
+        hasOnboarded = false
+        UserDefaults.standard.set(false, forKey: Self.onboardedKey)
+    }
+
+    // MARK: - Notifications
+
+    /// Active / coupe les notifications locales. Les alertes serveur (APNs,
+    /// avant-première Premium à distance) arrivent avec le Developer Program
+    /// en phase 2b — même interrupteur, même tuyauterie.
+    func setNotifications(_ enabled: Bool) async {
+        if enabled {
+            let granted = (try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            notificationsEnabled = granted
+        } else {
+            notificationsEnabled = false
+        }
+        UserDefaults.standard.set(notificationsEnabled, forKey: Self.notificationsKey)
+    }
+
+    /// Bannière de test — vérifie que tout marche (bêta).
+    func sendTestNotification() {
+        pushLocal(
+            title: tr("🚨 Nouveau SOS pour toi"),
+            body: tr("Test réussi — les notifications fonctionnent !")
+        )
+    }
+
+    private func pushLocal(title: String, body: String) {
+        guard notificationsEnabled else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Notifie les SOS fraîchement arrivés qui matchent mes instruments.
+    /// Premier passage silencieux : on mémorise sans arroser l'utilisateur.
+    private func notifyNewGigs(_ gigs: [GigRequest]) {
+        let isFirstScan = seenGigIDs.isEmpty
+        var changed = false
+        for gig in gigs where !seenGigIDs.contains(gig.id) {
+            seenGigIDs.insert(gig.id)
+            changed = true
+            guard !isFirstScan, !gig.isMine,
+                  !Set(gig.wantedInstruments).isDisjoint(with: profile.instruments)
+            else { continue }
+            pushLocal(
+                title: tr("🚨 Nouveau SOS pour toi"),
+                body: "\(gig.title) · \(tr(gig.feeLabel))"
+            )
+        }
+        if changed {
+            Self.save(seenGigIDs, key: Self.seenGigsKey)
+        }
+    }
+
+    // MARK: - Matching SOS
+
+    /// Musiciens compatibles avec un SOS : bon instrument et dispo dépannage.
+    /// Ceux qui ont coché la date exacte sortent en premier, puis les
+    /// relations (amis / suivis / abonnés), puis — en Premium — le niveau.
+    func matches(for gig: GigRequest) -> [SOSMatch] {
+        musicians
+            .filter { $0.plays(any: gig.wantedInstruments) && $0.isAvailable }
+            .map { SOSMatch(musician: $0, dateConfirmed: $0.isAvailable(on: gig.date)) }
+            .sorted { a, b in
+                if a.dateConfirmed != b.dateConfirmed { return a.dateConfirmed }
+                let genreA = a.musician.genres.contains(gig.genre)
+                let genreB = b.musician.genres.contains(gig.genre)
+                if genreA != genreB { return genreA }
+                return rank(a.musician, b.musician)
+            }
+    }
+
+    // MARK: - Médias du profil (photo + vidéos de démo)
+
+    /// Nombre maximum de vidéos de démo selon l'abonnement.
+    var videoLimit: Int { showsPremium ? 6 : 1 }
+    var canAddVideo: Bool { profile.videos.count < videoLimit }
+
+    nonisolated private static var documentsURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+
+    nonisolated static func mediaURL(for fileName: String) -> URL {
+        documentsURL.appendingPathComponent(fileName)
+    }
+
+    /// Enregistre la photo de profil choisie (remplace l'ancienne).
+    func setProfilePhoto(_ data: Data) {
+        let fileName = "profile_photo_\(Int(Date().timeIntervalSince1970)).jpg"
+        if let old = profile.photoFileName {
+            try? FileManager.default.removeItem(at: Self.mediaURL(for: old))
+        }
+        do {
+            try data.write(to: Self.mediaURL(for: fileName))
+            profile.photoFileName = fileName
+            saveProfile()
+        } catch {
+            backendError = tr("La photo n'a pas pu être enregistrée.")
+        }
+    }
+
+    func removeProfilePhoto() {
+        if let old = profile.photoFileName {
+            try? FileManager.default.removeItem(at: Self.mediaURL(for: old))
+        }
+        profile.photoFileName = nil
+        saveProfile()
+    }
+
+    /// Ajoute une vidéo de démo (données déjà copiées depuis la photothèque).
+    /// Respecte la limite gratuit / Premium — vérifier `canAddVideo` avant.
+    func addDemoVideo(from sourceURL: URL) {
+        guard canAddVideo else { return }
+        let fileName = "demo_video_\(Int(Date().timeIntervalSince1970)).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)"
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
+            profile.videoFileNames = profile.videos + [fileName]
+            saveProfile()
+        } catch {
+            backendError = tr("La vidéo n'a pas pu être enregistrée.")
+        }
+    }
+
+    func removeDemoVideo(_ fileName: String) {
+        try? FileManager.default.removeItem(at: Self.mediaURL(for: fileName))
+        profile.videoFileNames = profile.videos.filter { $0 != fileName }
+        saveProfile()
+    }
+
     // MARK: - Actions
 
     func addEvent(_ event: GigRequest) {
@@ -406,7 +651,7 @@ final class AppStore: ObservableObject {
         if let backend, let userID = liveUserID {
             Task {
                 do { try await backend.createGig(event, hostID: userID) }
-                catch { backendError = "L'annonce n'a pas pu être publiée sur le serveur." }
+                catch { backendError = tr("L'annonce n'a pas pu être publiée sur le serveur.") }
             }
         }
     }
@@ -425,7 +670,7 @@ final class AppStore: ObservableObject {
                         try await backend.unapply(from: event.id, musicianID: userID)
                     }
                 } catch {
-                    backendError = "La candidature n'a pas pu être envoyée."
+                    backendError = tr("La candidature n'a pas pu être envoyée.")
                 }
             }
         }
@@ -455,7 +700,7 @@ final class AppStore: ObservableObject {
                     else { return }
                     withAnimation { self.conversations[i].messages.append(message) }
                 } catch {
-                    self?.backendError = "Le message n'a pas pu être envoyé."
+                    self?.backendError = tr("Le message n'a pas pu être envoyé.")
                 }
             }
             return
@@ -494,7 +739,7 @@ final class AppStore: ObservableObject {
                 conversations.insert(new, at: 0)
                 return new
             } catch {
-                backendError = "Impossible d'ouvrir la conversation."
+                backendError = tr("Impossible d'ouvrir la conversation.")
                 // Repli local pour ne pas bloquer l'utilisateur.
             }
         }
@@ -520,7 +765,9 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.appreciationsKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
+        UserDefaults.standard.removeObject(forKey: Self.followingKey)
         favorites = []
+        following = []
         myAppreciations = [:]
         isPremium = false
         premiumPlan = nil

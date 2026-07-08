@@ -10,8 +10,8 @@ struct PaywallView: View {
 
     private struct Perk {
         let icon: String
-        let title: String
-        let text: String
+        let title: LocalizedStringKey
+        let text: LocalizedStringKey
         var highlight: Bool = false
     }
 
@@ -98,7 +98,7 @@ struct PaywallView: View {
 
     private var perksList: some View {
         VStack(spacing: 12) {
-            ForEach(perks, id: \.title) { perk in
+            ForEach(perks, id: \.icon) { perk in
                 HStack(spacing: 14) {
                     Image(systemName: perk.icon)
                         .font(.title3)
@@ -137,7 +137,7 @@ struct PaywallView: View {
         } label: {
             VStack(spacing: 6) {
                 if let tag = plan.promoTag {
-                    Text(tag)
+                    Text(LocalizedStringKey(tag))
                         .font(.system(size: 9, weight: .heavy))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -146,12 +146,12 @@ struct PaywallView: View {
                 } else {
                     Spacer().frame(height: 18)
                 }
-                Text(plan.title)
+                Text(LocalizedStringKey(plan.title))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
-                Text(plan.priceLine)
+                Text(LocalizedStringKey(plan.priceLine))
                     .font(.headline.weight(.heavy))
-                Text(plan.detailLine)
+                Text(LocalizedStringKey(plan.detailLine))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

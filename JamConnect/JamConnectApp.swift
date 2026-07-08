@@ -13,6 +13,10 @@ struct JamConnectApp: App {
             RootView()
                 .environmentObject(store)
                 .preferredColorScheme(store.theme.colorScheme)
+                // Langue choisie dans l'app : les Text localisés suivent la
+                // locale d'environnement ; le .id force le re-rendu complet.
+                .environment(\.locale, store.language.locale)
+                .id(store.language)
                 .tint(JC.coral)
                 .onOpenURL { url in
                     // Lien magique de connexion (dispo://login-callback).
@@ -376,8 +380,20 @@ struct LogoView: View {
 }
 
 struct TagView: View {
-    let text: String
+    let text: LocalizedStringKey
     var color: Color = JC.coral
+
+    /// Beaucoup d'appels passent des valeurs dynamiques (instruments,
+    /// genres…) : la chaîne devient une clé de traduction (repli : elle-même).
+    init(text: String, color: Color = JC.coral) {
+        self.text = LocalizedStringKey(text)
+        self.color = color
+    }
+
+    init(text: LocalizedStringKey, color: Color = JC.coral) {
+        self.text = text
+        self.color = color
+    }
 
     var body: some View {
         Text(text)
@@ -399,7 +415,7 @@ struct AvailabilityBadge: View {
             HStack(spacing: 5) {
                 Image(systemName: availability.symbol)
                     .font(.system(size: 9, weight: .bold))
-                Text(availability.badgeLabel)
+                Text(LocalizedStringKey(availability.badgeLabel))
                     .font(.caption2.weight(.bold))
             }
             .padding(.horizontal, 9)
@@ -509,8 +525,8 @@ struct JCCard<Content: View>: View {
 
 /// En-tête d'écran unifié — titre éditorial + sous-titre discret.
 struct ScreenHeader: View {
-    let title: String
-    var subtitle: String? = nil
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey? = nil
     var icon: String? = nil
     var iconColor: Color = JC.coral
     var trailing: AnyView? = nil
@@ -546,7 +562,7 @@ struct ScreenHeader: View {
 
 /// Pilule d'action secondaire (filtres, bascule carte/liste).
 struct JCPillButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String
     var isActive: Bool = false
     var activeColor: Color = JC.coral
@@ -572,8 +588,8 @@ struct JCPillButton: View {
 /// Bannière CTA signature (Premium, publier un SOS).
 struct JCPromoBanner: View {
     let icon: String
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     var style: PromoStyle = .premium
     let action: () -> Void
 
@@ -621,8 +637,8 @@ struct JCPromoBanner: View {
 /// État vide soigné.
 struct JCEmptyState: View {
     let icon: String
-    let title: String
-    let message: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
     var iconColor: Color = JC.violet
 
     var body: some View {
@@ -650,8 +666,8 @@ struct JCEmptyState: View {
 
 /// Titre de section du feed, avec barre d'accent dégradée signature.
 struct SectionHeader: View {
-    let title: String
-    var subtitle: String? = nil
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey? = nil
 
     var body: some View {
         HStack(spacing: 11) {

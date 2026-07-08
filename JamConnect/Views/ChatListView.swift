@@ -41,11 +41,11 @@ struct ChatListView: View {
                                                         .foregroundStyle(.secondary)
                                                 }
                                             }
-                                            Text(conversation.contactInstrument.rawValue)
+                                            Text(LocalizedStringKey(conversation.contactInstrument.rawValue))
                                                 .font(.caption2.weight(.bold))
                                                 .foregroundStyle(JC.coral)
                                             if let last = conversation.lastMessage {
-                                                Text((last.isFromMe ? "Toi : " : "") + last.text)
+                                                Text((last.isFromMe ? store.tr("Toi : ") : "") + last.text)
                                                     .font(.caption)
                                                     .foregroundStyle(.secondary)
                                                     .lineLimit(1)

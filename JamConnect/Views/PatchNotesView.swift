@@ -1,0 +1,142 @@
+import SwiftUI
+
+/// Une version de l'app et ses nouveautés (affichées dans « Nouveautés »).
+struct PatchNote: Identifiable {
+    let version: String
+    let title: LocalizedStringKey
+    let points: [LocalizedStringKey]
+    var id: String { version }
+
+    /// Historique des versions — la plus récente en premier. À compléter à
+    /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
+    static let all: [PatchNote] = [
+        PatchNote(
+            version: "0.4.0",
+            title: "Matching, réseau & langues",
+            points: [
+                "Matching des SOS : les musiciens compatibles s'affichent dès la publication",
+                "Amis & abonnés — tes relations remontent en premier",
+                "Tri par niveau et niveau visible (Premium)",
+                "Photo de profil et vidéos de démo (1 gratuite, 6 en Premium)",
+                "App en 7 langues + choix du pays et de la ville",
+                "Nouvel onboarding, notifications et patchnotes"
+            ]
+        ),
+        PatchNote(
+            version: "0.3.0",
+            title: "Dépannage d'abord",
+            points: [
+                "Recentrage 100 % dépannage concert — l'onglet Groupes s'en va",
+                "Dispo par vraies dates cochées au calendrier",
+                "Avant-première Premium visible (SOS verrouillés 30 min)",
+                "Compte e-mail + mot de passe, serveur en Suisse"
+            ]
+        ),
+        PatchNote(
+            version: "0.2.0",
+            title: "La démo vivante",
+            points: [
+                "20 musiciens genevois, annonces et conversations de démo",
+                "Design « nuit de jazz », mode clair / sombre",
+                "Appréciations positives : notes de musique et notes dorées"
+            ]
+        ),
+        PatchNote(
+            version: "0.1.0",
+            title: "Premier prototype",
+            points: [
+                "Feed de musiciens, profils et carte de Genève",
+                "Premières annonces SOS"
+            ]
+        )
+    ]
+}
+
+extension Bundle {
+    /// Version marketing de l'app (ex. « 0.4.0 »).
+    var appVersion: String {
+        (infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0.0.0"
+    }
+}
+
+/// Historique des mises à jour, avec bandeau bêta. Ouvert depuis le profil.
+struct PatchNotesView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+
+                ScrollView {
+                    VStack(spacing: 16) {
+                        betaBanner
+                        ForEach(PatchNote.all) { note in
+                            noteCard(note, isCurrent: note.version == Bundle.main.appVersion)
+                        }
+                    }
+                    .padding(18)
+                }
+            }
+            .navigationTitle("Nouveautés")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+        }
+    }
+
+    private var betaBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "hammer.fill")
+                .font(.title3)
+                .foregroundStyle(JC.coral)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Dispo est en bêta")
+                    .font(.subheadline.weight(.heavy))
+                Text("Merci de tester ! Un pépin, une idée ? Dis-le à Ludovic.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            TagView(text: "BÊTA", color: JC.coral)
+        }
+        .padding(14)
+        .background(JC.coral.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(JC.coral.opacity(0.35), lineWidth: 1)
+        )
+    }
+
+    private func noteCard(_ note: PatchNote, isCurrent: Bool) -> some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text(verbatim: "v\(note.version)")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(isCurrent ? JC.coral : .secondary)
+                    Text(note.title)
+                        .font(.subheadline.weight(.bold))
+                    Spacer(minLength: 0)
+                    if isCurrent {
+                        TagView(text: "Version actuelle", color: JC.coral)
+                    }
+                }
+                ForEach(Array(note.points.enumerated()), id: \.offset) { _, point in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "sparkle")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(JC.violet)
+                            .padding(.top, 4)
+                        Text(point)
+                            .font(.caption)
+                            .foregroundStyle(.primary.opacity(0.85))
+                    }
+                }
+            }
+        }
+    }
+}

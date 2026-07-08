@@ -81,7 +81,7 @@ struct AuthForm: View {
             JCCard {
                 VStack(alignment: .leading, spacing: 14) {
                     Picker("Mode", selection: $mode) {
-                        ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+                        ForEach(Mode.allCases) { Text(LocalizedStringKey($0.rawValue)).tag($0) }
                     }
                     .pickerStyle(.segmented)
 
@@ -109,7 +109,7 @@ struct AuthForm: View {
                     } label: {
                         HStack {
                             if isWorking { ProgressView().tint(.white) }
-                            Text(mode.rawValue)
+                            Text(LocalizedStringKey(mode.rawValue))
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -186,16 +186,16 @@ struct AuthForm: View {
             } catch {
                 let message = error.localizedDescription.lowercased()
                 if signUp, message.contains("already registered") {
-                    errorText = "Un compte existe déjà avec cet e-mail — connecte-toi."
+                    errorText = store.tr("Un compte existe déjà avec cet e-mail — connecte-toi.")
                     mode = .signIn
                 } else if !signUp, message.contains("invalid login credentials") {
-                    errorText = "E-mail ou mot de passe incorrect."
+                    errorText = store.tr("E-mail ou mot de passe incorrect.")
                 } else if message.contains("password") {
-                    errorText = "Mot de passe trop court : 8 caractères minimum."
+                    errorText = store.tr("Mot de passe trop court : 8 caractères minimum.")
                 } else {
                     errorText = signUp
-                        ? "Création du compte impossible — vérifie le réseau."
-                        : "Connexion impossible — vérifie le réseau."
+                        ? store.tr("Création du compte impossible — vérifie le réseau.")
+                        : store.tr("Connexion impossible — vérifie le réseau.")
                 }
             }
             isWorking = false
@@ -209,9 +209,9 @@ struct AuthForm: View {
         Task {
             do {
                 try await backend.requestPasswordReset(email: cleanEmail)
-                infoText = "E-mail de réinitialisation envoyé à \(cleanEmail)."
+                infoText = store.tr("E-mail de réinitialisation envoyé à :") + " " + cleanEmail
             } catch {
-                errorText = "Envoi impossible — vérifie l'adresse et le réseau."
+                errorText = store.tr("Envoi impossible — vérifie l'adresse et le réseau.")
             }
             isWorking = false
         }
@@ -223,7 +223,7 @@ struct AuthForm: View {
         case .failure(let error):
             // Annulation utilisateur : pas d'erreur à afficher.
             if (error as? ASAuthorizationError)?.code != .canceled {
-                errorText = "Connexion Apple impossible — réessaie."
+                errorText = store.tr("Connexion Apple impossible — réessaie.")
             }
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
@@ -231,7 +231,7 @@ struct AuthForm: View {
                   let idToken = String(data: tokenData, encoding: .utf8),
                   let nonce = appleNonce
             else {
-                errorText = "Réponse Apple invalide — réessaie."
+                errorText = store.tr("Réponse Apple invalide — réessaie.")
                 return
             }
             // Apple ne fournit le nom qu'à la toute première autorisation.
@@ -248,7 +248,7 @@ struct AuthForm: View {
                     }
                     await store.didSignIn(userID: userID)
                 } catch {
-                    errorText = "Connexion Apple refusée par le serveur."
+                    errorText = store.tr("Connexion Apple refusée par le serveur.")
                 }
                 isWorking = false
             }
