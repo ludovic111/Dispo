@@ -597,6 +597,121 @@
       "photo": "pfp_antoine"
     }
   ],
+  "bands": [
+    {
+      "name": "Les Descargas de Carouge",
+      "neighborhood": "Carouge",
+      "latitude": 46.1815,
+      "longitude": 6.1398,
+      "genres": ["Latin / World", "Jazz"],
+      "level": "Professionnel",
+      "bio": "Sextet latin jazz fondé en 2018. Descargas mensuelles au Chat Noir, festivals d'été en Suisse romande. Groove cubain authentique.",
+      "availability": "Ce soir",
+      "memberCount": 6,
+      "foundedYear": 2018,
+      "lookingFor": ["Percussions"],
+      "repertoire": ["Manteca", "Oye Como Va", "Guantanamera", "El Cuarto de Tula"],
+      "reviews": [
+        { "author": "Sofia", "appreciation": "golden", "comment": "La meilleure descarga de Genève. Énergie de feu." },
+        { "author": "Julien", "appreciation": "golden", "comment": "Section cuivre + rythmes impeccables." },
+        { "author": "David", "appreciation": "note", "comment": "Très pro, bonne ambiance de scène." }
+      ],
+      "photo": "cover_latin"
+    },
+    {
+      "name": "Blue Note Geneva",
+      "neighborhood": "Eaux-Vives",
+      "latitude": 46.2038,
+      "longitude": 6.1582,
+      "genres": ["Jazz"],
+      "level": "Professionnel",
+      "bio": "Quartet jazz moderne — standards revisités et compositions originales. Résidence au Bateau Genève le jeudi.",
+      "availability": "Cette semaine",
+      "memberCount": 4,
+      "foundedYear": 2015,
+      "lookingFor": ["Saxophone"],
+      "repertoire": ["Autumn Leaves", "Blue Bossa", "Footprints", "So What"],
+      "reviews": [
+        { "author": "Élise", "appreciation": "golden", "comment": "Un quartet de classe mondiale." },
+        { "author": "Nadia", "appreciation": "note", "comment": "Très bon niveau, setlist exigeante." }
+      ],
+      "photo": "cover_jazz"
+    },
+    {
+      "name": "Soul Session Genève",
+      "neighborhood": "Plainpalais",
+      "latitude": 46.1962,
+      "longitude": 6.1425,
+      "genres": ["Gospel / Soul / R&B", "Jazz"],
+      "level": "Avancé",
+      "bio": "Cinq voix + claviers + batterie. Covers soul des 70s et neo-soul contemporain. Open mic le premier vendredi du mois.",
+      "availability": "Ce week-end",
+      "memberCount": 5,
+      "foundedYear": 2020,
+      "lookingFor": [],
+      "repertoire": ["Ain't No Sunshine", "Georgia On My Mind", "Respect", "Compositions neo-soul"],
+      "reviews": [
+        { "author": "Marco", "appreciation": "golden", "comment": "Les harmonies nous ont fait pleurer." },
+        { "author": "Léa", "appreciation": "note", "comment": "Super groove, chanteuses au top." }
+      ],
+      "photo": "cover_soul"
+    },
+    {
+      "name": "Quartet Mont-Blanc",
+      "neighborhood": "Champel",
+      "latitude": 46.1925,
+      "longitude": 6.1510,
+      "genres": ["Jazz", "Classique"],
+      "level": "Professionnel",
+      "bio": "Formation hybride jazz-classique. Piano, violon, contrebasse, batterie. Répertoire de Gershwin à Shostakovitch.",
+      "availability": "Sur demande",
+      "memberCount": 4,
+      "foundedYear": 2012,
+      "lookingFor": [],
+      "repertoire": ["Rhapsody in Blue", "Summertime", "Jazz Suite No. 2"],
+      "reviews": [
+        { "author": "Anna", "appreciation": "golden", "comment": "Élégance et virtuosité rares." }
+      ],
+      "photo": "cover_classique"
+    },
+    {
+      "name": "Electric Triangle",
+      "neighborhood": "Pâquis",
+      "latitude": 46.2105,
+      "longitude": 6.1488,
+      "genres": ["Électronique", "Rock / Pop"],
+      "level": "Intermédiaire",
+      "bio": "Trio electro-rock genevois. Synthés analogiques, grooves hypnotiques. On cherche un guitariste pour compléter le live set.",
+      "availability": "Cette semaine",
+      "memberCount": 3,
+      "foundedYear": 2023,
+      "lookingFor": ["Guitare"],
+      "repertoire": ["Sets hybrides", "Live set", "Collabs studio"],
+      "reviews": [
+        { "author": "Karim", "appreciation": "note", "comment": "Son massif, bonne énergie live." }
+      ],
+      "photo": "cover_electro"
+    },
+    {
+      "name": "Folk & Friends",
+      "neighborhood": "Cité",
+      "latitude": 46.2048,
+      "longitude": 6.1365,
+      "genres": ["Folk / Acoustique"],
+      "level": "Avancé",
+      "bio": "Cercle acoustique ouvert — guitare, mandoline, voix. Sessions storytelling autour d'un feu (virtuel) chaque dimanche.",
+      "availability": "Ce week-end",
+      "memberCount": 7,
+      "foundedYear": 2019,
+      "lookingFor": ["Voix", "Violon"],
+      "repertoire": ["Storytelling", "Cercle", "Compositions perso"],
+      "reviews": [
+        { "author": "Camille", "appreciation": "golden", "comment": "Ambiance unique, très chaleureux." },
+        { "author": "Hugo", "appreciation": "note", "comment": "Belle énergie collective." }
+      ],
+      "photo": "cover_folk"
+    }
+  ],
   "events": [
     {
       "id": "6E1DEB6A-9D2B-4A3C-8F5E-0A1B2C3D4E01",

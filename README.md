@@ -30,6 +30,7 @@ JamConnect/
 
 - **Design « nuit de jazz »** — design system custom (dégradés violet → magenta → corail, cartes arrondies, couleur par genre musical), onboarding en 3 écrans qui explique le concept à la première ouverture.
 - **Accueil (feed social)** — rangée « stories » des musiciens dispo ce soir, feed de cartes avec couverture vidéo, cœur favori, compteur de notes de musique reçues, pilules Filtres/Carte, bascule carte MapKit centrée sur Genève.
+- **Groupes** — onglet dédié aux formations (bands) : feed de groupes avec niveau d'expérience (Débutant → Pro), notes de musique / coups de cœur, filtre par genre, rangée « Recrutent en ce moment », fiche détaillée (membres, répertoire, recrutement, appréciation interactive).
 - **Fiche musicien** — hero vidéo (60–90 s, lecteur réel en phase 2), stats sociales (jams, notes, abonnés), genres avec leurs codes (standards jazz, clave latine…), répertoire, boutons favori + « Proposer une jam ».
 - **Système d'appréciation positif** — après une jam, on donne une **note de musique** (« j'ai aimé ») ou une **note dorée animée** (« coup de cœur ») ; pas de note négative possible. Les profils affichent le total de notes et de coups de cœur.
 - **Jams** — cartes d'événements avec bloc date coloré par genre, bannière « Lance ta jam », bouton « Je viens ! », création de votre propre jam (persistée localement).

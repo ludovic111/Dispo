@@ -12,6 +12,7 @@ final class AppStore: ObservableObject {
     nonisolated static let geneva = CLLocationCoordinate2D(latitude: 46.2044, longitude: 6.1432)
 
     @Published var musicians: [Musician] = []
+    @Published var bands: [Band] = []
     @Published var events: [GigRequest] = []
     @Published var conversations: [Conversation] = []
     @Published var profile: MyProfile
@@ -43,6 +44,7 @@ final class AppStore: ObservableObject {
     init() {
         let seed = Self.loadSeed()
         musicians = seed.musicians
+        bands = seed.bands
 
         // Les dates du seed sont relatives : on les projette sur les prochains jours.
         let seededEvents = seed.events.enumerated().map { index, event -> GigRequest in
@@ -95,50 +97,53 @@ final class AppStore: ObservableObject {
 
     // MARK: - Social & Premium
 
-    /// Photo d'un musicien seed par nom complet ou prénom (avis, conversations).
+    /// Photo d'un musicien ou groupe seed par nom (avis, conversations).
     func photo(forName name: String) -> String? {
         if let exact = musicians.first(where: { $0.name == name }) { return exact.photo }
-        return musicians.first(where: { $0.name.hasPrefix(name + " ") })?.photo
+        if let musician = musicians.first(where: { $0.name.hasPrefix(name + " ") }) { return musician.photo }
+        if let band = bands.first(where: { $0.name == name }) { return band.photo }
+        return bands.first(where: { $0.name.hasPrefix(name + " ") })?.photo
     }
 
-    func isFavorite(_ musician: Musician) -> Bool {
-        favorites.contains(musician.name)
+    /// Favori (musicien ou groupe — géré par nom).
+    func isFavorite(_ item: Rateable) -> Bool {
+        favorites.contains(item.name)
     }
 
-    func toggleFavorite(_ musician: Musician) {
-        if favorites.contains(musician.name) {
-            favorites.remove(musician.name)
+    func toggleFavorite(_ item: Rateable) {
+        if favorites.contains(item.name) {
+            favorites.remove(item.name)
         } else {
-            favorites.insert(musician.name)
+            favorites.insert(item.name)
         }
         Self.save(favorites, key: Self.favoritesKey)
     }
 
     // MARK: - Appréciations (notes de musique)
 
-    /// L'appréciation donnée par l'utilisateur à ce musicien, s'il y en a une.
-    func appreciation(for musician: Musician) -> Appreciation? {
-        myAppreciations[musician.name]
+    /// L'appréciation donnée par l'utilisateur à ce musicien / groupe, s'il y en a une.
+    func appreciation(for item: Rateable) -> Appreciation? {
+        myAppreciations[item.name]
     }
 
-    /// Donne (ou retire, si nil) une appréciation à un musicien. Positif uniquement.
-    func setAppreciation(_ appreciation: Appreciation?, for musician: Musician) {
+    /// Donne (ou retire, si nil) une appréciation. Positif uniquement.
+    func setAppreciation(_ appreciation: Appreciation?, for item: Rateable) {
         if let appreciation {
-            myAppreciations[musician.name] = appreciation
+            myAppreciations[item.name] = appreciation
         } else {
-            myAppreciations.removeValue(forKey: musician.name)
+            myAppreciations.removeValue(forKey: item.name)
         }
         Self.save(myAppreciations, key: Self.appreciationsKey)
     }
 
     /// Total des notes de musique reçues (avis seed + appréciation de l'utilisateur).
-    func noteCount(for musician: Musician) -> Int {
-        musician.noteCount + (myAppreciations[musician.name] != nil ? 1 : 0)
+    func noteCount(for item: Rateable) -> Int {
+        item.noteCount + (myAppreciations[item.name] != nil ? 1 : 0)
     }
 
     /// Total des notes dorées reçues (coups de cœur, seed + utilisateur).
-    func goldenCount(for musician: Musician) -> Int {
-        musician.goldenCount + (myAppreciations[musician.name] == .golden ? 1 : 0)
+    func goldenCount(for item: Rateable) -> Int {
+        item.goldenCount + (myAppreciations[item.name] == .golden ? 1 : 0)
     }
 
     /// Souscription simulée — le vrai paiement passera par StoreKit / App Store en phase 2.
@@ -199,14 +204,19 @@ final class AppStore: ObservableObject {
 
     /// Ouvre (ou retrouve) une conversation avec un musicien depuis sa fiche.
     func conversation(with musician: Musician) -> Conversation {
-        if let existing = conversations.first(where: { $0.contactName == musician.name }) {
+        openConversation(name: musician.name, instrument: musician.instruments.first ?? .voix)
+    }
+
+    /// Ouvre (ou retrouve) une conversation avec un groupe depuis sa fiche.
+    func conversation(with band: Band) -> Conversation {
+        openConversation(name: band.name, instrument: band.lookingFor.first ?? .voix)
+    }
+
+    private func openConversation(name: String, instrument: Instrument) -> Conversation {
+        if let existing = conversations.first(where: { $0.contactName == name }) {
             return existing
         }
-        let new = Conversation(
-            contactName: musician.name,
-            contactInstrument: musician.instruments.first ?? .voix,
-            messages: []
-        )
+        let new = Conversation(contactName: name, contactInstrument: instrument, messages: [])
         conversations.insert(new, at: 0)
         persistConversations()
         return new
@@ -227,6 +237,7 @@ final class AppStore: ObservableObject {
         premiumPlan = nil
         let seed = Self.loadSeed()
         musicians = seed.musicians
+        bands = seed.bands
         events = seed.events.enumerated().map { index, event -> GigRequest in
             var e = event
             e.date = Calendar.current.date(byAdding: .day, value: index + 1, to: Date().addingTimeInterval(3600 * 4)) ?? e.date
@@ -263,24 +274,25 @@ final class AppStore: ObservableObject {
 
     private struct Seed: Decodable {
         var musicians: [Musician]
+        var bands: [Band]?
         var events: [GigRequest]
         var conversations: [Conversation]
     }
 
-    private static func loadSeed() -> (musicians: [Musician], events: [GigRequest], conversations: [Conversation]) {
+    private static func loadSeed() -> (musicians: [Musician], bands: [Band], events: [GigRequest], conversations: [Conversation]) {
         guard let url = Bundle.main.url(forResource: "SeedData", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
             assertionFailure("SeedData.json introuvable dans le bundle")
-            return ([], [], [])
+            return ([], [], [], [])
         }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         do {
             let seed = try decoder.decode(Seed.self, from: data)
-            return (seed.musicians, seed.events, seed.conversations)
+            return (seed.musicians, seed.bands ?? [], seed.events, seed.conversations)
         } catch {
             assertionFailure("SeedData.json invalide : \(error)")
-            return ([], [], [])
+            return ([], [], [], [])
         }
     }
 

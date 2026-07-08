@@ -102,53 +102,82 @@ struct HomeView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            LogoView(markSize: 26)
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(greeting) \(store.profile.name) 👋")
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
-                    Text("\(availableTonight.count) musiciens peuvent te dépanner ce soir")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 18) {
+            LogoView(markSize: 24)
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(greeting), \(store.profile.name.split(separator: " ").first.map(String.init) ?? store.profile.name)")
+                        .font(.system(size: 26, weight: .bold))
+                        .tracking(-0.3)
+                    HStack(spacing: 6) {
+                        Image(systemName: "bolt.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(JC.coral)
+                        Text("\(availableTonight.count) musiciens mobilisables ce soir")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 ZStack(alignment: .topTrailing) {
-                    AvatarView(name: store.profile.name, size: 46)
+                    AvatarView(name: store.profile.name, size: 48)
                     if store.profile.isAvailable {
                         Circle()
                             .fill(store.profile.availability.color)
-                            .frame(width: 13, height: 13)
+                            .frame(width: 12, height: 12)
                             .overlay(Circle().stroke(JC.bg, lineWidth: 2))
+                            .offset(x: 2, y: -2)
                     }
                 }
             }
         }
-        .padding(.top, 12)
     }
 
     /// Rangée principale : mobilisables immédiatement, le cœur de l'app.
     private var tonightRow: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text("🚨 Peuvent te dépanner ce soir")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "bolt.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(JC.coral)
+                Text("Dispo ce soir")
+                    .font(.subheadline.weight(.bold))
                 Spacer()
                 Text("\(availableTonight.count)")
                     .font(.caption.weight(.heavy))
                     .foregroundStyle(JC.coral)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(JC.coral.opacity(0.14), in: Capsule())
             }
-            storiesScroller(availableTonight, ringColors: [JC.coral, JC.magenta])
+            if availableTonight.isEmpty {
+                Text("Personne pour l'instant — reviens en fin d'après-midi.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                storiesScroller(availableTonight, ringColors: [JC.coral, JC.magenta])
+            }
         }
     }
 
     /// Rangée secondaire : dispo cette semaine, le week-end ou sur demande.
     private var soonRow: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("📅 Dispo prochainement")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-            storiesScroller(availableSoon, ringColors: [JC.gold, .teal], avatarSize: 52)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Text("Dispo prochainement")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            if availableSoon.isEmpty {
+                Text("Aucun musicien disponible dans les prochains jours.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                storiesScroller(availableSoon, ringColors: [JC.gold, .teal], avatarSize: 52)
+            }
         }
     }
 
@@ -184,63 +213,32 @@ struct HomeView: View {
 
     private var actionBar: some View {
         HStack(spacing: 10) {
-            Button {
-                showFilters = true
-            } label: {
-                Label(
-                    filters.activeCount > 0 ? "Filtres · \(filters.activeCount)" : "Filtres",
-                    systemImage: "slider.horizontal.3"
-                )
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(filters.activeCount > 0 ? JC.coral.opacity(0.25) : JC.card, in: Capsule())
-                .overlay(Capsule().stroke(JC.cardStroke, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+            JCPillButton(
+                title: filters.activeCount > 0 ? "Filtres · \(filters.activeCount)" : "Filtres",
+                icon: "slider.horizontal.3",
+                isActive: filters.activeCount > 0
+            ) { showFilters = true }
 
-            Button {
-                withAnimation(.snappy) { showMap.toggle() }
-            } label: {
-                Label(showMap ? "Liste" : "Carte", systemImage: showMap ? "list.bullet" : "map.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(showMap ? JC.violet.opacity(0.35) : JC.card, in: Capsule())
-                    .overlay(Capsule().stroke(JC.cardStroke, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
+            JCPillButton(
+                title: showMap ? "Liste" : "Carte",
+                icon: showMap ? "list.bullet" : "map.fill",
+                isActive: showMap,
+                activeColor: JC.violet
+            ) { withAnimation(.snappy) { showMap.toggle() } }
 
             Spacer()
             Text("\(filtered.count) profils")
                 .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
         }
     }
 
     private var premiumBanner: some View {
-        Button {
-            store.showPaywall = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "crown.fill")
-                    .font(.title2)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Ne rate plus un cachet")
-                        .font(.subheadline.weight(.heavy))
-                    Text("Alertes dépannage en priorité + profil en tête · dès CHF 3.25/mois")
-                        .font(.caption)
-                        .opacity(0.8)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(.black)
-            .padding(16)
-            .background(JC.premium, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(PressableStyle())
+        JCPromoBanner(
+            icon: "crown.fill",
+            title: "Ne rate plus un cachet",
+            subtitle: "Alertes dépannage en priorité + profil en tête · dès CHF 3.25/mois"
+        ) { store.showPaywall = true }
     }
 
     private var feed: some View {
@@ -250,16 +248,11 @@ struct HomeView: View {
                 subtitle: "Les musiciens les plus proches, dispo en premier"
             )
             if filtered.isEmpty {
-                JCCard {
-                    VStack(spacing: 8) {
-                        Text("😶 Aucun musicien avec ces filtres")
-                            .font(.headline)
-                        Text("Élargis le rayon ou retire un filtre.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
+                JCEmptyState(
+                    icon: "person.2.slash",
+                    title: "Aucun musicien trouvé",
+                    message: "Élargis le rayon ou retire un filtre pour voir plus de profils."
+                )
             }
             ForEach(filtered) { musician in
                 NavigationLink(value: musician) {

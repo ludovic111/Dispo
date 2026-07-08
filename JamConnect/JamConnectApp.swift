@@ -4,6 +4,10 @@ import SwiftUI
 struct JamConnectApp: App {
     @StateObject private var store = AppStore()
 
+    init() {
+        JC.configureAppearance()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -21,14 +25,18 @@ struct RootView: View {
         ZStack {
             TabView {
                 HomeView()
-                    .tabItem { Label("Accueil", systemImage: "sparkles") }
+                    .tabItem { Label("Accueil", systemImage: "waveform.path") }
+                BandsView()
+                    .tabItem { Label("Groupes", systemImage: "person.3.fill") }
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
                 ChatListView()
-                    .tabItem { Label("Messages", systemImage: "bubble.left.and.bubble.right.fill") }
+                    .tabItem { Label("Messages", systemImage: "bubble.left.and.bubble.right") }
                 MyProfileView()
                     .tabItem { Label("Profil", systemImage: "person.crop.circle") }
             }
+            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+            .toolbarBackground(.visible, for: .tabBar)
             .sheet(isPresented: $store.showPaywall) { PaywallView() }
 
             if !store.hasOnboarded {
@@ -84,6 +92,11 @@ enum JC {
         light: .black.opacity(0.06),
         dark: .white.opacity(0.08)
     )
+    /// Reflet interne des cartes — simule une légère épaisseur.
+    static let cardHighlight = Color(
+        light: .white.opacity(0.65),
+        dark: .white.opacity(0.06)
+    )
     /// Ombre portée des cartes — douce en clair, inexistante en sombre.
     static let cardShadow = Color(
         light: Color(red: 0.28, green: 0.22, blue: 0.5).opacity(0.14),
@@ -116,6 +129,21 @@ enum JC {
         colors: [gold, coral],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
+
+    /// Apparence globale (tab bar, navigation bar).
+    static func configureAppearance() {
+        let tab = UITabBarAppearance()
+        tab.configureWithDefaultBackground()
+        tab.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        UITabBar.appearance().standardAppearance = tab
+        UITabBar.appearance().scrollEdgeAppearance = tab
+
+        let nav = UINavigationBarAppearance()
+        nav.configureWithDefaultBackground()
+        nav.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().scrollEdgeAppearance = nav
+    }
 }
 
 /// Fond signature « aurore de jazz » : halos dégradés diffus posés sur le fond de base.
@@ -147,6 +175,15 @@ struct JCBackground: View {
                     .position(x: w * 0.2, y: h * 0.92)
             }
             .drawingGroup()
+
+            // Vignette légère — cadre l'écran sans alourdir le contenu.
+            RadialGradient(
+                colors: [.clear, JC.bg.opacity(0.45)],
+                center: .center,
+                startRadius: 80,
+                endRadius: 520
+            )
+            .allowsHitTesting(false)
         }
         .ignoresSafeArea()
     }
@@ -310,9 +347,9 @@ struct AvailabilityBadge: View {
 
     var body: some View {
         if availability.isAvailable {
-            HStack(spacing: 4) {
-                Text(availability.emoji)
-                    .font(.system(size: 8))
+            HStack(spacing: 5) {
+                Image(systemName: availability.symbol)
+                    .font(.system(size: 9, weight: .bold))
                 Text(availability.badgeLabel)
                     .font(.caption2.weight(.bold))
             }
@@ -406,7 +443,159 @@ struct JCCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .stroke(JC.cardStroke, lineWidth: 1)
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [JC.cardHighlight, .clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        ),
+                        lineWidth: 1
+                    )
+            )
             .shadow(color: JC.cardShadow, radius: 16, x: 0, y: 10)
+    }
+}
+
+/// En-tête d'écran unifié — titre éditorial + sous-titre discret.
+struct ScreenHeader: View {
+    let title: String
+    var subtitle: String? = nil
+    var icon: String? = nil
+    var iconColor: Color = JC.coral
+    var trailing: AnyView? = nil
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            if let icon {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(iconColor.opacity(0.14))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 28, weight: .bold))
+                    .tracking(-0.5)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+            if let trailing { trailing }
+        }
+        .padding(.top, 8)
+    }
+}
+
+/// Pilule d'action secondaire (filtres, bascule carte/liste).
+struct JCPillButton: View {
+    let title: String
+    let icon: String
+    var isActive: Bool = false
+    var activeColor: Color = JC.coral
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    isActive ? activeColor.opacity(0.2) : JC.card,
+                    in: Capsule()
+                )
+                .overlay(Capsule().stroke(isActive ? activeColor.opacity(0.35) : JC.cardStroke, lineWidth: 1))
+                .foregroundStyle(isActive ? activeColor : .primary)
+        }
+        .buttonStyle(PressableStyle(scale: 0.96))
+    }
+}
+
+/// Bannière CTA signature (Premium, publier un SOS).
+struct JCPromoBanner: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    var style: PromoStyle = .premium
+    let action: () -> Void
+
+    enum PromoStyle {
+        case premium, hero
+        var foreground: Color { self == .premium ? .black : .white }
+        var background: AnyShapeStyle {
+            switch self {
+            case .premium: return AnyShapeStyle(JC.premium)
+            case .hero: return AnyShapeStyle(JC.hero)
+            }
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(style.foreground.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.heavy))
+                    Text(subtitle)
+                        .font(.caption)
+                        .opacity(0.85)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .opacity(0.7)
+            }
+            .foregroundStyle(style.foreground)
+            .padding(16)
+            .background(style.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(PressableStyle())
+    }
+}
+
+/// État vide soigné.
+struct JCEmptyState: View {
+    let icon: String
+    let title: String
+    let message: String
+    var iconColor: Color = JC.violet
+
+    var body: some View {
+        JCCard {
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(iconColor.opacity(0.12))
+                        .frame(width: 56, height: 56)
+                    Image(systemName: icon)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(iconColor)
+                }
+                Text(title)
+                    .font(.headline)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
     }
 }
 

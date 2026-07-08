@@ -93,6 +93,17 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Icône SF Symbol pour l'interface (badges, filtres, listes).
+    var symbol: String {
+        switch self {
+        case .tonight: return "bolt.fill"
+        case .thisWeek: return "calendar"
+        case .weekend: return "calendar.badge.clock"
+        case .onRequest: return "hand.wave.fill"
+        case .unavailable: return "moon.fill"
+        }
+    }
+
     /// Libellé court des badges.
     var badgeLabel: String {
         switch self {
@@ -259,6 +270,21 @@ struct Review: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey { case author, appreciation, comment }
 }
 
+// MARK: - Rateable (musiciens & groupes partagent notes + favoris)
+
+/// Toute entité pouvant recevoir des appréciations (musicien solo ou groupe).
+protocol Rateable {
+    var name: String { get }
+    var reviews: [Review] { get }
+}
+
+extension Rateable {
+    /// Nombre total de notes de musique reçues (appréciations positives).
+    var noteCount: Int { reviews.count }
+    /// Nombre de notes dorées reçues (coups de cœur).
+    var goldenCount: Int { reviews.filter { $0.appreciation == .golden }.count }
+}
+
 // MARK: - Musicien
 
 struct Musician: Codable, Identifiable, Hashable {
@@ -290,12 +316,6 @@ struct Musician: Codable, Identifiable, Hashable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    /// Nombre total de notes de musique reçues (appréciations positives).
-    var noteCount: Int { reviews.count }
-
-    /// Nombre de notes dorées reçues (coups de cœur).
-    var goldenCount: Int { reviews.filter { $0.appreciation == .golden }.count }
-
     var initials: String {
         name.split(separator: " ").compactMap { $0.first.map(String.init) }.prefix(2).joined()
     }
@@ -307,6 +327,59 @@ struct Musician: Codable, Identifiable, Hashable {
         return a.distance(from: b) / 1000
     }
 }
+
+extension Musician: Rateable {}
+
+// MARK: - Groupe / formation
+
+/// Un groupe de musique (formation, band) présent sur JamConnect. Comme les
+/// musiciens solo, un groupe a un niveau d'expérience et un système de notes.
+struct Band: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var name: String
+    var neighborhood: String
+    var latitude: Double
+    var longitude: Double
+    var genres: [Genre]
+    /// Niveau d'expérience de la formation (comme pour les musiciens solo).
+    var level: Level
+    var bio: String
+    /// Statut de dispo pour jouer / répéter.
+    var availability: Availability
+    var memberCount: Int
+    /// Année de formation du groupe (optionnel).
+    var foundedYear: Int?
+    /// Instruments recherchés pour compléter le groupe (recrutement).
+    var lookingFor: [Instrument]
+    var repertoire: [String]
+    var reviews: [Review]
+    /// Nom de l'asset photo du groupe ; à défaut, pastille dégradée avec initiales.
+    var photo: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, neighborhood, latitude, longitude, genres, level, bio
+        case availability, memberCount, foundedYear, lookingFor, repertoire, reviews, photo
+    }
+
+    var isAvailable: Bool { availability.isAvailable }
+    var isRecruiting: Bool { !lookingFor.isEmpty }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    var initials: String {
+        name.split(separator: " ").compactMap { $0.first.map(String.init) }.prefix(2).joined()
+    }
+
+    func distance(from origin: CLLocationCoordinate2D) -> Double {
+        let a = CLLocation(latitude: latitude, longitude: longitude)
+        let b = CLLocation(latitude: origin.latitude, longitude: origin.longitude)
+        return a.distance(from: b) / 1000
+    }
+}
+
+extension Band: Rateable {}
 
 // MARK: - Annonce SOS dépannage
 
