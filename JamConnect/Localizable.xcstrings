@@ -13321,6 +13321,46 @@
         }
       }
     },
+    "Recherche approximative : fautes de frappe et bouts de nom tolérés (« marco » suffit, sans @)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unscharfe Suche: Tippfehler und Namensteile reichen („marco“ genügt, ohne @)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuzzy search: typos and partial names are fine (“marco” is enough, no @ needed)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda aproximada: erratas y nombres parciales valen («marco» basta, sin @)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca approssimativa: refusi e pezzi di nome bastano («marco», senza @)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あいまい検索：タイプミスや名前の一部でもOK（@なしの「marco」で十分）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模糊搜索：容忍拼写错误和部分名字（输“marco”就行，不用@）"
+          }
+        }
+      }
+    },
     "Recherche de ville par nom ou code postal": {
       "localizations": {
         "de": {
@@ -13397,6 +13437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "自由搜索：“钢琴手Carouge”、“今晚salsa”、名字、@用户名……"
+          }
+        }
+      }
+    },
+    "Recherche plus futée": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlauere Suche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smarter search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda más lista"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca più furba"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もっと賢い検索"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更聪明的搜索"
           }
         }
       }
@@ -14117,6 +14197,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消订阅"
+          }
+        }
+      }
+    },
+    "S'il n'y a pas de résultat exact, les résultats proches s'affichent quand même": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne exakten Treffer werden ähnliche Ergebnisse gezeigt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If there's no exact match, close results still show up"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si no hay resultado exacto, se muestran los cercanos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza risultati esatti, appaiono comunque quelli vicini"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全一致がなくても近い結果を表示します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有精确结果时也会显示相近的结果"
           }
         }
       }
@@ -15917,6 +16037,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
+          }
+        }
+      }
+    },
+    "Tout le monde est trouvable — même sans géoloc, sans instruments ou indisponible": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle sind auffindbar — auch ohne Standort, Instrumente oder Verfügbarkeit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everyone is findable — even without location, instruments or availability"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos aparecen — incluso sin ubicación, sin instrumentos o no disponibles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti sono trovabili — anche senza posizione, strumenti o disponibilità"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置情報・楽器・空き状況がなくても全員見つかります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有人都能被找到——即使没有定位、乐器或空闲时间"
           }
         }
       }

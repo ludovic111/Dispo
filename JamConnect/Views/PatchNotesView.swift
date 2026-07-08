@@ -11,6 +11,15 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.6.1",
+            title: "Recherche plus futée",
+            points: [
+                "Tout le monde est trouvable — même sans géoloc, sans instruments ou indisponible",
+                "Recherche approximative : fautes de frappe et bouts de nom tolérés (« marco » suffit, sans @)",
+                "S'il n'y a pas de résultat exact, les résultats proches s'affichent quand même"
+            ]
+        ),
+        PatchNote(
             version: "0.6.0",
             title: "Recherche, @pseudos & vidéos datées",
             points: [

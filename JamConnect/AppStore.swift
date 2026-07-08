@@ -685,9 +685,12 @@ final class AppStore: ObservableObject {
             .lowercased()
     }
 
-    /// Recherche libre : chaque mot de la requête doit matcher (préfixe)
-    /// un mot du profil / de l'annonce. « @marco », « pianiste Carouge »,
-    /// « salsa ce soir », « 1227 »…
+    /// Recherche libre et approximative : « @marco », « marco », « pianiste
+    /// Carouge », « salsa ce soir », « 1227 »… Chaque mot est comparé en
+    /// préfixe, en sous-chaîne et avec tolérance aux fautes de frappe.
+    /// Si aucun profil ne matche tous les mots, on montre les matchs
+    /// partiels plutôt que rien — on doit toujours pouvoir retrouver
+    /// quelqu'un, même indisponible.
     func search(_ query: String) -> SearchResults {
         let tokens = Self.normalized(query)
             .split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "@" })
@@ -695,27 +698,78 @@ final class AppStore: ObservableObject {
             .filter { !$0.isEmpty && !Self.searchStopWords.contains($0) }
         guard !tokens.isEmpty else { return SearchResults() }
 
-        let musicians = self.musicians
-            .filter { matches(tokens, in: haystack(for: $0)) }
-            .sorted { rank($0, $1) }
-        let gigs = events
-            .filter { matches(tokens, in: haystack(for: $0)) }
-            .sorted { $0.date < $1.date }
+        let musicians = pickBest(
+            self.musicians.map { ($0, matchCount(tokens, in: haystack(for: $0))) },
+            tokenCount: tokens.count
+        )
+        .sorted { a, b in rank(a, b) }
+        let gigs = pickBest(
+            events.map { ($0, matchCount(tokens, in: haystack(for: $0))) },
+            tokenCount: tokens.count
+        )
+        .sorted { $0.date < $1.date }
         return SearchResults(musicians: musicians, gigs: gigs)
     }
 
-    /// true si chaque mot de la requête matche un mot du texte (préfixe).
-    private func matches(_ tokens: [String], in words: [String]) -> Bool {
-        tokens.allSatisfy { token in
-            words.contains { word in
-                word.hasPrefix(token) || (token.count >= 4 && token.hasPrefix(word) && word.count >= 4)
-            }
+    /// Garde les matchs complets (tous les mots) s'il y en a, sinon se
+    /// rabat sur les matchs partiels (au moins un mot).
+    private func pickBest<T>(_ scored: [(T, Int)], tokenCount: Int) -> [T] {
+        let full = scored.filter { $0.1 == tokenCount }
+        if !full.isEmpty { return full.map(\.0) }
+        return scored.filter { $0.1 > 0 }.map(\.0)
+    }
+
+    /// Nombre de mots de la requête retrouvés dans le texte.
+    private func matchCount(_ tokens: [String], in words: [String]) -> Int {
+        tokens.reduce(0) { count, token in
+            count + (tokenMatches(token, in: words) ? 1 : 0)
         }
+    }
+
+    /// Un mot matche en préfixe, en sous-chaîne (≥ 3 lettres) ou à une ou
+    /// deux fautes de frappe près (distance d'édition).
+    private func tokenMatches(_ token: String, in words: [String]) -> Bool {
+        words.contains { word in
+            if word.hasPrefix(token) { return true }
+            if token.count >= 3 && word.contains(token) { return true }
+            if token.count >= 4 && word.count >= 4 && token.hasPrefix(word) { return true }
+            if token.count >= 4 {
+                let tolerance = token.count >= 7 ? 2 : 1
+                if Self.editDistance(token, word, max: tolerance) <= tolerance { return true }
+            }
+            return false
+        }
+    }
+
+    /// Distance de Levenshtein bornée (arrêt anticipé au-delà de `max`).
+    nonisolated private static func editDistance(_ a: String, _ b: String, max limit: Int) -> Int {
+        let aChars = Array(a), bChars = Array(b)
+        if abs(aChars.count - bChars.count) > limit { return limit + 1 }
+        var previous = Array(0...bChars.count)
+        for (i, aChar) in aChars.enumerated() {
+            var current = [i + 1]
+            var rowMin = i + 1
+            for (j, bChar) in bChars.enumerated() {
+                let cost = aChar == bChar ? 0 : 1
+                let value = Swift.min(previous[j] + cost, previous[j + 1] + 1, current[j] + 1)
+                current.append(value)
+                rowMin = Swift.min(rowMin, value)
+            }
+            if rowMin > limit { return limit + 1 }
+            previous = current
+        }
+        return previous[bChars.count]
     }
 
     /// Tout ce qui décrit un musicien, en mots normalisés.
     private func haystack(for musician: Musician) -> [String] {
-        var parts: [String] = [musician.name, musician.name.handleized, musician.neighborhood]
+        var parts: [String] = [
+            musician.name,
+            musician.name.handleized,
+            // Variante collée du @pseudo — « marcosilva » doit marcher aussi.
+            musician.name.handleized.replacingOccurrences(of: ".", with: ""),
+            musician.neighborhood
+        ]
         for instrument in musician.instruments {
             parts.append(instrument.rawValue)
             parts.append(tr(instrument.rawValue))

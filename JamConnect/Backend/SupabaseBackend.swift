@@ -96,21 +96,25 @@ final class SupabaseBackend: Sendable {
             availableDates.compactMap { SupabaseBackend.dayFormatter.date(from: $0) }
         }
 
-        /// Un profil apparaît dans le feed dès qu'il est réellement rempli.
+        // Un nom suffit pour exister dans l'app : la géoloc est en phase 2b
+        // et un profil sans instruments doit rester trouvable (recherche
+        // par nom / @pseudo, page profil des potes, même indisponibles).
         var isComplete: Bool {
-            !name.isEmpty && !instruments.isEmpty && latitude != nil && longitude != nil
+            !name.isEmpty
         }
 
         func asMusician(reviews: [Review]) -> Musician? {
-            guard isComplete, let latitude, let longitude else { return nil }
+            guard isComplete else { return nil }
             let dates = parsedDates
             return Musician(
                 id: id,
                 name: name,
                 age: age ?? 0,
                 neighborhood: neighborhood,
-                latitude: latitude,
-                longitude: longitude,
+                // Sans géoloc (phase 2b), le profil est posé au centre de
+                // Genève pour rester visible dans le feed et sur la carte.
+                latitude: latitude ?? AppStore.geneva.latitude,
+                longitude: longitude ?? AppStore.geneva.longitude,
                 instruments: instruments.compactMap(Instrument.init(rawValue:)),
                 genres: genres.compactMap(Genre.init(rawValue:)),
                 level: Level(rawValue: level) ?? .intermediaire,
