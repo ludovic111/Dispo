@@ -11,6 +11,18 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.8.0",
+            title: "Vrais groupes, profils façon Insta & invitations",
+            points: [
+                "Les groupes deviennent de vrais groupes : leader (Premium), invitations, exclusions, leadership transférable",
+                "Répertoire validé par le leader — pochettes des morceaux récupérées automatiquement",
+                "Événements (concert, répé, jam) avec setlist et suggestions à valider d'un tap",
+                "Bouton « Inviter » sur chaque match SOS — message pré-rempli envoyé direct",
+                "Pages profil repensées façon Instagram, avec les vrais logos des réseaux sociaux",
+                "Accueil allégé : rangées compactes, rappel du prochain événement de groupe"
+            ]
+        ),
+        PatchNote(
             version: "0.7.0",
             title: "Groupes, réseaux sociaux & grand ménage",
             points: [

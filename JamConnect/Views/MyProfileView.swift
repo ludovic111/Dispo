@@ -226,28 +226,10 @@ struct MyProfileView: View {
         return "\(instruments) · \(genres) · \(store.profile.resolvedCity)"
     }
 
-    /// Liens réseaux sociaux du hero — cliquables.
-    @ViewBuilder
+    /// Logos réseaux sociaux du hero — cliquables (vrais logos dessinés).
     private var socialChips: some View {
-        let links: [(SocialNetwork, URL)] = SocialNetwork.allCases.compactMap { network in
-            guard let handle = store.profile.socialHandle(network),
-                  let url = network.url(for: handle) else { return nil }
-            return (network, url)
-        }
-        if !links.isEmpty {
-            HStack(spacing: 8) {
-                ForEach(links, id: \.0) { network, url in
-                    Link(destination: url) {
-                        Image(systemName: network.icon)
-                            .font(.caption.weight(.bold))
-                            .padding(8)
-                            .background(.white.opacity(0.18), in: Circle())
-                            .foregroundStyle(.white)
-                    }
-                }
-            }
+        SocialLogosRow(socials: store.profile.socials, size: 28)
             .padding(.top, 4)
-        }
     }
 
     // MARK: - Favoris

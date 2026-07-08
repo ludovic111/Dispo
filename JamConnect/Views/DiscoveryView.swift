@@ -66,6 +66,7 @@ struct HomeView: View {
                     VStack(spacing: 22) {
                         header
                         searchBar
+                        groupEventReminder
                         tonightRow
                         actionBar
 
@@ -87,6 +88,7 @@ struct HomeView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
+            .navigationDestination(for: GroupChat.ID.self) { GroupChatView(groupID: $0) }
             .sheet(isPresented: $showFilters) {
                 FilterSheet(filters: $filters)
                     .presentationDetents([.medium, .large])
@@ -147,6 +149,44 @@ struct HomeView: View {
             )
         }
         .buttonStyle(PressableStyle())
+    }
+
+    /// Prochain événement d'un de mes groupes — le pont accueil ↔ groupes.
+    @ViewBuilder
+    private var groupEventReminder: some View {
+        let next: (GroupChat, GroupEvent)? = store.groups
+            .flatMap { group in group.upcomingEvents.map { (group, $0) } }
+            .min { $0.1.date < $1.1.date }
+        if let (group, event) = next,
+           event.date < Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date() {
+            NavigationLink(value: group.id) {
+                HStack(spacing: 11) {
+                    Text(event.kind.emoji)
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "\(group.emoji) \(group.name) — \(event.title)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month())) · \(event.venue)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(12)
+                .background(JC.violet.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(JC.violet.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PressableStyle())
+        }
     }
 
     /// Rangée principale : mobilisables immédiatement, le cœur de l'app.
@@ -248,7 +288,7 @@ struct HomeView: View {
             }
             ForEach(filtered) { musician in
                 NavigationLink(value: musician) {
-                    MusicianCard(musician: musician)
+                    SearchMusicianRow(musician: musician)
                 }
                 .buttonStyle(PressableStyle())
             }
@@ -299,139 +339,6 @@ struct SocialLinkBadge: View {
         case .follower: TagView(text: "Te suit", color: .teal)
         case .none: EmptyView()
         }
-    }
-}
-
-// MARK: - Carte musicien (feed)
-
-struct MusicianCard: View {
-    @EnvironmentObject private var store: AppStore
-    let musician: Musician
-
-    private var mainGenre: Genre { musician.genres.first ?? .jazz }
-
-    /// Durée fictive de la vidéo de présentation (60–90 s), stable par profil.
-    private var videoDuration: String {
-        let seconds = 60 + abs(musician.name.stableHash) % 31
-        return String(format: "%d:%02d", seconds / 60, seconds % 60)
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Couverture « vidéo » — photo libre de droit du genre
-            ZStack(alignment: .bottom) {
-                GenreCover(genre: mainGenre)
-                    .frame(height: 168)
-
-                // Scrim bas pour la lisibilité
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.55)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
-                    .offset(y: -20)
-
-                VStack {
-                    HStack(alignment: .top) {
-                        AvailabilityBadge(availability: musician.availability)
-                        Spacer()
-                        Button {
-                            withAnimation(.snappy(duration: 0.25)) {
-                                store.toggleFavorite(musician)
-                            }
-                        } label: {
-                            Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(store.isFavorite(musician) ? JC.magenta : .white)
-                                .padding(10)
-                                .background(.ultraThinMaterial, in: Circle())
-                        }
-                        .buttonStyle(PressableStyle(scale: 0.92))
-                    }
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Label(videoDuration, systemImage: "video.fill")
-                            .font(.caption2.weight(.bold))
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(.black.opacity(0.4), in: Capsule())
-                            .foregroundStyle(.white)
-                    }
-                }
-                .padding(12)
-            }
-            .frame(height: 168)
-
-            // Infos
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    AvatarView(name: musician.name, size: 44, photo: musician.photo)
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(musician.name)
-                                .font(.headline)
-                                .lineLimit(1)
-                            SocialLinkBadge(link: store.socialLink(with: musician.name))
-                        }
-                        // Le niveau est un avantage Premium — masqué en gratuit.
-                        Text(verbatim: store.showsPremium
-                             ? "\(musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")) · \(store.tr(musician.level.rawValue))"
-                             : musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · "))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    VStack(alignment: .trailing, spacing: 2) {
-                        let notes = store.noteCount(for: musician)
-                        if notes == 0 {
-                            Text("Nouveau")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.violet)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(JC.violet.opacity(0.12), in: Capsule())
-                        } else {
-                            NoteRatingView(notes: notes, golden: store.goldenCount(for: musician))
-                            Text(notes > 1 ? "\(notes) notes" : "1 note")
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-
-                HStack(spacing: 6) {
-                    ForEach(musician.genres.prefix(2)) { genre in
-                        TagView(text: genre.rawValue, color: genre.color)
-                    }
-                    Spacer()
-                    Label(
-                        String(format: "%.1f km", musician.distance(from: AppStore.geneva)),
-                        systemImage: "location.fill"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .padding(16)
-            .background(JC.card)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(
-                    LinearGradient(colors: [JC.cardHighlight, .clear], startPoint: .top, endPoint: .center),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: JC.cardShadow, radius: 16, x: 0, y: 10)
     }
 }
 

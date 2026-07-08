@@ -437,6 +437,105 @@ struct AvailabilityBadge: View {
     }
 }
 
+/// Logo d'un réseau social, dessiné en SwiftUI (aucun asset de marque
+/// embarqué). Reconnaissable au premier coup d'œil, cliquable via Link.
+struct SocialLogoView: View {
+    let network: SocialNetwork
+    var size: CGFloat = 28
+
+    var body: some View {
+        switch network {
+        case .instagram:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [
+                            Color(red: 0.99, green: 0.75, blue: 0.28),
+                            Color(red: 0.93, green: 0.28, blue: 0.44),
+                            Color(red: 0.51, green: 0.23, blue: 0.86)
+                        ],
+                        startPoint: .bottomLeading, endPoint: .topTrailing
+                    ))
+                RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
+                    .stroke(.white, lineWidth: size * 0.065)
+                    .frame(width: size * 0.62, height: size * 0.62)
+                Circle()
+                    .stroke(.white, lineWidth: size * 0.065)
+                    .frame(width: size * 0.3, height: size * 0.3)
+                Circle()
+                    .fill(.white)
+                    .frame(width: size * 0.09, height: size * 0.09)
+                    .offset(x: size * 0.185, y: -size * 0.185)
+            }
+            .frame(width: size, height: size)
+        case .tiktok:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .fill(.black)
+                // La note « chromatique » signature : cyan + rose décalés.
+                Image(systemName: "music.note")
+                    .font(.system(size: size * 0.5, weight: .bold))
+                    .foregroundStyle(Color(red: 0.15, green: 0.96, blue: 0.93))
+                    .offset(x: -size * 0.04, y: -size * 0.04)
+                Image(systemName: "music.note")
+                    .font(.system(size: size * 0.5, weight: .bold))
+                    .foregroundStyle(Color(red: 0.98, green: 0.17, blue: 0.33))
+                    .offset(x: size * 0.04, y: size * 0.04)
+                Image(systemName: "music.note")
+                    .font(.system(size: size * 0.5, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: size, height: size)
+        case .youtube:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .fill(Color(red: 1.0, green: 0.0, blue: 0.0))
+                Image(systemName: "play.fill")
+                    .font(.system(size: size * 0.42, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: size, height: size)
+        case .x:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .fill(.black)
+                Text(verbatim: "𝕏")
+                    .font(.system(size: size * 0.58, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: size, height: size)
+        }
+    }
+}
+
+/// Rangée de logos sociaux cliquables d'un profil (masquée si vide).
+struct SocialLogosRow: View {
+    /// Pseudos par réseau (rawValue) — profil musicien ou le mien.
+    let socials: [String: String]?
+    var size: CGFloat = 30
+
+    private var links: [(SocialNetwork, URL)] {
+        SocialNetwork.allCases.compactMap { network in
+            guard let handle = socials?[network.rawValue],
+                  !handle.trimmingCharacters(in: .whitespaces).isEmpty,
+                  let url = network.url(for: handle) else { return nil }
+            return (network, url)
+        }
+    }
+
+    var body: some View {
+        if !links.isEmpty {
+            HStack(spacing: 10) {
+                ForEach(links, id: \.0) { network, url in
+                    Link(destination: url) {
+                        SocialLogoView(network: network, size: size)
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Note de musique dorée animée — le « coup de cœur ». Pulse et scintille en continu.
 struct GoldenNoteView: View {
     var size: CGFloat = 16

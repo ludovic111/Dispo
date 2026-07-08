@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Page profil d'un musicien — layout façon Instagram : photo + stats en
+/// haut, identité (nom, @pseudo, niveau, bio, réseaux sociaux), boutons
+/// d'action, puis la grille de démos en bas.
 struct MusicianDetailView: View {
     @EnvironmentObject private var store: AppStore
     let musician: Musician
@@ -7,81 +10,33 @@ struct MusicianDetailView: View {
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
     /// Stat sociale fictive, stable entre lancements (backend en phase 2b).
-    private var jamsPlayed: Int { 3 + abs(musician.name.stableHash) % 40 }
-
-    /// Durée fictive de la vidéo (60–90 s) — la même que sur la carte du feed.
-    private var videoDuration: String {
-        let seconds = 60 + abs(musician.name.stableHash) % 31
-        return String(format: "%d:%02d", seconds / 60, seconds % 60)
-    }
+    private var gigsPlayed: Int { 3 + abs(musician.name.stableHash) % 40 }
+    /// Nombre de démos fictives, stable par profil (vidéos réelles en 2b).
+    private var demoCount: Int { 3 + abs(musician.name.stableHash) % 4 }
 
     var body: some View {
         ZStack {
             JCBackground()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    videoHero
+                VStack(alignment: .leading, spacing: 16) {
+                    header
                     identity
-                    statsRow
-                    genresCard
+                    actionButtons
+                    availabilityRow
                     repertoireCard
-                    bioCard
                     rateCard
                     reviewsCard
+                    demosGrid
                 }
                 .padding(.horizontal, 18)
-                .padding(.bottom, 90)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
         }
-        .navigationTitle(musician.name)
+        .navigationTitle(Text(verbatim: musician.handle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(JC.bg, for: .navigationBar)
-        .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 12) {
-                Button {
-                    store.toggleFavorite(musician)
-                } label: {
-                    Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(store.isFavorite(musician) ? JC.magenta : Color.primary)
-                        .padding(15)
-                        .background(JC.card, in: Circle())
-                        .overlay(Circle().stroke(JC.cardStroke, lineWidth: 1))
-                }
-                .buttonStyle(PressableStyle())
-
-                Button {
-                    withAnimation(.snappy) { store.toggleFollow(musician) }
-                } label: {
-                    Image(systemName: store.isFollowing(musician) ? "person.fill.checkmark" : "person.badge.plus")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(store.isFollowing(musician) ? JC.violet : Color.primary)
-                        .padding(15)
-                        .background(JC.card, in: Circle())
-                        .overlay(Circle().stroke(store.isFollowing(musician) ? JC.violet.opacity(0.5) : JC.cardStroke, lineWidth: 1))
-                }
-                .buttonStyle(PressableStyle())
-
-                Button {
-                    Task { openedConversation = await store.conversation(with: musician) }
-                } label: {
-                    Label(
-                        musician.isAvailable ? "Demander un dépannage" : "Contacter",
-                        systemImage: musician.isAvailable ? "bolt.fill" : "bubble.left.fill"
-                    )
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(JC.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(.white)
-                }
-                .buttonStyle(PressableStyle())
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial)
-        }
         .sheet(item: $openedConversation) { conversation in
             NavigationStack {
                 ChatView(conversationID: conversation.id)
@@ -89,61 +44,151 @@ struct MusicianDetailView: View {
         }
     }
 
-    private var videoHero: some View {
-        ZStack {
-            GenreCover(genre: mainGenre)
-                .frame(height: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 26))
-            VStack(spacing: 10) {
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 58))
-                    .foregroundStyle(.white)
-                    .shadow(radius: 10)
-                Text("Vidéo de présentation · \(videoDuration)")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.95))
-                Text("Lecteur réel en phase 2")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.55))
+    // MARK: - En-tête (photo + stats, façon Instagram)
+
+    private var header: some View {
+        HStack(spacing: 18) {
+            AvatarView(name: musician.name, size: 86, photo: musician.photo)
+                .overlay(alignment: .bottomTrailing) {
+                    if musician.isAvailable {
+                        Circle()
+                            .fill(musician.availability.color)
+                            .frame(width: 16, height: 16)
+                            .overlay(Circle().stroke(JC.bg, lineWidth: 2.5))
+                    }
+                }
+            HStack(spacing: 0) {
+                statBlock(value: "\(demoCount)", label: "démos")
+                statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
+                statBlock(value: "\(gigsPlayed)", label: "concerts")
             }
         }
-        .padding(.top, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func statBlock(value: String, label: LocalizedStringKey) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.heavy))
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Identité
+
     private var identity: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 14) {
-                AvatarView(name: musician.name, size: 62, photo: musician.photo)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(musician.name).font(.title3.weight(.heavy))
-                        AvailabilityBadge(availability: musician.availability)
-                        SocialLinkBadge(link: store.socialLink(with: musician.name))
-                    }
-                    Text(verbatim: musician.handle)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(JC.violet)
-                    Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(musician.name)
+                    .font(.title3.weight(.heavy))
+                SocialLinkBadge(link: store.socialLink(with: musician.name))
             }
-            if !upcomingDates.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    ForEach(upcomingDates, id: \.self) { date in
-                        TagView(
-                            text: date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
-                            color: musician.availability.color
-                        )
+            HStack(spacing: 8) {
+                Text(verbatim: musician.handle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(JC.violet)
+                AvailabilityBadge(availability: musician.availability)
+                // Niveau : avantage Premium.
+                if store.showsPremium {
+                    TagView(text: musician.level.rawValue, color: JC.gold)
+                } else {
+                    Button { store.showPaywall = true } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 8, weight: .bold))
+                            Text("niveau")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(JC.gold.opacity(0.14), in: Capsule())
+                        .foregroundStyle(JC.gold)
                     }
+                    .buttonStyle(PressableStyle())
                 }
             }
+            Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if !musician.bio.isEmpty {
+                Text(musician.bio)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary.opacity(0.9))
+                    .padding(.top, 2)
+            }
+            HStack(spacing: 6) {
+                ForEach(musician.genres.prefix(3)) { genre in
+                    TagView(text: genre.rawValue, color: genre.color)
+                }
+            }
+            .padding(.top, 2)
+            SocialLogosRow(socials: musician.socials)
+                .padding(.top, 4)
         }
     }
+
+    // MARK: - Actions
+
+    private var actionButtons: some View {
+        HStack(spacing: 8) {
+            Button {
+                withAnimation(.snappy) { store.toggleFollow(musician) }
+            } label: {
+                Text(store.isFollowing(musician) ? "Suivi" : "Suivre")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        store.isFollowing(musician) ? AnyShapeStyle(JC.card) : AnyShapeStyle(JC.hero),
+                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(store.isFollowing(musician) ? JC.cardStroke : .clear, lineWidth: 1)
+                    )
+                    .foregroundStyle(store.isFollowing(musician) ? Color.primary : Color.white)
+            }
+            .buttonStyle(PressableStyle())
+
+            Button {
+                Task { openedConversation = await store.conversation(with: musician) }
+            } label: {
+                Text(musician.isAvailable ? "Demander un dépannage" : "Contacter")
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(JC.cardStroke, lineWidth: 1)
+                    )
+                    .foregroundStyle(.primary)
+            }
+            .buttonStyle(PressableStyle())
+
+            Button {
+                withAnimation(.snappy) { store.toggleFavorite(musician) }
+            } label: {
+                Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(store.isFavorite(musician) ? JC.magenta : Color.primary)
+                    .padding(10)
+                    .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(JC.cardStroke, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(PressableStyle())
+        }
+    }
+
+    // MARK: - Dispo
 
     /// Prochaines dates de dispo (mode live — le seed n'en a pas).
     private var upcomingDates: [Date] {
@@ -151,140 +196,53 @@ struct MusicianDetailView: View {
         return musician.availableDates
             .filter { Calendar.current.startOfDay(for: $0) >= today }
             .sorted()
-            .prefix(3)
+            .prefix(4)
             .map { $0 }
     }
 
-    private var statsRow: some View {
-        HStack(spacing: 10) {
-            statBox(value: "\(jamsPlayed)", label: "concerts")
-            statBox(value: store.noteCount(for: musician) == 0 ? "—" : "\(store.noteCount(for: musician))", label: "notes")
-            statBox(value: "\(store.followerCount(of: musician))", label: "abonnés")
-            // Le niveau est réservé aux membres Premium — la case verrouillée
-            // mène au paywall.
-            if store.showsPremium {
-                statBox(value: store.tr(musician.level.rawValue), label: "niveau", compact: true)
-            } else {
-                Button { store.showPaywall = true } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "lock.fill")
-                            .font(.caption.weight(.heavy))
-                            .foregroundStyle(JC.gold)
-                        Text("niveau")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(JC.card, in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(JC.gold.opacity(0.4), lineWidth: 1))
-                }
-                .buttonStyle(PressableStyle())
-            }
-        }
-    }
-
-    private func statBox(value: String, label: LocalizedStringKey, compact: Bool = false) -> some View {
-        VStack(spacing: 3) {
-            Text(value)
-                .font(compact ? .caption.weight(.heavy) : .headline.weight(.heavy))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(JC.card, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(JC.cardStroke, lineWidth: 1))
-    }
-
-    private var genresCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionTitle("Instruments & styles", systemImage: "music.quarternote.3")
-                HStack(spacing: 6) {
-                    ForEach(musician.instruments) { instrument in
-                        TagView(text: instrument.rawValue, color: .teal)
-                    }
-                }
-                ForEach(musician.genres) { genre in
-                    HStack(spacing: 6) {
-                        Text(LocalizedStringKey(genre.rawValue))
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(genre.color)
-                        ForEach(genre.codes, id: \.self) { code in
-                            TagView(text: code, color: genre.color)
-                        }
-                        Spacer()
-                    }
-                }
-            }
-        }
-    }
-
-    private var repertoireCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionTitle("Répertoire", systemImage: "music.note.list")
-                ForEach(musician.repertoire, id: \.self) { piece in
-                    HStack(spacing: 10) {
-                        Image(systemName: "music.note")
-                            .font(.caption)
-                            .foregroundStyle(mainGenre.color)
-                        Text(piece).font(.subheadline)
-                    }
-                }
-            }
-        }
-    }
-
-    private var bioCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionTitle("À propos", systemImage: "person.text.rectangle")
-                Text(musician.bio)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary.opacity(0.9))
-                socialLinksRow(for: musician)
-            }
-        }
-    }
-
-    /// Liens réseaux sociaux cliquables (si le musicien les a renseignés).
     @ViewBuilder
-    private func socialLinksRow(for musician: Musician) -> some View {
-        let links: [(SocialNetwork, URL)] = SocialNetwork.allCases.compactMap { network in
-            guard let handle = musician.socialHandle(network),
-                  let url = network.url(for: handle) else { return nil }
-            return (network, url)
+    private var availabilityRow: some View {
+        if !upcomingDates.isEmpty {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+                ForEach(upcomingDates, id: \.self) { date in
+                    TagView(
+                        text: date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
+                        color: musician.availability.color
+                    )
+                }
+            }
         }
-        if !links.isEmpty {
-            HStack(spacing: 8) {
-                ForEach(links, id: \.0) { network, url in
-                    Link(destination: url) {
-                        HStack(spacing: 5) {
-                            Image(systemName: network.icon)
-                                .font(.caption.weight(.bold))
-                            Text(verbatim: network.label)
-                                .font(.caption.weight(.semibold))
+    }
+
+    // MARK: - Répertoire
+
+    @ViewBuilder
+    private var repertoireCard: some View {
+        if !musician.repertoire.isEmpty {
+            JCCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    sectionTitle("Répertoire", systemImage: "music.note.list")
+                    ForEach(musician.repertoire, id: \.self) { piece in
+                        HStack(spacing: 10) {
+                            Image(systemName: "music.note")
+                                .font(.caption)
+                                .foregroundStyle(mainGenre.color)
+                            Text(piece).font(.subheadline)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(JC.violet.opacity(0.12), in: Capsule())
-                        .foregroundStyle(JC.violet)
                     }
                 }
-                Spacer(minLength: 0)
             }
-            .padding(.top, 4)
         }
     }
 
     private var firstName: String {
         musician.name.split(separator: " ").first.map(String.init) ?? musician.name
     }
+
+    // MARK: - Appréciations
 
     /// Carte interactive : l'utilisateur donne une note de musique ou une note dorée.
     private var rateCard: some View {
@@ -388,6 +346,48 @@ struct MusicianDetailView: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(JC.violet)
         }
+    }
+
+    // MARK: - Grille de démos (bas de page, façon Instagram)
+
+    private var demosGrid: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Démos", systemImage: "play.square.stack")
+            let columns = [GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3)]
+            LazyVGrid(columns: columns, spacing: 3) {
+                ForEach(0..<demoCount, id: \.self) { index in
+                    demoTile(index: index)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            Text("Lecture des vraies vidéos en phase 2 — extraits de 60 à 90 s.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func demoTile(index: Int) -> some View {
+        // Couverture stable par tuile : alterne les genres du musicien.
+        // Repli sur mainGenre si le profil n'a aucun genre (sinon crash).
+        let genre = musician.genres.isEmpty ? mainGenre : musician.genres[index % musician.genres.count]
+        let seconds = 60 + abs((musician.name + "\(index)").stableHash) % 31
+        return ZStack(alignment: .bottomTrailing) {
+            GenreCover(genre: genre)
+                .aspectRatio(1, contentMode: .fill)
+            Image(systemName: "play.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white.opacity(0.95))
+                .shadow(radius: 4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Text(verbatim: String(format: "%d:%02d", seconds / 60, seconds % 60))
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(.black.opacity(0.45), in: Capsule())
+                .padding(5)
+        }
+        .clipped()
     }
 
     private func sectionTitle(_ title: LocalizedStringKey, systemImage: String) -> some View {

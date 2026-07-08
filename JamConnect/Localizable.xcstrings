@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "%@ · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        }
+      }
+    },
     "%lld abonnés": {
       "localizations": {
         "de": {
@@ -161,42 +201,82 @@
         }
       }
     },
-    "%lld membres · %lld partitions · %lld concerts": {
+    "%lld membres · %lld morceaux · %lld événements": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld Mitglieder · %lld Noten · %lld Gigs"
+            "value": "%lld Mitglieder · %lld Songs · %lld Events"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld members · %lld scores · %lld gigs"
+            "value": "%lld members · %lld songs · %lld events"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld miembros · %lld partituras · %lld bolos"
+            "value": "%lld miembros · %lld temas · %lld eventos"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld membri · %lld spartiti · %lld concerti"
+            "value": "%lld membri · %lld brani · %lld eventi"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メンバー%lld人 · 楽譜%lld · ライブ%lld"
+            "value": "メンバー%lld人 · 曲%lld · イベント%lld"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld名成员 · %lld份乐谱 · %lld场演出"
+            "value": "%lld名成员 · %lld首歌 · %lld场活动"
+          }
+        }
+      }
+    },
+    "%lld morceaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Songs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld songs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld temas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld曲"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld首歌"
           }
         }
       }
@@ -1121,6 +1201,46 @@
         }
       }
     },
+    "Accueil allégé : rangées compactes, rappel du prochain événement de groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlankerer Start: kompakte Zeilen, Erinnerung ans nächste Gruppen-Event"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter home: compact rows, next group event reminder"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicio más ligero: filas compactas y recordatorio del próximo evento del grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home più leggera: righe compatte e promemoria del prossimo evento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームを軽量化：コンパクト表示と次のイベント通知"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更清爽的首页：紧凑列表＋群组活动提醒"
+          }
+        }
+      }
+    },
     "Affiche un cachet — ces annonces reçoivent plus de candidatures": {
       "localizations": {
         "de": {
@@ -1241,42 +1361,42 @@
         }
       }
     },
-    "Ajoute les dates du groupe — et si un membre lâche, publie un SOS pré-rempli en un tap.": {
+    "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trag die Termine der Band ein — und wenn jemand absagt, poste mit einem Tipp ein vorausgefülltes SOS."
+            "value": "Füge die Songs der Gruppe hinzu — Mitglieder schlagen vor, der Leader bestätigt."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add the band's dates — and if a member bails, post a pre-filled SOS in one tap."
+            "value": "Add the group's songs — members can suggest, the leader approves."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añade las fechas de la banda — y si un miembro falla, publica un SOS prellenado en un toque."
+            "value": "Añade los temas del grupo — los miembros sugieren, el líder valida."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiungi le date della band — e se un membro molla, pubblica un SOS precompilato con un tap."
+            "value": "Aggiungi i brani del gruppo — i membri suggeriscono, il leader approva."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バンドの日程を登録。メンバーが抜けたらワンタップで事前入力済みSOSを投稿。"
+            "value": "グループの曲を追加。メンバーが提案し、リーダーが承認します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加乐队日程——如有成员放鸽子，一键发布预填好的SOS。"
+            "value": "添加群组曲目——成员可以建议，队长审核。"
           }
         }
       }
@@ -1361,42 +1481,42 @@
         }
       }
     },
-    "Ajouter un concert": {
+    "Ajouter un morceau": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gig hinzufügen"
+            "value": "Song hinzufügen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add a gig"
+            "value": "Add a song"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir bolo"
+            "value": "Añadir tema"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiungi concerto"
+            "value": "Aggiungi brano"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライブを追加"
+            "value": "曲を追加"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加演出"
+            "value": "添加歌曲"
           }
         }
       }
@@ -1517,6 +1637,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加视频"
+          }
+        }
+      }
+    },
+    "Ajouter à la setlist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zur Setlist hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to the setlist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir a la setlist"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi alla scaletta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セットリストに追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加到曲目单"
           }
         }
       }
@@ -2121,42 +2281,42 @@
         }
       }
     },
-    "Aucun concert planifié": {
+    "Artiste — ex. Santana": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keine Gigs geplant"
+            "value": "Künstler — z. B. Santana"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No gigs planned"
+            "value": "Artist — e.g. Santana"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin bolos planificados"
+            "value": "Artista — ej. Santana"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nessun concerto in programma"
+            "value": "Artista — es. Santana"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "予定されたライブはありません"
+            "value": "アーティスト — 例：Santana"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "暂无演出安排"
+            "value": "艺人——例如Santana"
           }
         }
       }
@@ -2317,6 +2477,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有结果"
+          }
+        }
+      }
+    },
+    "Aucun événement planifié": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Events geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events planned"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin eventos planificados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun evento in programma"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定されたイベントはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无活动安排"
           }
         }
       }
@@ -3317,6 +3517,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "波萨诺瓦/MPB"
+          }
+        }
+      }
+    },
+    "Bouton « Inviter » sur chaque match SOS — message pré-rempli envoyé direct": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Einladen“-Button bei jedem SOS-Match — vorausgefüllte Nachricht sofort gesendet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"Invite\" button on every SOS match — pre-filled message sent instantly"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botón «Invitar» en cada match SOS — mensaje prellenado enviado al instante"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bottone «Invita» su ogni match SOS — messaggio precompilato inviato subito"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOSマッチごとに「招待」ボタン。事前入力メッセージを即送信"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个SOS匹配都有“邀请”按钮——预填消息即刻发送"
           }
         }
       }
@@ -4681,6 +4921,86 @@
         }
       }
     },
+    "Concert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演出"
+          }
+        }
+      }
+    },
+    "Concert, répé ou jam : chaque événement a sa setlist — et si un membre lâche, SOS pré-rempli en un tap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gig, Probe oder Jam: jedes Event hat seine Setlist — und wenn jemand absagt, ein vorausgefülltes SOS mit einem Tipp."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gig, rehearsal or jam: every event has its setlist — and if a member bails, a pre-filled SOS in one tap."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bolo, ensayo o jam: cada evento tiene su setlist — y si un miembro falla, SOS prellenado en un toque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerto, prova o jam: ogni evento ha la sua scaletta — e se un membro molla, SOS precompilato con un tap."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ・リハ・ジャム：各イベントにセットリスト。メンバーが抜けたらワンタップでSOS。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演出、排练或即兴：每场活动都有setlist——成员放鸽子时一键预填SOS。"
+          }
+        }
+      }
+    },
     "Concerts": {
       "localizations": {
         "de": {
@@ -5521,6 +5841,46 @@
         }
       }
     },
+    "Crée et dirige des groupes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen gründen und leiten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create and lead groups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea y lidera grupos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea e guida gruppi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループを作成・リード"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建并领导群组"
+          }
+        }
+      }
+    },
     "Crée ton groupe": {
       "localizations": {
         "de": {
@@ -5637,6 +5997,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "注册"
+          }
+        }
+      }
+    },
+    "Créer un événement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event erstellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create an event"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea evento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベントを作成"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建活动"
           }
         }
       }
@@ -6641,6 +7041,46 @@
         }
       }
     },
+    "Démos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作品"
+          }
+        }
+      }
+    },
     "Dépannage d'abord": {
       "localizations": {
         "de": {
@@ -6797,6 +7237,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "邮箱或密码错误。"
+          }
+        }
+      }
+    },
+    "En attente": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausstehend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pendiente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "承認待ち"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待审核"
+          }
+        }
+      }
+    },
+    "En attente du leader": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartet auf den Leader"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the leader"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A la espera del líder"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa del leader"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダー待ち"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待队长审核"
           }
         }
       }
@@ -7161,6 +7681,46 @@
         }
       }
     },
+    "Exclure du groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus der Gruppe entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expulsar del grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi dal gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループから外す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移出群组"
+          }
+        }
+      }
+    },
     "Feed de musiciens, profils et carte de Genève": {
       "localizations": {
         "de": {
@@ -7477,6 +8037,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "长笛"
+          }
+        }
+      }
+    },
+    "Folk & Acoustique": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folk & Akustisch"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folk & Acoustic"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folk & Acústica"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folk & Acustica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォーク＆アコースティック"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "民谣与原声"
           }
         }
       }
@@ -7877,46 +8477,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组（Premium）：队内消息、共享乐谱、演出日程"
-          }
-        }
-      }
-    },
-    "Groupes illimités": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unbegrenzte Gruppen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unlimited groups"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grupos ilimitados"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gruppi illimitati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "グループ無制限"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无限群组"
           }
         }
       }
@@ -8561,46 +9121,6 @@
         }
       }
     },
-    "Instruments & styles": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Instrumente & Stile"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Instruments & styles"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Instrumentos y estilos"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Strumenti e stili"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パートとスタイル"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "乐器与风格"
-          }
-        }
-      }
-    },
     "Intermédiaire": {
       "localizations": {
         "de": {
@@ -8637,6 +9157,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "中级"
+          }
+        }
+      }
+    },
+    "Inviter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "招待"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请"
+          }
+        }
+      }
+    },
+    "Inviter un musicien": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musiker einladen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite a musician"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitar a un músico"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invita un musicista"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミュージシャンを招待"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请音乐人"
+          }
+        }
+      }
+    },
+    "Invité": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingeladen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invited"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invitato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "招待済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已邀请"
           }
         }
       }
@@ -8837,6 +9477,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "我需要乐手"
+          }
+        }
+      }
+    },
+    "Jam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jam"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jam"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jam"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jam"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ジャム"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即兴"
           }
         }
       }
@@ -9081,6 +9761,46 @@
         }
       }
     },
+    "L'événement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Event"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The event"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'evento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント情報"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动信息"
+          }
+        }
+      }
+    },
     "La candidature n'a pas pu être envoyée.": {
       "localizations": {
         "de": {
@@ -9197,6 +9917,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "照片未能保存。"
+          }
+        }
+      }
+    },
+    "La pochette est récupérée automatiquement si le morceau est trouvé.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Cover wird automatisch geladen, wenn der Song gefunden wird."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The artwork is fetched automatically if the song is found."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La carátula se recupera automáticamente si se encuentra el tema."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La copertina viene recuperata automaticamente se il brano esiste."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲が見つかればジャケットは自動取得されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到歌曲时会自动获取封面。"
           }
         }
       }
@@ -9681,6 +10441,46 @@
         }
       }
     },
+    "Le leadership ne peut être transmis qu'à un membre Premium.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Leitung kann nur an ein Premium-Mitglied übergeben werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leadership can only be transferred to a Premium member."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El liderazgo solo puede transferirse a un miembro Premium."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La leadership può passare solo a un membro Premium."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダーはPremiumメンバーにのみ引き継げます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "队长身份只能转让给Premium成员。"
+          }
+        }
+      }
+    },
     "Le message n'a pas pu être envoyé.": {
       "localizations": {
         "de": {
@@ -9761,42 +10561,122 @@
         }
       }
     },
-    "Lecteur réel en phase 2": {
+    "Leader": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Echter Player in Phase 2"
+            "value": "Leader"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Real player coming in phase 2"
+            "value": "Leader"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reproductor real en fase 2"
+            "value": "Líder"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Player reale in fase 2"
+            "value": "Leader"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "実際のプレイヤーはフェーズ2で"
+            "value": "リーダー"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "真实播放器将在第二阶段推出"
+            "value": "队长"
+          }
+        }
+      }
+    },
+    "Leader du groupe : membres, répertoire validé, événements et setlists — rejoindre reste gratuit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppenleader: Mitglieder, bestätigtes Repertoire, Events und Setlists — Beitreten bleibt gratis."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group leader: members, approved repertoire, events and setlists — joining stays free."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Líder del grupo: miembros, repertorio validado, eventos y setlists — unirse sigue gratis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leader del gruppo: membri, repertorio approvato, eventi e scalette — unirsi resta gratis."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダーとしてメンバー・レパートリー・イベントを管理。参加は無料のまま。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组队长：成员、审核曲库、活动和曲目单——加入依然免费。"
+          }
+        }
+      }
+    },
+    "Lecture des vraies vidéos en phase 2 — extraits de 60 à 90 s.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Echte Videowiedergabe in Phase 2 — Clips von 60–90 s."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real video playback in phase 2 — 60 to 90 s clips."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reproducción real en fase 2 — clips de 60 a 90 s."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riproduzione reale in fase 2 — clip da 60–90 s."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実際の再生はフェーズ2で。60〜90秒のクリップです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真实视频播放将在第二阶段推出——60至90秒片段。"
           }
         }
       }
@@ -9877,6 +10757,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "别人看到你的状态：%@ %@"
+          }
+        }
+      }
+    },
+    "Les groupes deviennent de vrais groupes : leader (Premium), invitations, exclusions, leadership transférable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen werden echte Bands: Leader (Premium), Einladungen, Ausschlüsse, übertragbare Leitung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups become real bands: leader (Premium), invites, removals, transferable leadership"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los grupos se vuelven bandas de verdad: líder (Premium), invitaciones, expulsiones, liderazgo transferible"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I gruppi diventano vere band: leader (Premium), inviti, esclusioni, leadership trasferibile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループが本物のバンドに：リーダー（Premium）・招待・除名・リーダー引き継ぎ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组变成真正的乐队：队长（Premium）、邀请、移除、可转让队长"
           }
         }
       }
@@ -10361,6 +11281,46 @@
         }
       }
     },
+    "Membres": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitglieder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Members"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miembros"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员"
+          }
+        }
+      }
+    },
     "Membres (%lld)": {
       "localizations": {
         "de": {
@@ -10837,86 +11797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "消息"
-          }
-        }
-      }
-    },
-    "Messages d'équipe, partitions partagées, agenda des concerts — et SOS pré-rempli si un membre lâche.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Team-Nachrichten, geteilte Noten, Gig-Kalender — und ein vorausgefülltes SOS, wenn jemand absagt."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Team messages, shared sheet music, gig agenda — and a pre-filled SOS if a member bails."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mensajes de equipo, partituras compartidas, agenda de bolos — y SOS prellenado si un miembro falla."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Messaggi di gruppo, spartiti condivisi, agenda dei concerti — e SOS precompilato se un membro molla."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム連絡・楽譜共有・ライブ日程、メンバーが抜けたら事前入力SOSも。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "队内消息、共享乐谱、演出日程——成员放鸽子还有预填SOS。"
-          }
-        }
-      }
-    },
-    "Messages d'équipe, partitions partagées, dates de concert — avec Premium": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Team-Nachrichten, geteilte Noten, Konzerttermine — mit Premium"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Team messages, shared sheet music, concert dates — with Premium"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mensajes de equipo, partituras compartidas, fechas de concierto — con Premium"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Messaggi di gruppo, spartiti condivisi, date dei concerti — con Premium"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム連絡・楽譜共有・ライブ日程 — Premiumで"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "队内消息、共享乐谱、演出日程——Premium专享"
           }
         }
       }
@@ -12041,6 +12921,46 @@
         }
       }
     },
+    "Nom du musicien…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name des Musikers …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musician's name…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre del músico…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome del musicista…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミュージシャンの名前…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐人姓名……"
+          }
+        }
+      }
+    },
     "Nom — ex. Latin Vibes Quartet": {
       "localizations": {
         "de": {
@@ -12157,6 +13077,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "每个档案和搜索结果都显示粉丝数"
+          }
+        }
+      }
+    },
+    "Nommer %@ leader": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ zum Leader machen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make %@ leader"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombrar líder a %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomina %@ leader"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@をリーダーに任命"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任命%@为队长"
+          }
+        }
+      }
+    },
+    "Nommer %@ leader ? Tu perdras la gestion du groupe.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ zum Leader machen? Du verlierst die Gruppenverwaltung."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make %@ leader? You'll lose group management."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Nombrar líder a %@? Perderás la gestión del grupo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nominare %@ leader? Perderai la gestione del gruppo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@をリーダーに？グループの管理権を失います。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任命%@为队长？你将失去群组管理权。"
+          }
+        }
+      }
+    },
+    "Nommer leader": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Leader machen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make leader"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombrar líder"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomina leader"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダーに任命"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任命为队长"
           }
         }
       }
@@ -12717,6 +13757,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "你在哪里演出？"
+          }
+        }
+      }
+    },
+    "Pages profil repensées façon Instagram, avec les vrais logos des réseaux sociaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilseiten im Instagram-Stil, mit echten Social-Logos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile pages redesigned Instagram-style, with real social network logos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfiles rediseñados al estilo Instagram, con logos reales de redes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profili ridisegnati in stile Instagram, con i veri loghi social"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィールをインスタ風に刷新、本物のSNSロゴつき"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "档案页Ins风重设计，配真实社交平台logo"
           }
         }
       }
@@ -14761,6 +15841,46 @@
         }
       }
     },
+    "Rejoindre est gratuit — créer et diriger un groupe est Premium": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beitreten ist gratis — Gründen und Leiten ist Premium"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joining is free — creating and leading a group is Premium"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unirse es gratis — crear y liderar un grupo es Premium"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unirsi è gratis — creare e guidare un gruppo è Premium"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参加は無料。作成とリーダーはPremiumで"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入免费——创建和领导群组需要Premium"
+          }
+        }
+      }
+    },
     "Rejoindre le réseau": {
       "localizations": {
         "de": {
@@ -15316,7 +16436,127 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "曲目"
+            "value": "曲库"
+          }
+        }
+      }
+    },
+    "Répertoire du groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen-Repertoire"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group repertoire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio del grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio del gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループのレパートリー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组曲库"
+          }
+        }
+      }
+    },
+    "Répertoire validé par le leader — pochettes des morceaux récupérées automatiquement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Leader bestätigtes Repertoire — Cover automatisch geladen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leader-approved repertoire — song artwork fetched automatically"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio validado por el líder — carátulas recuperadas automáticamente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio approvato dal leader — copertine recuperate automaticamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダー承認のレパートリー、ジャケット自動取得"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "队长审核曲库——自动获取歌曲封面"
+          }
+        }
+      }
+    },
+    "Répertoire vide": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leeres Repertoire"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty repertoire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio vacío"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio vuoto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レパートリーは空です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲库为空"
           }
         }
       }
@@ -15357,6 +16597,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple响应无效——请重试。"
+          }
+        }
+      }
+    },
+    "Répétition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rehearsal"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ensayo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リハーサル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排练"
           }
         }
       }
@@ -15801,6 +17081,46 @@
         }
       }
     },
+    "Salut ! Je cherche %@ pour « %@ » le %@ à %@ (cachet : %@). Partant·e ?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hey! Ich suche %@ für „%@“ am %@ im %@ (Gage: %@). Dabei?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hey! I'm looking for %@ for \"%@\" on %@ at %@ (fee: %@). Interested?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Hola! Busco %@ para «%@» el %@ en %@ (caché: %@). ¿Te apuntas?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciao! Cerco %@ per «%@» il %@ al %@ (compenso: %@). Ci stai?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "こんにちは！「%2$@」（%3$@、%4$@、ギャラ：%5$@）で%1$@を探しています。いかがですか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你好！我在找%@参加《%@》，时间%@，地点%@（酬劳：%@）。有兴趣吗？"
+          }
+        }
+      }
+    },
     "Saxophone": {
       "localizations": {
         "de": {
@@ -15917,6 +17237,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "退出登录"
+          }
+        }
+      }
+    },
+    "Setlist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaletta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セットリスト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲目单"
+          }
+        }
+      }
+    },
+    "Setlist : %lld morceaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist: %lld Songs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist: %lld songs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist: %lld temas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaletta: %lld brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セットリスト：%lld曲"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲目单：%lld首"
+          }
+        }
+      }
+    },
+    "Setlist vide — pioche dans le répertoire du groupe ou ajoute des morceaux.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leere Setlist — bedien dich am Repertoire oder füge Songs hinzu."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty setlist — pick from the group repertoire or add songs."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Setlist vacía — usa el repertorio del grupo o añade temas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaletta vuota — pesca dal repertorio o aggiungi brani."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セットリストは空です。レパートリーから選ぶか曲を追加して。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲目单为空——从群组曲库中选或添加歌曲。"
+          }
+        }
+      }
+    },
+    "Seul le leader crée les événements — suggère-lui en message.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur der Leader erstellt Events — schlag ihm per Nachricht vor."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the leader creates events — suggest one by message."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo el líder crea eventos — sugiérele por mensaje."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo il leader crea eventi — suggerisci in chat."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント作成はリーダーのみ。メッセージで提案しましょう。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有队长能创建活动——可以发消息建议。"
           }
         }
       }
@@ -16201,6 +17681,166 @@
         }
       }
     },
+    "Suggestions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschläge"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggestions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugerencias"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggerimenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提案"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建议"
+          }
+        }
+      }
+    },
+    "Suggérer pour la setlist": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für die Setlist vorschlagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest for the setlist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugerir para la setlist"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggerisci per la scaletta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セットリストに提案"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为曲目单建议歌曲"
+          }
+        }
+      }
+    },
+    "Suggérer un morceau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Song vorschlagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggest a song"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugerir tema"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggerisci brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲を提案"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建议歌曲"
+          }
+        }
+      }
+    },
+    "Suggéré par %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorgeschlagen von %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested by %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugerido por %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggerito da %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@さんの提案"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的建议"
+          }
+        }
+      }
+    },
     "Suis les musiciens fiables : tes amis et abonnés remontent en premier dans tes recherches.": {
       "localizations": {
         "de": {
@@ -16321,6 +17961,46 @@
         }
       }
     },
+    "Suivre": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folgen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguir"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segui"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォロー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关注"
+          }
+        }
+      }
+    },
     "Supprimer": {
       "localizations": {
         "de": {
@@ -16361,42 +18041,82 @@
         }
       }
     },
-    "Supprimer ce groupe (messages, partitions et concerts) ?": {
+    "Supprimer ce groupe (messages, répertoire, événements, partitions) ?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diese Gruppe löschen (Nachrichten, Noten und Gigs)?"
+            "value": "Diese Gruppe löschen (Nachrichten, Repertoire, Events, Noten)?"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete this group (messages, sheet music and gigs)?"
+            "value": "Delete this group (messages, repertoire, events, sheet music)?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Eliminar este grupo (mensajes, partituras y bolos)?"
+            "value": "¿Eliminar este grupo (mensajes, repertorio, eventos, partituras)?"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eliminare questo gruppo (messaggi, spartiti e concerti)?"
+            "value": "Eliminare questo gruppo (messaggi, repertorio, eventi, spartiti)?"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このグループを削除しますか（メッセージ・楽譜・ライブ）？"
+            "value": "このグループを削除しますか（メッセージ・レパートリー・イベント・楽譜）？"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除该群组（消息、乐谱和演出）？"
+            "value": "删除该群组（消息、曲库、活动、乐谱）？"
+          }
+        }
+      }
+    },
+    "Supprimer l'événement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event löschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the event"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar el evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina l'evento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベントを削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除活动"
           }
         }
       }
@@ -17001,6 +18721,46 @@
         }
       }
     },
+    "Titre — ex. Oye Como Va": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel — z. B. Oye Como Va"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title — e.g. Oye Como Va"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Título — ej. Oye Como Va"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titolo — es. Oye Como Va"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトル — 例：Oye Como Va"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标题——例如Oye Como Va"
+          }
+        }
+      }
+    },
     "Titre — ex. Soirée salsa": {
       "localizations": {
         "de": {
@@ -17037,6 +18797,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "标题——例如salsa之夜"
+          }
+        }
+      }
+    },
+    "Toi": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tú"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなた"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你"
           }
         }
       }
@@ -17801,6 +19601,46 @@
         }
       }
     },
+    "Tu seras le leader : membres, répertoire et événements passent par toi.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du wirst Leader: Mitglieder, Repertoire und Events laufen über dich."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll be the leader: members, repertoire and events go through you."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serás el líder: miembros, repertorio y eventos pasan por ti."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sarai il leader: membri, repertorio ed eventi passano da te."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたがリーダー：メンバー・レパートリー・イベントを管理します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你将成为队长：成员、曲库和活动都由你负责。"
+          }
+        }
+      }
+    },
     "Tuba": {
       "localizations": {
         "de": {
@@ -17837,6 +19677,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "大号"
+          }
+        }
+      }
+    },
+    "Type": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Art"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "種類"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "类型"
           }
         }
       }
@@ -18361,46 +20241,6 @@
         }
       }
     },
-    "Vidéo de présentation · %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vorstellungsvideo · %@"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intro video · %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vídeo de presentación · %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Video di presentazione · %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "紹介動画 · %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "介绍视频 · %@"
-          }
-        }
-      }
-    },
     "Ville / région": {
       "localizations": {
         "de": {
@@ -18721,6 +20561,46 @@
         }
       }
     },
+    "Vrais groupes, profils façon Insta & invitations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Echte Bands, Insta-Profile & Einladungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real bands, Insta-style profiles & invites"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bandas de verdad, perfiles estilo Insta e invitaciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vere band, profili stile Insta e inviti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本物のバンド・インスタ風プロフィール・招待"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "真正的乐队、Ins风档案与邀请"
+          }
+        }
+      }
+    },
     "abonnés": {
       "localizations": {
         "de": {
@@ -18797,6 +20677,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "演出"
+          }
+        }
+      }
+    },
+    "démos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "demos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "demos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "demo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作品"
           }
         }
       }
@@ -19161,6 +21081,46 @@
         }
       }
     },
+    "· %lld membres": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld Mitglieder"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld members"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld miembros"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld membri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· メンバー%lld人"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld名成员"
+          }
+        }
+      }
+    },
     "À discuter": {
       "localizations": {
         "de": {
@@ -19237,6 +21197,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "关于"
+          }
+        }
+      }
+    },
+    "À valider — c'est toi qui décides": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu bestätigen — du entscheidest"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To approve — you decide"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por validar — tú decides"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da approvare — decidi tu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "承認待ち。決めるのはあなた"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待审核——由你决定"
           }
         }
       }
@@ -19397,6 +21397,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "美国"
+          }
+        }
+      }
+    },
+    "Événement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        }
+      }
+    },
+    "Événements": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eventos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eventi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        }
+      }
+    },
+    "Événements (concert, répé, jam) avec setlist et suggestions à valider d'un tap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events (Gig, Probe, Jam) mit Setlist und Ein-Tipp-Freigaben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events (gig, rehearsal, jam) with setlists and one-tap approvals"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eventos (bolo, ensayo, jam) con setlist y sugerencias validables en un toque"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eventi (concerto, prova, jam) con scaletta e approvazioni in un tap"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント（ライブ・リハ・ジャム）にセットリスト、ワンタップ承認"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动（演出、排练、即兴）带曲目单，一键审核建议"
           }
         }
       }

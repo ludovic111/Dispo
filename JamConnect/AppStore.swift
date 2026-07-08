@@ -591,12 +591,205 @@ final class AppStore: ObservableObject {
         Self.save(groups, key: Self.groupsKey)
     }
 
-    /// Crée un groupe — l'appelant vérifie le statut Premium (paywall sinon).
+    /// Crée un groupe — création réservée aux Premium (l'appelant vérifie,
+    /// paywall sinon). Le créateur devient leader — représenté par
+    /// leaderName == nil (« moi »), robuste à un futur renommage du profil.
     func createGroup(name: String, emoji: String, members: [String]) {
-        let group = GroupChat(name: name, emoji: emoji, memberNames: members)
+        let group = GroupChat(name: name, emoji: emoji, leaderName: nil, memberNames: members)
         groups.insert(group, at: 0)
         persistGroups()
+        scheduleDemoSuggestion(for: group.id)
     }
+
+    /// Suis-je le leader de ce groupe ? leaderName == nil ⇒ moi (le titre ne
+    /// dépend pas de mon nom d'affichage, qui peut changer).
+    func isLeader(of group: GroupChat) -> Bool {
+        group.leaderName == nil
+    }
+
+    /// Nom affiché du leader (le mien si c'est moi).
+    func leaderDisplayName(of group: GroupChat) -> String {
+        group.leaderName ?? profile.name
+    }
+
+    /// Puis-je exercer les pouvoirs de leader ? Être leader ne suffit pas :
+    /// il faut aussi être Premium (un abonnement expiré fait retomber au
+    /// rang de membre — on ne perd pas le titre, juste les commandes).
+    func canLead(_ group: GroupChat) -> Bool {
+        isLeader(of: group) && showsPremium
+    }
+
+    /// Statut Premium simulé d'un membre (stable) — le vrai flag viendra du
+    /// serveur en phase 2b. Conditionne le transfert de leadership.
+    nonisolated func isPremiumMusician(_ name: String) -> Bool {
+        abs(name.stableHash) % 2 == 0
+    }
+
+    // MARK: Membres (leader uniquement — l'UI verrouille)
+
+    func inviteMember(_ name: String, to group: GroupChat) {
+        updateGroup(group.id) {
+            guard !$0.memberNames.contains(name) else { return }
+            $0.memberNames.append(name)
+            $0.memberNames.sort()
+        }
+    }
+
+    func kickMember(_ name: String, from group: GroupChat) {
+        updateGroup(group.id) {
+            $0.memberNames.removeAll { $0 == name }
+            // Un membre viré ne laisse pas de suggestions orphelines — ni dans
+            // le répertoire, ni dans les setlists des événements.
+            $0.repertoire = $0.songs.filter { $0.isApproved || $0.suggestedBy != name }
+            $0.events = $0.events?.map { event in
+                var event = event
+                event.setlist.removeAll { !$0.isApproved && $0.suggestedBy == name }
+                return event
+            }
+        }
+    }
+
+    /// Transfère le leadership — uniquement vers un membre Premium.
+    func transferLeadership(of group: GroupChat, to name: String) {
+        guard isPremiumMusician(name) else { return }
+        updateGroup(group.id) { $0.leaderName = name }
+    }
+
+    // MARK: Répertoire (leader valide, membres suggèrent)
+
+    /// Ajoute un morceau au répertoire du groupe. Le leader ajoute
+    /// directement (validé) ; un membre crée une suggestion à valider.
+    func addSong(title: String, artist: String, to groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
+        // Le leader valide d'office ; sinon c'est une suggestion en attente.
+        let approved = groups.first(where: { $0.id == groupID }).map(canLead) ?? true
+        let song = Song(
+            title: title,
+            artist: artist,
+            artworkURL: nil,
+            suggestedBy: profile.name,
+            isApproved: approved
+        )
+        insertSong(song, in: groupID, eventID: eventID)
+        // La pochette arrive en différé (iTunes Search) — le morceau vit sans.
+        Task { [weak self] in
+            guard let self else { return }
+            if let artwork = await Self.fetchArtworkURL(title: title, artist: artist) {
+                self.updateSong(song.id, in: groupID, eventID: eventID) { $0.artworkURL = artwork }
+            }
+        }
+    }
+
+    func approveSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
+        updateSong(song.id, in: groupID, eventID: eventID) { $0.isApproved = true }
+    }
+
+    func rejectSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
+        updateGroup(groupID) { group in
+            if let eventID, let index = group.events?.firstIndex(where: { $0.id == eventID }) {
+                group.events?[index].setlist.removeAll { $0.id == song.id }
+            } else {
+                group.repertoire = group.songs.filter { $0.id != song.id }
+            }
+        }
+    }
+
+    private func insertSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID?) {
+        updateGroup(groupID) { group in
+            if let eventID {
+                // Ciblait un événement précis : s'il a disparu entretemps, on
+                // ne bascule pas le morceau vers le répertoire — on abandonne.
+                guard let index = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
+                group.events?[index].setlist.append(song)
+            } else {
+                group.repertoire = group.songs + [song]
+            }
+        }
+    }
+
+    private func updateSong(_ songID: Song.ID, in groupID: GroupChat.ID, eventID: GroupEvent.ID?, _ transform: (inout Song) -> Void) {
+        updateGroup(groupID) { group in
+            if let eventID, let eventIndex = group.events?.firstIndex(where: { $0.id == eventID }) {
+                if let songIndex = group.events?[eventIndex].setlist.firstIndex(where: { $0.id == songID }) {
+                    transform(&group.events![eventIndex].setlist[songIndex])
+                }
+            } else if var repertoire = group.repertoire,
+                      let songIndex = repertoire.firstIndex(where: { $0.id == songID }) {
+                transform(&repertoire[songIndex])
+                group.repertoire = repertoire
+            }
+        }
+    }
+
+    /// Cherche la pochette du morceau (iTunes Search — gratuit, sans clé).
+    nonisolated static func fetchArtworkURL(title: String, artist: String) async -> String? {
+        struct SearchResponse: Decodable {
+            struct Item: Decodable { let artworkUrl100: String? }
+            let results: [Item]
+        }
+        let term = "\(title) \(artist)"
+        guard let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&media=music&entity=song&limit=1")
+        else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let response = try? JSONDecoder().decode(SearchResponse.self, from: data)
+        else { return nil }
+        // 100 px → 300 px : même CDN, meilleure netteté dans les listes.
+        return response.results.first?.artworkUrl100?
+            .replacingOccurrences(of: "100x100", with: "300x300")
+    }
+
+    // MARK: Événements (leader crée, membres suggèrent la setlist)
+
+    func addEvent(_ event: GroupEvent, to group: GroupChat) {
+        updateGroup(group.id) {
+            $0.events = ($0.events ?? []) + [event]
+            $0.events?.sort { $0.date < $1.date }
+        }
+        scheduleDemoSuggestion(for: group.id, eventID: event.id)
+    }
+
+    func removeEvent(_ event: GroupEvent, from group: GroupChat) {
+        updateGroup(group.id) { $0.events?.removeAll { $0.id == event.id } }
+    }
+
+    /// Vie de démo : peu après une création (groupe ou événement), un membre
+    /// suggère un morceau — le flux « suggestion → validation leader »
+    /// devient concret. Temps réel serveur en phase 2b.
+    private func scheduleDemoSuggestion(for groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Double.random(in: 8...15)))
+            guard let self,
+                  let group = self.groups.first(where: { $0.id == groupID }),
+                  let member = group.memberNames.randomElement(),
+                  let pick = Self.demoSongPool.randomElement()
+            else { return }
+            var song = Song(
+                title: pick.0,
+                artist: pick.1,
+                artworkURL: nil,
+                suggestedBy: member,
+                isApproved: false
+            )
+            song.artworkURL = await Self.fetchArtworkURL(title: pick.0, artist: pick.1)
+            self.insertSong(song, in: groupID, eventID: eventID)
+            self.pushLocal(
+                title: "\(group.emoji) \(group.name)",
+                body: "\(member) : \(pick.0) — \(pick.1) ?"
+            )
+        }
+    }
+
+    /// Standards que « suggèrent » les membres en démo (pochettes réelles).
+    nonisolated private static let demoSongPool: [(String, String)] = [
+        ("Oye Como Va", "Santana"),
+        ("Chan Chan", "Buena Vista Social Club"),
+        ("Autumn Leaves", "Bill Evans"),
+        ("Watermelon Man", "Herbie Hancock"),
+        ("Vivir Mi Vida", "Marc Anthony"),
+        ("So What", "Miles Davis"),
+        ("La Vida Es Un Carnaval", "Celia Cruz"),
+        ("Take Five", "Dave Brubeck")
+    ]
 
     func deleteGroup(_ group: GroupChat) {
         for doc in group.docs {
@@ -657,17 +850,6 @@ final class AppStore: ObservableObject {
         updateGroup(group.id) { $0.docs.removeAll { $0.id == doc.id } }
     }
 
-    func addConcert(_ concert: GroupConcert, to group: GroupChat) {
-        updateGroup(group.id) {
-            $0.concerts.append(concert)
-            $0.concerts.sort { $0.date < $1.date }
-        }
-    }
-
-    func removeConcert(_ concert: GroupConcert, from group: GroupChat) {
-        updateGroup(group.id) { $0.concerts.removeAll { $0.id == concert.id } }
-    }
-
     private static let scriptedGroupReplies: [String] = [
         "Ça marche pour moi 👍",
         "Reçu ! Je bosse la partition ce soir.",
@@ -676,6 +858,32 @@ final class AppStore: ObservableObject {
         "Top. Balance l'heure du soundcheck quand tu l'as.",
         "Je peux amener la sono si besoin."
     ]
+
+    // MARK: - Invitation à un SOS
+
+    /// Musiciens déjà invités, par annonce (mémoire de session).
+    @Published var invitedByGig: [UUID: Set<String>] = [:]
+
+    func hasInvited(_ musician: Musician, to gig: GigRequest) -> Bool {
+        invitedByGig[gig.id]?.contains(musician.name) ?? false
+    }
+
+    /// Invite un musicien à dépanner : ouvre (ou crée) la conversation et
+    /// envoie un message d'invitation pré-rempli avec les infos du concert.
+    func invite(_ musician: Musician, to gig: GigRequest) async {
+        // Marqué avant l'await : un double-tap rapide ne déclenche pas deux
+        // invitations (l'ouverture de conversation est asynchrone).
+        guard !hasInvited(musician, to: gig) else { return }
+        invitedByGig[gig.id, default: []].insert(musician.name)
+        let conversation = await conversation(with: musician)
+        let dateLabel = gig.date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
+        let instruments = gig.wantedInstruments.map { tr($0.rawValue) }.joined(separator: " / ")
+        let text = String(
+            format: tr("Salut ! Je cherche %@ pour « %@ » le %@ à %@ (cachet : %@). Partant·e ?"),
+            instruments, gig.title, dateLabel, gig.place, tr(gig.feeLabel)
+        )
+        sendMessage(text, in: conversation)
+    }
 
     // MARK: - Médias du profil (photo + vidéos de démo)
 

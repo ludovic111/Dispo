@@ -815,7 +815,7 @@ extension Musician {
     }
 }
 
-// MARK: - Groupes (messagerie d'équipe — Premium)
+// MARK: - Groupes de musique
 
 /// Un message dans un groupe.
 struct GroupMessage: Codable, Identifiable, Hashable {
@@ -836,33 +836,78 @@ struct GroupDoc: Codable, Identifiable, Hashable {
     var date: Date
 }
 
-/// Une date de concert planifiée par le groupe. Reliée aux SOS : si un
-/// membre lâche, on publie un SOS pré-rempli depuis le concert.
-struct GroupConcert: Codable, Identifiable, Hashable {
+/// Un morceau du répertoire (du groupe ou d'un événement). Tant que le
+/// leader ne l'a pas validé, c'est une suggestion en attente.
+struct Song: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
+    var title: String
+    var artist: String
+    /// Pochette (iTunes Search) — nil si introuvable, le morceau vit sans.
+    var artworkURL: String?
+    var suggestedBy: String
+    var isApproved: Bool
+}
+
+/// Type d'événement d'un groupe.
+enum GroupEventKind: String, Codable, CaseIterable, Identifiable {
+    case concert = "Concert"
+    case repetition = "Répétition"
+    case jam = "Jam"
+
+    var id: String { rawValue }
+
+    var emoji: String {
+        switch self {
+        case .concert: return "🎤"
+        case .repetition: return "🎧"
+        case .jam: return "🔥"
+        }
+    }
+}
+
+/// Un événement du groupe (concert, répé, jam) avec sa propre setlist.
+/// Créé par le leader ; les membres suggèrent des morceaux qu'il valide.
+/// Relié aux SOS : si un membre lâche, SOS pré-rempli en un tap.
+struct GroupEvent: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var kind: GroupEventKind
     var title: String
     var venue: String
     var date: Date
+    var setlist: [Song] = []
 }
 
-/// Un groupe de discussion (Premium) : messages d'équipe, partitions
-/// partagées et agenda des concerts. Local pour l'instant — synchronisation
-/// serveur en phase 2b.
+/// Un groupe de musique : le leader (créateur, forcément Premium) gère les
+/// membres, le répertoire et les événements ; les membres — Premium ou non —
+/// discutent, partagent des partitions et font des suggestions.
+/// Local pour l'instant — synchronisation serveur en phase 2b.
 struct GroupChat: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var name: String
     var emoji: String = "🎶"
-    /// Membres (par nom, comme les favoris) — moi en plus, implicitement.
+    /// Leader du groupe (rôle transférable à un membre Premium uniquement).
+    /// Optionnel pour décoder les groupes v0.7 — nil = moi.
+    var leaderName: String?
+    /// Membres (par nom) — moi en plus, implicitement.
     var memberNames: [String]
     var messages: [GroupMessage] = []
     var docs: [GroupDoc] = []
-    var concerts: [GroupConcert] = []
+    /// Répertoire du groupe (morceaux validés + suggestions en attente).
+    var repertoire: [Song]?
+    /// Événements (concerts, répés, jams) avec leur setlist.
+    var events: [GroupEvent]?
+
+    var songs: [Song] { repertoire ?? [] }
+    var allEvents: [GroupEvent] { events ?? [] }
 
     var lastMessage: GroupMessage? { messages.max(by: { $0.date < $1.date }) }
-    /// Concerts à venir, les plus proches d'abord.
-    var upcomingConcerts: [GroupConcert] {
-        concerts.filter { $0.date > Date() }.sorted { $0.date < $1.date }
+    /// Événements à venir, les plus proches d'abord.
+    var upcomingEvents: [GroupEvent] {
+        allEvents.filter { $0.date > Date() }.sorted { $0.date < $1.date }
     }
+    /// Suggestions de morceaux en attente de validation du leader.
+    var pendingSongs: [Song] { songs.filter { !$0.isApproved } }
+    var approvedSongs: [Song] { songs.filter { $0.isApproved } }
 }
 
 // MARK: - Annonce SOS dépannage

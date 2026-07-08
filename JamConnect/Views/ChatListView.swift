@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// Destinations de l'onglet Messages. Un enum dédié car Conversation.ID et
+/// GroupChat.ID sont tous deux des UUID : sans lui, un seul
+/// `navigationDestination(for: UUID.self)` gagnerait et l'autre lien casserait.
+enum ChatRoute: Hashable {
+    case conversation(Conversation.ID)
+    case group(GroupChat.ID)
+}
+
 struct ChatListView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showNewGroup = false
@@ -29,7 +37,7 @@ struct ChatListView: View {
                         }
 
                         ForEach(store.conversations) { conversation in
-                            NavigationLink(value: conversation.id) {
+                            NavigationLink(value: ChatRoute.conversation(conversation.id)) {
                                 JCCard(padding: 13) {
                                     HStack(spacing: 12) {
                                         AvatarView(name: conversation.contactName, size: 50, photo: store.photo(forName: conversation.contactName))
@@ -65,8 +73,12 @@ struct ChatListView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Conversation.ID.self) { ChatView(conversationID: $0) }
-            .navigationDestination(for: GroupChat.ID.self) { GroupChatView(groupID: $0) }
+            .navigationDestination(for: ChatRoute.self) { route in
+                switch route {
+                case .conversation(let id): ChatView(conversationID: id)
+                case .group(let id): GroupChatView(groupID: id)
+                }
+            }
             .sheet(isPresented: $showNewGroup) { NewGroupSheet() }
         }
     }
@@ -79,7 +91,7 @@ struct ChatListView: View {
             JCPromoBanner(
                 icon: "person.3.fill",
                 title: "Crée ton groupe",
-                subtitle: "Messages d'équipe, partitions partagées, dates de concert — avec Premium"
+                subtitle: "Rejoindre est gratuit — créer et diriger un groupe est Premium"
             ) { store.showPaywall = true }
         } else {
             VStack(alignment: .leading, spacing: 10) {
@@ -104,7 +116,7 @@ struct ChatListView: View {
                 }
 
                 ForEach(store.groups) { group in
-                    NavigationLink(value: group.id) {
+                    NavigationLink(value: ChatRoute.group(group.id)) {
                         JCCard(padding: 13) {
                             HStack(spacing: 12) {
                                 ZStack {
@@ -126,7 +138,7 @@ struct ChatListView: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
-                                    Text("\(group.memberNames.count + 1) membres · \(group.docs.count) partitions · \(group.upcomingConcerts.count) concerts")
+                                    Text("\(group.memberNames.count + 1) membres · \(group.approvedSongs.count) morceaux · \(group.upcomingEvents.count) événements")
                                         .font(.caption2.weight(.bold))
                                         .foregroundStyle(JC.violet)
                                         .lineLimit(1)

@@ -208,11 +208,35 @@ struct SOSMatchRow: View {
             } else {
                 TagView(text: "Sur demande", color: JC.violet)
             }
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.tertiary)
+            inviteButton
         }
         .padding(.vertical, 3)
         .contentShape(Rectangle())
+    }
+
+    /// Le geste clé : inviter ce musicien à l'événement, en un tap.
+    /// Envoie un message pré-rempli (titre, date, lieu, cachet).
+    private var inviteButton: some View {
+        Button {
+            guard !store.hasInvited(match.musician, to: gig) else { return }
+            Task { await store.invite(match.musician, to: gig) }
+        } label: {
+            if store.hasInvited(match.musician, to: gig) {
+                Label("Invité", systemImage: "checkmark")
+                    .font(.caption2.weight(.heavy))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color.green.opacity(0.15), in: Capsule())
+                    .foregroundStyle(.green)
+            } else {
+                Label("Inviter", systemImage: "paperplane.fill")
+                    .font(.caption2.weight(.heavy))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(JC.hero, in: Capsule())
+                    .foregroundStyle(.white)
+            }
+        }
+        .buttonStyle(PressableStyle())
     }
 }
