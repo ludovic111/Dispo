@@ -11,6 +11,16 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.5.0",
+            title: "Lieux précis, genres & instruments",
+            points: [
+                "14 pays et plus de 300 villes avec code postal",
+                "Recherche de ville par nom ou code postal",
+                "42 genres musicaux rangés en 9 familles (sous-genres inclus)",
+                "33 instruments triés par catégories (claviers, cordes, vents…)"
+            ]
+        ),
+        PatchNote(
             version: "0.4.0",
             title: "Matching, réseau & langues",
             points: [

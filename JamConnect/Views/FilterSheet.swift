@@ -11,8 +11,14 @@ struct FilterSheet: View {
                 Section("Instrument") {
                     Picker("Instrument", selection: $filters.instrument) {
                         Text("Tous").tag(Instrument?.none)
-                        ForEach(Instrument.allCases) { instrument in
-                            Text(LocalizedStringKey(instrument.rawValue)).tag(Instrument?.some(instrument))
+                        ForEach(InstrumentCategory.allCases) { category in
+                            Section {
+                                ForEach(Instrument.instruments(in: category)) { instrument in
+                                    Text(LocalizedStringKey(instrument.rawValue)).tag(Instrument?.some(instrument))
+                                }
+                            } header: {
+                                Text(LocalizedStringKey(category.rawValue))
+                            }
                         }
                     }
                 }
@@ -20,8 +26,14 @@ struct FilterSheet: View {
                 Section("Genre") {
                     Picker("Genre", selection: $filters.genre) {
                         Text("Tous").tag(Genre?.none)
-                        ForEach(Genre.allCases) { genre in
-                            (Text(genre.emoji + " ") + Text(LocalizedStringKey(genre.rawValue))).tag(Genre?.some(genre))
+                        ForEach(GenreFamily.allCases) { family in
+                            Section {
+                                ForEach(Genre.genres(in: family)) { genre in
+                                    Text(LocalizedStringKey(genre.rawValue)).tag(Genre?.some(genre))
+                                }
+                            } header: {
+                                Text(family.emoji + " ") + Text(LocalizedStringKey(family.rawValue))
+                            }
                         }
                     }
                 }

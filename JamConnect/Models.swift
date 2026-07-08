@@ -3,70 +3,241 @@ import CoreLocation
 
 // MARK: - Genres
 
-enum Genre: String, Codable, CaseIterable, Identifiable {
+/// Familles de genres — structurent les sélecteurs (sections) et portent
+/// l'identité visuelle (emoji, couleur, photo de couverture, codes).
+enum GenreFamily: String, CaseIterable, Identifiable {
     case jazz = "Jazz"
-    case latin = "Latin / World"
+    case latinWorld = "Latin & World"
     case classique = "Classique"
-    case rock = "Rock / Pop"
+    case rockPop = "Rock & Pop"
+    case bluesCountry = "Blues & Country"
+    case soulFunk = "Soul & Funk"
+    case urbain = "Hip-hop & Urbain"
     case electro = "Électronique"
-    case soul = "Gospel / Soul / R&B"
-    case folk = "Folk / Acoustique"
+    case folk = "Folk & Acoustique"
 
     var id: String { rawValue }
 
     var emoji: String {
         switch self {
         case .jazz: return "🎷"
-        case .latin: return "🪘"
+        case .latinWorld: return "🪘"
         case .classique: return "🎻"
-        case .rock: return "🎸"
+        case .rockPop: return "🎸"
+        case .bluesCountry: return "🤠"
+        case .soulFunk: return "🎤"
+        case .urbain: return "🎧"
         case .electro: return "🎛️"
-        case .soul: return "🎤"
         case .folk: return "🪕"
         }
     }
 
-    /// Les « codes » propres à chaque genre, affichés sur les profils.
+    /// Les « codes » de la famille, affichés sur les profils.
     var codes: [String] {
         switch self {
         case .jazz: return ["Standards", "Grille + impro"]
-        case .latin: return ["Clave", "Groove"]
+        case .latinWorld: return ["Clave", "Groove"]
         case .classique: return ["Partitions", "Niveau conservatoire"]
-        case .rock: return ["Impro libre", "Covers"]
+        case .rockPop: return ["Impro libre", "Covers"]
+        case .bluesCountry: return ["Blues en 12", "Shuffle"]
+        case .soulFunk: return ["Chœurs", "Feel"]
+        case .urbain: return ["Flow", "Beats"]
         case .electro: return ["Live set", "Collab studio"]
-        case .soul: return ["Chœurs", "Feel"]
         case .folk: return ["Storytelling", "Cercle"]
         }
     }
 }
 
+/// Les rawValues français sont stockés tels quels (seed, backend) — ne pas
+/// renommer un cas existant. Les 7 premiers cas historiques servent de
+/// « genre général » de leur famille ; le reste = sous-genres.
+enum Genre: String, Codable, CaseIterable, Identifiable {
+    // Jazz
+    case jazz = "Jazz"
+    case bebop = "Bebop / Hard bop"
+    case swing = "Swing / Big band"
+    case jazzFusion = "Jazz fusion"
+    case jazzManouche = "Jazz manouche"
+    case freeJazz = "Free jazz"
+    case smoothJazz = "Smooth jazz"
+    // Latin & World
+    case latin = "Latin / World"
+    case salsa = "Salsa / Timba"
+    case bossa = "Bossa nova / MPB"
+    case cumbia = "Cumbia"
+    case tango = "Tango"
+    case afroCuban = "Afro-cubain"
+    case reggae = "Reggae / Ska"
+    case afrobeat = "Afrobeat / Highlife"
+    case flamenco = "Flamenco"
+    case oriental = "Musique orientale"
+    case balkan = "Balkan / Klezmer"
+    // Classique
+    case classique = "Classique"
+    case baroque = "Baroque"
+    case opera = "Opéra / Lyrique"
+    case chambre = "Musique de chambre"
+    case contemporaine = "Musique contemporaine"
+    // Rock & Pop
+    case rock = "Rock / Pop"
+    case indie = "Indie / Alternatif"
+    case hardRock = "Hard rock / Metal"
+    case punk = "Punk / Garage"
+    case popVariete = "Pop / Variété"
+    case chansonFrancaise = "Chanson française"
+    // Blues & Country
+    case blues = "Blues"
+    case country = "Country / Bluegrass"
+    case rocknroll = "Rock'n'roll / Rockabilly"
+    // Soul & Funk
+    case soul = "Gospel / Soul / R&B"
+    case funk = "Funk"
+    case disco = "Disco"
+    // Hip-hop & Urbain
+    case hiphop = "Hip-hop / Rap"
+    case rnbModerne = "R&B moderne / Neo-soul"
+    // Électronique
+    case electro = "Électronique"
+    case house = "House"
+    case techno = "Techno"
+    case drumAndBass = "Drum & bass"
+    case ambient = "Ambient / Downtempo"
+    // Folk & Acoustique
+    case folk = "Folk / Acoustique"
+    case singerSongwriter = "Singer-songwriter"
+    case celtique = "Musique celtique"
+
+    var id: String { rawValue }
+
+    var family: GenreFamily {
+        switch self {
+        case .jazz, .bebop, .swing, .jazzFusion, .jazzManouche, .freeJazz, .smoothJazz:
+            return .jazz
+        case .latin, .salsa, .bossa, .cumbia, .tango, .afroCuban, .reggae,
+             .afrobeat, .flamenco, .oriental, .balkan:
+            return .latinWorld
+        case .classique, .baroque, .opera, .chambre, .contemporaine:
+            return .classique
+        case .rock, .indie, .hardRock, .punk, .popVariete, .chansonFrancaise:
+            return .rockPop
+        case .blues, .country, .rocknroll:
+            return .bluesCountry
+        case .soul, .funk, .disco:
+            return .soulFunk
+        case .hiphop, .rnbModerne:
+            return .urbain
+        case .electro, .house, .techno, .drumAndBass, .ambient:
+            return .electro
+        case .folk, .singerSongwriter, .celtique:
+            return .folk
+        }
+    }
+
+    var emoji: String { family.emoji }
+
+    /// Les « codes » propres à chaque genre, affichés sur les profils.
+    var codes: [String] { family.codes }
+
+    /// Genres d'une famille, dans l'ordre de déclaration.
+    static func genres(in family: GenreFamily) -> [Genre] {
+        allCases.filter { $0.family == family }
+    }
+}
+
 // MARK: - Instruments
 
-enum Instrument: String, Codable, CaseIterable, Identifiable {
-    case piano = "Piano"
-    case guitare = "Guitare"
-    case basse = "Basse"
-    case contrebasse = "Contrebasse"
-    case batterie = "Batterie"
-    case percussions = "Percussions"
+/// Familles d'instruments — structurent les sélecteurs (sections).
+enum InstrumentCategory: String, CaseIterable, Identifiable {
+    case claviers = "Claviers"
+    case cordes = "Cordes"
+    case vents = "Vents & cuivres"
+    case rythmique = "Batterie & percussions"
     case voix = "Voix"
-    case saxophone = "Saxophone"
-    case trompette = "Trompette"
-    case violon = "Violon"
-    case violoncelle = "Violoncelle"
-    case flute = "Flûte"
-    case synthe = "Synthé / MAO"
+    case electro = "DJ & électro"
 
     var id: String { rawValue }
 
     var symbol: String {
         switch self {
-        case .piano, .synthe: return "pianokeys"
-        case .guitare, .basse, .contrebasse, .violon, .violoncelle: return "guitars"
-        case .batterie, .percussions: return "circle.grid.2x2"
+        case .claviers: return "pianokeys"
+        case .cordes: return "guitars"
+        case .vents: return "wind"
+        case .rythmique: return "circle.grid.2x2"
         case .voix: return "music.mic"
-        case .saxophone, .trompette, .flute: return "wind"
+        case .electro: return "hifispeaker.2"
         }
+    }
+}
+
+/// Les rawValues français sont stockés tels quels (seed, backend) — ne pas
+/// renommer un cas existant. L'affichage passe par le catalogue de traductions.
+enum Instrument: String, Codable, CaseIterable, Identifiable {
+    // Claviers
+    case piano = "Piano"
+    case synthe = "Synthé / MAO"
+    case orgue = "Orgue"
+    case accordeon = "Accordéon"
+    // Cordes
+    case guitare = "Guitare"
+    case guitareElectrique = "Guitare électrique"
+    case basse = "Basse"
+    case contrebasse = "Contrebasse"
+    case violon = "Violon"
+    case alto = "Alto"
+    case violoncelle = "Violoncelle"
+    case harpe = "Harpe"
+    case banjo = "Banjo"
+    case mandoline = "Mandoline"
+    case ukulele = "Ukulélé"
+    // Vents & cuivres
+    case saxophone = "Saxophone"
+    case trompette = "Trompette"
+    case trombone = "Trombone"
+    case clarinette = "Clarinette"
+    case flute = "Flûte"
+    case cor = "Cor"
+    case tuba = "Tuba"
+    case harmonica = "Harmonica"
+    // Batterie & percussions
+    case batterie = "Batterie"
+    case percussions = "Percussions"
+    case cajon = "Cajón"
+    case congas = "Congas"
+    case timbales = "Timbales"
+    case vibraphone = "Vibraphone"
+    // Voix
+    case voix = "Voix"
+    case choeurs = "Chœurs"
+    case beatbox = "Beatbox"
+    // DJ & électro
+    case dj = "DJ / Platines"
+
+    var id: String { rawValue }
+
+    var category: InstrumentCategory {
+        switch self {
+        case .piano, .synthe, .orgue, .accordeon:
+            return .claviers
+        case .guitare, .guitareElectrique, .basse, .contrebasse, .violon,
+             .alto, .violoncelle, .harpe, .banjo, .mandoline, .ukulele:
+            return .cordes
+        case .saxophone, .trompette, .trombone, .clarinette, .flute,
+             .cor, .tuba, .harmonica:
+            return .vents
+        case .batterie, .percussions, .cajon, .congas, .timbales, .vibraphone:
+            return .rythmique
+        case .voix, .choeurs, .beatbox:
+            return .voix
+        case .dj:
+            return .electro
+        }
+    }
+
+    var symbol: String { category.symbol }
+
+    /// Instruments d'une catégorie, dans l'ordre de déclaration.
+    static func instruments(in category: InstrumentCategory) -> [Instrument] {
+        allCases.filter { $0.category == category }
     }
 }
 
@@ -304,11 +475,34 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Pays & villes
 
-/// Pays proposés au lancement (Suisse, France, USA pour l'instant).
+/// Une ville / localité avec son code postal — pour situer précisément le
+/// musicien. La liste par pays vit dans Locations.swift.
+struct City: Identifiable, Hashable {
+    let name: String
+    let postalCode: String
+    var id: String { "\(postalCode) \(name)" }
+
+    /// « 1227 Carouge » — l'affichage standard.
+    var label: String { "\(postalCode) \(name)" }
+}
+
+/// Pays proposés (Europe + Amérique du Nord pour l'instant).
+/// rawValue = code ISO — stocké dans le profil, ne pas changer.
 enum Country: String, Codable, CaseIterable, Identifiable {
     case switzerland = "CH"
     case france = "FR"
     case usa = "US"
+    case germany = "DE"
+    case italy = "IT"
+    case spain = "ES"
+    case portugal = "PT"
+    case belgium = "BE"
+    case netherlands = "NL"
+    case luxembourg = "LU"
+    case austria = "AT"
+    case uk = "GB"
+    case ireland = "IE"
+    case canada = "CA"
 
     var id: String { rawValue }
 
@@ -317,6 +511,17 @@ enum Country: String, Codable, CaseIterable, Identifiable {
         case .switzerland: return "🇨🇭"
         case .france: return "🇫🇷"
         case .usa: return "🇺🇸"
+        case .germany: return "🇩🇪"
+        case .italy: return "🇮🇹"
+        case .spain: return "🇪🇸"
+        case .portugal: return "🇵🇹"
+        case .belgium: return "🇧🇪"
+        case .netherlands: return "🇳🇱"
+        case .luxembourg: return "🇱🇺"
+        case .austria: return "🇦🇹"
+        case .uk: return "🇬🇧"
+        case .ireland: return "🇮🇪"
+        case .canada: return "🇨🇦"
         }
     }
 
@@ -326,18 +531,17 @@ enum Country: String, Codable, CaseIterable, Identifiable {
         case .switzerland: return "Suisse"
         case .france: return "France"
         case .usa: return "États-Unis"
-        }
-    }
-
-    /// Villes / régions proposées (noms propres, non traduits).
-    var cities: [String] {
-        switch self {
-        case .switzerland:
-            return ["Genève", "Lausanne", "Zurich", "Bâle", "Berne", "Lucerne", "Lugano", "Fribourg", "Neuchâtel", "Sion"]
-        case .france:
-            return ["Paris", "Lyon", "Marseille", "Toulouse", "Bordeaux", "Nantes", "Lille", "Strasbourg", "Nice", "Annecy"]
-        case .usa:
-            return ["New York", "Los Angeles", "Chicago", "Miami", "San Francisco", "Austin", "Nashville", "New Orleans", "Seattle", "Boston"]
+        case .germany: return "Allemagne"
+        case .italy: return "Italie"
+        case .spain: return "Espagne"
+        case .portugal: return "Portugal"
+        case .belgium: return "Belgique"
+        case .netherlands: return "Pays-Bas"
+        case .luxembourg: return "Luxembourg"
+        case .austria: return "Autriche"
+        case .uk: return "Royaume-Uni"
+        case .ireland: return "Irlande"
+        case .canada: return "Canada"
         }
     }
 }
@@ -632,6 +836,8 @@ struct MyProfile: Codable {
     // profils sauvegardés sans les perdre.
     var country: Country?
     var city: String?
+    /// Code postal de la ville choisie (NPA, CP, ZIP…).
+    var postalCode: String?
     /// Photo de profil choisie par l'utilisateur (fichier dans Documents).
     var photoFileName: String?
     /// Vidéos de démo (fichiers dans Documents) — 1 en gratuit, 6 en Premium.
@@ -642,7 +848,12 @@ struct MyProfile: Codable {
     var isAvailable: Bool { availability.isAvailable }
 
     var resolvedCountry: Country { country ?? .switzerland }
-    var resolvedCity: String { city ?? resolvedCountry.cities[0] }
+    var resolvedCity: String { city ?? resolvedCountry.cities[0].name }
+    /// « 1200 Genève » si le code postal est connu, sinon juste la ville.
+    var cityLabel: String {
+        if let postalCode { return "\(postalCode) \(resolvedCity)" }
+        return resolvedCity
+    }
     var videos: [String] { videoFileNames ?? [] }
 }
 

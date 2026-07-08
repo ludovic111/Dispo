@@ -209,7 +209,7 @@ struct MusicianDetailView: View {
                 }
                 ForEach(musician.genres) { genre in
                     HStack(spacing: 6) {
-                        Text(genre.rawValue)
+                        Text(LocalizedStringKey(genre.rawValue))
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(genre.color)
                         ForEach(genre.codes, id: \.self) { code in

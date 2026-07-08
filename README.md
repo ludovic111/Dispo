@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.4.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.5.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|
@@ -85,7 +85,9 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 ## Ce que contient la démo
 
 - **Design « nuit de jazz »** — design system custom (dégradés violet → magenta → corail, cartes arrondies, couleur par genre musical).
-- **Onboarding en 4 étapes** — langue → concept → pays/ville (Suisse, France, USA) → profil express (nom, instruments, niveau). Rejouable à tout moment pour les comptes admin (*Profil → Mode admin → Revoir l'onboarding*).
+- **Onboarding en 4 étapes** — langue → concept → pays/ville → profil express (nom, instruments, niveau). Rejouable à tout moment pour les comptes admin (*Profil → Mode admin → Revoir l'onboarding*).
+- **Lieux précis** — **14 pays** (CH, FR, US, DE, IT, ES, PT, BE, NL, LU, AT, GB, IE, CA) et **300+ villes avec code postal** (`Locations.swift`), sélecteur avec recherche par nom ou code postal.
+- **42 genres musicaux** en 9 familles (jazz, latin & world, classique, rock & pop, blues & country, soul & funk, hip-hop & urbain, électronique, folk) avec sous-genres — et **33 instruments** triés par catégories (claviers, cordes, vents & cuivres, batterie & percussions, voix, DJ & électro).
 - **7 langues** — français (source), anglais, espagnol, allemand, italien, mandarin, japonais. ~330 chaînes dans `Localizable.xcstrings`, bascule immédiate depuis *Profil → Langue & région*.
 - **Accueil** — rangée « Dispo ce soir » (les mobilisables immédiatement), rangée « Dispo prochainement », feed de cartes avec couverture vidéo, cœur favori, notes de musique reçues, pilules Filtres/Carte, bascule carte MapKit centrée sur Genève.
 - **SOS dépannage** — tableau d'annonces : un concert cherche un musicien (date, lieu, instrument, cachet CHF — cachet et description optionnels). Publication de son propre SOS en 30 secondes, bouton « Je peux dépanner ! ». Les annonces passées sont purgées automatiquement.

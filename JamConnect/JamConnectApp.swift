@@ -254,18 +254,38 @@ extension Availability {
     }
 }
 
-extension Genre {
+extension GenreFamily {
     var color: Color {
         switch self {
         case .jazz: return JC.coral
-        case .latin: return JC.magenta
+        case .latinWorld: return JC.magenta
         case .classique: return Color(red: 0.45, green: 0.55, blue: 1.0)
-        case .rock: return Color(red: 1.0, green: 0.33, blue: 0.38)
+        case .rockPop: return Color(red: 1.0, green: 0.33, blue: 0.38)
+        case .bluesCountry: return Color(red: 0.85, green: 0.58, blue: 0.30)
+        case .soulFunk: return JC.gold
+        case .urbain: return Color(red: 0.55, green: 0.65, blue: 0.95)
         case .electro: return Color(red: 0.25, green: 0.85, blue: 0.95)
-        case .soul: return JC.gold
         case .folk: return Color(red: 0.45, green: 0.85, blue: 0.55)
         }
     }
+
+    /// Photo de couverture bundlée (les nouvelles familles réutilisent les
+    /// visuels existants les plus proches — visuels dédiés en phase 2).
+    var coverAsset: String {
+        switch self {
+        case .jazz: return "cover_jazz"
+        case .latinWorld: return "cover_latin"
+        case .classique: return "cover_classique"
+        case .rockPop, .bluesCountry: return "cover_rock"
+        case .soulFunk: return "cover_soul"
+        case .urbain, .electro: return "cover_electro"
+        case .folk: return "cover_folk"
+        }
+    }
+}
+
+extension Genre {
+    var color: Color { family.color }
 
     var gradient: LinearGradient {
         LinearGradient(
@@ -275,17 +295,7 @@ extension Genre {
     }
 
     /// Photo de couverture bundlée (images musicales libres de droit).
-    var coverAsset: String {
-        switch self {
-        case .jazz: return "cover_jazz"
-        case .latin: return "cover_latin"
-        case .classique: return "cover_classique"
-        case .rock: return "cover_rock"
-        case .electro: return "cover_electro"
-        case .soul: return "cover_soul"
-        case .folk: return "cover_folk"
-        }
-    }
+    var coverAsset: String { family.coverAsset }
 }
 
 /// Couverture photo d'un genre avec voile dégradé pour la lisibilité.

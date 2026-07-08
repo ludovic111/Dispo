@@ -11,7 +11,8 @@ struct OnboardingView: View {
     @State private var instruments: Set<Instrument> = []
     @State private var level: Level = .intermediaire
     @State private var country: Country = .switzerland
-    @State private var city: String = Country.switzerland.cities[0]
+    @State private var city: City = Country.switzerland.cities[0]
+    @State private var citySearch = ""
 
     private let stepCount = 4
 
@@ -50,7 +51,8 @@ struct OnboardingView: View {
             instruments = Set(store.profile.instruments)
             level = store.profile.level
             country = store.profile.resolvedCountry
-            city = store.profile.resolvedCity
+            city = country.cities.first { $0.name == store.profile.resolvedCity }
+                ?? country.cities[0]
         }
     }
 
@@ -119,7 +121,8 @@ struct OnboardingView: View {
         }
         store.profile.level = level
         store.profile.country = country
-        store.profile.city = city
+        store.profile.city = city.name
+        store.profile.postalCode = city.postalCode
         store.saveProfile()
         store.completeOnboarding()
     }
@@ -221,73 +224,108 @@ struct OnboardingView: View {
 
     // MARK: - Étape 3 : pays & ville
 
+    /// Villes du pays choisi, filtrées par la recherche (nom ou code postal).
+    private var filteredCities: [City] {
+        let trimmed = citySearch.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return country.cities }
+        return country.cities.filter {
+            $0.name.localizedCaseInsensitiveContains(trimmed)
+                || $0.postalCode.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
     private var regionStep: some View {
         stepLayout(
             icon: "mappin.and.ellipse",
             title: Text("Où joues-tu ?"),
             subtitle: Text("On te montre les musiciens et les concerts autour de toi.")
         ) {
-            VStack(spacing: 16) {
-                HStack(spacing: 10) {
-                    ForEach(Country.allCases) { option in
-                        Button {
-                            withAnimation(.snappy) {
-                                country = option
-                                if !option.cities.contains(city) { city = option.cities[0] }
-                            }
-                        } label: {
-                            VStack(spacing: 6) {
-                                Text(option.flag)
-                                    .font(.title2)
-                                Text(LocalizedStringKey(option.nameKey))
-                                    .font(.caption.weight(.bold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                            }
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                .white.opacity(country == option ? 0.24 : 0.10),
-                                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(.white.opacity(country == option ? 0.6 : 0.15), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(PressableStyle())
-                    }
-                }
-
-                // Villes du pays choisi
-                ScrollView {
-                    let columns = [GridItem(.flexible()), GridItem(.flexible())]
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(country.cities, id: \.self) { option in
+            VStack(spacing: 12) {
+                // Pays — rangée défilante de drapeaux
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Country.allCases) { option in
                             Button {
-                                city = option
+                                withAnimation(.snappy) {
+                                    country = option
+                                    citySearch = ""
+                                    if !option.cities.contains(city) { city = option.cities[0] }
+                                }
                             } label: {
-                                Text(option)
-                                    .font(.caption.weight(.bold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 11)
-                                    .background(
-                                        .white.opacity(city == option ? 0.24 : 0.08),
-                                        in: Capsule()
-                                    )
-                                    .overlay(
-                                        Capsule().stroke(.white.opacity(city == option ? 0.6 : 0.12), lineWidth: 1)
-                                    )
+                                HStack(spacing: 6) {
+                                    Text(option.flag)
+                                    Text(LocalizedStringKey(option.nameKey))
+                                        .font(.caption.weight(.bold))
+                                        .lineLimit(1)
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 13)
+                                .padding(.vertical, 10)
+                                .background(
+                                    .white.opacity(country == option ? 0.24 : 0.10),
+                                    in: Capsule()
+                                )
+                                .overlay(
+                                    Capsule().stroke(.white.opacity(country == option ? 0.6 : 0.15), lineWidth: 1)
+                                )
                             }
                             .buttonStyle(PressableStyle())
                         }
                     }
                 }
-                .frame(maxHeight: 240)
+
+                // Recherche de ville (nom ou code postal)
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.6))
+                    TextField(
+                        "",
+                        text: $citySearch,
+                        prompt: Text("Ville ou code postal…").foregroundStyle(.white.opacity(0.5))
+                    )
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 13)
+                .padding(.vertical, 10)
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                // Villes du pays choisi, avec code postal
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(filteredCities) { option in
+                            Button {
+                                city = option
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Text(option.postalCode)
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.white.opacity(0.6))
+                                        .frame(width: 52, alignment: .leading)
+                                    Text(option.name)
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                    Spacer(minLength: 0)
+                                    if city == option {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
+                                .background(
+                                    .white.opacity(city == option ? 0.24 : 0.08),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                )
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                }
+                .frame(maxHeight: 250)
             }
         }
     }
@@ -313,27 +351,39 @@ struct OnboardingView: View {
 
                 ScrollView {
                     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-                    LazyVGrid(columns: columns, spacing: 8) {
-                        ForEach(Instrument.allCases) { instrument in
-                            let isOn = instruments.contains(instrument)
-                            Button {
-                                if isOn { instruments.remove(instrument) } else { instruments.insert(instrument) }
-                            } label: {
-                                Text(LocalizedStringKey(instrument.rawValue))
-                                    .font(.caption.weight(.bold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(.white.opacity(isOn ? 0.24 : 0.08), in: Capsule())
-                                    .overlay(Capsule().stroke(.white.opacity(isOn ? 0.6 : 0.12), lineWidth: 1))
+                    VStack(alignment: .leading, spacing: 10) {
+                        // Instruments groupés par famille
+                        ForEach(InstrumentCategory.allCases) { category in
+                            HStack(spacing: 6) {
+                                Image(systemName: category.symbol)
+                                    .font(.system(size: 9, weight: .bold))
+                                Text(LocalizedStringKey(category.rawValue))
+                                    .font(.caption2.weight(.heavy))
                             }
-                            .buttonStyle(PressableStyle())
+                            .foregroundStyle(.white.opacity(0.65))
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                ForEach(Instrument.instruments(in: category)) { instrument in
+                                    let isOn = instruments.contains(instrument)
+                                    Button {
+                                        if isOn { instruments.remove(instrument) } else { instruments.insert(instrument) }
+                                    } label: {
+                                        Text(LocalizedStringKey(instrument.rawValue))
+                                            .font(.caption.weight(.bold))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.7)
+                                            .foregroundStyle(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 10)
+                                            .background(.white.opacity(isOn ? 0.24 : 0.08), in: Capsule())
+                                            .overlay(Capsule().stroke(.white.opacity(isOn ? 0.6 : 0.12), lineWidth: 1))
+                                    }
+                                    .buttonStyle(PressableStyle())
+                                }
+                            }
                         }
                     }
                 }
-                .frame(maxHeight: 190)
+                .frame(maxHeight: 220)
 
                 HStack(spacing: 8) {
                     ForEach(Level.allCases) { option in

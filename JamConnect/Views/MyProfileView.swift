@@ -67,6 +67,7 @@ struct MyProfileView: View {
     @State private var playingVideo: PlayableVideo?
     @State private var importingVideo = false
     @State private var showPatchNotes = false
+    @State private var showCityPicker = false
 
     var body: some View {
         NavigationStack {
@@ -102,6 +103,18 @@ struct MyProfileView: View {
             }
             .sheet(isPresented: $showPatchNotes) {
                 PatchNotesView()
+            }
+            .sheet(isPresented: $showCityPicker) {
+                CityPickerSheet(
+                    country: store.profile.resolvedCountry,
+                    selected: store.profile.resolvedCountry.cities.first {
+                        $0.name == store.profile.resolvedCity
+                    }
+                ) { city in
+                    store.profile.city = city.name
+                    store.profile.postalCode = city.postalCode
+                    store.saveProfile()
+                }
             }
             .sheet(item: $playingVideo) { video in
                 VideoPlayer(player: AVPlayer(url: video.url))
@@ -405,8 +418,9 @@ struct MyProfileView: View {
                         set: { newCountry in
                             store.profile.country = newCountry
                             // La ville doit appartenir au pays choisi.
-                            if !newCountry.cities.contains(store.profile.resolvedCity) {
-                                store.profile.city = newCountry.cities[0]
+                            if !newCountry.cities.contains(where: { $0.name == store.profile.resolvedCity }) {
+                                store.profile.city = newCountry.cities[0].name
+                                store.profile.postalCode = newCountry.cities[0].postalCode
                             }
                             store.saveProfile()
                         }
@@ -418,18 +432,22 @@ struct MyProfileView: View {
                     .tint(JC.violet)
                 }
 
-                HStack {
-                    Text("Ville / région")
-                        .font(.subheadline)
-                    Spacer()
-                    Picker("Ville / région", selection: Binding(
-                        get: { store.profile.resolvedCity },
-                        set: { store.profile.city = $0; store.saveProfile() }
-                    )) {
-                        ForEach(store.profile.resolvedCountry.cities, id: \.self) { Text($0) }
+                // Ville précise (avec code postal) — recherche dans la liste.
+                Button { showCityPicker = true } label: {
+                    HStack {
+                        Text("Ville / région")
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(store.profile.cityLabel)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(JC.violet)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(JC.violet)
                     }
-                    .tint(JC.violet)
                 }
+                .buttonStyle(PressableStyle())
             }
         }
     }
@@ -685,35 +703,52 @@ struct EditProfileSheet: View {
                     ))
                 }
 
-                Section("Mes instruments") {
-                    ForEach(Instrument.allCases) { instrument in
-                        toggleRow(
-                            label: LocalizedStringKey(instrument.rawValue),
-                            isOn: store.profile.instruments.contains(instrument)
-                        ) {
-                            if let index = store.profile.instruments.firstIndex(of: instrument) {
-                                store.profile.instruments.remove(at: index)
-                            } else {
-                                store.profile.instruments.append(instrument)
+                // Mes instruments — une section par famille.
+                ForEach(InstrumentCategory.allCases) { category in
+                    Section {
+                        ForEach(Instrument.instruments(in: category)) { instrument in
+                            toggleRow(
+                                label: LocalizedStringKey(instrument.rawValue),
+                                isOn: store.profile.instruments.contains(instrument)
+                            ) {
+                                if let index = store.profile.instruments.firstIndex(of: instrument) {
+                                    store.profile.instruments.remove(at: index)
+                                } else {
+                                    store.profile.instruments.append(instrument)
+                                }
+                                store.saveProfile()
                             }
-                            store.saveProfile()
+                        }
+                    } header: {
+                        if category == InstrumentCategory.allCases.first {
+                            Text("Mes instruments — ") + Text(LocalizedStringKey(category.rawValue))
+                        } else {
+                            Text(LocalizedStringKey(category.rawValue))
                         }
                     }
                 }
 
-                Section("Mes genres") {
-                    ForEach(Genre.allCases) { genre in
-                        toggleRow(
-                            emoji: genre.emoji,
-                            label: LocalizedStringKey(genre.rawValue),
-                            isOn: store.profile.genres.contains(genre)
-                        ) {
-                            if let index = store.profile.genres.firstIndex(of: genre) {
-                                store.profile.genres.remove(at: index)
-                            } else {
-                                store.profile.genres.append(genre)
+                // Mes genres — une section par famille, sous-genres inclus.
+                ForEach(GenreFamily.allCases) { family in
+                    Section {
+                        ForEach(Genre.genres(in: family)) { genre in
+                            toggleRow(
+                                label: LocalizedStringKey(genre.rawValue),
+                                isOn: store.profile.genres.contains(genre)
+                            ) {
+                                if let index = store.profile.genres.firstIndex(of: genre) {
+                                    store.profile.genres.remove(at: index)
+                                } else {
+                                    store.profile.genres.append(genre)
+                                }
+                                store.saveProfile()
                             }
-                            store.saveProfile()
+                        }
+                    } header: {
+                        if family == GenreFamily.allCases.first {
+                            Text("Mes genres — \(family.emoji) ") + Text(LocalizedStringKey(family.rawValue))
+                        } else {
+                            Text(family.emoji + " ") + Text(LocalizedStringKey(family.rawValue))
                         }
                     }
                 }

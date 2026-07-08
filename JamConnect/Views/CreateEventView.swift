@@ -43,8 +43,14 @@ struct CreateEventView: View {
                     TextField("Titre — ex. Cherche pianiste, soirée salsa", text: $title)
                     DatePicker("Date et heure", selection: $date, in: Date()...)
                     Picker("Genre", selection: $genre) {
-                        ForEach(Genre.allCases) { genre in
-                            (Text(genre.emoji + " ") + Text(LocalizedStringKey(genre.rawValue))).tag(genre)
+                        ForEach(GenreFamily.allCases) { family in
+                            Section {
+                                ForEach(Genre.genres(in: family)) { genre in
+                                    Text(LocalizedStringKey(genre.rawValue)).tag(genre)
+                                }
+                            } header: {
+                                Text(family.emoji + " ") + Text(LocalizedStringKey(family.rawValue))
+                            }
                         }
                     }
                 }
@@ -56,24 +62,33 @@ struct CreateEventView: View {
                     }
                 }
 
-                Section("Musicien recherché") {
-                    ForEach(Instrument.allCases) { instrument in
-                        Button {
-                            if wanted.contains(instrument) {
-                                wanted.remove(instrument)
-                            } else {
-                                wanted.insert(instrument)
-                            }
-                        } label: {
-                            HStack {
-                                Text(LocalizedStringKey(instrument.rawValue))
-                                    .foregroundStyle(.primary)
-                                Spacer()
+                // Musicien recherché — une section par famille d'instruments.
+                ForEach(InstrumentCategory.allCases) { category in
+                    Section {
+                        ForEach(Instrument.instruments(in: category)) { instrument in
+                            Button {
                                 if wanted.contains(instrument) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(JC.coral)
+                                    wanted.remove(instrument)
+                                } else {
+                                    wanted.insert(instrument)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(LocalizedStringKey(instrument.rawValue))
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    if wanted.contains(instrument) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(JC.coral)
+                                    }
                                 }
                             }
+                        }
+                    } header: {
+                        if category == InstrumentCategory.allCases.first {
+                            Text("Musicien recherché — ") + Text(LocalizedStringKey(category.rawValue))
+                        } else {
+                            Text(LocalizedStringKey(category.rawValue))
                         }
                     }
                 }
