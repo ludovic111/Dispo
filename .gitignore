@@ -38,3 +38,8 @@ fastlane/test_output
 .env.*
 *.p12
 *.mobileprovision
+
+# Supabase
+JamConnect/Secrets.plist
+supabase/.temp/
+supabase/.branches/

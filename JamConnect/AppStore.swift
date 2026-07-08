@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import SwiftUI
+import Supabase
 
 /// État global de la démo. Charge les données fictives depuis SeedData.json
 /// et persiste les actions de l'utilisateur (événements créés, messages,
@@ -31,6 +32,20 @@ final class AppStore: ObservableObject {
     /// Préférence d'apparence (système / clair / sombre).
     @Published var theme: AppTheme = .system
 
+    // MARK: - Backend (mode live)
+
+    /// Backend Supabase, nil si Secrets.plist est absent (mode démo pur).
+    let backend: SupabaseBackend?
+    /// Identifiant de l'utilisateur connecté au backend, nil hors ligne.
+    @Published var liveUserID: UUID?
+    @Published var liveEmail: String?
+    /// Erreur backend à montrer à l'utilisateur (bannière discrète).
+    @Published var backendError: String?
+    /// true quand l'app affiche les données du serveur et non la démo locale.
+    var isLive: Bool { liveUserID != nil }
+    private var messageChannel: RealtimeChannelV2?
+    private var messageTask: Task<Void, Never>?
+
     private static let eventsKey = "jamconnect.events"
     private static let conversationsKey = "jamconnect.conversations"
     private static let profileKey = "jamconnect.profile"
@@ -42,6 +57,7 @@ final class AppStore: ObservableObject {
     private static let themeKey = "jamconnect.theme"
 
     init() {
+        backend = BackendConfig.load().map(SupabaseBackend.init)
         let seed = Self.loadSeed()
         musicians = seed.musicians
         bands = seed.bands
@@ -66,6 +82,9 @@ final class AppStore: ObservableObject {
         }
         events.sort { $0.date < $1.date }
         armEarlyAccessTeaser()
+
+        // Reprend la session backend si l'utilisateur était déjà connecté.
+        Task { await restoreLiveSession() }
 
         if let saved: Set<String> = Self.load(key: Self.favoritesKey) {
             favorites = saved
@@ -108,6 +127,130 @@ final class AppStore: ObservableObject {
         guard let index = events.firstIndex(where: { !$0.isMine && $0.date > now }) else { return }
         events[index].postedAt = now.addingTimeInterval(-7 * 60) // publiée il y a 7 min
         persistEvents()
+    }
+
+    // MARK: - Mode live (backend Supabase)
+
+    /// Restaure la session au lancement et charge les données serveur.
+    func restoreLiveSession() async {
+        guard let backend, let userID = await backend.currentUserID() else { return }
+        liveUserID = userID
+        liveEmail = await backend.currentUserEmail()
+        await refreshLiveData()
+        await startMessageStream()
+    }
+
+    /// À appeler après une connexion réussie (AccountSheet).
+    func didSignIn(userID: UUID) async {
+        guard let backend else { return }
+        liveUserID = userID
+        liveEmail = await backend.currentUserEmail()
+        backendError = nil
+
+        // Premier passage : si le profil serveur est vide, on pousse le
+        // profil local ; sinon le serveur fait foi.
+        if let rows = try? await backend.fetchProfiles(),
+           let mine = rows.first(where: { $0.id == userID }) {
+            if mine.name.isEmpty {
+                try? await backend.saveProfile(profile, userID: userID)
+            } else {
+                profile = MyProfile(
+                    name: mine.name,
+                    instruments: mine.instruments.compactMap(Instrument.init(rawValue:)),
+                    genres: mine.genres.compactMap(Genre.init(rawValue:)),
+                    level: Level(rawValue: mine.level) ?? .intermediaire,
+                    bio: mine.bio,
+                    availability: Availability(rawValue: mine.availability) ?? .onRequest
+                )
+                isPremium = mine.isPremium
+            }
+        }
+        await refreshLiveData()
+        await startMessageStream()
+    }
+
+    /// Recharge musiciens, annonces et conversations depuis le serveur.
+    func refreshLiveData() async {
+        guard let backend, let userID = liveUserID else { return }
+        do {
+            async let musiciansTask = backend.fetchMusicians(excluding: userID)
+            async let gigsTask = backend.fetchGigs(myID: userID)
+            async let conversationsTask = backend.fetchConversations(myID: userID)
+            let (m, g, c) = try await (musiciansTask, gigsTask, conversationsTask)
+            musicians = m
+            events = g.sorted { $0.date < $1.date }
+            conversations = c.sorted {
+                ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
+            }
+            bands = [] // les groupes ne font pas partie du mode live (résidu jam)
+            backendError = nil
+        } catch {
+            backendError = "Connexion au serveur impossible — vérifie le réseau."
+        }
+    }
+
+    func signOutLive() async {
+        guard let backend else { return }
+        await backend.signOut()
+        liveUserID = nil
+        liveEmail = nil
+        backendError = nil
+        messageTask?.cancel()
+        messageTask = nil
+        if let channel = messageChannel {
+            await backend.client.removeChannel(channel)
+            messageChannel = nil
+        }
+        reloadDemoData()
+    }
+
+    /// Recharge la démo locale (seed + actions sauvegardées) après déconnexion.
+    private func reloadDemoData() {
+        let seed = Self.loadSeed()
+        musicians = seed.musicians
+        bands = seed.bands
+        let savedEvents: [GigRequest]? = Self.load(key: Self.eventsKey)
+        if let upcoming = savedEvents?.filter({ $0.date > Date() }), !upcoming.isEmpty {
+            events = upcoming.sorted { $0.date < $1.date }
+        } else {
+            events = Self.projectedSeedEvents(seed.events).sorted { $0.date < $1.date }
+        }
+        if let saved: [Conversation] = Self.load(key: Self.conversationsKey) {
+            conversations = saved.filter { !$0.messages.isEmpty }
+        } else {
+            conversations = seed.conversations
+        }
+        if let saved: MyProfile = Self.load(key: Self.profileKey) {
+            profile = saved
+        }
+        isPremium = UserDefaults.standard.bool(forKey: Self.premiumKey)
+        armEarlyAccessTeaser()
+    }
+
+    /// Écoute les nouveaux messages en temps réel et les range dans la bonne
+    /// conversation (dédoublonnés — notre propre envoi arrive aussi par ici).
+    private func startMessageStream() async {
+        guard let backend, messageTask == nil else { return }
+        let (channel, stream) = await backend.messageStream()
+        messageChannel = channel
+        messageTask = Task { [weak self] in
+            for await row in stream {
+                await self?.handleIncomingMessage(row)
+            }
+        }
+    }
+
+    private func handleIncomingMessage(_ row: SupabaseBackend.MessageRow) async {
+        guard let userID = liveUserID else { return }
+        if let index = conversations.firstIndex(where: { $0.id == row.conversationId }) {
+            guard !conversations[index].messages.contains(where: { $0.id == row.id }) else { return }
+            withAnimation {
+                conversations[index].messages.append(row.asMessage(myID: userID))
+            }
+        } else {
+            // Conversation inconnue : quelqu'un vient de m'écrire pour la première fois.
+            await refreshLiveData()
+        }
     }
 
     /// Change et persiste la préférence d'apparence.
@@ -183,6 +326,7 @@ final class AppStore: ObservableObject {
         premiumPlan = plan
         UserDefaults.standard.set(true, forKey: Self.premiumKey)
         UserDefaults.standard.set(plan.rawValue, forKey: Self.premiumPlanKey)
+        pushPremiumStatus()
     }
 
     func cancelPremium() {
@@ -190,6 +334,18 @@ final class AppStore: ObservableObject {
         premiumPlan = nil
         UserDefaults.standard.set(false, forKey: Self.premiumKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
+        pushPremiumStatus()
+    }
+
+    /// En mode live, le statut Premium vit côté serveur (il conditionne la
+    /// RLS de l'avant-première) — on le pousse puis on recharge le feed.
+    private func pushPremiumStatus() {
+        guard let backend, let userID = liveUserID else { return }
+        let premium = isPremium
+        Task {
+            try? await backend.setPremium(premium, userID: userID)
+            await refreshLiveData()
+        }
     }
 
     func completeOnboarding() {
@@ -203,21 +359,64 @@ final class AppStore: ObservableObject {
         events.append(event)
         events.sort { $0.date < $1.date }
         persistEvents()
+        if let backend, let userID = liveUserID {
+            Task {
+                do { try await backend.createGig(event, hostID: userID) }
+                catch { backendError = "L'annonce n'a pas pu être publiée sur le serveur." }
+            }
+        }
     }
 
     func toggleApply(_ event: GigRequest) {
         guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
         events[index].applied.toggle()
         persistEvents()
+        if let backend, let userID = liveUserID {
+            let applied = events[index].applied
+            Task {
+                do {
+                    if applied {
+                        try await backend.apply(to: event.id, musicianID: userID)
+                    } else {
+                        try await backend.unapply(from: event.id, musicianID: userID)
+                    }
+                } catch {
+                    backendError = "La candidature n'a pas pu être envoyée."
+                }
+            }
+        }
     }
 
     func saveProfile() {
         Self.save(profile, key: Self.profileKey)
+        if let backend, let userID = liveUserID {
+            let snapshot = profile
+            Task { try? await backend.saveProfile(snapshot, userID: userID) }
+        }
     }
 
-    /// Envoie un message et déclenche une réponse scriptée pour rendre la démo vivante.
+    /// Envoie un message. En mode live il part sur le serveur (temps réel) ;
+    /// en démo, une réponse scriptée rend la conversation vivante.
     func sendMessage(_ text: String, in conversation: Conversation) {
         guard let index = conversations.firstIndex(where: { $0.id == conversation.id }) else { return }
+
+        if let backend, let userID = liveUserID {
+            let conversationID = conversation.id
+            Task { [weak self] in
+                do {
+                    let message = try await backend.sendMessage(text, conversationID: conversationID, senderID: userID)
+                    guard let self,
+                          let i = self.conversations.firstIndex(where: { $0.id == conversationID }),
+                          !self.conversations[i].messages.contains(where: { $0.id == message.id })
+                    else { return }
+                    withAnimation { self.conversations[i].messages.append(message) }
+                } catch {
+                    self?.backendError = "Le message n'a pas pu être envoyé."
+                }
+            }
+            return
+        }
+
         conversations[index].messages.append(Message(text: text, isFromMe: true, date: Date()))
         persistConversations()
 
@@ -234,8 +433,28 @@ final class AppStore: ObservableObject {
     }
 
     /// Ouvre (ou retrouve) une conversation avec un musicien depuis sa fiche.
-    func conversation(with musician: Musician) -> Conversation {
-        openConversation(name: musician.name, instrument: musician.instruments.first ?? .voix)
+    /// En mode live, la conversation est créée côté serveur.
+    func conversation(with musician: Musician) async -> Conversation {
+        if let backend, let userID = liveUserID {
+            do {
+                let row = try await backend.ensureConversation(with: musician.id, myID: userID)
+                if let existing = conversations.first(where: { $0.id == row.id }) {
+                    return existing
+                }
+                let new = Conversation(
+                    id: row.id,
+                    contactName: musician.name,
+                    contactInstrument: musician.instruments.first ?? .voix,
+                    messages: []
+                )
+                conversations.insert(new, at: 0)
+                return new
+            } catch {
+                backendError = "Impossible d'ouvrir la conversation."
+                // Repli local pour ne pas bloquer l'utilisateur.
+            }
+        }
+        return openConversation(name: musician.name, instrument: musician.instruments.first ?? .voix)
     }
 
     private func openConversation(name: String, instrument: Instrument) -> Conversation {
@@ -272,8 +491,16 @@ final class AppStore: ObservableObject {
 
     // MARK: - Persistance
 
-    private func persistEvents() { Self.save(events, key: Self.eventsKey) }
-    private func persistConversations() { Self.save(conversations, key: Self.conversationsKey) }
+    // En mode live, UserDefaults reste le bac à sable de la démo : on n'y
+    // écrit jamais les données serveur.
+    private func persistEvents() {
+        guard !isLive else { return }
+        Self.save(events, key: Self.eventsKey)
+    }
+    private func persistConversations() {
+        guard !isLive else { return }
+        Self.save(conversations, key: Self.conversationsKey)
+    }
 
     private static func save<T: Encodable>(_ value: T, key: String) {
         if let data = try? JSONEncoder().encode(value) {

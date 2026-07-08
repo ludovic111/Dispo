@@ -44,6 +44,9 @@ struct EventsView: View {
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
                 }
+                .refreshable {
+                    await store.refreshLiveData()
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }

@@ -4,6 +4,7 @@ struct MyProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showEdit = false
     @State private var showResetConfirmation = false
+    @State private var showAccount = false
 
     var body: some View {
         NavigationStack {
@@ -13,6 +14,7 @@ struct MyProfileView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         heroCard
+                        if store.backend != nil { accountCard }
                         availabilityCard
                         viewersCard
                         premiumCard
@@ -29,6 +31,9 @@ struct MyProfileView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showEdit) {
                 EditProfileSheet()
+            }
+            .sheet(isPresented: $showAccount) {
+                AccountSheet()
             }
             .confirmationDialog(
                 "Réinitialiser toutes les données de la démo ?",
@@ -210,6 +215,40 @@ struct MyProfileView: View {
             )
         }
         .buttonStyle(PressableStyle(scale: 0.99))
+    }
+
+    /// Compte réseau (mode live) — connexion au backend Supabase.
+    private var accountCard: some View {
+        Button { showAccount = true } label: {
+            JCCard {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill((store.isLive ? Color.green : JC.violet).opacity(0.14))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: store.isLive ? "checkmark.icloud.fill" : "icloud")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(store.isLive ? .green : JC.violet)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(store.isLive ? "Mode live" : "Rejoindre le réseau")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                        Text(store.isLive
+                             ? (store.liveEmail ?? "Connecté au serveur")
+                             : "Profil visible + annonces et messages en temps réel")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .buttonStyle(PressableStyle())
     }
 
     /// « Qui a vu ton profil » — teaser Premium : avatars floutés pour les

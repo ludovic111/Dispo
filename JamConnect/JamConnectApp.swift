@@ -42,8 +42,35 @@ struct RootView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .zIndex(1)
             }
+
+            // Bannière d'erreur backend, discrète et fermable.
+            if let error = store.backendError {
+                VStack {
+                    HStack(spacing: 10) {
+                        Image(systemName: "wifi.exclamationmark")
+                            .font(.subheadline.weight(.bold))
+                        Text(error)
+                            .font(.caption.weight(.semibold))
+                        Spacer(minLength: 0)
+                        Button {
+                            store.backendError = nil
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption.weight(.bold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .padding(12)
+                    .background(JC.coral, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .padding(.horizontal, 18)
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(2)
+            }
         }
         .animation(.snappy(duration: 0.4), value: store.hasOnboarded)
+        .animation(.snappy(duration: 0.3), value: store.backendError)
     }
 }
 

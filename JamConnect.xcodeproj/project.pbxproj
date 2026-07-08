@@ -12,16 +12,22 @@
 		4341AF039E69FFC05E354A96 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4E806800255D2D76F9F2AB /* ChatView.swift */; };
 		5BCB26B5A1F9B5A3E804B811 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AAC67142500684FFF14F48 /* AppStore.swift */; };
 		5DBC765C1151FEA08050CA80 /* SeedData.json in Resources */ = {isa = PBXBuildFile; fileRef = 7C3F2D84DF5CB4D0B4370797 /* SeedData.json */; };
+		700DA7D773326978F2F90412 /* BackendConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55040740713ABEF0D3EECB3D /* BackendConfig.swift */; };
 		7FF5CEAEB9FB083238F7CD7E /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 262BFFC74AF046664EC96E63 /* DiscoveryView.swift */; };
 		8841EA08A6D7ECF07C2B8273 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F427F409E0A731C1D5C2783B /* PaywallView.swift */; };
+		8A5E70B962AF5AD88F74D04B /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8563B27E48156181D670A31A /* SupabaseBackend.swift */; };
 		93192FF266A90A3565FA62B3 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4E4CA715D47B53D3298603 /* Models.swift */; };
 		9ADD00390F9907974819A98E /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C651D79F899D5B3E8B3BCDA /* EventsView.swift */; };
+		A0C4768787109716629C453C /* Secrets.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F8E0E9DF8F933FF987A98CC /* Secrets.example.plist */; };
+		A8B375DC70F88A6C0005D533 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = FF1E4A670F87C5C4B5163D4E /* Secrets.plist */; };
+		AF4C5F3ECFADA158E104D9F0 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 3AD917C5D818B5BCABB37F9B /* Supabase */; };
 		B1ABE87EDE9D3E3AE70F24FD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C8D25F0E4226F0F03262C112 /* Assets.xcassets */; };
 		BEB9532A64BD4CD507BCF245 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */; };
 		CF2835F8810B635473DED0D5 /* JamConnectApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */; };
 		D52B44EAA5D51541BA4C32E8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D6EE827A078334EFDA5F7D /* OnboardingView.swift */; };
 		DE03DF3651AF45A26C107B54 /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A60D8E71BC4FA9EE791D2AE /* MyProfileView.swift */; };
 		E6C11FA53DA2429CF933AC9E /* FilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F489393E23CE084974EC35A /* FilterSheet.swift */; };
+		F9BFE41D65072E88C9C1AE4D /* AccountSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A89B8E98106DE603864131A8 /* AccountSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,25 +35,42 @@
 		0E06DD22EC730939A25A843F /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
 		262BFFC74AF046664EC96E63 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		328466268794994F9BCFD141 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
+		4F8E0E9DF8F933FF987A98CC /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.example.plist; sourceTree = "<group>"; };
+		55040740713ABEF0D3EECB3D /* BackendConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendConfig.swift; sourceTree = "<group>"; };
 		5F489393E23CE084974EC35A /* FilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSheet.swift; sourceTree = "<group>"; };
 		6C651D79F899D5B3E8B3BCDA /* EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsView.swift; sourceTree = "<group>"; };
 		7A60D8E71BC4FA9EE791D2AE /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
 		7C3F2D84DF5CB4D0B4370797 /* SeedData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SeedData.json; sourceTree = "<group>"; };
 		7F4E806800255D2D76F9F2AB /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		8563B27E48156181D670A31A /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
 		94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JamConnectApp.swift; sourceTree = "<group>"; };
+		A89B8E98106DE603864131A8 /* AccountSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSheet.swift; sourceTree = "<group>"; };
 		BC3D79B0C5E80B96FE7FE9DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C8D25F0E4226F0F03262C112 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E0E04E33E5F02657B1131DEF /* JamConnect.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JamConnect.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2AAC67142500684FFF14F48 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateEventView.swift; sourceTree = "<group>"; };
 		F427F409E0A731C1D5C2783B /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		FF1E4A670F87C5C4B5163D4E /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
 		FF4E4CA715D47B53D3298603 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D779E830328D135A61B1141D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF4C5F3ECFADA158E104D9F0 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		148165438510A6000E79D268 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A89B8E98106DE603864131A8 /* AccountSheet.swift */,
 				0E06DD22EC730939A25A843F /* ChatListView.swift */,
 				7F4E806800255D2D76F9F2AB /* ChatView.swift */,
 				F32B57FCCD374C8EEA53D3BB /* CreateEventView.swift */,
@@ -70,7 +93,10 @@
 				BC3D79B0C5E80B96FE7FE9DA /* Info.plist */,
 				94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */,
 				FF4E4CA715D47B53D3298603 /* Models.swift */,
+				4F8E0E9DF8F933FF987A98CC /* Secrets.example.plist */,
+				FF1E4A670F87C5C4B5163D4E /* Secrets.plist */,
 				7C3F2D84DF5CB4D0B4370797 /* SeedData.json */,
+				EDA2E8581CAC7B8EA1872247 /* Backend */,
 				148165438510A6000E79D268 /* Views */,
 			);
 			path = JamConnect;
@@ -92,6 +118,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		EDA2E8581CAC7B8EA1872247 /* Backend */ = {
+			isa = PBXGroup;
+			children = (
+				55040740713ABEF0D3EECB3D /* BackendConfig.swift */,
+				8563B27E48156181D670A31A /* SupabaseBackend.swift */,
+			);
+			path = Backend;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -101,6 +136,7 @@
 			buildPhases = (
 				7F2F02C1A6C4FDABCB672F2F /* Sources */,
 				5567659FCF3D0D36E8DBB129 /* Resources */,
+				D779E830328D135A61B1141D /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -108,6 +144,7 @@
 			);
 			name = JamConnect;
 			packageProductDependencies = (
+				3AD917C5D818B5BCABB37F9B /* Supabase */,
 			);
 			productName = JamConnect;
 			productReference = E0E04E33E5F02657B1131DEF /* JamConnect.app */;
@@ -137,6 +174,9 @@
 			);
 			mainGroup = 2C150817F6104F7FD22F0DAC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D23737E1C85E9C6CDB7D76CB /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 839365ED823A3652E6F7488E /* Products */;
 			projectDirPath = "";
@@ -153,6 +193,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1ABE87EDE9D3E3AE70F24FD /* Assets.xcassets in Resources */,
+				A0C4768787109716629C453C /* Secrets.example.plist in Resources */,
+				A8B375DC70F88A6C0005D533 /* Secrets.plist in Resources */,
 				5DBC765C1151FEA08050CA80 /* SeedData.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -164,7 +206,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F9BFE41D65072E88C9C1AE4D /* AccountSheet.swift in Sources */,
 				5BCB26B5A1F9B5A3E804B811 /* AppStore.swift in Sources */,
+				700DA7D773326978F2F90412 /* BackendConfig.swift in Sources */,
 				2D5B702ECB411D3C18D6FF2D /* ChatListView.swift in Sources */,
 				4341AF039E69FFC05E354A96 /* ChatView.swift in Sources */,
 				BEB9532A64BD4CD507BCF245 /* CreateEventView.swift in Sources */,
@@ -177,6 +221,7 @@
 				DE03DF3651AF45A26C107B54 /* MyProfileView.swift in Sources */,
 				D52B44EAA5D51541BA4C32E8 /* OnboardingView.swift in Sources */,
 				8841EA08A6D7ECF07C2B8273 /* PaywallView.swift in Sources */,
+				8A5E70B962AF5AD88F74D04B /* SupabaseBackend.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,7 +283,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -299,7 +344,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -368,6 +413,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D23737E1C85E9C6CDB7D76CB /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.20.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3AD917C5D818B5BCABB37F9B /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D23737E1C85E9C6CDB7D76CB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7640670F7C94E324BA0B47BB /* Project object */;
 }

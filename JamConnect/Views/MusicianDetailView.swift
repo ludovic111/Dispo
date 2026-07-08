@@ -53,7 +53,7 @@ struct MusicianDetailView: View {
                 .buttonStyle(PressableStyle())
 
                 Button {
-                    openedConversation = store.conversation(with: musician)
+                    Task { openedConversation = await store.conversation(with: musician) }
                 } label: {
                     Label(
                         musician.isAvailable ? "Demander un dépannage" : "Contacter",

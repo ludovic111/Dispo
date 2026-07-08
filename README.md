@@ -7,7 +7,8 @@ Version 0.3 — démo autonome (sans backend) pour valider le concept en main, p
 | | |
 |---|---|
 | **Plateforme** | iOS 17+ (SwiftUI) |
-| **Statut** | Démo locale — pas de backend |
+| **Statut** | Démo locale + **mode live** (backend Supabase) |
+| **Backend** | Supabase (Postgres + RLS, Auth OTP e-mail, Realtime) |
 | **Bundle ID** | `com.ludovicmarie.jamconnect` |
 | **Repo** | Privé |
 
@@ -17,14 +18,58 @@ Version 0.3 — démo autonome (sans backend) pour valider le concept en main, p
 JamConnect/
 ├── JamConnect/              # Code source SwiftUI
 │   ├── Views/               # Écrans (Discovery, Events, Chat, Profil…)
+│   ├── Backend/             # Couche Supabase (config + service)
 │   ├── Assets.xcassets/     # Icônes, couvertures, avatars
 │   ├── Models.swift         # Modèles de données
-│   ├── AppStore.swift       # État global + persistance locale
+│   ├── AppStore.swift       # État global : mode démo + mode live
+│   ├── Secrets.example.plist# Modèle de config backend (copier en Secrets.plist)
 │   └── SeedData.json        # Données fictives de démo
+├── supabase/
+│   ├── migrations/          # Schéma SQL (tables, RLS, vue teaser Premium)
+│   ├── seed.sql             # 20 musiciens de dev (mdp « jamconnect-demo »)
+│   └── config.toml          # Config stack locale
 ├── JamConnect.xcodeproj/    # Projet Xcode (généré)
 ├── project.yml              # Config XcodeGen
 └── README.md
 ```
+
+## Backend (mode live)
+
+L'app embarque une couche Supabase complète : **auth par code e-mail**, profils
+synchronisés, annonces SOS, candidatures et **messagerie temps réel**. Toute la
+sécurité est côté serveur (RLS) — y compris l'**avant-première Premium** : pendant
+30 min, la vue `gig_requests_feed` masque titre/lieu/description aux non-Premium
+(le cachet et l'instrument restent visibles), et postuler est bloqué par policy.
+
+Sans `Secrets.plist`, l'app reste en mode démo 100 % locale. Avec, une carte
+« Rejoindre le réseau » apparaît dans l'onglet Profil.
+
+### Dev local (stack Supabase dans Docker)
+
+```bash
+brew install supabase/tap/supabase colima
+colima start --cpu 4 --memory 6
+cd JamConnect && supabase start      # migrations + seed appliqués automatiquement
+supabase status                      # → API URL + anon key
+```
+
+Puis copiez `JamConnect/Secrets.example.plist` en `JamConnect/Secrets.plist` avec
+`http://IP-DU-MAC:54321` (iPhone sur le même Wi-Fi) et l'anon key. Rebuild.
+
+- Comptes de test : `marco@demo.jamconnect.ch` … (20 musiciens du seed), mot de passe `jamconnect-demo`.
+- Les codes e-mail de connexion arrivent dans **Mailpit** : http://localhost:54324
+- Studio (admin BDD) : http://localhost:54323
+
+### Passage en production
+
+Créer un projet sur [supabase.com](https://supabase.com) (plan gratuit), puis :
+
+```bash
+supabase link --project-ref <ref>
+supabase db push                     # applique les migrations (PAS le seed)
+```
+
+Mettre l'URL https + l'anon key du projet dans `Secrets.plist`. C'est tout.
 
 ## Ce que contient la démo
 
@@ -60,10 +105,12 @@ Le `.xcodeproj` est généré par [XcodeGen](https://github.com/yonaskolb/XcodeG
 cd JamConnect && xcodegen generate
 ```
 
-## Prochaines étapes (phase 2 — à discuter avec Raphaël)
+## Prochaines étapes (phase 2b — à discuter avec Raphaël)
 
-1. **Backend Supabase** (gratuit au départ) : comptes avec vérification téléphone, vrais profils, messagerie temps réel.
-2. **Vidéo réelle** : enregistrement in-app, upload et streaming via Mux ou Cloudflare Stream (~5 $/1000 min).
-3. **Notifications push** (« un batteur dispo ce soir à 2 km »).
-4. **Matching bidirectionnel** et avis post-concert réels.
-5. **TestFlight** pour les 20–30 premiers musiciens genevois (AMR, Conservatoire, Chat Noir…).
+1. ~~Backend Supabase~~ ✅ fait (auth e-mail, profils, SOS, messagerie temps réel, RLS Premium).
+2. **Projet Supabase hébergé** (gratuit) + `supabase db push` pour sortir du Mac.
+3. **Vidéo réelle** : enregistrement in-app, upload Supabase Storage ou Mux (~5 $/1000 min).
+4. **Notifications push** (« un SOS piano à 2 km, cachet CHF 150 ») — le cœur de la promesse Premium.
+5. **StoreKit 2** : brancher le paywall sur de vrais abonnements App Store + `is_premium` serveur.
+6. **Géolocalisation réelle** (aujourd'hui : position fixée au centre de Genève) et favoris/appréciations synchronisés.
+7. **TestFlight** pour les 20–30 premiers musiciens genevois (AMR, Conservatoire, Chat Noir…).
