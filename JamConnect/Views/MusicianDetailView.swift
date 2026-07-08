@@ -10,6 +10,12 @@ struct MusicianDetailView: View {
     private var followers: Int { 40 + abs(musician.name.stableHash) % 320 }
     private var jamsPlayed: Int { 3 + abs(musician.name.stableHash) % 40 }
 
+    /// Durée fictive de la vidéo (60–90 s) — la même que sur la carte du feed.
+    private var videoDuration: String {
+        let seconds = 60 + abs(musician.name.stableHash) % 31
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
     var body: some View {
         ZStack {
             JCBackground()
@@ -82,7 +88,7 @@ struct MusicianDetailView: View {
                     .font(.system(size: 58))
                     .foregroundStyle(.white)
                     .shadow(radius: 10)
-                Text("Vidéo de présentation · 1:15")
+                Text("Vidéo de présentation · \(videoDuration)")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.95))
                 Text("Lecteur réel en phase 2")
@@ -145,7 +151,7 @@ struct MusicianDetailView: View {
                 }
                 ForEach(musician.genres) { genre in
                     HStack(spacing: 6) {
-                        Text("\(genre.emoji) \(genre.rawValue)")
+                        Text(genre.rawValue)
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(genre.color)
                         ForEach(genre.codes, id: \.self) { code in

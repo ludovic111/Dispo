@@ -29,10 +29,10 @@ struct FilterSheet: View {
                 Section {
                     Picker("J'ai besoin d'un musicien", selection: $filters.availability) {
                         Text("Peu importe quand").tag(Availability?.none)
-                        Text("🚨 Ce soir").tag(Availability?.some(.tonight))
-                        Text("📅 Cette semaine").tag(Availability?.some(.thisWeek))
-                        Text("🗓️ Ce week-end").tag(Availability?.some(.weekend))
-                        Text("🤙 Avec préavis").tag(Availability?.some(.onRequest))
+                        Label("Ce soir", systemImage: Availability.tonight.symbol).tag(Availability?.some(.tonight))
+                        Label("Cette semaine", systemImage: Availability.thisWeek.symbol).tag(Availability?.some(.thisWeek))
+                        Label("Ce week-end", systemImage: Availability.weekend.symbol).tag(Availability?.some(.weekend))
+                        Label("Avec préavis", systemImage: Availability.onRequest.symbol).tag(Availability?.some(.onRequest))
                     }
                 } header: {
                     Text("Disponibilité")
@@ -76,7 +76,7 @@ struct FilterSheet: View {
                     Text("Niveau minimum")
                 } footer: {
                     if !store.isPremium {
-                        Text("Le filtre par niveau fait partie de JamConnect Premium (dès CHF 3.25/mois).")
+                        Text("Le filtre par niveau fait partie de JamConnect Premium (dès CHF 4.90/mois).")
                     }
                 }
 

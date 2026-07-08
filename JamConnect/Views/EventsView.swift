@@ -10,26 +10,35 @@ struct EventsView: View {
                 JCBackground()
 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("SOS dépannage 🚨")
-                                    .font(.system(size: 26, weight: .heavy, design: .rounded))
-                                Text("\(store.events.count) concerts cherchent un musicien à Genève")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                        }
-                        .padding(.top, 12)
+                    VStack(spacing: 18) {
+                        ScreenHeader(
+                            title: "SOS dépannage",
+                            subtitle: "\(store.events.count) concerts cherchent un musicien",
+                            icon: "bolt.fill",
+                            iconColor: JC.coral
+                        )
 
                         createBanner
 
-                        ForEach(store.events) { event in
-                            NavigationLink(value: event) {
-                                EventCard(event: event)
+                        // Les annonces fraîches (< 30 min) sont en avant-première
+                        // Premium : les non-abonnés voient le cachet mais pas le
+                        // lieu — la minuterie rend l'avantage Premium concret.
+                        TimelineView(.periodic(from: .now, by: 30)) { context in
+                            VStack(spacing: 18) {
+                                ForEach(store.events) { event in
+                                    if event.isEarlyAccess(now: context.date) && !store.isPremium {
+                                        Button { store.showPaywall = true } label: {
+                                            LockedEventCard(event: event, now: context.date)
+                                        }
+                                        .buttonStyle(PressableStyle())
+                                    } else {
+                                        NavigationLink(value: event) {
+                                            EventCard(event: event)
+                                        }
+                                        .buttonStyle(PressableStyle())
+                                    }
+                                }
                             }
-                            .buttonStyle(PressableStyle())
                         }
                     }
                     .padding(.horizontal, 18)
@@ -45,28 +54,12 @@ struct EventsView: View {
     }
 
     private var createBanner: some View {
-        Button {
-            showCreate = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Publie ton SOS")
-                        .font(.subheadline.weight(.heavy))
-                    Text("« Cherche bassiste samedi, Chat Noir, cachet CHF 150 »")
-                        .font(.caption)
-                        .opacity(0.85)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(.white)
-            .padding(16)
-            .background(JC.hero, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(PressableStyle())
+        JCPromoBanner(
+            icon: "plus.circle.fill",
+            title: "Publie ton SOS",
+            subtitle: "« Cherche bassiste samedi, Chat Noir, cachet CHF 150 »",
+            style: .hero
+        ) { showCreate = true }
     }
 }
 
@@ -93,14 +86,14 @@ struct EventCard: View {
 
             VStack(alignment: .leading, spacing: 7) {
                 HStack {
-                    Text("\(event.genre.emoji) \(event.title)")
+                    Text(event.title)
                         .font(.subheadline.weight(.bold))
                         .lineLimit(1)
-                    Spacer()
+                    Spacer(minLength: 0)
                     if event.isMine {
                         TagView(text: "Mon SOS", color: JC.violet)
                     } else if event.applied {
-                        TagView(text: "Postulé ✓", color: .green)
+                        TagView(text: "Postulé", color: .green)
                     }
                 }
                 Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
@@ -110,11 +103,11 @@ struct EventCard: View {
                 HStack(spacing: 5) {
                     Text("Cherche")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
                     ForEach(event.wantedInstruments.prefix(2)) { instrument in
                         TagView(text: instrument.rawValue, color: .teal)
                     }
-                    TagView(text: "💰 \(event.feeLabel)", color: JC.gold)
+                    TagView(text: event.feeLabel, color: JC.gold)
                 }
             }
             .padding(13)
@@ -124,6 +117,85 @@ struct EventCard: View {
         .fixedSize(horizontal: false, vertical: true)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
+        .shadow(color: JC.cardShadow, radius: 14, x: 0, y: 8)
+    }
+}
+
+/// Annonce en avant-première Premium : cachet et instrument visibles (le
+/// teasing), titre et lieu masqués jusqu'à la fin de la minuterie.
+struct LockedEventCard: View {
+    let event: GigRequest
+    let now: Date
+
+    /// Minutes restantes avant l'ouverture à tous (arrondi supérieur).
+    private var remainingMinutes: Int {
+        guard let end = event.earlyAccessEnd else { return 0 }
+        return max(1, Int((end.timeIntervalSince(now) / 60).rounded(.up)))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                VStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                        .font(.title3.weight(.bold))
+                    Text(event.date.formatted(.dateTime.day().month(.abbreviated)))
+                        .font(.caption2.weight(.bold))
+                        .textCase(.uppercase)
+                }
+                .foregroundStyle(.black)
+                .frame(width: 68)
+                .frame(maxHeight: .infinity)
+                .background(JC.premium)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack {
+                        Text("Nouveau SOS \(event.genre.rawValue)")
+                            .font(.subheadline.weight(.bold))
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        TagView(text: "Nouveau", color: JC.gold)
+                    }
+                    Label("Lieu révélé aux membres Premium", systemImage: "mappin.slash")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    HStack(spacing: 5) {
+                        Text("Cherche")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.tertiary)
+                        ForEach(event.wantedInstruments.prefix(2)) { instrument in
+                            TagView(text: instrument.rawValue, color: .teal)
+                        }
+                        TagView(text: event.feeLabel, color: JC.gold)
+                    }
+                }
+                .padding(13)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(JC.card)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                Image(systemName: "crown.fill")
+                    .font(.caption2.weight(.bold))
+                Text("En avant-première Premium · ouvert à tous dans \(remainingMinutes) min")
+                    .font(.caption2.weight(.bold))
+                Spacer(minLength: 0)
+                Text("Débloquer")
+                    .font(.caption2.weight(.heavy))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(.black.opacity(0.85), in: Capsule())
+                    .foregroundStyle(JC.gold)
+            }
+            .foregroundStyle(.black)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(JC.premium)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(JC.gold.opacity(0.5), lineWidth: 1))
         .shadow(color: JC.cardShadow, radius: 14, x: 0, y: 8)
     }
 }
@@ -138,6 +210,23 @@ struct EventDetailView: View {
 
     var body: some View {
         if let event {
+            detail(for: event)
+        } else {
+            ZStack {
+                JCBackground()
+                JCEmptyState(
+                    icon: "bolt.slash",
+                    title: "Annonce introuvable",
+                    message: "Ce SOS n'existe plus — le concert est passé ou l'annonce a été retirée."
+                )
+                .padding(.horizontal, 18)
+            }
+            .navigationTitle("SOS dépannage")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func detail(for event: GigRequest) -> some View {
             ZStack {
                 JCBackground()
 
@@ -229,6 +318,5 @@ struct EventDetailView: View {
                     .background(.ultraThinMaterial)
                 }
             }
-        }
     }
 }

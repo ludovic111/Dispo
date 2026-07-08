@@ -64,7 +64,8 @@ struct HomeView: View {
     }
 
     private var greeting: String {
-        Calendar.current.component(.hour, from: Date()) >= 17 ? "Bonsoir" : "Salut"
+        let hour = Calendar.current.component(.hour, from: Date())
+        return (hour >= 17 || hour < 5) ? "Bonsoir" : "Salut"
     }
 
     var body: some View {
@@ -237,7 +238,7 @@ struct HomeView: View {
         JCPromoBanner(
             icon: "crown.fill",
             title: "Ne rate plus un cachet",
-            subtitle: "Alertes dépannage en priorité + profil en tête · dès CHF 3.25/mois"
+            subtitle: "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois"
         ) { store.showPaywall = true }
     }
 
@@ -272,76 +273,97 @@ struct MusicianCard: View {
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
 
+    /// Durée fictive de la vidéo de présentation (60–90 s), stable par profil.
+    private var videoDuration: String {
+        let seconds = 60 + abs(musician.name.stableHash) % 31
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Couverture « vidéo » — photo libre de droit du genre
-            ZStack {
+            ZStack(alignment: .bottom) {
                 GenreCover(genre: mainGenre)
+                    .frame(height: 168)
+
+                // Scrim bas pour la lisibilité
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.55)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+
                 Image(systemName: "play.circle.fill")
-                    .font(.system(size: 46))
-                    .foregroundStyle(.white.opacity(0.95))
-                    .shadow(radius: 8)
+                    .font(.system(size: 44))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+                    .offset(y: -20)
 
                 VStack {
-                    HStack {
+                    HStack(alignment: .top) {
                         AvailabilityBadge(availability: musician.availability)
                         Spacer()
                         Button {
-                            store.toggleFavorite(musician)
+                            withAnimation(.snappy(duration: 0.25)) {
+                                store.toggleFavorite(musician)
+                            }
                         } label: {
                             Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
-                                .font(.title3.weight(.semibold))
+                                .font(.body.weight(.semibold))
                                 .foregroundStyle(store.isFavorite(musician) ? JC.magenta : .white)
-                                .padding(9)
-                                .background(.black.opacity(0.35), in: Circle())
+                                .padding(10)
+                                .background(.ultraThinMaterial, in: Circle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressableStyle(scale: 0.92))
                     }
                     Spacer()
                     HStack {
                         Spacer()
-                        Label("1:15", systemImage: "video.fill")
+                        Label(videoDuration, systemImage: "video.fill")
                             .font(.caption2.weight(.bold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.black.opacity(0.45), in: Capsule())
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(.black.opacity(0.4), in: Capsule())
                             .foregroundStyle(.white)
                     }
                 }
                 .padding(12)
             }
-            .frame(height: 155)
+            .frame(height: 168)
 
             // Infos
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(spacing: 10) {
-                    AvatarView(name: musician.name, size: 42, photo: musician.photo)
-                    VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    AvatarView(name: musician.name, size: 44, photo: musician.photo)
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(musician.name)
                             .font(.headline)
                         Text(musician.instruments.map(\.rawValue).joined(separator: " · "))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                     VStack(alignment: .trailing, spacing: 2) {
                         let notes = store.noteCount(for: musician)
                         if notes == 0 {
                             Text("Nouveau")
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(JC.violet)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(JC.violet.opacity(0.12), in: Capsule())
                         } else {
                             NoteRatingView(notes: notes, golden: store.goldenCount(for: musician))
                             Text(notes > 1 ? "\(notes) notes" : "1 note")
                                 .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.tertiary)
                         }
                     }
                 }
 
                 HStack(spacing: 6) {
                     ForEach(musician.genres.prefix(2)) { genre in
-                        TagView(text: "\(genre.emoji) \(genre.rawValue)", color: genre.color)
+                        TagView(text: genre.rawValue, color: genre.color)
                     }
                     TagView(text: musician.level.rawValue, color: .teal)
                 }
@@ -354,16 +376,27 @@ struct MusicianCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     Spacer()
-                    Text("Voir le profil")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(JC.coral)
+                    HStack(spacing: 4) {
+                        Text("Voir le profil")
+                            .font(.caption.weight(.bold))
+                        Image(systemName: "arrow.right")
+                            .font(.caption2.weight(.bold))
+                    }
+                    .foregroundStyle(JC.coral)
                 }
             }
-            .padding(14)
+            .padding(16)
             .background(JC.card)
         }
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(
+                    LinearGradient(colors: [JC.cardHighlight, .clear], startPoint: .top, endPoint: .center),
+                    lineWidth: 1
+                )
+        )
         .shadow(color: JC.cardShadow, radius: 16, x: 0, y: 10)
     }
 }

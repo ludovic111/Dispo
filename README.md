@@ -1,8 +1,8 @@
-# JamConnect 🎶
+# JamConnect ⚡🎶
 
-**L'app qui met en relation les musiciens pour des jams — profil vidéo + dispo temps réel + géolocalisation.**
+**L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version 0.2 — démo autonome (sans backend) pour valider le concept en main, basée sur la réflexion menée avec Raphaël : le « BlaBlaCar de la jam », lancé sur la communauté jazz / latin jazz de Genève.
+Version 0.3 — démo autonome (sans backend) pour valider le concept en main, projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026).
 
 | | |
 |---|---|
@@ -29,14 +29,14 @@ JamConnect/
 ## Ce que contient la démo
 
 - **Design « nuit de jazz »** — design system custom (dégradés violet → magenta → corail, cartes arrondies, couleur par genre musical), onboarding en 3 écrans qui explique le concept à la première ouverture.
-- **Accueil (feed social)** — rangée « stories » des musiciens dispo ce soir, feed de cartes avec couverture vidéo, cœur favori, compteur de notes de musique reçues, pilules Filtres/Carte, bascule carte MapKit centrée sur Genève.
-- **Groupes** — onglet dédié aux formations (bands) : feed de groupes avec niveau d'expérience (Débutant → Pro), notes de musique / coups de cœur, filtre par genre, rangée « Recrutent en ce moment », fiche détaillée (membres, répertoire, recrutement, appréciation interactive).
-- **Fiche musicien** — hero vidéo (60–90 s, lecteur réel en phase 2), stats sociales (jams, notes, abonnés), genres avec leurs codes (standards jazz, clave latine…), répertoire, boutons favori + « Proposer une jam ».
-- **Système d'appréciation positif** — après une jam, on donne une **note de musique** (« j'ai aimé ») ou une **note dorée animée** (« coup de cœur ») ; pas de note négative possible. Les profils affichent le total de notes et de coups de cœur.
-- **Jams** — cartes d'événements avec bloc date coloré par genre, bannière « Lance ta jam », bouton « Je viens ! », création de votre propre jam (persistée localement).
+- **Accueil** — rangée « Dispo ce soir » (les mobilisables immédiatement), rangée « Dispo prochainement », feed de cartes avec couverture vidéo, cœur favori, notes de musique reçues, pilules Filtres/Carte, bascule carte MapKit centrée sur Genève.
+- **SOS dépannage** — tableau d'annonces : un concert cherche un musicien (date, lieu, instrument, cachet CHF). Publication de son propre SOS en 30 secondes, bouton « Je peux dépanner ! ». Les annonces passées sont purgées automatiquement.
+- **Avant-première Premium** — les SOS fraîchement publiés (< 30 min) sont réservés aux membres Premium : les non-abonnés voient le cachet et l'instrument mais pas le lieu, avec un compte à rebours en direct → c'est la démonstration in-app de la killer feature.
+- **Fiche musicien** — hero vidéo (60–90 s, lecteur réel en phase 2), stats sociales, genres avec leurs codes (standards jazz, clave latine…), répertoire, boutons favori + « Demander un dépannage ».
+- **Système d'appréciation positif** — après un concert, on donne une **note de musique** (« j'ai aimé ») ou une **note dorée animée** (« coup de cœur ») ; pas de note négative possible.
 - **Messages** — conversations avec réponse automatique scriptée (démo).
-- **Profil** — carte hero avec stats, interrupteur « Dispo ce soir », badge Premium, édition (instruments, genres, niveau, bio).
-- **Monétisation** — abonnement **JamConnect Premium à CHF 4.50/mois** : paywall (profil mis en avant, filtres avancés, qui a vu ton profil, badge doré), filtre par niveau verrouillé pour les non-abonnés. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
+- **Profil** — carte hero avec stats, sélecteur de dispo dépannage (5 statuts, de 🚨 Ce soir à 🌙 Indisponible), teaser « qui a vu ton profil » (avatars floutés → paywall), badge Premium, thème clair/sombre, édition complète.
+- **Monétisation** — abonnement **JamConnect Premium à CHF 6.90/mois ou CHF 59/an** (annuel mis en avant : « soit CHF 4.90/mois, −29 % ») : alertes dépannage 30 min avant tout le monde, profil en tête, filtres avancés, qui a vu ton profil, badge doré. Essai 7 jours. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
 
 Les données sont fictives et rechargeables : *Profil → Réinitialiser la démo*.
 
@@ -65,5 +65,5 @@ cd JamConnect && xcodegen generate
 1. **Backend Supabase** (gratuit au départ) : comptes avec vérification téléphone, vrais profils, messagerie temps réel.
 2. **Vidéo réelle** : enregistrement in-app, upload et streaming via Mux ou Cloudflare Stream (~5 $/1000 min).
 3. **Notifications push** (« un batteur dispo ce soir à 2 km »).
-4. **Matching bidirectionnel** et avis post-jam réels.
+4. **Matching bidirectionnel** et avis post-concert réels.
 5. **TestFlight** pour les 20–30 premiers musiciens genevois (AMR, Conservatoire, Chat Noir…).

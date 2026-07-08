@@ -13,10 +13,11 @@ struct MyProfileView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         heroCard
-                        appearanceCard
                         availabilityCard
+                        viewersCard
                         premiumCard
                         videoCard
+                        appearanceCard
                         editButton
                         resetButton
                     }
@@ -43,28 +44,33 @@ struct MyProfileView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(JC.hero)
-            VStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(.white.opacity(0.15), lineWidth: 1)
+
+            VStack(spacing: 14) {
                 ZStack(alignment: .bottomTrailing) {
-                    AvatarView(name: store.profile.name, size: 86)
+                    AvatarView(name: store.profile.name, size: 84)
                         .padding(4)
-                        .background(.white.opacity(0.25), in: Circle())
+                        .background(.white.opacity(0.2), in: Circle())
                     if store.isPremium {
                         Image(systemName: "crown.fill")
-                            .font(.caption)
+                            .font(.caption2.weight(.bold))
                             .padding(6)
                             .background(JC.premium, in: Circle())
                             .foregroundStyle(.black)
+                            .offset(x: 4, y: 4)
                     }
                 }
-                VStack(spacing: 3) {
+                VStack(spacing: 4) {
                     HStack(spacing: 8) {
                         Text(store.profile.name)
-                            .font(.title2.weight(.heavy))
+                            .font(.title2.weight(.bold))
                         if store.isPremium { PremiumBadge() }
                     }
                     Text(subtitle)
                         .font(.caption.weight(.medium))
-                        .opacity(0.9)
+                        .opacity(0.88)
+                        .multilineTextAlignment(.center)
                 }
 
                 HStack(spacing: 0) {
@@ -74,11 +80,15 @@ struct MyProfileView: View {
                     divider
                     profileStat(value: "87", label: "abonnés")
                 }
-                .padding(.vertical, 10)
-                .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 18))
+                .padding(.vertical, 12)
+                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(.white.opacity(0.1), lineWidth: 1)
+                )
             }
             .foregroundStyle(.white)
-            .padding(18)
+            .padding(20)
         }
     }
 
@@ -144,8 +154,9 @@ struct MyProfileView: View {
     private var availabilityCard: some View {
         JCCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("🚨 Ma dispo dépannage")
+                Label("Ma dispo dépannage", systemImage: "bolt.fill")
                     .font(.subheadline.weight(.heavy))
+                    .foregroundStyle(JC.coral)
                 Text("Quand peux-tu remplacer un musicien pour un concert ?")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -161,11 +172,20 @@ struct MyProfileView: View {
     private func availabilityRow(_ option: Availability) -> some View {
         let isSelected = store.profile.availability == option
         return Button {
-            store.profile.availability = option
-            store.saveProfile()
+            withAnimation(.snappy) {
+                store.profile.availability = option
+                store.saveProfile()
+            }
         } label: {
-            HStack(spacing: 10) {
-                Text(option.emoji)
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(option.color.opacity(isSelected ? 0.18 : 0.08))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: option.symbol)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(option.color)
+                }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(option.rawValue)
                         .font(.subheadline.weight(isSelected ? .bold : .regular))
@@ -176,47 +196,69 @@ struct MyProfileView: View {
                 }
                 Spacer()
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? option.color : .secondary.opacity(0.4))
+                    .foregroundStyle(isSelected ? option.color : .secondary.opacity(0.35))
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
             .background(
-                isSelected ? option.color.opacity(0.13) : .clear,
-                in: RoundedRectangle(cornerRadius: 12)
+                isSelected ? option.color.opacity(0.1) : .clear,
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? option.color.opacity(0.5) : .clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? option.color.opacity(0.4) : .clear, lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableStyle(scale: 0.99))
+    }
+
+    /// « Qui a vu ton profil » — teaser Premium : avatars floutés pour les
+    /// non-abonnés, noms révélés pour les membres Premium.
+    private var viewersCard: some View {
+        let viewers = store.profileViewers
+        return Button {
+            if !store.isPremium { store.showPaywall = true }
+        } label: {
+            JCCard {
+                HStack(spacing: 14) {
+                    HStack(spacing: -14) {
+                        ForEach(viewers.prefix(3)) { viewer in
+                            AvatarView(name: viewer.name, size: 40, photo: viewer.photo)
+                                .overlay(Circle().stroke(JC.card, lineWidth: 2))
+                                .blur(radius: store.isPremium ? 0 : 4)
+                                .clipShape(Circle())
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("\(viewers.count + 7) pros ont vu ton profil cette semaine")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                        Text(store.isPremium
+                             ? "Dont \(viewers.prefix(2).map { $0.name.split(separator: " ").first.map(String.init) ?? $0.name }.joined(separator: ", ")) — contacte-les !"
+                             : "Découvre qui avec Premium")
+                            .font(.caption)
+                            .foregroundStyle(store.isPremium ? .secondary : JC.gold)
+                    }
+                    Spacer(minLength: 0)
+                    if !store.isPremium {
+                        Image(systemName: "lock.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(JC.gold)
+                    }
+                }
+            }
+        }
+        .buttonStyle(PressableStyle())
     }
 
     private var premiumCard: some View {
-        Button {
-            store.showPaywall = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "crown.fill")
-                    .font(.title2)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(store.isPremium ? "Premium actif ✨" : "Ne rate plus un cachet")
-                        .font(.subheadline.weight(.heavy))
-                    Text(store.isPremium
-                         ? "Alertes dépannage prioritaires · gérer mon abonnement"
-                         : "Alertes dépannage en priorité + profil en tête · dès CHF 3.25/mois")
-                        .font(.caption)
-                        .opacity(0.8)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(.black)
-            .padding(16)
-            .background(JC.premium, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(PressableStyle())
+        JCPromoBanner(
+            icon: "crown.fill",
+            title: store.isPremium ? "Premium actif" : "Ne rate plus un cachet",
+            subtitle: store.isPremium
+                ? "Alertes dépannage prioritaires · gérer mon abonnement"
+                : "Alertes dépannage en priorité + profil en tête · dès CHF 4.90/mois"
+        ) { store.showPaywall = true }
     }
 
     private var videoCard: some View {
@@ -261,7 +303,7 @@ struct MyProfileView: View {
                 showResetConfirmation = true
             }
             .font(.caption)
-            Text("JamConnect v0.1 — démo sans backend, données fictives.")
+            Text("JamConnect v0.3 — démo sans backend, données fictives.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }

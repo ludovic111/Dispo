@@ -33,15 +33,25 @@ struct OnboardingView: View {
         ZStack {
             JC.hero.ignoresSafeArea()
 
+            // Halos décoratifs
+            GeometryReader { geo in
+                Circle()
+                    .fill(.white.opacity(0.08))
+                    .frame(width: geo.size.width * 0.7)
+                    .blur(radius: 60)
+                    .position(x: geo.size.width * 0.85, y: geo.size.height * 0.15)
+            }
+            .allowsHitTesting(false)
+
             VStack(spacing: 0) {
                 HStack {
-                    LogoView(markSize: 34, wordmarkColor: .white)
+                    LogoView(markSize: 32, wordmarkColor: .white)
                         .padding(.leading)
                     Spacer()
                     if page < pages.count - 1 {
                         Button("Passer") { store.completeOnboarding() }
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(.white.opacity(0.75))
                             .padding()
                     }
                 }
@@ -49,50 +59,62 @@ struct OnboardingView: View {
 
                 TabView(selection: $page) {
                     ForEach(pages.indices, id: \.self) { index in
-                        VStack(spacing: 28) {
+                        VStack(spacing: 32) {
                             ZStack {
                                 Circle()
-                                    .fill(.white.opacity(0.15))
-                                    .frame(width: 170, height: 170)
+                                    .stroke(.white.opacity(0.15), lineWidth: 1)
+                                    .frame(width: 160, height: 160)
                                 Circle()
-                                    .fill(.white.opacity(0.12))
-                                    .frame(width: 135, height: 135)
+                                    .fill(.white.opacity(0.1))
+                                    .frame(width: 120, height: 120)
                                 Image(systemName: pages[index].icon)
-                                    .font(.system(size: 56, weight: .bold))
+                                    .font(.system(size: 48, weight: .semibold))
                                     .foregroundStyle(.white)
+                                    .symbolEffect(.pulse, options: .repeating.speed(0.4), value: page == index)
                             }
-                            Text(pages[index].title)
-                                .font(.system(size: 30, weight: .heavy, design: .rounded))
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.white)
-                            Text(pages[index].text)
-                                .font(.callout)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.white.opacity(0.85))
-                                .padding(.horizontal, 36)
+                            VStack(spacing: 14) {
+                                Text(pages[index].title)
+                                    .font(.system(size: 32, weight: .bold))
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.white)
+                                    .tracking(-0.5)
+                                Text(pages[index].text)
+                                    .font(.body)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.white.opacity(0.82))
+                                    .lineSpacing(4)
+                                    .padding(.horizontal, 32)
+                            }
                         }
                         .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
+                .animation(.snappy, value: page)
 
                 Button {
                     if page < pages.count - 1 {
-                        withAnimation { page += 1 }
+                        withAnimation(.snappy) { page += 1 }
                     } else {
                         store.completeOnboarding()
                     }
                 } label: {
-                    Text(page < pages.count - 1 ? "Continuer" : "C'est parti 🚨")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .foregroundStyle(.black)
+                    HStack(spacing: 8) {
+                        Text(page < pages.count - 1 ? "Continuer" : "C'est parti")
+                            .font(.headline)
+                        if page == pages.count - 1 {
+                            Image(systemName: "bolt.fill")
+                                .font(.subheadline.weight(.bold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 17)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .foregroundStyle(.black)
                 }
                 .buttonStyle(PressableStyle())
                 .padding(.horizontal, 28)
-                .padding(.bottom, 30)
+                .padding(.bottom, 36)
             }
         }
     }

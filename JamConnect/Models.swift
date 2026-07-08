@@ -145,7 +145,8 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
         switch filter {
         case .tonight: return self == .tonight
         case .thisWeek: return [.tonight, .thisWeek, .weekend].contains(self)
-        case .weekend: return [.tonight, .weekend].contains(self)
+        // « Dispo cette semaine » couvre les prochains jours, week-end compris.
+        case .weekend: return [.tonight, .thisWeek, .weekend].contains(self)
         case .onRequest: return isAvailable
         case .unavailable: return true
         }
@@ -177,7 +178,7 @@ enum Level: String, Codable, CaseIterable, Identifiable, Comparable {
 // MARK: - Premium
 
 /// Plans d'abonnement Premium. L'annuel est l'offre mise en avant :
-/// 2 mois offerts (CHF 39 au lieu de 54) pour maximiser la rétention.
+/// CHF 59 au lieu de 82.80 (−29 %) pour maximiser la rétention.
 enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     case annual
     case monthly
@@ -194,15 +195,15 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     /// Prix affiché en gros sur la carte du plan.
     var priceLine: String {
         switch self {
-        case .annual: return "CHF 39/an"
-        case .monthly: return "CHF 4.50/mois"
+        case .annual: return "CHF 59/an"
+        case .monthly: return "CHF 6.90/mois"
         }
     }
 
     /// Équivalent mensuel + argument, affiché sous le prix.
     var detailLine: String {
         switch self {
-        case .annual: return "soit CHF 3.25/mois · 2 mois offerts"
+        case .annual: return "soit CHF 4.90/mois · économise CHF 24"
         case .monthly: return "sans engagement"
         }
     }
@@ -210,7 +211,7 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     /// Étiquette promo (bandeau sur la carte du plan).
     var promoTag: String? {
         switch self {
-        case .annual: return "MEILLEURE OFFRE · −28 %"
+        case .annual: return "MEILLEURE OFFRE · −29 %"
         case .monthly: return nil
         }
     }
@@ -399,15 +400,32 @@ struct GigRequest: Codable, Identifiable, Hashable {
     /// L'utilisateur a postulé à cette annonce.
     var applied: Bool = false
     var isMine: Bool = false
+    /// Date de publication — les 30 premières minutes sont réservées aux
+    /// membres Premium (la killer feature « alerte en avance »).
+    var postedAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, title, hostName, date, place, neighborhood, genre
-        case wantedInstruments, fee, descriptionText, applied, isMine
+        case wantedInstruments, fee, descriptionText, applied, isMine, postedAt
     }
 
     var feeLabel: String {
         if let fee { return "CHF \(fee)" }
         return "À discuter"
+    }
+
+    /// Durée de l'avant-première Premium après publication.
+    static let earlyAccessWindow: TimeInterval = 30 * 60
+
+    /// Fin de la fenêtre d'avant-première (nil si l'annonce n'en a pas).
+    var earlyAccessEnd: Date? {
+        postedAt.map { $0.addingTimeInterval(Self.earlyAccessWindow) }
+    }
+
+    /// true si l'annonce est encore en avant-première Premium.
+    func isEarlyAccess(now: Date = Date()) -> Bool {
+        guard let earlyAccessEnd, !isMine else { return false }
+        return now < earlyAccessEnd
     }
 }
 

@@ -26,8 +26,6 @@ struct RootView: View {
             TabView {
                 HomeView()
                     .tabItem { Label("Accueil", systemImage: "waveform.path") }
-                BandsView()
-                    .tabItem { Label("Groupes", systemImage: "person.3.fill") }
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
                 ChatListView()
@@ -374,7 +372,7 @@ struct GoldenNoteView: View {
             .scaleEffect(animate ? 1.14 : 0.9)
             .rotationEffect(.degrees(animate ? 7 : -7))
             .shadow(color: JC.gold.opacity(animate ? 0.85 : 0.25), radius: animate ? size * 0.45 : 2)
-            .animation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true), value: animate)
+            .animation(.spring(response: 0.85, dampingFraction: 0.55).repeatForever(autoreverses: true), value: animate)
             .onAppear { animate = true }
     }
 }

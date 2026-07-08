@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Paywall Premium, centré sur la promesse n°1 : ne jamais rater un cachet
-/// de dépannage. Annuel CHF 39 (2 mois offerts) mis en avant, mensuel CHF 4.50.
+/// de dépannage. Annuel CHF 59 (−29 %) mis en avant, mensuel CHF 6.90.
 /// Paiement simulé dans la démo ; StoreKit / App Store en phase 2.
 struct PaywallView: View {
     @EnvironmentObject private var store: AppStore
@@ -77,10 +77,16 @@ struct PaywallView: View {
 
     /// L'argument massue : un cachet de dépannage vaut CHF 100–300 à Genève.
     private var roiHook: some View {
-        HStack(spacing: 10) {
-            Text("💡")
-                .font(.title3)
-            Text("Un seul concert dépanné (CHF 100–300) rembourse **plusieurs années** d'abonnement.")
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(JC.gold.opacity(0.18))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "lightbulb.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(JC.gold)
+            }
+            Text("Un seul concert dépanné (CHF 100–300) rembourse **largement ton année** d'abonnement.")
                 .font(.footnote)
                 .foregroundStyle(.primary.opacity(0.9))
             Spacer(minLength: 0)
@@ -196,12 +202,12 @@ struct PaywallView: View {
                 .buttonStyle(PressableStyle())
 
                 Text(selectedPlan == .annual
-                     ? "7 jours offerts, puis CHF 39/an · annulable à tout moment"
-                     : "7 jours offerts, puis CHF 4.50/mois · annulable à tout moment")
+                     ? "7 jours offerts, puis CHF 59/an · annulable à tout moment"
+                     : "7 jours offerts, puis CHF 6.90/mois · annulable à tout moment")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Text("⭐️ Déjà 120+ musiciens genevois nous font confiance")
+                Text("Pensé avec la scène jazz & latin de Genève")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(JC.gold)
 

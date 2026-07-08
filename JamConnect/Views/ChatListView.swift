@@ -10,29 +10,19 @@ struct ChatListView: View {
 
                 ScrollView {
                     VStack(spacing: 14) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Messages 💬")
-                                    .font(.system(size: 26, weight: .heavy, design: .rounded))
-                                Text("Cale tes prochains dépannages")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                        }
-                        .padding(.top, 12)
+                        ScreenHeader(
+                            title: "Messages",
+                            subtitle: "Cale tes prochains dépannages",
+                            icon: "bubble.left.and.bubble.right.fill",
+                            iconColor: JC.violet
+                        )
 
                         if store.conversations.isEmpty {
-                            JCCard {
-                                VStack(spacing: 8) {
-                                    Text("Aucune conversation")
-                                        .font(.headline)
-                                    Text("Contacte un musicien dispo depuis l'accueil 🚨")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
+                            JCEmptyState(
+                                icon: "bubble.left.and.bubble.right",
+                                title: "Aucune conversation",
+                                message: "Contacte un musicien dispo depuis l'accueil pour organiser un dépannage."
+                            )
                         }
 
                         ForEach(store.conversations) { conversation in

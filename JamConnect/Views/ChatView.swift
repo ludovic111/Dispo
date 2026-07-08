@@ -30,8 +30,12 @@ struct ChatView: View {
                         }
                     }
                     .onAppear {
-                        if let lastID = conversation?.messages.last?.id {
-                            proxy.scrollTo(lastID, anchor: .bottom)
+                        // Différé d'un cycle : la LazyVStack n'a pas encore
+                        // posé ses bulles au moment du onAppear.
+                        DispatchQueue.main.async {
+                            if let lastID = conversation?.messages.last?.id {
+                                proxy.scrollTo(lastID, anchor: .bottom)
+                            }
                         }
                     }
                 }
@@ -79,8 +83,8 @@ struct MessageBubble: View {
 
     var body: some View {
         HStack {
-            if message.isFromMe { Spacer(minLength: 50) }
-            VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 2) {
+            if message.isFromMe { Spacer(minLength: 56) }
+            VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 3) {
                 Text(message.text)
                     .font(.subheadline)
                     .padding(.horizontal, 14)
@@ -89,14 +93,18 @@ struct MessageBubble: View {
                         message.isFromMe
                             ? AnyShapeStyle(JC.hero)
                             : AnyShapeStyle(JC.card),
-                        in: RoundedRectangle(cornerRadius: 19, style: .continuous)
+                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
                     )
                     .foregroundStyle(message.isFromMe ? Color.white : Color.primary)
                 Text(message.date.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
-            if !message.isFromMe { Spacer(minLength: 50) }
+            if !message.isFromMe { Spacer(minLength: 56) }
         }
     }
 }

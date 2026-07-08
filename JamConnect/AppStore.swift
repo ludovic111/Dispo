@@ -46,36 +46,26 @@ final class AppStore: ObservableObject {
         musicians = seed.musicians
         bands = seed.bands
 
-        // Les dates du seed sont relatives : on les projette sur les prochains jours.
-        let seededEvents = seed.events.enumerated().map { index, event -> GigRequest in
-            var e = event
-            e.date = Calendar.current.date(byAdding: .day, value: index + 1, to: Date().addingTimeInterval(3600 * 4)) ?? e.date
-            return e
-        }
-
-        if let saved: [GigRequest] = Self.load(key: Self.eventsKey) {
-            events = saved
+        // Un concert passé n'a plus besoin de dépannage : on ne garde que l'avenir.
+        let savedEvents: [GigRequest]? = Self.load(key: Self.eventsKey)
+        if let upcoming = savedEvents?.filter({ $0.date > Date() }), !upcoming.isEmpty {
+            events = upcoming
         } else {
-            events = seededEvents
+            events = Self.projectedSeedEvents(seed.events)
         }
+        // Une conversation ouverte sans message envoyé ne doit pas encombrer la liste.
         if let saved: [Conversation] = Self.load(key: Self.conversationsKey) {
-            conversations = saved
+            conversations = saved.filter { !$0.messages.isEmpty }
         } else {
             conversations = seed.conversations
         }
         if let saved: MyProfile = Self.load(key: Self.profileKey) {
             profile = saved
         } else {
-            profile = MyProfile(
-                name: "Ludovic",
-                instruments: [.piano],
-                genres: [.latin, .jazz],
-                level: .avance,
-                bio: "Pianiste latin jazz à Genève. Toujours partant pour une descarga !",
-                availability: .tonight
-            )
+            profile = Self.defaultProfile
         }
         events.sort { $0.date < $1.date }
+        armEarlyAccessTeaser()
 
         if let saved: Set<String> = Self.load(key: Self.favoritesKey) {
             favorites = saved
@@ -87,6 +77,37 @@ final class AppStore: ObservableObject {
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
         theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .system
+    }
+
+    /// Profil par défaut de la démo.
+    private static var defaultProfile: MyProfile {
+        MyProfile(
+            name: "Ludovic",
+            instruments: [.piano],
+            genres: [.latin, .jazz],
+            level: .avance,
+            bio: "Pianiste latin jazz à Genève. Toujours partant pour une descarga !",
+            availability: .tonight
+        )
+    }
+
+    /// Les dates du seed sont relatives : on les projette sur les prochains jours.
+    private static func projectedSeedEvents(_ seedEvents: [GigRequest]) -> [GigRequest] {
+        seedEvents.enumerated().map { index, event -> GigRequest in
+            var e = event
+            e.date = Calendar.current.date(byAdding: .day, value: index + 1, to: Date().addingTimeInterval(3600 * 4)) ?? e.date
+            return e
+        }
+    }
+
+    /// Garantit qu'une annonce est en avant-première Premium — la killer
+    /// feature reste ainsi visible à chaque lancement de la démo.
+    private func armEarlyAccessTeaser() {
+        let now = Date()
+        guard !events.contains(where: { $0.isEarlyAccess(now: now) }) else { return }
+        guard let index = events.firstIndex(where: { !$0.isMine && $0.date > now }) else { return }
+        events[index].postedAt = now.addingTimeInterval(-7 * 60) // publiée il y a 7 min
+        persistEvents()
     }
 
     /// Change et persiste la préférence d'apparence.
@@ -144,6 +165,16 @@ final class AppStore: ObservableObject {
     /// Total des notes dorées reçues (coups de cœur, seed + utilisateur).
     func goldenCount(for item: Rateable) -> Int {
         item.goldenCount + (myAppreciations[item.name] == .golden ? 1 : 0)
+    }
+
+    /// « Qui a vu ton profil » — sélection stable de musiciens seed pour la
+    /// démo (la vraie donnée viendra du backend en phase 2).
+    var profileViewers: [Musician] {
+        Array(
+            musicians
+                .sorted { abs($0.name.stableHash) % 97 < abs($1.name.stableHash) % 97 }
+                .prefix(5)
+        )
     }
 
     /// Souscription simulée — le vrai paiement passera par StoreKit / App Store en phase 2.
@@ -207,11 +238,6 @@ final class AppStore: ObservableObject {
         openConversation(name: musician.name, instrument: musician.instruments.first ?? .voix)
     }
 
-    /// Ouvre (ou retrouve) une conversation avec un groupe depuis sa fiche.
-    func conversation(with band: Band) -> Conversation {
-        openConversation(name: band.name, instrument: band.lookingFor.first ?? .voix)
-    }
-
     private func openConversation(name: String, instrument: Instrument) -> Conversation {
         if let existing = conversations.first(where: { $0.contactName == name }) {
             return existing
@@ -238,20 +264,10 @@ final class AppStore: ObservableObject {
         let seed = Self.loadSeed()
         musicians = seed.musicians
         bands = seed.bands
-        events = seed.events.enumerated().map { index, event -> GigRequest in
-            var e = event
-            e.date = Calendar.current.date(byAdding: .day, value: index + 1, to: Date().addingTimeInterval(3600 * 4)) ?? e.date
-            return e
-        }
+        events = Self.projectedSeedEvents(seed.events).sorted { $0.date < $1.date }
         conversations = seed.conversations
-        profile = MyProfile(
-            name: "Ludovic",
-            instruments: [.piano],
-            genres: [.latin, .jazz],
-            level: .avance,
-            bio: "Pianiste latin jazz à Genève. Toujours partant pour une descarga !",
-            availability: .tonight
-        )
+        profile = Self.defaultProfile
+        armEarlyAccessTeaser()
     }
 
     // MARK: - Persistance
