@@ -33,6 +33,7 @@
 /* Begin PBXFileReference section */
 		05D6EE827A078334EFDA5F7D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		0E06DD22EC730939A25A843F /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
+		17005F240478D1B0E79E091F /* Dispo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Dispo.entitlements; sourceTree = "<group>"; };
 		262BFFC74AF046664EC96E63 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		328466268794994F9BCFD141 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
 		4F8E0E9DF8F933FF987A98CC /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.example.plist; sourceTree = "<group>"; };
@@ -90,6 +91,7 @@
 			children = (
 				F2AAC67142500684FFF14F48 /* AppStore.swift */,
 				C8D25F0E4226F0F03262C112 /* Assets.xcassets */,
+				17005F240478D1B0E79E091F /* Dispo.entitlements */,
 				BC3D79B0C5E80B96FE7FE9DA /* Info.plist */,
 				94A0130C2424187FB32FF5F5 /* JamConnectApp.swift */,
 				FF4E4CA715D47B53D3298603 /* Models.swift */,
@@ -367,7 +369,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ludovicmarie.jamconnect;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ludovicmarie.dispo;
+				PRODUCT_NAME = Dispo;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -385,7 +388,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.ludovicmarie.jamconnect;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ludovicmarie.dispo;
+				PRODUCT_NAME = Dispo;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

@@ -1,15 +1,15 @@
-# JamConnect ⚡🎶
+# Dispo ⚡🎶
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version 0.3 — démo autonome (sans backend) pour valider le concept en main, projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026).
+Version 0.3 — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne).
 
 | | |
 |---|---|
 | **Plateforme** | iOS 17+ (SwiftUI) |
-| **Statut** | Démo locale + **mode live** (backend Supabase) |
-| **Backend** | Supabase (Postgres + RLS, Auth OTP e-mail, Realtime) |
-| **Bundle ID** | `com.ludovicmarie.jamconnect` |
+| **Statut** | Démo locale + **mode live** (backend Supabase hébergé) |
+| **Backend** | Supabase `dispo` — Zurich (`cghmmpcwqzpjwgnbiuuw`), Postgres + RLS, Auth e-mail + Apple, Realtime |
+| **Bundle ID** | `com.ludovicmarie.dispo` |
 | **Repo** | Privé |
 
 ## Structure du projet
@@ -56,20 +56,28 @@ supabase status                      # → API URL + anon key
 Puis copiez `JamConnect/Secrets.example.plist` en `JamConnect/Secrets.plist` avec
 `http://IP-DU-MAC:54321` (iPhone sur le même Wi-Fi) et l'anon key. Rebuild.
 
-- Comptes de test : `marco@demo.jamconnect.ch` … (20 musiciens du seed), mot de passe `jamconnect-demo`.
+- Comptes de test : `marco@demo.dispo.ch` … (20 musiciens du seed), mot de passe `jamconnect-demo`.
 - Les codes e-mail de connexion arrivent dans **Mailpit** : http://localhost:54324
 - Studio (admin BDD) : http://localhost:54323
 
-### Passage en production
+### Projet hébergé (production de test)
 
-Créer un projet sur [supabase.com](https://supabase.com) (plan gratuit), puis :
+Le projet **`dispo`** tourne sur supabase.com (org « Ludovic's Supabase », région
+Zurich, plan gratuit) : schéma + seed déployés, `Secrets.plist` pointe dessus par
+défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 
-```bash
-supabase link --project-ref <ref>
-supabase db push                     # applique les migrations (PAS le seed)
-```
-
-Mettre l'URL https + l'anon key du projet dans `Secrets.plist`. C'est tout.
+- Dashboard : https://supabase.com/dashboard/project/cghmmpcwqzpjwgnbiuuw
+- Comptes de test : `prenom@demo.dispo.ch` / `jamconnect-demo` (20 musiciens du seed)
+- **Connexion dans l'app** : e-mail → lien magique (redirige vers `dispo://login-callback`).
+  Le tier gratuit ne permet pas de personnaliser l'e-mail (sinon on afficherait le
+  code à 6 chiffres) et limite l'envoi à ~2 e-mails/h — configurer un SMTP custom
+  (Resend, gratuit) avant les tests avec de vrais musiciens.
+- Jeton CLI + mot de passe BDD : trousseau macOS (`supabase-cli-dispo`,
+  `supabase-dispo-db-password`). Re-déployer : `supabase db push`.
+- **Sign in with Apple** : provider activé côté Supabase (`com.ludovicmarie.dispo`).
+  Le code iOS est prêt, mais la capability exige le Developer Program (99 $/an) —
+  le bouton Apple apparaîtra automatiquement une fois l'app signée avec l'équipe
+  payante (décommenter le bloc `entitlements` dans `project.yml`).
 
 ## Ce que contient la démo
 
@@ -81,7 +89,7 @@ Mettre l'URL https + l'anon key du projet dans `Secrets.plist`. C'est tout.
 - **Système d'appréciation positif** — après un concert, on donne une **note de musique** (« j'ai aimé ») ou une **note dorée animée** (« coup de cœur ») ; pas de note négative possible.
 - **Messages** — conversations avec réponse automatique scriptée (démo).
 - **Profil** — carte hero avec stats, sélecteur de dispo dépannage (5 statuts, de 🚨 Ce soir à 🌙 Indisponible), teaser « qui a vu ton profil » (avatars floutés → paywall), badge Premium, thème clair/sombre, édition complète.
-- **Monétisation** — abonnement **JamConnect Premium à CHF 6.90/mois ou CHF 59/an** (annuel mis en avant : « soit CHF 4.90/mois, −29 % ») : alertes dépannage 30 min avant tout le monde, profil en tête, filtres avancés, qui a vu ton profil, badge doré. Essai 7 jours. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
+- **Monétisation** — abonnement **Dispo Premium à CHF 6.90/mois ou CHF 59/an** (annuel mis en avant : « soit CHF 4.90/mois, −29 % ») : alertes dépannage 30 min avant tout le monde, profil en tête, filtres avancés, qui a vu ton profil, badge doré. Essai 7 jours. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
 
 Les données sont fictives et rechargeables : *Profil → Réinitialiser la démo*.
 
@@ -108,7 +116,7 @@ cd JamConnect && xcodegen generate
 ## Prochaines étapes (phase 2b — à discuter avec Raphaël)
 
 1. ~~Backend Supabase~~ ✅ fait (auth e-mail, profils, SOS, messagerie temps réel, RLS Premium).
-2. **Projet Supabase hébergé** (gratuit) + `supabase db push` pour sortir du Mac.
+2. ~~Projet Supabase hébergé~~ ✅ fait (`dispo`, Zurich) — reste : SMTP custom (Resend) pour les e-mails de connexion.
 3. **Vidéo réelle** : enregistrement in-app, upload Supabase Storage ou Mux (~5 $/1000 min).
 4. **Notifications push** (« un SOS piano à 2 km, cachet CHF 150 ») — le cœur de la promesse Premium.
 5. **StoreKit 2** : brancher le paywall sur de vrais abonnements App Store + `is_premium` serveur.

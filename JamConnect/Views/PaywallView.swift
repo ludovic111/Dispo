@@ -64,7 +64,7 @@ struct PaywallView: View {
             VStack(spacing: 8) {
                 Image(systemName: "crown.fill")
                     .font(.system(size: 36, weight: .bold))
-                Text("JamConnect Premium")
+                Text("Dispo Premium")
                     .font(.title2.weight(.heavy))
                 Text("Ne rate plus jamais un cachet")
                     .font(.subheadline.weight(.semibold))

@@ -1,16 +1,22 @@
 import SwiftUI
+import AuthenticationServices
+import CryptoKit
 
-/// Connexion au backend (mode live) : un code à 6 chiffres envoyé par e-mail.
-/// En dev local, les e-mails arrivent dans Mailpit (http://localhost:54324).
+/// Connexion au backend (mode live) : Sign in with Apple, ou un code à
+/// 6 chiffres envoyé par e-mail. En dev local, les e-mails arrivent dans
+/// Mailpit (http://localhost:54324).
 struct AccountSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var email = ""
     @State private var code = ""
     @State private var codeSent = false
     @State private var isWorking = false
     @State private var errorText: String?
+    /// Nonce brut de la requête Apple en cours (le hash part chez Apple).
+    @State private var appleNonce: String?
 
     private var cleanEmail: String {
         email.trimmingCharacters(in: .whitespaces).lowercased()
@@ -28,6 +34,10 @@ struct AccountSheet: View {
                         if store.isLive {
                             signedInCard
                         } else {
+                            if Self.isAppleSignInAvailable {
+                                appleButton
+                                separator
+                            }
                             signInCard
                         }
 
@@ -43,6 +53,11 @@ struct AccountSheet: View {
             }
             .navigationTitle("Mon compte")
             .navigationBarTitleDisplayMode(.inline)
+            // Connexion par lien magique aboutie pendant que la feuille est
+            // ouverte (onOpenURL) : on peut la refermer.
+            .onChange(of: store.isLive) { _, live in
+                if live { dismiss() }
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") { dismiss() }.font(.headline)
@@ -61,7 +76,7 @@ struct AccountSheet: View {
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(store.isLive ? .green : JC.violet)
             }
-            Text(store.isLive ? "Connecté au réseau JamConnect" : "Rejoins le réseau JamConnect")
+            Text(store.isLive ? "Connecté au réseau Dispo" : "Rejoins le réseau Dispo")
                 .font(.headline)
             Text(store.isLive
                  ? "Ton profil, les annonces SOS et tes messages sont synchronisés en temps réel."
@@ -71,6 +86,31 @@ struct AccountSheet: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.top, 8)
+    }
+
+    private var appleButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            let nonce = Self.randomNonce()
+            appleNonce = nonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = Self.sha256(nonce)
+        } onCompletion: { result in
+            handleApple(result)
+        }
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        .frame(height: 50)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var separator: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(JC.cardStroke).frame(height: 1)
+            Text("ou par e-mail")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Rectangle().fill(JC.cardStroke).frame(height: 1)
+        }
     }
 
     private var signInCard: some View {
@@ -89,7 +129,7 @@ struct AccountSheet: View {
                     .disabled(codeSent)
 
                 if codeSent {
-                    Text("Code reçu par e-mail")
+                    Text("E-mail envoyé ! Ouvre le lien sur cet iPhone — ou entre le code s'il y en a un :")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.secondary)
                     TextField("123456", text: $code)
@@ -105,7 +145,7 @@ struct AccountSheet: View {
                 } label: {
                     HStack {
                         if isWorking { ProgressView().tint(.white) }
-                        Text(codeSent ? "Valider le code" : "Recevoir mon code")
+                        Text(codeSent ? "Valider le code" : "Recevoir mon lien de connexion")
                             .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
@@ -190,5 +230,77 @@ struct AccountSheet: View {
             }
             isWorking = false
         }
+    }
+
+    // MARK: - Sign in with Apple
+
+    private func handleApple(_ result: Result<ASAuthorization, Error>) {
+        guard let backend = store.backend else { return }
+        switch result {
+        case .failure(let error):
+            // Annulation utilisateur : pas d'erreur à afficher.
+            if (error as? ASAuthorizationError)?.code != .canceled {
+                errorText = "Connexion Apple impossible — réessaie."
+            }
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8),
+                  let nonce = appleNonce
+            else {
+                errorText = "Réponse Apple invalide — réessaie."
+                return
+            }
+            // Apple ne fournit le nom qu'à la toute première autorisation.
+            let appleName = [credential.fullName?.givenName, credential.fullName?.familyName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            isWorking = true
+            errorText = nil
+            Task {
+                do {
+                    let userID = try await backend.signInWithApple(idToken: idToken, nonce: nonce)
+                    if !appleName.isEmpty, store.profile.name.isEmpty {
+                        store.profile.name = appleName
+                    }
+                    await store.didSignIn(userID: userID)
+                    dismiss()
+                } catch {
+                    errorText = "Connexion Apple refusée par le serveur."
+                }
+                isWorking = false
+            }
+        }
+    }
+
+    /// true si le build embarque l'entitlement Sign in with Apple.
+    /// Les équipes personnelles gratuites ne peuvent pas le provisionner :
+    /// le bouton apparaît automatiquement dès la signature avec une équipe
+    /// du Developer Program (voir le bloc commenté dans project.yml).
+    static var isAppleSignInAvailable: Bool {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let content = String(data: data, encoding: .isoLatin1) else {
+            #if targetEnvironment(simulator)
+            return true // pas de profil embarqué en simulateur
+            #else
+            return false
+            #endif
+        }
+        return content.contains("com.apple.developer.applesignin")
+    }
+
+    /// Nonce aléatoire (anti-rejeu) : brut → Supabase, hash SHA-256 → Apple.
+    private static func randomNonce(length: Int = 32) -> String {
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var bytes = [UInt8](repeating: 0, count: length)
+        _ = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private static func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 }

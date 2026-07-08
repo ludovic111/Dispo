@@ -76,7 +76,7 @@ struct FilterSheet: View {
                     Text("Niveau minimum")
                 } footer: {
                     if !store.isPremium {
-                        Text("Le filtre par niveau fait partie de JamConnect Premium (dès CHF 4.90/mois).")
+                        Text("Le filtre par niveau fait partie de Dispo Premium (dès CHF 4.90/mois).")
                     }
                 }
 

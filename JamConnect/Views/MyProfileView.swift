@@ -342,7 +342,7 @@ struct MyProfileView: View {
                 showResetConfirmation = true
             }
             .font(.caption)
-            Text("JamConnect v0.3 — démo sans backend, données fictives.")
+            Text("Dispo v0.3 — données de démo réinitialisables.")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }

@@ -14,6 +14,10 @@ struct JamConnectApp: App {
                 .environmentObject(store)
                 .preferredColorScheme(store.theme.colorScheme)
                 .tint(JC.coral)
+                .onOpenURL { url in
+                    // Lien magique de connexion (dispo://login-callback).
+                    Task { await store.handleAuthCallback(url) }
+                }
         }
     }
 }
@@ -343,7 +347,7 @@ struct LogoView: View {
                 .scaledToFit()
                 .frame(width: markSize, height: markSize)
             if showWordmark {
-                Text("JamConnect")
+                Text("Dispo")
                     .font(.system(size: markSize * 0.62, weight: .heavy, design: .rounded))
                     .foregroundStyle(wordmarkColor)
             }

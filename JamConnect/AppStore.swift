@@ -140,6 +140,17 @@ final class AppStore: ObservableObject {
         await startMessageStream()
     }
 
+    /// Termine la connexion par lien magique (e-mail → dispo://login-callback).
+    func handleAuthCallback(_ url: URL) async {
+        guard let backend, url.host() == "login-callback" || url.absoluteString.hasPrefix("dispo://login-callback") else { return }
+        do {
+            let userID = try await backend.handleAuthCallback(url)
+            await didSignIn(userID: userID)
+        } catch {
+            backendError = "Lien de connexion invalide ou expiré."
+        }
+    }
+
     /// À appeler après une connexion réussie (AccountSheet).
     func didSignIn(userID: UUID) async {
         guard let backend else { return }

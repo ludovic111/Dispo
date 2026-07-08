@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>JamConnect</string>
+	<string>Dispo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -18,6 +18,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.3.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>ch.dispo.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>dispo</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -28,9 +39,9 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>JamConnect se connecte au serveur de développement local sur votre réseau Wi-Fi.</string>
+	<string>Dispo se connecte au serveur de développement local sur votre réseau Wi-Fi.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>JamConnect utilise votre position pour trouver des musiciens proches de vous.</string>
+	<string>Dispo utilise votre position pour trouver des musiciens proches de vous.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

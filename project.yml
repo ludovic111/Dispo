@@ -23,24 +23,37 @@ targets:
       - JamConnect
     dependencies:
       - package: Supabase
+    # Sign in with Apple : capability refusée aux équipes personnelles
+    # gratuites. Dès l'inscription au Developer Program (99 $/an),
+    # décommenter ce bloc — le bouton Apple apparaîtra tout seul
+    # (détection du profil embarqué à l'exécution).
+    # entitlements:
+    #   path: JamConnect/Dispo.entitlements
+    #   properties:
+    #     com.apple.developer.applesignin: [Default]
     info:
       path: JamConnect/Info.plist
       properties:
-        CFBundleDisplayName: JamConnect
+        CFBundleDisplayName: Dispo
         CFBundleShortVersionString: "0.3.0"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSLocationWhenInUseUsageDescription: "JamConnect utilise votre position pour trouver des musiciens proches de vous."
-        NSLocalNetworkUsageDescription: "JamConnect se connecte au serveur de développement local sur votre réseau Wi-Fi."
+        NSLocationWhenInUseUsageDescription: "Dispo utilise votre position pour trouver des musiciens proches de vous."
+        NSLocalNetworkUsageDescription: "Dispo se connecte au serveur de développement local sur votre réseau Wi-Fi."
         ITSAppUsesNonExemptEncryption: false
         # Autorise le backend Supabase local (http://<ip-du-mac>:54321) pendant
         # le développement. La prod (https) n'est pas concernée.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # Lien magique de connexion : l'e-mail redirige vers dispo://login-callback.
+        CFBundleURLTypes:
+          - CFBundleURLName: ch.dispo.auth
+            CFBundleURLSchemes: [dispo]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.ludovicmarie.jamconnect
+        PRODUCT_BUNDLE_IDENTIFIER: com.ludovicmarie.dispo
+        PRODUCT_NAME: Dispo
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         GENERATE_INFOPLIST_FILE: false

@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "JamConnect"
+project_id = "dispo"
 
 [api]
 enabled = true
@@ -244,7 +244,11 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 # Uncomment to customize email template
-# [auth.email.template.invite]
+# [auth.email.template.magic_link]
+subject = "Ton code Dispo"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
@@ -320,10 +324,11 @@ max_frequency = "5s"
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 [auth.external.apple]
-enabled = false
-client_id = ""
-# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
+enabled = true
+# Flux natif iOS : l'audience du jeton = bundle id de l'app. Pas de secret
+# nécessaire pour le flux id_token (le secret ne sert qu'au flux web OAuth).
+client_id = "com.ludovicmarie.dispo"
+secret = ""
 # Overrides the default auth callback URL derived from auth.external_url.
 redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,

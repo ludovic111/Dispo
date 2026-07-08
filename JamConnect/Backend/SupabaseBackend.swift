@@ -23,9 +23,24 @@ final class SupabaseBackend: Sendable {
         (try? await client.auth.session)?.user.email
     }
 
-    /// Envoie un code à 6 chiffres par e-mail (crée le compte au premier envoi).
+    /// URL de retour du lien magique (schéma custom de l'app).
+    static let authCallbackURL = URL(string: "dispo://login-callback")!
+
+    /// Envoie l'e-mail de connexion (crée le compte au premier envoi).
+    /// En local (Mailpit), l'e-mail contient le code à 6 chiffres ; en
+    /// hébergé, un lien magique qui rouvre l'app déjà connectée.
     func sendCode(email: String) async throws {
-        try await client.auth.signInWithOTP(email: email, shouldCreateUser: true)
+        try await client.auth.signInWithOTP(
+            email: email,
+            redirectTo: Self.authCallbackURL,
+            shouldCreateUser: true
+        )
+    }
+
+    /// Termine la connexion par lien magique (onOpenURL).
+    func handleAuthCallback(_ url: URL) async throws -> UUID {
+        let session = try await client.auth.session(from: url)
+        return session.user.id
     }
 
     /// Vérifie le code reçu et ouvre la session.
@@ -35,9 +50,18 @@ final class SupabaseBackend: Sendable {
     }
 
     /// Connexion par mot de passe — utilisée avec les comptes du seed local
-    /// (« prenom@demo.jamconnect.ch » / « jamconnect-demo »).
+    /// (« prenom@demo.dispo.ch » / « jamconnect-demo »).
     func signIn(email: String, password: String) async throws -> UUID {
         let session = try await client.auth.signIn(email: email, password: password)
+        return session.user.id
+    }
+
+    /// Sign in with Apple : échange le jeton d'identité Apple contre une
+    /// session Supabase (flux natif, aucun secret côté app).
+    func signInWithApple(idToken: String, nonce: String) async throws -> UUID {
+        let session = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
+        )
         return session.user.id
     }
 
