@@ -69,7 +69,7 @@ struct MyProfileView: View {
                 HStack(spacing: 0) {
                     profileStat(value: "12", label: "concerts")
                     divider
-                    profileStat(value: "4.9", label: "note")
+                    profileStat(value: "142", label: "notes")
                     divider
                     profileStat(value: "87", label: "abonnés")
                 }

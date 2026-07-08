@@ -234,15 +234,46 @@ struct AvailabilityBadge: View {
     }
 }
 
-struct StarsView: View {
-    let rating: Double
+/// Note de musique dorée animée — le « coup de cœur ». Pulse et scintille en continu.
+struct GoldenNoteView: View {
+    var size: CGFloat = 16
+    @State private var animate = false
 
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(1...5, id: \.self) { star in
-                Image(systemName: Double(star) <= rating.rounded() ? "star.fill" : "star")
-                    .font(.caption2)
-                    .foregroundStyle(JC.gold)
+        Image(systemName: "music.note")
+            .font(.system(size: size, weight: .black))
+            .foregroundStyle(JC.premium)
+            .scaleEffect(animate ? 1.14 : 0.9)
+            .rotationEffect(.degrees(animate ? 7 : -7))
+            .shadow(color: JC.gold.opacity(animate ? 0.85 : 0.25), radius: animate ? size * 0.45 : 2)
+            .animation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true), value: animate)
+            .onAppear { animate = true }
+    }
+}
+
+/// Récapitulatif des appréciations reçues : notes de musique + coups de cœur dorés.
+/// Système strictement positif — pas de note négative.
+struct NoteRatingView: View {
+    let notes: Int
+    let golden: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 3) {
+                Image(systemName: "music.note")
+                    .font(.caption2.weight(.bold))
+                Text("\(notes)")
+                    .font(.caption2.weight(.bold))
+            }
+            .foregroundStyle(JC.violet)
+
+            if golden > 0 {
+                HStack(spacing: 3) {
+                    GoldenNoteView(size: 12)
+                    Text("\(golden)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(JC.gold)
+                }
             }
         }
     }

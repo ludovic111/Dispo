@@ -205,15 +205,31 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Avis post-concert
+// MARK: - Appréciation post-concert
+
+/// Système d'appréciation positif : soit une note de musique (« j'ai aimé »),
+/// soit une note dorée animée (« coup de cœur »). Pas de note négative possible.
+enum Appreciation: String, Codable, Hashable, CaseIterable, Identifiable {
+    case note   // j'ai aimé
+    case golden // j'ai adoré (coup de cœur)
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .note: return "J'ai aimé"
+        case .golden: return "Coup de cœur"
+        }
+    }
+}
 
 struct Review: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var author: String
-    var rating: Int // 1...5
+    var appreciation: Appreciation
     var comment: String
 
-    enum CodingKeys: String, CodingKey { case author, rating, comment }
+    enum CodingKeys: String, CodingKey { case author, appreciation, comment }
 }
 
 // MARK: - Musicien
@@ -247,10 +263,11 @@ struct Musician: Codable, Identifiable, Hashable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    var averageRating: Double {
-        guard !reviews.isEmpty else { return 0 }
-        return Double(reviews.map(\.rating).reduce(0, +)) / Double(reviews.count)
-    }
+    /// Nombre total de notes de musique reçues (appréciations positives).
+    var noteCount: Int { reviews.count }
+
+    /// Nombre de notes dorées reçues (coups de cœur).
+    var goldenCount: Int { reviews.filter { $0.appreciation == .golden }.count }
 
     var initials: String {
         name.split(separator: " ").compactMap { $0.first.map(String.init) }.prefix(2).joined()

@@ -18,6 +18,9 @@ final class AppStore: ObservableObject {
 
     /// Favoris (par nom — les ids des musiciens seed changent à chaque lancement).
     @Published var favorites: Set<String> = []
+    /// Appréciations données par l'utilisateur (par nom de musicien). Positif uniquement :
+    /// note de musique (« aimé ») ou note dorée (« coup de cœur »).
+    @Published var myAppreciations: [String: Appreciation] = [:]
     /// Abonnement Premium — simulé dans la démo.
     @Published var isPremium: Bool = false
     /// Plan choisi (mensuel / annuel), nil si non abonné.
@@ -29,6 +32,7 @@ final class AppStore: ObservableObject {
     private static let conversationsKey = "jamconnect.conversations"
     private static let profileKey = "jamconnect.profile"
     private static let favoritesKey = "jamconnect.favorites"
+    private static let appreciationsKey = "jamconnect.appreciations"
     private static let premiumKey = "jamconnect.premium"
     private static let premiumPlanKey = "jamconnect.premiumPlan"
     private static let onboardedKey = "jamconnect.onboarded"
@@ -71,6 +75,9 @@ final class AppStore: ObservableObject {
         if let saved: Set<String> = Self.load(key: Self.favoritesKey) {
             favorites = saved
         }
+        if let saved: [String: Appreciation] = Self.load(key: Self.appreciationsKey) {
+            myAppreciations = saved
+        }
         isPremium = UserDefaults.standard.bool(forKey: Self.premiumKey)
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
@@ -95,6 +102,33 @@ final class AppStore: ObservableObject {
             favorites.insert(musician.name)
         }
         Self.save(favorites, key: Self.favoritesKey)
+    }
+
+    // MARK: - Appréciations (notes de musique)
+
+    /// L'appréciation donnée par l'utilisateur à ce musicien, s'il y en a une.
+    func appreciation(for musician: Musician) -> Appreciation? {
+        myAppreciations[musician.name]
+    }
+
+    /// Donne (ou retire, si nil) une appréciation à un musicien. Positif uniquement.
+    func setAppreciation(_ appreciation: Appreciation?, for musician: Musician) {
+        if let appreciation {
+            myAppreciations[musician.name] = appreciation
+        } else {
+            myAppreciations.removeValue(forKey: musician.name)
+        }
+        Self.save(myAppreciations, key: Self.appreciationsKey)
+    }
+
+    /// Total des notes de musique reçues (avis seed + appréciation de l'utilisateur).
+    func noteCount(for musician: Musician) -> Int {
+        musician.noteCount + (myAppreciations[musician.name] != nil ? 1 : 0)
+    }
+
+    /// Total des notes dorées reçues (coups de cœur, seed + utilisateur).
+    func goldenCount(for musician: Musician) -> Int {
+        musician.goldenCount + (myAppreciations[musician.name] == .golden ? 1 : 0)
     }
 
     /// Souscription simulée — le vrai paiement passera par StoreKit / App Store en phase 2.
@@ -174,9 +208,11 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.conversationsKey)
         UserDefaults.standard.removeObject(forKey: Self.profileKey)
         UserDefaults.standard.removeObject(forKey: Self.favoritesKey)
+        UserDefaults.standard.removeObject(forKey: Self.appreciationsKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
         favorites = []
+        myAppreciations = [:]
         isPremium = false
         premiumPlan = nil
         let seed = Self.loadSeed()

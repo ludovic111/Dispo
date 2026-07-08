@@ -25,12 +25,12 @@
       "reviews": [
         {
           "author": "Sofia",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Groove incroyable, très accueillant."
         },
         {
           "author": "Julien",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "La clave dans le sang. Il a sauvé notre soirée salsa."
         }
       ],
@@ -60,7 +60,7 @@
       "reviews": [
         {
           "author": "Marco",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Une voix qui transforme n'importe quel concert."
         }
       ],
@@ -91,12 +91,12 @@
       "reviews": [
         {
           "author": "Anna",
-          "rating": 4,
+          "appreciation": "note",
           "comment": "Solide walking bass, très bon niveau."
         },
         {
           "author": "David",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Le pilier de n'importe quel groupe. Fiable à 200 %."
         }
       ],
@@ -126,7 +126,7 @@
       "reviews": [
         {
           "author": "Élise",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Rigoureuse et pédagogue."
         }
       ],
@@ -156,12 +156,12 @@
       "reviews": [
         {
           "author": "Julien",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Swing impeccable, studio top."
         },
         {
           "author": "Marco",
-          "rating": 4,
+          "appreciation": "note",
           "comment": "Très bon feel latin."
         }
       ],
@@ -215,7 +215,7 @@
       "reviews": [
         {
           "author": "Léa",
-          "rating": 4,
+          "appreciation": "note",
           "comment": "Très bon son, super énergie."
         }
       ],
@@ -245,7 +245,7 @@
       "reviews": [
         {
           "author": "Karim",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Le groove est là. Fiable et ponctuelle."
         }
       ],
@@ -276,12 +276,12 @@
       "reviews": [
         {
           "author": "Marco",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Un son de cuivre exceptionnel."
         },
         {
           "author": "Sofia",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Le feu. La section cuivre rêvée."
         }
       ],
@@ -310,7 +310,7 @@
       "reviews": [
         {
           "author": "Anna",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Très belle sonorité, engagée."
         }
       ],
@@ -363,7 +363,7 @@
       "reviews": [
         {
           "author": "Sofia",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Harmonies magnifiques."
         }
       ],
@@ -393,7 +393,7 @@
       "reviews": [
         {
           "author": "David",
-          "rating": 4,
+          "appreciation": "note",
           "comment": "Beau phrasé, belle écoute."
         }
       ],
@@ -446,7 +446,7 @@
       "reviews": [
         {
           "author": "Sofia",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "La bossa comme à Rio."
         }
       ],
@@ -476,7 +476,7 @@
       "reviews": [
         {
           "author": "Karim",
-          "rating": 4,
+          "appreciation": "note",
           "comment": "Frappe solide, bon local."
         }
       ],
@@ -506,7 +506,7 @@
       "reviews": [
         {
           "author": "Nadia",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Un toucher exceptionnel."
         }
       ],
@@ -536,7 +536,7 @@
       "reviews": [
         {
           "author": "Pablo",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Tumbao d'enfer."
         }
       ],
@@ -590,7 +590,7 @@
       "reviews": [
         {
           "author": "Léa",
-          "rating": 5,
+          "appreciation": "golden",
           "comment": "Le son Rhodes parfait."
         }
       ],

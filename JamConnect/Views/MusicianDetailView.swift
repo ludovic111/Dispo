@@ -22,6 +22,7 @@ struct MusicianDetailView: View {
                     genresCard
                     repertoireCard
                     bioCard
+                    rateCard
                     reviewsCard
                 }
                 .padding(.horizontal, 18)
@@ -111,7 +112,7 @@ struct MusicianDetailView: View {
     private var statsRow: some View {
         HStack(spacing: 10) {
             statBox(value: "\(jamsPlayed)", label: "concerts")
-            statBox(value: musician.reviews.isEmpty ? "—" : String(format: "%.1f", musician.averageRating), label: "note")
+            statBox(value: store.noteCount(for: musician) == 0 ? "—" : "\(store.noteCount(for: musician))", label: "notes")
             statBox(value: "\(followers)", label: "abonnés")
             statBox(value: musician.level.rawValue, label: "niveau", compact: true)
         }
@@ -184,18 +185,77 @@ struct MusicianDetailView: View {
         }
     }
 
+    private var firstName: String {
+        musician.name.split(separator: " ").first.map(String.init) ?? musician.name
+    }
+
+    /// Carte interactive : l'utilisateur donne une note de musique ou une note dorée.
+    private var rateCard: some View {
+        let given = store.appreciation(for: musician)
+        return JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionTitle("Tu as joué avec \(firstName) ?", systemImage: "hand.thumbsup.fill")
+                Text("Laisse-lui une note de musique — ou une note dorée si c'était un coup de cœur. Ici on ne partage que le positif : pas de mauvaise note.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    appreciationButton(.note, given: given)
+                    appreciationButton(.golden, given: given)
+                }
+            }
+        }
+    }
+
+    private func appreciationButton(_ appreciation: Appreciation, given: Appreciation?) -> some View {
+        let isSelected = given == appreciation
+        let isGolden = appreciation == .golden
+        let accent = isGolden ? JC.gold : JC.violet
+        return Button {
+            withAnimation(.snappy) {
+                store.setAppreciation(isSelected ? nil : appreciation, for: musician)
+            }
+        } label: {
+            VStack(spacing: 8) {
+                if isGolden {
+                    GoldenNoteView(size: 26)
+                } else {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(isSelected ? JC.violet : .white)
+                }
+                Text(isGolden ? "J'ai adoré" : "J'ai aimé")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(isSelected ? accent : .primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                isSelected ? accent.opacity(0.16) : JC.bg.opacity(0.6),
+                in: RoundedRectangle(cornerRadius: 16)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? accent.opacity(0.6) : JC.cardStroke, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var reviewsCard: some View {
         JCCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    sectionTitle("Avis post-concert", systemImage: "star.bubble")
+                    sectionTitle("Ce qu'ils en disent", systemImage: "music.note")
                     Spacer()
-                    if !musician.reviews.isEmpty {
-                        StarsView(rating: musician.averageRating)
+                    if store.noteCount(for: musician) > 0 {
+                        NoteRatingView(
+                            notes: store.noteCount(for: musician),
+                            golden: store.goldenCount(for: musician)
+                        )
                     }
                 }
                 if musician.reviews.isEmpty {
-                    Text("Pas encore d'avis — sois le premier à jouer avec \(musician.name.split(separator: " ").first.map(String.init) ?? musician.name) !")
+                    Text("Pas encore de note — sois le premier à jouer avec \(firstName) !")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -203,9 +263,9 @@ struct MusicianDetailView: View {
                         HStack(alignment: .top, spacing: 10) {
                             AvatarView(name: review.author, size: 32, photo: store.photo(forName: review.author))
                             VStack(alignment: .leading, spacing: 3) {
-                                HStack {
+                                HStack(spacing: 6) {
                                     Text(review.author).font(.caption.weight(.bold))
-                                    StarsView(rating: Double(review.rating))
+                                    reviewMark(review.appreciation)
                                 }
                                 Text(review.comment)
                                     .font(.caption)
@@ -218,6 +278,18 @@ struct MusicianDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func reviewMark(_ appreciation: Appreciation) -> some View {
+        switch appreciation {
+        case .golden:
+            GoldenNoteView(size: 12)
+        case .note:
+            Image(systemName: "music.note")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(JC.violet)
         }
     }
 

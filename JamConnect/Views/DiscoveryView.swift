@@ -332,13 +332,14 @@ struct MusicianCard: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        if musician.reviews.isEmpty {
+                        let notes = store.noteCount(for: musician)
+                        if notes == 0 {
                             Text("Nouveau")
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(JC.violet)
                         } else {
-                            StarsView(rating: musician.averageRating)
-                            Text("\(musician.reviews.count) avis")
+                            NoteRatingView(notes: notes, golden: store.goldenCount(for: musician))
+                            Text(notes > 1 ? "\(notes) notes" : "1 note")
                                 .font(.system(size: 9))
                                 .foregroundStyle(.secondary)
                         }
