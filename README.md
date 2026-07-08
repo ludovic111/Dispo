@@ -35,7 +35,7 @@ JamConnect/
 
 ## Backend (mode live)
 
-L'app embarque une couche Supabase complète : **auth par code e-mail**, profils
+L'app embarque une couche Supabase complète : **auth e-mail + mot de passe**, profils
 synchronisés, annonces SOS, candidatures et **messagerie temps réel**. Toute la
 sécurité est côté serveur (RLS) — y compris l'**avant-première Premium** : pendant
 30 min, la vue `gig_requests_feed` masque titre/lieu/description aux non-Premium
@@ -57,7 +57,7 @@ Puis copiez `JamConnect/Secrets.example.plist` en `JamConnect/Secrets.plist` ave
 `http://IP-DU-MAC:54321` (iPhone sur le même Wi-Fi) et l'anon key. Rebuild.
 
 - Comptes de test : `marco@demo.dispo.ch` … (20 musiciens du seed), mot de passe `jamconnect-demo`.
-- Les codes e-mail de connexion arrivent dans **Mailpit** : http://localhost:54324
+- Les e-mails (réinitialisation de mot de passe…) arrivent dans **Mailpit** : http://localhost:54324
 - Studio (admin BDD) : http://localhost:54323
 
 ### Projet hébergé (production de test)
@@ -68,10 +68,11 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 
 - Dashboard : https://supabase.com/dashboard/project/cghmmpcwqzpjwgnbiuuw
 - Comptes de test : `prenom@demo.dispo.ch` / `jamconnect-demo` (20 musiciens du seed)
-- **Connexion dans l'app** : e-mail → lien magique (redirige vers `dispo://login-callback`).
-  Le tier gratuit ne permet pas de personnaliser l'e-mail (sinon on afficherait le
-  code à 6 chiffres) et limite l'envoi à ~2 e-mails/h — configurer un SMTP custom
-  (Resend, gratuit) avant les tests avec de vrais musiciens.
+- **Connexion dans l'app** : e-mail + mot de passe classique (création de compte
+  instantanée, confirmation d'e-mail désactivée, minimum 8 caractères). « Mot de
+  passe oublié » envoie un lien de réinitialisation (`dispo://login-callback`) —
+  seul cas qui utilise l'e-mail, limité à ~2/h sur le tier gratuit (SMTP custom
+  type Resend à prévoir avant le lancement).
 - Jeton CLI + mot de passe BDD : trousseau macOS (`supabase-cli-dispo`,
   `supabase-dispo-db-password`). Re-déployer : `supabase db push`.
 - **Sign in with Apple** : provider activé côté Supabase (`com.ludovicmarie.dispo`).

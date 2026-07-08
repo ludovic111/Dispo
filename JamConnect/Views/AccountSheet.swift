@@ -2,24 +2,34 @@ import SwiftUI
 import AuthenticationServices
 import CryptoKit
 
-/// Connexion au backend (mode live) : Sign in with Apple, ou un code à
-/// 6 chiffres envoyé par e-mail. En dev local, les e-mails arrivent dans
-/// Mailpit (http://localhost:54324).
+/// Connexion au backend (mode live) : e-mail + mot de passe classique,
+/// ou Sign in with Apple (dès l'équipe Developer Program).
 struct AccountSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
+    enum Mode: String, CaseIterable, Identifiable {
+        case signIn = "Se connecter"
+        case signUp = "Créer un compte"
+        var id: String { rawValue }
+    }
+
+    @State private var mode: Mode = .signIn
     @State private var email = ""
-    @State private var code = ""
-    @State private var codeSent = false
+    @State private var password = ""
     @State private var isWorking = false
     @State private var errorText: String?
+    @State private var infoText: String?
     /// Nonce brut de la requête Apple en cours (le hash part chez Apple).
     @State private var appleNonce: String?
 
     private var cleanEmail: String {
         email.trimmingCharacters(in: .whitespaces).lowercased()
+    }
+
+    private var canSubmit: Bool {
+        cleanEmail.contains("@") && cleanEmail.contains(".") && password.count >= 8
     }
 
     var body: some View {
@@ -45,6 +55,12 @@ struct AccountSheet: View {
                             Label(errorText, systemImage: "exclamationmark.triangle.fill")
                                 .font(.caption)
                                 .foregroundStyle(JC.coral)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if let infoText {
+                            Label(infoText, systemImage: "envelope.badge")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -80,7 +96,7 @@ struct AccountSheet: View {
                 .font(.headline)
             Text(store.isLive
                  ? "Ton profil, les annonces SOS et tes messages sont synchronisés en temps réel."
-                 : "Un code envoyé par e-mail, et ton profil devient visible des autres musiciens — annonces et messages en temps réel.")
+                 : "Ton profil devient visible des autres musiciens — annonces SOS et messages en temps réel.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -116,6 +132,11 @@ struct AccountSheet: View {
     private var signInCard: some View {
         JCCard {
             VStack(alignment: .leading, spacing: 14) {
+                Picker("Mode", selection: $mode) {
+                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+
                 Text("E-mail")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
@@ -126,26 +147,21 @@ struct AccountSheet: View {
                     .autocorrectionDisabled()
                     .padding(12)
                     .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .disabled(codeSent)
 
-                if codeSent {
-                    Text("E-mail envoyé ! Ouvre le lien sur cet iPhone — ou entre le code s'il y en a un :")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    TextField("123456", text: $code)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                        .font(.title3.weight(.bold).monospaced())
-                        .padding(12)
-                        .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
+                Text("Mot de passe")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                SecureField(mode == .signUp ? "8 caractères minimum" : "Ton mot de passe", text: $password)
+                    .textContentType(mode == .signUp ? .newPassword : .password)
+                    .padding(12)
+                    .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 Button {
-                    codeSent ? verify() : sendCode()
+                    submit()
                 } label: {
                     HStack {
                         if isWorking { ProgressView().tint(.white) }
-                        Text(codeSent ? "Valider le code" : "Recevoir mon lien de connexion")
+                        Text(mode.rawValue)
                             .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
@@ -154,15 +170,13 @@ struct AccountSheet: View {
                     .foregroundStyle(.white)
                 }
                 .buttonStyle(PressableStyle())
-                .disabled(isWorking || cleanEmail.isEmpty || (codeSent && code.count < 6))
+                .disabled(isWorking || !canSubmit)
 
-                if codeSent {
-                    Button("Renvoyer un code") {
-                        codeSent = false
-                        code = ""
-                    }
-                    .font(.caption)
-                    .frame(maxWidth: .infinity)
+                if mode == .signIn {
+                    Button("Mot de passe oublié ?") { forgotPassword() }
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .disabled(isWorking || !cleanEmail.contains("@"))
                 }
             }
         }
@@ -198,35 +212,48 @@ struct AccountSheet: View {
         }
     }
 
-    private func sendCode() {
+    private func submit() {
         guard let backend = store.backend else { return }
         isWorking = true
         errorText = nil
+        infoText = nil
+        let signUp = mode == .signUp
         Task {
             do {
-                try await backend.sendCode(email: cleanEmail)
-                codeSent = true
+                let userID = signUp
+                    ? try await backend.signUp(email: cleanEmail, password: password)
+                    : try await backend.signIn(email: cleanEmail, password: password)
+                await store.didSignIn(userID: userID)
+                dismiss()
             } catch {
-                errorText = "Envoi du code impossible — vérifie l'adresse et le réseau."
+                let message = error.localizedDescription.lowercased()
+                if signUp, message.contains("already registered") {
+                    errorText = "Un compte existe déjà avec cet e-mail — connecte-toi."
+                    mode = .signIn
+                } else if !signUp, message.contains("invalid login credentials") {
+                    errorText = "E-mail ou mot de passe incorrect."
+                } else if message.contains("password") {
+                    errorText = "Mot de passe trop court : 8 caractères minimum."
+                } else {
+                    errorText = signUp
+                        ? "Création du compte impossible — vérifie le réseau."
+                        : "Connexion impossible — vérifie le réseau."
+                }
             }
             isWorking = false
         }
     }
 
-    private func verify() {
+    private func forgotPassword() {
         guard let backend = store.backend else { return }
         isWorking = true
         errorText = nil
         Task {
             do {
-                let userID = try await backend.verifyCode(
-                    email: cleanEmail,
-                    code: code.trimmingCharacters(in: .whitespaces)
-                )
-                await store.didSignIn(userID: userID)
-                dismiss()
+                try await backend.requestPasswordReset(email: cleanEmail)
+                infoText = "E-mail de réinitialisation envoyé à \(cleanEmail)."
             } catch {
-                errorText = "Code invalide ou expiré — réessaie."
+                errorText = "Envoi impossible — vérifie l'adresse et le réseau."
             }
             isWorking = false
         }

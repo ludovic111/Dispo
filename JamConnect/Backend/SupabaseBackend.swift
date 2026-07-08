@@ -23,36 +23,30 @@ final class SupabaseBackend: Sendable {
         (try? await client.auth.session)?.user.email
     }
 
-    /// URL de retour du lien magique (schéma custom de l'app).
+    /// URL de retour des liens d'auth (réinitialisation de mot de passe…).
     static let authCallbackURL = URL(string: "dispo://login-callback")!
 
-    /// Envoie l'e-mail de connexion (crée le compte au premier envoi).
-    /// En local (Mailpit), l'e-mail contient le code à 6 chiffres ; en
-    /// hébergé, un lien magique qui rouvre l'app déjà connectée.
-    func sendCode(email: String) async throws {
-        try await client.auth.signInWithOTP(
-            email: email,
-            redirectTo: Self.authCallbackURL,
-            shouldCreateUser: true
-        )
-    }
-
-    /// Termine la connexion par lien magique (onOpenURL).
-    func handleAuthCallback(_ url: URL) async throws -> UUID {
-        let session = try await client.auth.session(from: url)
-        return session.user.id
-    }
-
-    /// Vérifie le code reçu et ouvre la session.
-    func verifyCode(email: String, code: String) async throws -> UUID {
-        let response = try await client.auth.verifyOTP(email: email, token: code, type: .email)
+    /// Crée un compte e-mail + mot de passe. La confirmation d'e-mail est
+    /// désactivée : la session s'ouvre immédiatement.
+    func signUp(email: String, password: String) async throws -> UUID {
+        let response = try await client.auth.signUp(email: email, password: password)
         return response.user.id
     }
 
-    /// Connexion par mot de passe — utilisée avec les comptes du seed local
-    /// (« prenom@demo.dispo.ch » / « jamconnect-demo »).
+    /// Connexion e-mail + mot de passe.
     func signIn(email: String, password: String) async throws -> UUID {
         let session = try await client.auth.signIn(email: email, password: password)
+        return session.user.id
+    }
+
+    /// Envoie l'e-mail de réinitialisation du mot de passe.
+    func requestPasswordReset(email: String) async throws {
+        try await client.auth.resetPasswordForEmail(email, redirectTo: Self.authCallbackURL)
+    }
+
+    /// Termine une connexion par lien (réinitialisation) via onOpenURL.
+    func handleAuthCallback(_ url: URL) async throws -> UUID {
+        let session = try await client.auth.session(from: url)
         return session.user.id
     }
 
