@@ -12,7 +12,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: YYJU63HSD4
     MARKETING_VERSION: "0.9.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "2"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -37,7 +37,8 @@ targets:
       path: JamConnect/Info.plist
       properties:
         CFBundleDisplayName: Dispo
-        CFBundleShortVersionString: "0.8.0"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDevelopmentRegion: fr
         # Langues proposées dans l'app (sélecteur onboarding + profil).
         CFBundleLocalizations: [fr, en, es, de, it, zh-Hans, ja]

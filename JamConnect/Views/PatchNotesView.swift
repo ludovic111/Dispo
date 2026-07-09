@@ -17,7 +17,8 @@ struct PatchNote: Identifiable {
                 "Membres Permanent ou Occasionnel — le leader bascule d'un tap",
                 "Confirmation de présence (Dispo / Indispo) sur chaque événement",
                 "Rappel automatique pour confirmer, alerte leader 2 jours avant si indispo",
-                "Sur l'accueil : inviter en un tap les musiciens déjà dispo ce jour-là"
+                "Sur l'accueil : inviter en un tap les musiciens déjà dispo ce jour-là",
+                "Groupes, membres et présence synchronisés sur Supabase"
             ]
         ),
         PatchNote(

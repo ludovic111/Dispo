@@ -875,6 +875,22 @@ enum GroupMemberKind: String, Codable, CaseIterable, Identifiable {
 
     var label: String { rawValue }
 
+    /// Valeur stockée côté Supabase (`group_members.kind`).
+    var dbValue: String {
+        switch self {
+        case .permanent: return "permanent"
+        case .occasional: return "occasional"
+        }
+    }
+
+    init?(dbValue: String) {
+        switch dbValue {
+        case "permanent": self = .permanent
+        case "occasional": self = .occasional
+        default: return nil
+        }
+    }
+
     var symbol: String {
         switch self {
         case .permanent: return "person.fill.checkmark"
@@ -890,6 +906,24 @@ enum AttendanceStatus: String, Codable, CaseIterable, Identifiable {
     case unavailable = "Indispo"
 
     var id: String { rawValue }
+
+    /// Valeur stockée côté Supabase (`event_attendance.status`).
+    var dbValue: String {
+        switch self {
+        case .pending: return "pending"
+        case .available: return "available"
+        case .unavailable: return "unavailable"
+        }
+    }
+
+    init?(dbValue: String) {
+        switch dbValue {
+        case "pending": self = .pending
+        case "available": self = .available
+        case "unavailable": self = .unavailable
+        default: return nil
+        }
+    }
 
     var shortLabel: String {
         switch self {
@@ -931,7 +965,7 @@ struct GroupEvent: Codable, Identifiable, Hashable {
 /// Un groupe de musique : le leader (créateur, forcément Premium) gère les
 /// membres, le répertoire et les événements ; les membres — Premium ou non —
 /// discutent, partagent des partitions et font des suggestions.
-/// Local pour l'instant — synchronisation serveur en phase 2b.
+/// Synchronisé via Supabase en mode live ; messages/partitions restent locaux.
 struct GroupChat: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var name: String

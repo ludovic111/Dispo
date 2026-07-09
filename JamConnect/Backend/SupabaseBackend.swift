@@ -459,4 +459,303 @@ final class SupabaseBackend: Sendable {
         }
         return decoder
     }()
+
+    // MARK: - Groupes (noyau fixe + présence)
+
+    struct MusicGroupRow: Codable {
+        var id: UUID
+        var name: String
+        var emoji: String
+        var leaderId: UUID
+        var repertoire: [SongPayload]
+
+        enum CodingKeys: String, CodingKey {
+            case id, name, emoji, repertoire
+            case leaderId = "leader_id"
+        }
+    }
+
+    struct GroupMemberRow: Codable {
+        var groupId: UUID
+        var profileId: UUID
+        var kind: String
+
+        enum CodingKeys: String, CodingKey {
+            case kind
+            case groupId = "group_id"
+            case profileId = "profile_id"
+        }
+    }
+
+    struct GroupEventRow: Codable {
+        var id: UUID
+        var groupId: UUID
+        var kind: String
+        var title: String
+        var venue: String
+        var date: Date
+        var setlist: [SongPayload]
+
+        enum CodingKeys: String, CodingKey {
+            case id, kind, title, venue, date, setlist
+            case groupId = "group_id"
+        }
+    }
+
+    struct EventAttendanceRow: Codable {
+        var eventId: UUID
+        var profileId: UUID
+        var status: String
+
+        enum CodingKeys: String, CodingKey {
+            case status
+            case eventId = "event_id"
+            case profileId = "profile_id"
+        }
+    }
+
+    /// Forme JSON des morceaux (répertoire / setlist) côté Postgres.
+    struct SongPayload: Codable, Hashable {
+        var id: UUID
+        var title: String
+        var artist: String
+        var artworkURL: String?
+        var suggestedBy: String
+        var isApproved: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id, title, artist
+            case artworkURL = "artwork_url"
+            case suggestedBy = "suggested_by"
+            case isApproved = "is_approved"
+        }
+
+        init(from song: Song) {
+            id = song.id
+            title = song.title
+            artist = song.artist
+            artworkURL = song.artworkURL
+            suggestedBy = song.suggestedBy
+            isApproved = song.isApproved
+        }
+
+        var asSong: Song {
+            Song(
+                id: id,
+                title: title,
+                artist: artist,
+                artworkURL: artworkURL,
+                suggestedBy: suggestedBy,
+                isApproved: isApproved
+            )
+        }
+    }
+
+    /// Charge les groupes dont je suis membre (RLS), avec membres, événements
+    /// et présence. Les messages / partitions restent locaux à l'appareil.
+    func fetchGroups(myID: UUID, myName: String, nameByID: [UUID: String]) async throws -> [GroupChat] {
+        let groupRows: [MusicGroupRow] = try await client.from("music_groups")
+            .select()
+            .order("created_at", ascending: false)
+            .execute().value
+        guard !groupRows.isEmpty else { return [] }
+
+        let groupIDs = groupRows.map(\.id.uuidString)
+        async let membersTask: [GroupMemberRow] = client.from("group_members")
+            .select()
+            .in("group_id", values: groupIDs)
+            .execute().value
+        async let eventsTask: [GroupEventRow] = client.from("group_events")
+            .select()
+            .in("group_id", values: groupIDs)
+            .order("date")
+            .execute().value
+        let (members, events) = try await (membersTask, eventsTask)
+
+        let eventIDs = events.map(\.id.uuidString)
+        let attendance: [EventAttendanceRow]
+        if eventIDs.isEmpty {
+            attendance = []
+        } else {
+            attendance = try await client.from("event_attendance")
+                .select()
+                .in("event_id", values: eventIDs)
+                .execute().value
+        }
+
+        let membersByGroup = Dictionary(grouping: members, by: \.groupId)
+        let eventsByGroup = Dictionary(grouping: events, by: \.groupId)
+        let attendanceByEvent = Dictionary(grouping: attendance, by: \.eventId)
+
+        return groupRows.map { row in
+            let leaderName = row.leaderId == myID ? nil : nameByID[row.leaderId]
+            let memberRows = (membersByGroup[row.id] ?? [])
+                .filter { $0.profileId != row.leaderId }
+            let memberNames = memberRows.compactMap { nameByID[$0.profileId] }.sorted()
+            var kinds: [String: GroupMemberKind] = [:]
+            for member in memberRows {
+                if let name = nameByID[member.profileId],
+                   let kind = GroupMemberKind(dbValue: member.kind) {
+                    kinds[name] = kind
+                }
+            }
+
+            let mappedEvents: [GroupEvent] = (eventsByGroup[row.id] ?? []).map { event in
+                var attendanceMap: [String: AttendanceStatus] = [:]
+                for entry in attendanceByEvent[event.id] ?? [] {
+                    let name = entry.profileId == myID ? myName : (nameByID[entry.profileId] ?? "")
+                    guard !name.isEmpty, let status = AttendanceStatus(dbValue: entry.status) else { continue }
+                    attendanceMap[name] = status
+                }
+                return GroupEvent(
+                    id: event.id,
+                    kind: GroupEventKind(rawValue: event.kind) ?? .jam,
+                    title: event.title,
+                    venue: event.venue,
+                    date: event.date,
+                    setlist: event.setlist.map(\.asSong),
+                    attendance: attendanceMap
+                )
+            }
+
+            return GroupChat(
+                id: row.id,
+                name: row.name,
+                emoji: row.emoji,
+                leaderName: leaderName,
+                memberNames: memberNames,
+                memberKinds: kinds,
+                messages: [],
+                docs: [],
+                repertoire: row.repertoire.map(\.asSong),
+                events: mappedEvents
+            )
+        }
+    }
+
+    @discardableResult
+    func createGroup(
+        id: UUID = UUID(),
+        name: String,
+        emoji: String,
+        leaderID: UUID,
+        memberIDs: [(UUID, GroupMemberKind)]
+    ) async throws -> UUID {
+        struct Insert: Encodable {
+            let id: UUID
+            let name: String
+            let emoji: String
+            let leader_id: UUID
+        }
+        try await client.from("music_groups")
+            .insert(Insert(id: id, name: name, emoji: emoji, leader_id: leaderID))
+            .execute()
+        // Le trigger ajoute déjà le leader ; on invite les autres.
+        for (memberID, kind) in memberIDs where memberID != leaderID {
+            try await inviteMember(memberID, to: id, kind: kind)
+        }
+        return id
+    }
+
+    func inviteMember(_ profileID: UUID, to groupID: UUID, kind: GroupMemberKind) async throws {
+        struct Insert: Encodable {
+            let group_id: UUID
+            let profile_id: UUID
+            let kind: String
+        }
+        try await client.from("group_members")
+            .upsert(Insert(group_id: groupID, profile_id: profileID, kind: kind.dbValue))
+            .execute()
+    }
+
+    func setMemberKind(_ profileID: UUID, _ kind: GroupMemberKind, in groupID: UUID) async throws {
+        try await client.from("group_members")
+            .update(["kind": kind.dbValue])
+            .eq("group_id", value: groupID)
+            .eq("profile_id", value: profileID)
+            .execute()
+    }
+
+    func kickMember(_ profileID: UUID, from groupID: UUID) async throws {
+        try await client.from("group_members")
+            .delete()
+            .eq("group_id", value: groupID)
+            .eq("profile_id", value: profileID)
+            .execute()
+    }
+
+    func transferLeadership(of groupID: UUID, to profileID: UUID) async throws {
+        try await client.from("music_groups")
+            .update(["leader_id": profileID.uuidString])
+            .eq("id", value: groupID)
+            .execute()
+        // Le nouveau leader reste membre permanent.
+        try await setMemberKind(profileID, .permanent, in: groupID)
+    }
+
+    func deleteGroup(_ groupID: UUID) async throws {
+        try await client.from("music_groups").delete().eq("id", value: groupID).execute()
+    }
+
+    func createEvent(_ event: GroupEvent, groupID: UUID) async throws {
+        struct Insert: Encodable {
+            let id: UUID
+            let group_id: UUID
+            let kind: String
+            let title: String
+            let venue: String
+            let date: Date
+            let setlist: [SongPayload]
+        }
+        try await client.from("group_events")
+            .insert(Insert(
+                id: event.id,
+                group_id: groupID,
+                kind: event.kind.rawValue,
+                title: event.title,
+                venue: event.venue,
+                date: event.date,
+                setlist: event.setlist.map(SongPayload.init(from:))
+            ))
+            .execute()
+    }
+
+    func deleteEvent(_ eventID: UUID) async throws {
+        try await client.from("group_events").delete().eq("id", value: eventID).execute()
+    }
+
+    func setAttendance(
+        _ status: AttendanceStatus,
+        eventID: UUID,
+        profileID: UUID
+    ) async throws {
+        struct Upsert: Encodable {
+            let event_id: UUID
+            let profile_id: UUID
+            let status: String
+        }
+        try await client.from("event_attendance")
+            .upsert(Upsert(
+                event_id: eventID,
+                profile_id: profileID,
+                status: status.dbValue
+            ))
+            .execute()
+    }
+
+    func updateGroupRepertoire(_ songs: [Song], groupID: UUID) async throws {
+        struct Update: Encodable { let repertoire: [SongPayload] }
+        try await client.from("music_groups")
+            .update(Update(repertoire: songs.map(SongPayload.init(from:))))
+            .eq("id", value: groupID)
+            .execute()
+    }
+
+    func updateEventSetlist(_ songs: [Song], eventID: UUID) async throws {
+        struct Update: Encodable { let setlist: [SongPayload] }
+        try await client.from("group_events")
+            .update(Update(setlist: songs.map(SongPayload.init(from:))))
+            .eq("id", value: eventID)
+            .execute()
+    }
 }

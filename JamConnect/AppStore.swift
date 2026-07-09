@@ -251,23 +251,64 @@ final class AppStore: ObservableObject {
         await startMessageStream()
     }
 
-    /// Recharge musiciens, annonces et conversations depuis le serveur.
+    /// Recharge musiciens, annonces, conversations et groupes depuis le serveur.
     func refreshLiveData() async {
         guard let backend, let userID = liveUserID else { return }
         do {
             async let musiciansTask = backend.fetchMusicians(excluding: userID)
             async let gigsTask = backend.fetchGigs(myID: userID)
             async let conversationsTask = backend.fetchConversations(myID: userID)
-            let (m, g, c) = try await (musiciansTask, gigsTask, conversationsTask)
+            async let profilesTask = backend.fetchProfiles()
+            let (m, g, c, profiles) = try await (
+                musiciansTask, gigsTask, conversationsTask, profilesTask
+            )
             musicians = m
             events = g.sorted { $0.date < $1.date }
             notifyNewGigs(g)
             conversations = c.sorted {
                 ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
+            let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
+            let remoteGroups = try await backend.fetchGroups(
+                myID: userID,
+                myName: profile.name,
+                nameByID: nameByID
+            )
+            // Messages / partitions restent locaux — on les rattache au même id.
+            let localByID = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
+            groups = remoteGroups.map { remote in
+                var merged = remote
+                if let local = localByID[remote.id] {
+                    merged.messages = local.messages
+                    merged.docs = local.docs
+                }
+                return merged
+            }
+            persistGroups()
+            rescheduleAllAttendanceNotifications()
             backendError = nil
         } catch {
             backendError = tr("Connexion au serveur impossible — vérifie le réseau.")
+        }
+    }
+
+    /// UUID profil pour un nom affiché (moi ou musicien du feed).
+    private func profileID(for name: String) -> UUID? {
+        if name == profile.name { return liveUserID }
+        return musicians.first(where: { $0.name == name })?.id
+    }
+
+    /// Exécute une écriture serveur sans bloquer l'UI ; remonte l'erreur.
+    private func syncLive(_ work: @escaping () async throws -> Void) {
+        guard isLive, let _ = backend else { return }
+        Task { [weak self] in
+            do {
+                try await work()
+            } catch {
+                await MainActor.run {
+                    self?.backendError = self?.tr("La synchro groupe a échoué — réessaie.")
+                }
+            }
         }
     }
 
@@ -620,6 +661,8 @@ final class AppStore: ObservableObject {
     // MARK: - Groupes (Premium)
 
     private func persistGroups() {
+        // En live, le serveur fait foi ; on garde une copie locale pour
+        // messages / partitions et pour le mode hors-ligne.
         Self.save(groups, key: Self.groupsKey)
     }
 
@@ -638,7 +681,23 @@ final class AppStore: ObservableObject {
         )
         groups.insert(group, at: 0)
         persistGroups()
-        scheduleDemoSuggestion(for: group.id)
+        if let backend, let userID = liveUserID {
+            let memberIDs: [(UUID, GroupMemberKind)] = members.compactMap { name in
+                guard let id = profileID(for: name) else { return nil }
+                return (id, .permanent)
+            }
+            syncLive {
+                _ = try await backend.createGroup(
+                    id: group.id,
+                    name: name,
+                    emoji: emoji,
+                    leaderID: userID,
+                    memberIDs: memberIDs
+                )
+            }
+        } else {
+            scheduleDemoSuggestion(for: group.id)
+        }
     }
 
     /// Suis-je le leader de ce groupe ? leaderName == nil ⇒ moi (le titre ne
@@ -682,6 +741,9 @@ final class AppStore: ObservableObject {
             kinds[name] = kind
             $0.memberKinds = kinds
         }
+        if let backend, let profileID = profileID(for: name) {
+            syncLive { try await backend.inviteMember(profileID, to: group.id, kind: kind) }
+        }
     }
 
     /// Permanent ↔ occasionnel — le noyau fixe du groupe.
@@ -690,6 +752,9 @@ final class AppStore: ObservableObject {
             var kinds = $0.memberKinds ?? [:]
             kinds[name] = kind
             $0.memberKinds = kinds
+        }
+        if let backend, let profileID = profileID(for: name) {
+            syncLive { try await backend.setMemberKind(profileID, kind, in: group.id) }
         }
     }
 
@@ -707,10 +772,19 @@ final class AppStore: ObservableObject {
                 return event
             }
         }
+        if let backend, let profileID = profileID(for: name) {
+            syncLive { try await backend.kickMember(profileID, from: group.id) }
+        }
     }
 
     /// Transfère le leadership — uniquement vers un membre Premium.
     func transferLeadership(of group: GroupChat, to name: String) {
+        if isLive {
+            guard let backend, let profileID = profileID(for: name) else { return }
+            updateGroup(group.id) { $0.leaderName = name }
+            syncLive { try await backend.transferLeadership(of: group.id, to: profileID) }
+            return
+        }
         guard isPremiumMusician(name) else { return }
         updateGroup(group.id) { $0.leaderName = name }
     }
@@ -751,6 +825,7 @@ final class AppStore: ObservableObject {
                 group.repertoire = group.songs.filter { $0.id != song.id }
             }
         }
+        syncSongs(groupID: groupID, eventID: eventID)
     }
 
     private func insertSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID?) {
@@ -764,6 +839,7 @@ final class AppStore: ObservableObject {
                 group.repertoire = group.songs + [song]
             }
         }
+        syncSongs(groupID: groupID, eventID: eventID)
     }
 
     private func updateSong(_ songID: Song.ID, in groupID: GroupChat.ID, eventID: GroupEvent.ID?, _ transform: (inout Song) -> Void) {
@@ -777,6 +853,20 @@ final class AppStore: ObservableObject {
                 transform(&repertoire[songIndex])
                 group.repertoire = repertoire
             }
+        }
+        syncSongs(groupID: groupID, eventID: eventID)
+    }
+
+    /// Pousse répertoire / setlist vers Supabase après une mutation locale.
+    private func syncSongs(groupID: GroupChat.ID, eventID: GroupEvent.ID?) {
+        guard let backend, isLive,
+              let group = groups.first(where: { $0.id == groupID })
+        else { return }
+        if let eventID,
+           let event = group.allEvents.first(where: { $0.id == eventID }) {
+            syncLive { try await backend.updateEventSetlist(event.setlist, eventID: eventID) }
+        } else {
+            syncLive { try await backend.updateGroupRepertoire(group.songs, groupID: groupID) }
         }
     }
 
@@ -809,12 +899,19 @@ final class AppStore: ObservableObject {
             $0.events?.sort { $0.date < $1.date }
         }
         scheduleAttendanceReminders(for: event, in: group)
-        scheduleDemoSuggestion(for: group.id, eventID: event.id)
+        if let backend, isLive {
+            syncLive { try await backend.createEvent(event, groupID: group.id) }
+        } else {
+            scheduleDemoSuggestion(for: group.id, eventID: event.id)
+        }
     }
 
     func removeEvent(_ event: GroupEvent, from group: GroupChat) {
         cancelAttendanceNotifications(for: event)
         updateGroup(group.id) { $0.events?.removeAll { $0.id == event.id } }
+        if let backend, isLive {
+            syncLive { try await backend.deleteEvent(event.id) }
+        }
     }
 
     // MARK: Présence (RSVP)
@@ -845,6 +942,10 @@ final class AppStore: ObservableObject {
             scheduleUnavailableAlert(for: event, member: member, in: group)
         } else {
             cancelNotification(id: Self.unavailableAlertID(eventID: eventID, member: member))
+        }
+
+        if let backend, isLive, let profileID = profileID(for: member) {
+            syncLive { try await backend.setAttendance(status, eventID: eventID, profileID: profileID) }
         }
     }
 
@@ -1014,6 +1115,9 @@ final class AppStore: ObservableObject {
         }
         groups.removeAll { $0.id == group.id }
         persistGroups()
+        if let backend, isLive {
+            syncLive { try await backend.deleteGroup(group.id) }
+        }
     }
 
     private func updateGroup(_ id: GroupChat.ID, _ transform: (inout GroupChat) -> Void) {
