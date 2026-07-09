@@ -11,6 +11,16 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.0",
+            title: "Noyau fixe, présence & invitations",
+            points: [
+                "Membres Permanent ou Occasionnel — le leader bascule d'un tap",
+                "Confirmation de présence (Dispo / Indispo) sur chaque événement",
+                "Rappel automatique pour confirmer, alerte leader 2 jours avant si indispo",
+                "Sur l'accueil : inviter en un tap les musiciens déjà dispo ce jour-là"
+            ]
+        ),
+        PatchNote(
             version: "0.8.0",
             title: "Vrais groupes, profils façon Insta & invitations",
             points: [

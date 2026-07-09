@@ -38,6 +38,8 @@ struct HomeView: View {
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
     @State private var showMap = false
+    /// Musicien en cours d'invitation depuis l'accueil (un tap).
+    @State private var invitingName: String?
 
     private var filtered: [Musician] {
         // Amis / suivis / abonnés d'abord, puis niveau (Premium seulement),
@@ -50,6 +52,17 @@ struct HomeView: View {
     /// Mobilisables immédiatement — la rangée d'urgence.
     private var availableTonight: [Musician] {
         store.musicians.filter { $0.availability == .tonight }
+    }
+
+    /// Prochain événement de groupe (7 jours) — pour le rappel + invitations.
+    private var nextGroupEvent: (group: GroupChat, event: GroupEvent)? {
+        let next = store.groups
+            .flatMap { group in group.upcomingEvents.map { (group, $0) } }
+            .min { $0.1.date < $1.1.date }
+        guard let (group, event) = next,
+              event.date < Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+        else { return nil }
+        return (group, event)
     }
 
     private var greeting: LocalizedStringKey {
@@ -67,6 +80,7 @@ struct HomeView: View {
                         header
                         searchBar
                         groupEventReminder
+                        availableInviteRow
                         tonightRow
                         actionBar
 
@@ -154,38 +168,154 @@ struct HomeView: View {
     /// Prochain événement d'un de mes groupes — le pont accueil ↔ groupes.
     @ViewBuilder
     private var groupEventReminder: some View {
-        let next: (GroupChat, GroupEvent)? = store.groups
-            .flatMap { group in group.upcomingEvents.map { (group, $0) } }
-            .min { $0.1.date < $1.1.date }
-        if let (group, event) = next,
-           event.date < Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date() {
-            NavigationLink(value: group.id) {
-                HStack(spacing: 11) {
-                    Text(event.kind.emoji)
-                        .font(.title3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: "\(group.emoji) \(group.name) — \(event.title)")
+        if let (group, event) = nextGroupEvent {
+            let myStatus = event.status(for: store.profile.name)
+            VStack(spacing: 10) {
+                NavigationLink(value: group.id) {
+                    HStack(spacing: 11) {
+                        Text(event.kind.emoji)
+                            .font(.title3)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: "\(group.emoji) \(group.name) — \(event.title)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month())) · \(event.venue)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month())) · \(event.venue)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .foregroundStyle(.tertiary)
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.tertiary)
                 }
-                .padding(12)
-                .background(JC.violet.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .buttonStyle(PressableStyle())
+
+                if myStatus == .pending {
+                    HStack(spacing: 8) {
+                        Text("Tu viens ?")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                        Button {
+                            store.setAttendance(.available, eventID: event.id, in: group.id)
+                        } label: {
+                            Text("Dispo")
+                                .font(.caption.weight(.heavy))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Color.green, in: Capsule())
+                        }
+                        .buttonStyle(PressableStyle())
+                        Button {
+                            store.setAttendance(.unavailable, eventID: event.id, in: group.id)
+                        } label: {
+                            Text("Indispo")
+                                .font(.caption.weight(.heavy))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(JC.coral, in: Capsule())
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: myStatus == .available ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(myStatus == .available ? Color.green : JC.coral)
+                        Text(myStatus == .available ? "Tu as confirmé ta présence" : "Tu as indiqué être indispo")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+            .padding(12)
+            .background(JC.violet.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(JC.violet.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+
+    /// Musiciens déjà dispo le jour de l'événement — invitation en un tap.
+    @ViewBuilder
+    private var availableInviteRow: some View {
+        if let (group, event) = nextGroupEvent,
+           store.canLead(group) {
+            let invitees = store.availableInvitees(for: event, in: group)
+            if !invitees.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.badge.plus")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(JC.violet)
+                        Text("Dispos pour \(event.title)")
+                            .font(.subheadline.weight(.bold))
+                            .lineLimit(1)
+                        Spacer()
+                        Text("\(invitees.count)")
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(JC.violet)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(JC.violet.opacity(0.14), in: Capsule())
+                    }
+                    Text("Un tap pour inviter — ils rejoignent l'événement directement.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(invitees.prefix(12)) { musician in
+                                VStack(spacing: 8) {
+                                    AvatarView(name: musician.name, size: 52, photo: musician.photo)
+                                    Text(musician.name.split(separator: " ").first.map(String.init) ?? musician.name)
+                                        .font(.caption2.weight(.semibold))
+                                        .lineLimit(1)
+                                        .frame(width: 72)
+                                    Button {
+                                        guard invitingName == nil else { return }
+                                        invitingName = musician.name
+                                        Task {
+                                            await store.inviteAvailable(musician, to: event, in: group)
+                                            invitingName = nil
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            if invitingName == musician.name {
+                                                ProgressView().controlSize(.mini)
+                                            } else {
+                                                Image(systemName: "paperplane.fill")
+                                                    .font(.system(size: 9, weight: .bold))
+                                            }
+                                            Text("Inviter")
+                                                .font(.caption2.weight(.heavy))
+                                        }
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(JC.violet, in: Capsule())
+                                    }
+                                    .buttonStyle(PressableStyle())
+                                    .disabled(invitingName != nil)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                .padding(14)
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(JC.violet.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(JC.cardStroke, lineWidth: 1)
                 )
             }
-            .buttonStyle(PressableStyle())
         }
     }
 

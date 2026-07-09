@@ -399,6 +399,27 @@ struct GroupChatView: View {
                                     Text("Setlist : \(event.setlist.filter(\.isApproved).count) morceaux")
                                         .font(.caption2.weight(.bold))
                                         .foregroundStyle(JC.violet)
+                                    let available = event.availableNames.count
+                                    let total = store.roster(of: group).count
+                                    let myStatus = event.status(for: store.profile.name)
+                                    HStack(spacing: 8) {
+                                        Text("Présence : \(available)/\(total)")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                        if myStatus == .pending {
+                                            Text("À confirmer")
+                                                .font(.caption2.weight(.heavy))
+                                                .foregroundStyle(JC.coral)
+                                        } else if myStatus == .available {
+                                            Text("Tu es dispo")
+                                                .font(.caption2.weight(.heavy))
+                                                .foregroundStyle(Color.green)
+                                        } else {
+                                            Text("Tu es indispo")
+                                                .font(.caption2.weight(.heavy))
+                                                .foregroundStyle(JC.coral)
+                                        }
+                                    }
                                 }
                                 .padding(12)
                                 Spacer(minLength: 0)
@@ -680,7 +701,7 @@ struct GroupMembersSheet: View {
                             }
 
                             if isLeader {
-                                Text("Le leadership ne peut être transmis qu'à un membre Premium.")
+                                Text("Le leadership ne peut être transmis qu'à un membre Premium. Marque chaque membre Permanent (noyau) ou Occasionnel.")
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                                     .padding(.top, 4)
@@ -717,7 +738,8 @@ struct GroupMembersSheet: View {
     }
 
     private func memberRow(name: String, isMe: Bool, isLeaderRow: Bool, isPremiumMember: Bool, group: GroupChat) -> some View {
-        JCCard(padding: 11) {
+        let kind = group.memberKind(for: name)
+        return JCCard(padding: 11) {
             HStack(spacing: 11) {
                 AvatarView(name: name, size: 42, photo: store.photo(forName: name))
                 VStack(alignment: .leading, spacing: 2) {
@@ -739,15 +761,39 @@ struct GroupMembersSheet: View {
                             .foregroundStyle(JC.gold)
                         }
                     }
-                    if isPremiumMember {
-                        Text("Premium")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(JC.gold)
+                    HStack(spacing: 6) {
+                        if isPremiumMember {
+                            Text("Premium")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(JC.gold)
+                        }
+                        // Le leader est toujours le noyau ; les autres ont un statut.
+                        if !isLeaderRow {
+                            Label(kind.label, systemImage: kind.symbol)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(kind == .permanent ? JC.violet : .secondary)
+                        }
                     }
                 }
                 Spacer(minLength: 0)
                 if isLeader && !isMe {
                     Menu {
+                        if !isLeaderRow {
+                            Button {
+                                store.setMemberKind(
+                                    name,
+                                    kind == .permanent ? .occasional : .permanent,
+                                    in: group
+                                )
+                            } label: {
+                                Label(
+                                    kind == .permanent ? "Passer en occasionnel" : "Passer en permanent",
+                                    systemImage: kind == .permanent
+                                        ? GroupMemberKind.occasional.symbol
+                                        : GroupMemberKind.permanent.symbol
+                                )
+                            }
+                        }
                         if isPremiumMember {
                             Button {
                                 pendingLeader = name
@@ -873,6 +919,8 @@ struct GroupEventSheet: View {
                                 }
                             }
 
+                            attendanceCard(event: event, group: group)
+
                             // Un membre lâche ? SOS pré-rempli — le réflexe Dispo.
                             Button {
                                 dismiss()
@@ -967,6 +1015,115 @@ struct GroupEventSheet: View {
             .sheet(isPresented: $addingSong) {
                 AddSongSheet(groupID: groupID, eventID: eventID)
                     .presentationDetents([.medium])
+            }
+        }
+    }
+
+    /// Confirmation de présence — un tap Oui / Non, plus le tableau pour le leader.
+    @ViewBuilder
+    private func attendanceCard(event: GroupEvent, group: GroupChat) -> some View {
+        let myStatus = event.status(for: store.profile.name)
+        let pending = store.pendingAttendance(for: event, in: group)
+        let available = event.availableNames
+        let unavailable = event.unavailableNames
+
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Ta présence", systemImage: "person.crop.circle.badge.questionmark")
+                        .font(.subheadline.weight(.bold))
+                    Spacer()
+                    Text("\(available.count)/\(store.roster(of: group).count)")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(JC.violet)
+                }
+
+                HStack(spacing: 10) {
+                    attendanceButton(
+                        title: "Dispo",
+                        symbol: "checkmark.circle.fill",
+                        color: Color.green,
+                        selected: myStatus == .available
+                    ) {
+                        store.setAttendance(.available, eventID: eventID, in: groupID)
+                    }
+                    attendanceButton(
+                        title: "Indispo",
+                        symbol: "xmark.circle.fill",
+                        color: JC.coral,
+                        selected: myStatus == .unavailable
+                    ) {
+                        store.setAttendance(.unavailable, eventID: eventID, in: groupID)
+                    }
+                }
+
+                if myStatus == .pending {
+                    Text("Un rappel te sera envoyé pour confirmer.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else if myStatus == .unavailable {
+                    Text("Le leader sera alerté 2 jours avant pour trouver un remplaçant.")
+                        .font(.caption2)
+                        .foregroundStyle(JC.coral)
+                }
+
+                Divider().opacity(0.4)
+
+                attendanceSummaryRow(title: "Dispo", names: available, color: Color.green)
+                attendanceSummaryRow(title: "Indispo", names: unavailable, color: JC.coral)
+                attendanceSummaryRow(title: "En attente", names: pending, color: .secondary)
+            }
+        }
+    }
+
+    private func attendanceButton(
+        title: LocalizedStringKey,
+        symbol: String,
+        color: Color,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol)
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                selected ? color.opacity(0.18) : JC.cardStroke.opacity(0.35),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            )
+            .foregroundStyle(selected ? color : .secondary)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(selected ? color.opacity(0.55) : .clear, lineWidth: 1.5)
+            )
+        }
+        .buttonStyle(PressableStyle())
+    }
+
+    private func attendanceSummaryRow(title: LocalizedStringKey, names: [String], color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Circle().fill(color).frame(width: 7, height: 7)
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(color)
+                Text(verbatim: "· \(names.count)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            if names.isEmpty {
+                Text("—")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text(names.map { $0 == store.profile.name ? store.tr("Toi") : $0 }.joined(separator: ", "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

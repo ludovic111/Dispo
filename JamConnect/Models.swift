@@ -865,6 +865,41 @@ enum GroupEventKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Statut d'un membre dans le noyau du groupe : permanent (base fixe) ou
+/// occasionnel (remplaçant / invité ponctuel).
+enum GroupMemberKind: String, Codable, CaseIterable, Identifiable {
+    case permanent = "Permanent"
+    case occasional = "Occasionnel"
+
+    var id: String { rawValue }
+
+    var label: String { rawValue }
+
+    var symbol: String {
+        switch self {
+        case .permanent: return "person.fill.checkmark"
+        case .occasional: return "person.badge.clock"
+        }
+    }
+}
+
+/// Réponse de présence à un événement de groupe.
+enum AttendanceStatus: String, Codable, CaseIterable, Identifiable {
+    case pending = "En attente"
+    case available = "Dispo"
+    case unavailable = "Indispo"
+
+    var id: String { rawValue }
+
+    var shortLabel: String {
+        switch self {
+        case .pending: return "?"
+        case .available: return "Oui"
+        case .unavailable: return "Non"
+        }
+    }
+}
+
 /// Un événement du groupe (concert, répé, jam) avec sa propre setlist.
 /// Créé par le leader ; les membres suggèrent des morceaux qu'il valide.
 /// Relié aux SOS : si un membre lâche, SOS pré-rempli en un tap.
@@ -875,6 +910,22 @@ struct GroupEvent: Codable, Identifiable, Hashable {
     var venue: String
     var date: Date
     var setlist: [Song] = []
+    /// Présence par nom de membre (et le leader). Absent = pas encore répondu.
+    var attendance: [String: AttendanceStatus]?
+
+    var responses: [String: AttendanceStatus] { attendance ?? [:] }
+
+    func status(for name: String) -> AttendanceStatus {
+        responses[name] ?? .pending
+    }
+
+    var availableNames: [String] {
+        responses.filter { $0.value == .available }.map(\.key).sorted()
+    }
+
+    var unavailableNames: [String] {
+        responses.filter { $0.value == .unavailable }.map(\.key).sorted()
+    }
 }
 
 /// Un groupe de musique : le leader (créateur, forcément Premium) gère les
@@ -890,6 +941,8 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var leaderName: String?
     /// Membres (par nom) — moi en plus, implicitement.
     var memberNames: [String]
+    /// Permanent vs occasionnel, par nom. Absent = permanent (noyau par défaut).
+    var memberKinds: [String: GroupMemberKind]?
     var messages: [GroupMessage] = []
     var docs: [GroupDoc] = []
     /// Répertoire du groupe (morceaux validés + suggestions en attente).
@@ -908,6 +961,18 @@ struct GroupChat: Codable, Identifiable, Hashable {
     /// Suggestions de morceaux en attente de validation du leader.
     var pendingSongs: [Song] { songs.filter { !$0.isApproved } }
     var approvedSongs: [Song] { songs.filter { $0.isApproved } }
+
+    func memberKind(for name: String) -> GroupMemberKind {
+        memberKinds?[name] ?? .permanent
+    }
+
+    var permanentMembers: [String] {
+        memberNames.filter { memberKind(for: $0) == .permanent }
+    }
+
+    var occasionalMembers: [String] {
+        memberNames.filter { memberKind(for: $0) == .occasional }
+    }
 }
 
 // MARK: - Annonce SOS dépannage

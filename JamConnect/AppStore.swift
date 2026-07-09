@@ -165,6 +165,9 @@ final class AppStore: ObservableObject {
             groups = saved
         }
         UNUserNotificationCenter.current().delegate = notificationDelegate
+        // Reprogramme les rappels de présence au lancement (les triggers
+        // locaux survivent au kill, mais on resynchronise après un reset).
+        rescheduleAllAttendanceNotifications()
     }
 
     /// Profil par défaut de la démo.
@@ -518,8 +521,12 @@ final class AppStore: ObservableObject {
             let granted = (try? await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
             notificationsEnabled = granted
+            if granted {
+                rescheduleAllAttendanceNotifications()
+            }
         } else {
             notificationsEnabled = false
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         }
         UserDefaults.standard.set(notificationsEnabled, forKey: Self.notificationsKey)
     }
@@ -532,18 +539,43 @@ final class AppStore: ObservableObject {
         )
     }
 
-    private func pushLocal(title: String, body: String) {
+    private func pushLocal(
+        title: String,
+        body: String,
+        identifier: String = UUID().uuidString,
+        at date: Date? = nil
+    ) {
         guard notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        let trigger: UNNotificationTrigger?
+        if let date {
+            // Déjà passé : on n'envoie pas (évite une rafale au lancement).
+            guard date > Date().addingTimeInterval(5) else { return }
+            trigger = UNCalendarNotificationTrigger(
+                dateMatching: Calendar.current.dateComponents(
+                    [.year, .month, .day, .hour, .minute],
+                    from: date
+                ),
+                repeats: false
+            )
+        } else {
+            trigger = nil
+        }
         let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
+            identifier: identifier,
             content: content,
-            trigger: nil
+            trigger: trigger
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Annule une notif planifiée (ex. après confirmation de présence).
+    private func cancelNotification(id: String) {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [id])
     }
 
     /// Notifie les SOS fraîchement arrivés qui matchent mes instruments.
@@ -595,7 +627,15 @@ final class AppStore: ObservableObject {
     /// paywall sinon). Le créateur devient leader — représenté par
     /// leaderName == nil (« moi »), robuste à un futur renommage du profil.
     func createGroup(name: String, emoji: String, members: [String]) {
-        let group = GroupChat(name: name, emoji: emoji, leaderName: nil, memberNames: members)
+        // Les membres initiaux forment le noyau permanent du groupe.
+        let kinds = Dictionary(uniqueKeysWithValues: members.map { ($0, GroupMemberKind.permanent) })
+        let group = GroupChat(
+            name: name,
+            emoji: emoji,
+            leaderName: nil,
+            memberNames: members,
+            memberKinds: kinds
+        )
         groups.insert(group, at: 0)
         persistGroups()
         scheduleDemoSuggestion(for: group.id)
@@ -627,23 +667,43 @@ final class AppStore: ObservableObject {
 
     // MARK: Membres (leader uniquement — l'UI verrouille)
 
-    func inviteMember(_ name: String, to group: GroupChat) {
+    /// Noms de tous les participants du groupe (leader inclus).
+    func roster(of group: GroupChat) -> [String] {
+        ([leaderDisplayName(of: group)] + group.memberNames)
+            .filter { !$0.isEmpty }
+    }
+
+    func inviteMember(_ name: String, to group: GroupChat, kind: GroupMemberKind = .occasional) {
         updateGroup(group.id) {
             guard !$0.memberNames.contains(name) else { return }
             $0.memberNames.append(name)
             $0.memberNames.sort()
+            var kinds = $0.memberKinds ?? [:]
+            kinds[name] = kind
+            $0.memberKinds = kinds
+        }
+    }
+
+    /// Permanent ↔ occasionnel — le noyau fixe du groupe.
+    func setMemberKind(_ name: String, _ kind: GroupMemberKind, in group: GroupChat) {
+        updateGroup(group.id) {
+            var kinds = $0.memberKinds ?? [:]
+            kinds[name] = kind
+            $0.memberKinds = kinds
         }
     }
 
     func kickMember(_ name: String, from group: GroupChat) {
         updateGroup(group.id) {
             $0.memberNames.removeAll { $0 == name }
+            $0.memberKinds?[name] = nil
             // Un membre viré ne laisse pas de suggestions orphelines — ni dans
             // le répertoire, ni dans les setlists des événements.
             $0.repertoire = $0.songs.filter { $0.isApproved || $0.suggestedBy != name }
             $0.events = $0.events?.map { event in
                 var event = event
                 event.setlist.removeAll { !$0.isApproved && $0.suggestedBy == name }
+                event.attendance?[name] = nil
                 return event
             }
         }
@@ -741,15 +801,172 @@ final class AppStore: ObservableObject {
     // MARK: Événements (leader crée, membres suggèrent la setlist)
 
     func addEvent(_ event: GroupEvent, to group: GroupChat) {
+        var event = event
+        // Le leader confirme sa présence d'office ; les autres restent en attente.
+        event.attendance = [leaderDisplayName(of: group): .available]
         updateGroup(group.id) {
             $0.events = ($0.events ?? []) + [event]
             $0.events?.sort { $0.date < $1.date }
         }
+        scheduleAttendanceReminders(for: event, in: group)
         scheduleDemoSuggestion(for: group.id, eventID: event.id)
     }
 
     func removeEvent(_ event: GroupEvent, from group: GroupChat) {
+        cancelAttendanceNotifications(for: event)
         updateGroup(group.id) { $0.events?.removeAll { $0.id == event.id } }
+    }
+
+    // MARK: Présence (RSVP)
+
+    /// Confirme ou refuse sa présence à un événement — un tap.
+    func setAttendance(
+        _ status: AttendanceStatus,
+        for name: String? = nil,
+        eventID: GroupEvent.ID,
+        in groupID: GroupChat.ID
+    ) {
+        let member = name ?? profile.name
+        guard status == .available || status == .unavailable else { return }
+        updateGroup(groupID) { group in
+            guard let index = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
+            var attendance = group.events?[index].attendance ?? [:]
+            attendance[member] = status
+            group.events?[index].attendance = attendance
+        }
+        // Plus besoin du rappel de confirmation pour ce membre.
+        cancelNotification(id: Self.confirmReminderID(eventID: eventID, member: member))
+
+        guard let group = groups.first(where: { $0.id == groupID }),
+              let event = group.allEvents.first(where: { $0.id == eventID })
+        else { return }
+
+        if status == .unavailable {
+            scheduleUnavailableAlert(for: event, member: member, in: group)
+        } else {
+            cancelNotification(id: Self.unavailableAlertID(eventID: eventID, member: member))
+        }
+    }
+
+    /// Membres encore sans réponse pour un événement.
+    func pendingAttendance(for event: GroupEvent, in group: GroupChat) -> [String] {
+        roster(of: group).filter { event.status(for: $0) == .pending }
+    }
+
+    /// Musiciens hors groupe déjà marqués dispo ce jour-là — candidats
+    /// remplaçants en un tap depuis l'accueil.
+    func availableInvitees(for event: GroupEvent, in group: GroupChat) -> [Musician] {
+        let roster = Set(self.roster(of: group))
+        return musicians
+            .filter { !roster.contains($0.name) && $0.isAvailable(on: event.date) }
+            .sorted { rank($0, $1) }
+    }
+
+    /// Invite un musicien dispo à un événement : l'ajoute au groupe en
+    /// occasionnel + message pré-rempli — zéro étape supplémentaire.
+    func inviteAvailable(_ musician: Musician, to event: GroupEvent, in group: GroupChat) async {
+        if !group.memberNames.contains(musician.name) {
+            inviteMember(musician.name, to: group, kind: .occasional)
+        }
+        // Pré-marque dispo (il a indiqué sa dispo sur le calendrier).
+        setAttendance(.available, for: musician.name, eventID: event.id, in: group.id)
+
+        let conversation = await conversation(with: musician)
+        let dateLabel = event.date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
+        let text = String(
+            format: tr("Salut ! On a une place pour « %@ » (%@) le %@ à %@. Tu es dispo — tu nous rejoins ?"),
+            event.title, group.name, dateLabel, event.venue
+        )
+        sendMessage(text, in: conversation)
+        pushLocal(
+            title: "\(group.emoji) \(group.name)",
+            body: String(format: tr("%@ invité·e pour %@"), musician.name, event.title)
+        )
+    }
+
+    // MARK: Rappels de présence (notifications locales planifiées)
+
+    private static func confirmReminderID(eventID: UUID, member: String) -> String {
+        "confirm.\(eventID.uuidString).\(member)"
+    }
+
+    private static func unavailableAlertID(eventID: UUID, member: String) -> String {
+        "unavailable.\(eventID.uuidString).\(member)"
+    }
+
+    /// Rappel à chaque membre pour confirmer — 3 jours avant, ou immédiatement
+    /// si l'événement est plus proche.
+    private func scheduleAttendanceReminders(for event: GroupEvent, in group: GroupChat) {
+        let leader = leaderDisplayName(of: group)
+        for member in roster(of: group) where member != leader {
+            guard event.status(for: member) == .pending else { continue }
+            let remindAt = event.date.addingTimeInterval(-3 * 24 * 3600)
+            let when = max(remindAt, Date().addingTimeInterval(10))
+            pushLocal(
+                title: "\(group.emoji) \(group.name)",
+                body: String(
+                    format: tr("Confirmes-tu ta présence pour « %@ » le %@ ?"),
+                    event.title,
+                    event.date.formatted(.dateTime.weekday(.wide).day().month())
+                ),
+                identifier: Self.confirmReminderID(eventID: event.id, member: member),
+                at: when
+            )
+        }
+    }
+
+    /// Alerte leader 2 jours avant si un membre s'est déclaré indispo.
+    private func scheduleUnavailableAlert(
+        for event: GroupEvent,
+        member: String,
+        in group: GroupChat
+    ) {
+        // Notification locale sur cet appareil — le leader (compte courant
+        // en démo) reçoit l'alerte pour trouver un remplaçant à temps.
+        let alertAt = event.date.addingTimeInterval(-2 * 24 * 3600)
+        let when = max(alertAt, Date().addingTimeInterval(15))
+        pushLocal(
+            title: String(format: tr("⚠️ Remplaçant pour %@"), group.name),
+            body: String(
+                format: tr("%@ est indispo pour « %@ » — trouve un remplaçant."),
+                member, event.title
+            ),
+            identifier: Self.unavailableAlertID(eventID: event.id, member: member),
+            at: when
+        )
+    }
+
+    private func cancelAttendanceNotifications(for event: GroupEvent) {
+        let center = UNUserNotificationCenter.current()
+        let ids = (event.attendance ?? [:]).keys.flatMap { member in
+            [
+                Self.confirmReminderID(eventID: event.id, member: member),
+                Self.unavailableAlertID(eventID: event.id, member: member)
+            ]
+        }
+        // Aussi les rappels pour les membres pas encore dans attendance.
+        center.removePendingNotificationRequests(withIdentifiers: ids)
+        // Filet : tout préfixe de cet événement.
+        center.getPendingNotificationRequests { requests in
+            let prefix = event.id.uuidString
+            let stale = requests
+                .map(\.identifier)
+                .filter { $0.contains(prefix) }
+            center.removePendingNotificationRequests(withIdentifiers: stale)
+        }
+    }
+
+    /// Reprogramme tous les rappels après un lancement / reset.
+    private func rescheduleAllAttendanceNotifications() {
+        guard notificationsEnabled else { return }
+        for group in groups {
+            for event in group.upcomingEvents {
+                scheduleAttendanceReminders(for: event, in: group)
+                for name in event.unavailableNames {
+                    scheduleUnavailableAlert(for: event, member: name, in: group)
+                }
+            }
+        }
     }
 
     /// Vie de démo : peu après une création (groupe ou événement), un membre
