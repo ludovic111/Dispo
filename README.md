@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.9.1 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.9.2 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|
@@ -12,6 +12,7 @@ Version **0.9.1 (bêta)** — projet mené avec Raphaël, lancé sur la communau
 | **Backend** | Supabase `dispo` — Zurich (`cghmmpcwqzpjwgnbiuuw`), Postgres + RLS, Auth e-mail + Apple, Realtime |
 | **Bundle ID** | `ch.dispo.app` |
 | **Repo** | Privé |
+| **Site** | `https://dispo.lol` — dépôt séparé `ludovic111/Dispo-Website` |
 
 ## Structure du projet
 
@@ -27,7 +28,8 @@ Dispo/
 │   ├── Secrets.example.plist# Modèle de config backend (copier en Secrets.plist)
 │   └── SeedData.json        # Données fictives de démo
 ├── supabase/
-│   ├── migrations/          # Schéma SQL (tables, RLS, vue teaser Premium)
+│   ├── migrations/          # Schéma SQL (tables, RLS, push, vue teaser Premium)
+│   ├── functions/push/      # Livraison APNs authentifiée
 │   ├── seed.sql             # 20 musiciens de dev (mdp « jamconnect-demo »)
 │   └── config.toml          # Config stack locale
 ├── Dispo.xcodeproj/    # Projet Xcode (généré)
@@ -95,7 +97,7 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 - **Matching SOS** — à la publication, l'app affiche immédiatement les musiciens compatibles (bon instrument + date du concert cochée dans leur calendrier en premier, puis profils « sur demande ») ; sans match, message honnête + conseils. Section « Musiciens compatibles » persistante sur ses propres annonces. Chaque match a un bouton **« Inviter »** : message pré-rempli (titre, date, lieu, cachet) envoyé direct dans la conversation.
 - **Amis & abonnés** — bouton suivre sur chaque fiche, ami = suivi mutuel, badges Ami/Suivi/Te suit. Le feed et les matchs classent les relations en premier ; le **tri par niveau** (et l'affichage du niveau) est réservé aux membres Premium — les comptes gratuits voient une invitation à s'abonner.
 - **Photo de profil & vidéos de démo** — photo depuis la photothèque ; vidéos de démo lisibles in-app, **datées** (date du concert / de l'enregistrement, modifiable) : **1 en gratuit, jusqu'à 6 en Premium** (stockage local, Supabase Storage en phase 2b).
-- **Notifications** — notifications locales : nouveaux SOS compatibles avec ses instruments et messages reçus, avec bouton de test (*Profil → Notifications*). Les push serveur (APNs) arrivent avec le Developer Program.
+- **Notifications** — rappels locaux et push APNs pour messages, candidatures, SOS compatibles et événements de groupe. L'utilisateur choisit chaque catégorie depuis *Profil → Notifications* ; un appui ouvre directement l'onglet utile. La livraison serveur requiert les secrets APNs dans Supabase, jamais dans Git.
 - **Patchnotes in-app** — *Profil → Nouveautés* : historique des versions avec bandeau bêta.
 - **Avant-première Premium** — les SOS fraîchement publiés (< 30 min) sont réservés aux membres Premium : les non-abonnés voient le cachet et l'instrument mais pas le lieu, avec un compte à rebours en direct → c'est la démonstration in-app de la killer feature.
 - **Fiche musicien** — hero vidéo (60–90 s, lecteur réel en phase 2), stats sociales, genres avec leurs codes (standards jazz, clave latine…), répertoire, boutons favori + « Demander un dépannage ».

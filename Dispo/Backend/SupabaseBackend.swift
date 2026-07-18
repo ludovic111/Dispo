@@ -23,6 +23,81 @@ final class SupabaseBackend: Sendable {
         (try? await client.auth.session)?.user.email
     }
 
+    // MARK: - Notifications push
+
+    private struct PushDevicePayload: Encodable {
+        let token: String
+        let userId: UUID
+        let platform: String
+        let environment: String
+        let appVersion: String
+        let locale: String
+        let notificationsEnabled: Bool
+        let sosEnabled: Bool
+        let messagesEnabled: Bool
+        let groupsEnabled: Bool
+        let lastSeenAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case token, platform, environment, locale
+            case userId = "user_id"
+            case appVersion = "app_version"
+            case notificationsEnabled = "notifications_enabled"
+            case sosEnabled = "sos_enabled"
+            case messagesEnabled = "messages_enabled"
+            case groupsEnabled = "groups_enabled"
+            case lastSeenAt = "last_seen_at"
+        }
+    }
+
+    func upsertPushDevice(
+        token: String,
+        userID: UUID,
+        environment: String,
+        appVersion: String,
+        locale: String,
+        preferences: PushPreferences
+    ) async throws {
+        let payload = PushDevicePayload(
+            token: token,
+            userId: userID,
+            platform: "ios",
+            environment: environment,
+            appVersion: appVersion,
+            locale: locale,
+            notificationsEnabled: true,
+            sosEnabled: preferences.sos,
+            messagesEnabled: preferences.messages,
+            groupsEnabled: preferences.groups,
+            lastSeenAt: Date()
+        )
+        try await client.from("push_devices")
+            .upsert(payload, onConflict: "token")
+            .execute()
+    }
+
+    func deletePushDevice(token: String) async throws {
+        try await client.from("push_devices")
+            .delete()
+            .eq("token", value: token)
+            .execute()
+    }
+
+    private struct PushDeliveryResponse: Decodable {
+        let sent: Int?
+        let failed: Int?
+        let skipped: Int?
+    }
+
+    /// Demande au backend de livrer uniquement les notifications que les
+    /// triggers viennent de créer pour l'utilisateur authentifié.
+    func deliverPendingPushNotifications() async {
+        let _: PushDeliveryResponse? = try? await client.functions.invoke(
+            "push",
+            options: FunctionInvokeOptions(body: ["source": "ios"])
+        )
+    }
+
     /// URL de retour des liens d'auth (réinitialisation de mot de passe…).
     static let authCallbackURL = URL(string: "dispo://login-callback")
 

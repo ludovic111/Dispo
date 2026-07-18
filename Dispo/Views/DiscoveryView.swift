@@ -140,16 +140,22 @@ struct HomeView: View {
                 }
             }
             Spacer(minLength: 0)
-            ZStack(alignment: .topTrailing) {
-                AvatarView(name: store.profile.name, size: 48)
-                if store.profile.isAvailable {
-                    Circle()
-                        .fill(store.profile.availability.color)
-                        .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(JC.bg, lineWidth: 2))
-                        .offset(x: 2, y: -2)
+            Button {
+                store.selectedTab = .profile
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    AvatarView(name: store.profile.name, size: 48)
+                    if store.profile.isAvailable {
+                        Circle()
+                            .fill(store.profile.availability.color)
+                            .frame(width: 12, height: 12)
+                            .overlay(Circle().stroke(JC.bg, lineWidth: 2))
+                            .offset(x: 2, y: -2)
+                    }
                 }
             }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel(Text("Ouvrir mon profil"))
         }
     }
 
@@ -421,9 +427,6 @@ struct HomeView: View {
                     ? "Tes relations d'abord, puis les meilleurs niveaux"
                     : "Tes relations d'abord, puis les plus proches"
             )
-            if !store.showsPremium {
-                levelUpsellBox
-            }
             if filtered.isEmpty {
                 JCEmptyState(
                     icon: "person.2.slash",
@@ -431,11 +434,14 @@ struct HomeView: View {
                     message: "Élargis le rayon ou retire un filtre pour voir plus de profils."
                 )
             }
-            ForEach(filtered) { musician in
+            ForEach(Array(filtered.enumerated()), id: \.element.id) { index, musician in
                 NavigationLink(value: musician) {
                     SearchMusicianRow(musician: musician)
                 }
                 .buttonStyle(PressableStyle())
+                if index == min(2, filtered.count - 1), !store.showsPremium {
+                    levelUpsellBox
+                }
             }
         }
     }

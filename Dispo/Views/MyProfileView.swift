@@ -69,6 +69,7 @@ struct MyProfileView: View {
     @State private var showPatchNotes = false
     @State private var showLanguageRegion = false
     @State private var showFavorites = false
+    @State private var showNotifications = false
     /// Vidéo dont on est en train d'éditer la date.
     @State private var datingVideo: DemoVideo?
 
@@ -109,6 +110,9 @@ struct MyProfileView: View {
             }
             .sheet(isPresented: $showFavorites) {
                 FavoritesSheet()
+            }
+            .sheet(isPresented: $showNotifications) {
+                NotificationsSettingsView()
             }
             .sheet(item: $playingVideo) { video in
                 VideoPlayer(player: AVPlayer(url: video.url))
@@ -152,7 +156,9 @@ struct MyProfileView: View {
     }
 
     private var heroCard: some View {
-        ZStack {
+        let profileSnapshot = store.profile
+        let premiumSnapshot = store.showsPremium
+        return ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(JC.hero)
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -162,14 +168,14 @@ struct MyProfileView: View {
                 // La photo de profil se change d'un tap sur l'avatar.
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
-                        MyAvatarView(profile: store.profile, size: 84)
+                        MyAvatarView(profile: profileSnapshot, size: 84)
                             .padding(4)
                             .background(.white.opacity(0.2), in: Circle())
-                        Image(systemName: store.showsPremium ? "crown.fill" : "camera.fill")
+                        Image(systemName: premiumSnapshot ? "crown.fill" : "camera.fill")
                             .font(.caption2.weight(.bold))
                             .padding(6)
                             .background(
-                                store.showsPremium
+                                premiumSnapshot
                                     ? AnyShapeStyle(JC.premium)
                                     : AnyShapeStyle(.white.opacity(0.9)),
                                 in: Circle()
@@ -282,30 +288,12 @@ struct MyProfileView: View {
                     Divider().padding(.leading, 52)
                 }
 
-                // Notifications — l'interrupteur reste inline.
-                HStack(spacing: 12) {
-                    settingsIcon("bell.badge.fill", JC.coral)
-                    Toggle(isOn: Binding(
-                        get: { store.notificationsEnabled },
-                        set: { enabled in Task { await store.setNotifications(enabled) } }
-                    )) {
-                        Text("Notifications")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .tint(JC.coral)
-                }
-                .padding(10)
-                if store.notificationsEnabled {
-                    Button {
-                        store.sendTestNotification()
-                    } label: {
-                        Label("Envoyer une notification de test", systemImage: "paperplane.fill")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(JC.coral)
-                    }
-                    .buttonStyle(PressableStyle())
-                    .padding(.bottom, 10)
-                }
+                settingsRow(
+                    icon: "bell.badge.fill",
+                    color: JC.coral,
+                    title: Text("Notifications"),
+                    detail: Text(store.notificationStatusLabel)
+                ) { showNotifications = true }
                 Divider().padding(.leading, 52)
 
                 settingsRow(

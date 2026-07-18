@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct DispoApp: App {
+    @UIApplicationDelegateAdaptor(DispoAppDelegate.self) private var appDelegate
     @StateObject private var store = AppStore()
 
     init() {
@@ -31,15 +32,19 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            TabView {
+            TabView(selection: $store.selectedTab) {
                 HomeView()
-                    .tabItem { Label("Accueil", systemImage: "waveform.path") }
+                    .tabItem { Label("Accueil", systemImage: "house.fill") }
+                    .tag(AppTab.home)
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
+                    .tag(AppTab.sos)
                 ChatListView()
                     .tabItem { Label("Messages", systemImage: "bubble.left.and.bubble.right") }
+                    .tag(AppTab.messages)
                 MyProfileView()
                     .tabItem { Label("Profil", systemImage: "person.crop.circle") }
+                    .tag(AppTab.profile)
             }
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)

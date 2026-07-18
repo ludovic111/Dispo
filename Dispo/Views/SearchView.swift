@@ -137,38 +137,39 @@ struct SearchMusicianRow: View {
 
     var body: some View {
         JCCard(padding: 12) {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 AvatarView(name: musician.name, size: 48, photo: musician.photo)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(musician.name)
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .layoutPriority(1)
                         if musician.isDemo { DemoAccountBadge() }
+                        Spacer(minLength: 4)
+                        AvailabilityBadge(availability: musician.availability)
+                    }
+                    HStack(spacing: 7) {
+                        Text(verbatim: musician.handle)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(JC.violet)
                         SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
-                    if store.playedWithAFriend(musician) {
-                        PlayedWithFriendCompactBadge(friends: store.friendsWhoPlayedWith(musician))
-                    }
-                    Text(verbatim: musician.handle)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(JC.violet)
                     Text(verbatim: "\(musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")) · \(musician.neighborhood)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                    Text("\(store.followerCount(of: musician)) abonnés")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                    HStack(spacing: 7) {
+                        Text("\(store.followerCount(of: musician)) abonnés")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        if store.playedWithAFriend(musician) {
+                            PlayedWithFriendCompactBadge(friends: store.friendsWhoPlayedWith(musician))
+                        }
+                    }
                 }
                 Spacer(minLength: 0)
-                VStack(alignment: .trailing, spacing: 6) {
-                    AvailabilityBadge(availability: musician.availability)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.tertiary)
-                }
             }
         }
     }
@@ -186,7 +187,7 @@ struct PlayedWithFriendCompactBadge: View {
         HStack(spacing: 4) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 9, weight: .bold))
-            Text("A joué avec un ami")
+            Text("Relation commune")
                 .font(.caption2.weight(.bold))
         }
         .padding(.horizontal, 8)
@@ -199,7 +200,7 @@ struct PlayedWithFriendCompactBadge: View {
                 Label(friend.name, systemImage: "person.fill")
             }
         }
-        .accessibilityLabel(Text("A joué avec un ami"))
+        .accessibilityLabel(Text("Relation commune"))
         .accessibilityHint(Text(verbatim: friendNames))
         .help(friendNames)
     }

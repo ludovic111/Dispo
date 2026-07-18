@@ -2,18 +2,8 @@ import Foundation
 import CoreLocation
 import SwiftUI
 import Supabase
-import UserNotifications
+@preconcurrency import UserNotifications
 import StoreKit
-
-/// Affiche les notifications en bannière même quand l'app est au premier plan.
-final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
-    }
-}
 
 /// État global de la démo. Charge les données fictives depuis SeedData.json
 /// et persiste les actions de l'utilisateur (événements créés, messages,
@@ -34,7 +24,7 @@ final class AppStore: ObservableObject {
     /// Appréciations données par l'utilisateur (par nom de musicien). Positif uniquement :
     /// note de musique (« aimé ») ou note dorée (« coup de cœur »).
     @Published var myAppreciations: [String: Appreciation] = [:]
-    /// Abonnement Premium — simulé dans la démo.
+    /// Abonnement Premium — StoreKit en production, état local de repli en démo.
     @Published var isPremium: Bool = false
     /// Plan choisi (mensuel / annuel), nil si non abonné.
     @Published var premiumPlan: PremiumPlan?
@@ -51,15 +41,21 @@ final class AppStore: ObservableObject {
     /// Musiciens avec qui j'ai déjà joué (par nom) — graphe local « a joué avec ».
     /// TODO phase 2b: sync playedWith to Supabase
     @Published var playedWith: Set<String> = []
+    /// Onglet actif — utilisé aussi par les raccourcis et les notifications.
+    @Published var selectedTab: AppTab = .home
     /// Etats UUID exclusivement serveur; les Sets par nom restent le repli demo.
     private var liveFollowingIDs: Set<UUID> = []
     private var liveFollowerIDs: Set<UUID> = []
     private var liveFollowerCounts: [UUID: Int] = [:]
     private var liveCollaborations: Set<SupabaseBackend.CollaborationRow> = []
     @Published private(set) var blockedUserIDs: Set<UUID> = []
-    /// Notifications locales activées (nouveaux SOS compatibles, messages).
+    /// Préférence interne. L'autorisation iOS reste la source de vérité.
     @Published var notificationsEnabled: Bool = false
-    private let notificationDelegate = NotificationDelegate()
+    @Published private(set) var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
+    @Published var pushPreferences = PushPreferences()
+    @Published private(set) var pushRegistrationError: String?
+    private var pushDeviceToken: String?
+    private var notificationObservers: [NSObjectProtocol] = []
     /// SOS déjà vus — pour ne notifier que les vraies nouveautés.
     private var seenGigIDs: Set<UUID> = []
     /// Groupes (messagerie d'équipe Premium) — locaux, serveur en phase 2b.
@@ -127,6 +123,7 @@ final class AppStore: ObservableObject {
     private static let followingKey = "jamconnect.following"
     private static let playedWithKey = "jamconnect.playedWith"
     private static let notificationsKey = "jamconnect.notifications"
+    private static let pushPreferencesKey = "dispo.pushPreferences"
     /// Amis de démo (suivent déjà l'utilisateur) — rend le badge « a joué avec » visible.
     private static let demoFollowing: Set<String> = [
         "Marco Fernández", "Yann Broillet", "Léa Zbinden"
@@ -198,13 +195,17 @@ final class AppStore: ObservableObject {
             playedWith = saved
         }
         notificationsEnabled = UserDefaults.standard.bool(forKey: Self.notificationsKey)
+        if let saved: PushPreferences = Self.load(key: Self.pushPreferencesKey) {
+            pushPreferences = saved
+        }
         if let saved: Set<UUID> = Self.load(key: Self.seenGigsKey) {
             seenGigIDs = saved
         }
         if let saved: [GroupChat] = Self.load(key: Self.groupsKey) {
             groups = saved
         }
-        UNUserNotificationCenter.current().delegate = notificationDelegate
+        observePushNotifications()
+        Task { await refreshNotificationAuthorization(registerIfAllowed: true) }
         // Reprogramme les rappels de présence au lancement (les triggers
         // locaux survivent au kill, mais on resynchronise après un reset).
         rescheduleAllAttendanceNotifications()
@@ -289,6 +290,7 @@ final class AppStore: ObservableObject {
         }
         await refreshLiveData()
         await startMessageStream()
+        await refreshNotificationAuthorization(registerIfAllowed: true)
     }
 
     /// Recharge musiciens, annonces, conversations et groupes depuis le serveur.
@@ -372,6 +374,9 @@ final class AppStore: ObservableObject {
 
     func signOutLive() async {
         guard let backend else { return }
+        if let token = pushDeviceToken {
+            try? await backend.deletePushDevice(token: token)
+        }
         await backend.signOut()
         liveUserID = nil
         liveEmail = nil
@@ -844,22 +849,138 @@ final class AppStore: ObservableObject {
 
     // MARK: - Notifications
 
-    /// Active / coupe les notifications locales. Les alertes serveur (APNs,
-    /// avant-première Premium à distance) arrivent avec le Developer Program
-    /// en phase 2b — même interrupteur, même tuyauterie.
+    var notificationStatusLabel: String {
+        if notificationAuthorizationStatus == .denied {
+            return tr("Bloquées dans Réglages")
+        }
+        guard notificationsEnabled else { return tr("Désactivées") }
+        switch notificationAuthorizationStatus {
+        case .authorized: return tr("Actives")
+        case .provisional: return tr("Livraison discrète")
+        case .denied: return tr("Bloquées dans Réglages")
+        case .notDetermined: return tr("À configurer")
+        case .ephemeral: return tr("Temporaires")
+        @unknown default: return tr("À vérifier")
+        }
+    }
+
+    var notificationsNeedSystemSettings: Bool {
+        notificationAuthorizationStatus == .denied
+    }
+
+    private func observePushNotifications() {
+        let center = NotificationCenter.default
+        notificationObservers.append(center.addObserver(
+            forName: .dispoDidReceivePushToken,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let token = notification.object as? String else { return }
+            Task { @MainActor in await self?.didReceivePushToken(token) }
+        })
+        notificationObservers.append(center.addObserver(
+            forName: .dispoDidFailPushRegistration,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let message = notification.object as? String else { return }
+            Task { @MainActor in self?.pushRegistrationError = message }
+        })
+        notificationObservers.append(center.addObserver(
+            forName: .dispoDidOpenPush,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor in self?.openPushDestination(notification.userInfo ?? [:]) }
+        })
+    }
+
+    private func openPushDestination(_ userInfo: [AnyHashable: Any]) {
+        let rawTab = (userInfo["target_tab"] as? String)
+            ?? (userInfo["category"] as? String)
+        switch rawTab {
+        case "sos": selectedTab = .sos
+        case "message", "messages", "groups": selectedTab = .messages
+        case "profile": selectedTab = .profile
+        default: selectedTab = .home
+        }
+        Task { try? await UNUserNotificationCenter.current().setBadgeCount(0) }
+    }
+
+    func refreshNotificationAuthorization(registerIfAllowed: Bool = false) async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationAuthorizationStatus = settings.authorizationStatus
+        let allowed = settings.authorizationStatus == .authorized
+            || settings.authorizationStatus == .provisional
+            || settings.authorizationStatus == .ephemeral
+        if notificationsEnabled && allowed && registerIfAllowed {
+            UIApplication.shared.registerForRemoteNotifications()
+        } else if notificationsEnabled && settings.authorizationStatus == .denied {
+            notificationsEnabled = false
+            UserDefaults.standard.set(false, forKey: Self.notificationsKey)
+        }
+    }
+
+    /// Active ou coupe les alertes locales et distantes.
     func setNotifications(_ enabled: Bool) async {
         if enabled {
             let granted = (try? await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
             notificationsEnabled = granted
             if granted {
+                UIApplication.shared.registerForRemoteNotifications()
                 rescheduleAllAttendanceNotifications()
+                pushRegistrationError = nil
             }
         } else {
             notificationsEnabled = false
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            UIApplication.shared.unregisterForRemoteNotifications()
+            if let backend, let token = pushDeviceToken {
+                try? await backend.deletePushDevice(token: token)
+            }
         }
         UserDefaults.standard.set(notificationsEnabled, forKey: Self.notificationsKey)
+        await refreshNotificationAuthorization()
+    }
+
+    func setPushPreference(_ category: PushCategory, enabled: Bool) {
+        pushPreferences.set(enabled, for: category)
+        Self.save(pushPreferences, key: Self.pushPreferencesKey)
+        guard let token = pushDeviceToken else { return }
+        Task { await syncPushDevice(token: token) }
+    }
+
+    func openNotificationSettings() {
+        guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func didReceivePushToken(_ token: String) async {
+        pushDeviceToken = token
+        pushRegistrationError = nil
+        await syncPushDevice(token: token)
+    }
+
+    private func syncPushDevice(token: String) async {
+        guard notificationsEnabled, let backend, let userID = liveUserID else { return }
+        #if DEBUG
+        let environment = "development"
+        #else
+        let environment = "production"
+        #endif
+        do {
+            try await backend.upsertPushDevice(
+                token: token,
+                userID: userID,
+                environment: environment,
+                appVersion: Bundle.main.appVersion,
+                locale: language.rawValue,
+                preferences: pushPreferences
+            )
+        } catch {
+            pushRegistrationError = tr("L'appareil n'a pas pu être enregistré pour les alertes distantes.")
+        }
     }
 
     /// Bannière de test — vérifie que tout marche (bêta).
@@ -1190,7 +1311,10 @@ final class AppStore: ObservableObject {
         }
         scheduleAttendanceReminders(for: event, in: group)
         if let backend, isLive {
-            syncLive { try await backend.createEvent(event, groupID: group.id) }
+            syncLive {
+                try await backend.createEvent(event, groupID: group.id)
+                await backend.deliverPendingPushNotifications()
+            }
         } else {
             scheduleDemoSuggestion(for: group.id, eventID: event.id)
         }
@@ -1695,7 +1819,9 @@ final class AppStore: ObservableObject {
         }
         parts.append(musician.level.rawValue)
         parts.append(musician.availability.badgeLabel)
-        return parts.flatMap { Self.normalized($0).split(separator: " ").map(String.init) }
+        return parts.flatMap { (part: String) -> [String] in
+            Self.normalized(part).split(separator: " ").map(String.init)
+        }
             .flatMap { $0.split(separator: ".").map(String.init) }
     }
 
@@ -1722,7 +1848,10 @@ final class AppStore: ObservableObject {
         persistEvents()
         if let backend, let userID = liveUserID {
             Task {
-                do { try await backend.createGig(event, hostID: userID) }
+                do {
+                    try await backend.createGig(event, hostID: userID)
+                    await backend.deliverPendingPushNotifications()
+                }
                 catch { backendError = tr("L'annonce n'a pas pu être publiée sur le serveur.") }
             }
         }
@@ -1738,6 +1867,7 @@ final class AppStore: ObservableObject {
                 do {
                     if applied {
                         try await backend.apply(to: event.id, musicianID: userID)
+                        await backend.deliverPendingPushNotifications()
                     } else {
                         try await backend.unapply(from: event.id, musicianID: userID)
                     }
@@ -1768,6 +1898,7 @@ final class AppStore: ObservableObject {
             Task { [weak self] in
                 do {
                     let message = try await backend.sendMessage(text, conversationID: conversationID, senderID: userID)
+                    await backend.deliverPendingPushNotifications()
                     guard let self,
                           let i = self.conversations.firstIndex(where: { $0.id == conversationID }),
                           !self.conversations[i].messages.contains(where: { $0.id == message.id })
@@ -1778,7 +1909,7 @@ final class AppStore: ObservableObject {
                         try? await backend.replyAsDemo(conversationID: conversationID)
                     }
                 } catch {
-                    self?.backendError = tr("Le message n'a pas pu être envoyé.")
+                    self?.backendError = self?.tr("Le message n'a pas pu être envoyé.")
                 }
             }
             return

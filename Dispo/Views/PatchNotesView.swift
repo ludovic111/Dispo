@@ -11,6 +11,16 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.2",
+            title: "Plus claire, plus réactive",
+            points: [
+                "Notifications push pour les messages, SOS compatibles et événements de groupe",
+                "Réglages de notifications détaillés et raccourcis vers les bons écrans",
+                "Accueil et cartes de musiciens allégés pour trouver l'essentiel plus vite",
+                "Corrections de stabilité et synchronisation Supabase renforcée"
+            ]
+        ),
+        PatchNote(
             version: "0.9.1",
             title: "Réseau réel et sécurité",
             points: [
