@@ -14,6 +14,17 @@ struct ChatView: View {
             JCBackground()
 
             VStack(spacing: 0) {
+                if let name = conversation?.contactName, store.isDemoContact(name) {
+                    HStack(spacing: 7) {
+                        DemoAccountBadge()
+                        Text("Compte de démonstration · les réponses peuvent être automatiques")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(JC.violet.opacity(0.08))
+                }
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 10) {

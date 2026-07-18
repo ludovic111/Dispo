@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.9.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.9.1 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|
@@ -106,7 +106,7 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
 - **Pages profil façon Instagram** — photo + stats (démos, abonnés, concerts) en tête, nom/@pseudo/niveau/bio/genres/logos sociaux, boutons Suivre / Contacter / favori, et la **grille de démos** en bas. L'accueil est allégé : rangées compactes (avatar, nom, dispo) séparées de la page profil, avec rappel du prochain événement de groupe.
 - **Favoris** — liste dédiée dans le profil pour retrouver ses musiciens fiables en un tap.
 - **Profil** — carte hero avec photo, compteurs abonnés/suivis, calendrier de dispo (statut 🚨/📅/🌙 dérivé des dates cochées), vidéos de démo, teaser « qui a vu ton profil » (avatars floutés → paywall), langue & région, thème clair/sombre, édition complète.
-- **Monétisation** — abonnement **Dispo Premium à CHF 9.90/mois ou CHF 79/an** (annuel mis en avant : « soit CHF 6.60/mois, −33 % ») : alertes dépannage 30 min avant tout le monde, profil en tête, **groupes illimités**, 6 vidéos de démo, tri/affichage du niveau, qui a vu ton profil. Essai 7 jours. Paiement simulé dans la démo ; StoreKit/App Store en phase 2.
+- **Monétisation** — abonnements **Dispo Premium mensuel et annuel** via StoreKit 2 : alertes dépannage 30 min avant tout le monde, profil en tête, **groupes illimités**, 6 vidéos de démo, tri/affichage du niveau et visiteurs du profil. Les prix sont chargés directement depuis l’App Store, avec achat, restauration et gestion des abonnements.
 
 ## Prix & marge (calcul v0.7)
 
@@ -160,7 +160,7 @@ cd Dispo && xcodegen generate
 2. ~~Projet Supabase hébergé~~ ✅ fait (`dispo`, Zurich) — reste : SMTP custom (Resend) pour les e-mails de connexion.
 3. **Vidéo réelle** : enregistrement in-app, upload Supabase Storage ou Mux (~5 $/1000 min).
 4. ~~Notifications~~ ✅ notifications locales faites (SOS compatibles + messages) — reste : **push serveur APNs** (« un SOS piano à 2 km, cachet CHF 150 »), le cœur de la promesse Premium, dès le Developer Program.
-5. **StoreKit 2** : brancher le paywall sur de vrais abonnements App Store + `is_premium` serveur.
+5. ~~**StoreKit 2** : brancher le paywall sur de vrais abonnements App Store.~~ ✅ fait côté client — reste la validation serveur des transactions et la configuration des produits dans App Store Connect.
 5b. **Groupes serveur** : tables Supabase (groupes, membres, messages temps réel, Storage pour les partitions).
 6. **Géolocalisation réelle** (aujourd'hui : position fixée au centre de Genève) et synchronisation serveur des favoris, appréciations, follows, photo et vidéos.
 7. **TestFlight** pour les 20–30 premiers musiciens genevois (AMR, Conservatoire, Chat Noir…).

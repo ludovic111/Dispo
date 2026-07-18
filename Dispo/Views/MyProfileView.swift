@@ -661,7 +661,7 @@ struct MyProfileView: View {
             title: store.showsPremium ? "Premium actif" : "Ne rate plus un cachet",
             subtitle: store.showsPremium
                 ? "Alertes dépannage prioritaires · gérer mon abonnement"
-                : "Alertes en priorité, groupes, 6 vidéos · dès CHF 6.60/mois"
+                : "Alertes en priorité, groupes, 6 vidéos · via l'App Store"
         ) { store.showPaywall = true }
     }
 

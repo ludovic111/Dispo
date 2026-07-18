@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// Paywall Premium, centré sur la promesse n°1 : ne jamais rater un cachet
-/// de dépannage. Annuel CHF 79 (−33 %) mis en avant, mensuel CHF 9.90 en
-/// ancre — calcul des coûts et de la marge dans le README.
-/// Paiement simulé dans la démo ; StoreKit / App Store en phase 2.
+/// Paywall Premium centre sur la promesse n°1 : ne jamais rater un cachet.
+/// Abonnements auto-renouvelables achetes et restaures avec StoreKit 2.
 struct PaywallView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -152,9 +150,9 @@ struct PaywallView: View {
                 Text(LocalizedStringKey(plan.title))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.secondary)
-                Text(LocalizedStringKey(plan.priceLine))
+                Text(verbatim: store.displayPrice(for: plan))
                     .font(.headline.weight(.heavy))
-                Text(LocalizedStringKey(plan.detailLine))
+                Text(plan == .annual ? "par an" : "par mois")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -184,40 +182,46 @@ struct PaywallView: View {
                 )
                 .font(.headline)
                 .foregroundStyle(.green)
-                Button("Résilier l'abonnement", role: .destructive) {
-                    store.cancelPremium()
+                if let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions") {
+                    Link("Gérer l'abonnement", destination: subscriptionsURL)
+                        .font(.subheadline)
                 }
-                .font(.subheadline)
             }
         } else {
             VStack(spacing: 10) {
                 Button {
-                    store.subscribePremium(plan: selectedPlan)
-                    dismiss()
+                    Task {
+                        if await store.purchasePremium(plan: selectedPlan) { dismiss() }
+                    }
                 } label: {
-                    Text("Essayer 7 jours gratuits")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(JC.premium, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .foregroundStyle(.black)
+                    HStack {
+                        if store.purchaseInProgress { ProgressView().tint(.black) }
+                        Text("S'abonner · \(store.displayPrice(for: selectedPlan))")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(JC.premium, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .foregroundStyle(.black)
                 }
                 .buttonStyle(PressableStyle())
+                .disabled(store.purchaseInProgress || store.storeProducts[selectedPlan] == nil)
 
-                Text(selectedPlan == .annual
-                     ? "7 jours offerts, puis CHF 79/an · annulable à tout moment"
-                     : "7 jours offerts, puis CHF 9.90/mois · annulable à tout moment")
+                Text("Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Button("Restaurer mes achats") {
+                    Task { await store.restorePurchases() }
+                }
+                .font(.caption.weight(.semibold))
+                .disabled(store.purchaseInProgress)
 
                 Text("Pensé avec la scène jazz & latin de Genève")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(JC.gold)
 
-                Text("Démo : paiement simulé — l'achat réel passera par l'App Store (StoreKit) en phase 2.")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
             }
         }
     }

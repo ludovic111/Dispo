@@ -463,11 +463,8 @@ enum Level: String, Codable, CaseIterable, Identifiable, Comparable {
 
 // MARK: - Premium
 
-/// Plans d'abonnement Premium (v0.7). Stratégie : le mensuel sert d'ancre
-/// (CHF 9.90) pour pousser vers l'annuel CHF 79 (−33 %), qui maximise la
-/// rétention et le revenu par utilisateur. Un seul niveau Premium — deux
-/// périodicités : la simplicité convertit mieux qu'un menu de formules.
-/// Marge : ~90 % après commission Apple (calcul détaillé dans le README).
+/// Deux periodicites pour un seul niveau Premium. Les prix affiches viennent
+/// exclusivement de StoreKit afin de respecter la devise du compte Apple.
 enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
     case annual
     case monthly
@@ -478,22 +475,6 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .annual: return "Annuel"
         case .monthly: return "Mensuel"
-        }
-    }
-
-    /// Prix affiché en gros sur la carte du plan.
-    var priceLine: String {
-        switch self {
-        case .annual: return "CHF 79/an"
-        case .monthly: return "CHF 9.90/mois"
-        }
-    }
-
-    /// Équivalent mensuel + argument, affiché sous le prix.
-    var detailLine: String {
-        switch self {
-        case .annual: return "soit CHF 6.60/mois · économise CHF 40"
-        case .monthly: return "sans engagement"
         }
     }
 
@@ -740,11 +721,13 @@ struct Musician: Codable, Identifiable, Hashable {
     var socials: [String: String]?
     /// Noms des musiciens avec qui cette personne a déjà joué (graphe « a joué avec »).
     var collaborators: [String] = []
+    /// Compte échantillon clairement distingué des profils réels.
+    var isDemo: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
         case instruments, genres, level, bio, availability, repertoire, reviews, photo
-        case socials, collaborators
+        case socials, collaborators, isDemo
     }
 
     init(
@@ -764,7 +747,8 @@ struct Musician: Codable, Identifiable, Hashable {
         reviews: [Review],
         photo: String? = nil,
         socials: [String: String]? = nil,
-        collaborators: [String] = []
+        collaborators: [String] = [],
+        isDemo: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -783,6 +767,7 @@ struct Musician: Codable, Identifiable, Hashable {
         self.photo = photo
         self.socials = socials
         self.collaborators = collaborators
+        self.isDemo = isDemo
     }
 
     init(from decoder: Decoder) throws {
@@ -804,6 +789,7 @@ struct Musician: Codable, Identifiable, Hashable {
         socials = try c.decodeIfPresent([String: String].self, forKey: .socials)
         // Absent du JSON (backend live, anciennes seeds) → liste vide.
         collaborators = try c.decodeIfPresent([String].self, forKey: .collaborators) ?? []
+        isDemo = try c.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
     }
 
     /// Pseudo sur un réseau, s'il est renseigné.

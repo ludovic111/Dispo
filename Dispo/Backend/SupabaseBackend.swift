@@ -24,7 +24,7 @@ final class SupabaseBackend: Sendable {
     }
 
     /// URL de retour des liens d'auth (réinitialisation de mot de passe…).
-    static let authCallbackURL = URL(string: "dispo://login-callback")!
+    static let authCallbackURL = URL(string: "dispo://login-callback")
 
     /// Crée un compte e-mail + mot de passe. La confirmation d'e-mail est
     /// désactivée : la session s'ouvre immédiatement.
@@ -82,6 +82,7 @@ final class SupabaseBackend: Sendable {
         var photoUrl: String?
         var isPremium: Bool
         var isAdmin: Bool
+        var isDemo: Bool?
         /// Pseudos réseaux sociaux (jsonb côté serveur).
         var socials: [String: String]?
 
@@ -92,6 +93,7 @@ final class SupabaseBackend: Sendable {
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
             case isAdmin = "is_admin"
+            case isDemo = "is_demo"
         }
 
         var parsedDates: [Date] {
@@ -126,8 +128,45 @@ final class SupabaseBackend: Sendable {
                 repertoire: repertoire,
                 reviews: reviews,
                 photo: photoUrl,
-                socials: socials
+                socials: socials,
+                isDemo: isDemo ?? false
             )
+        }
+    }
+
+    struct FollowRow: Codable, Hashable {
+        var followerId: UUID
+        var followingId: UUID
+        enum CodingKeys: String, CodingKey {
+            case followerId = "follower_id"
+            case followingId = "following_id"
+        }
+    }
+
+    struct FavoriteRow: Codable, Hashable {
+        var userId: UUID
+        var favoriteId: UUID
+        enum CodingKeys: String, CodingKey {
+            case userId = "user_id"
+            case favoriteId = "favorite_id"
+        }
+    }
+
+    struct CollaborationRow: Codable, Hashable {
+        var aId: UUID
+        var bId: UUID
+        enum CodingKeys: String, CodingKey {
+            case aId = "a_id"
+            case bId = "b_id"
+        }
+    }
+
+    struct BlockRow: Codable, Hashable {
+        var blockerId: UUID
+        var blockedId: UUID
+        enum CodingKeys: String, CodingKey {
+            case blockerId = "blocker_id"
+            case blockedId = "blocked_id"
         }
     }
 
@@ -293,6 +332,94 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    // MARK: - Graphe social et securite
+
+    func fetchFollows() async throws -> [FollowRow] {
+        try await client.from("follows").select().execute().value
+    }
+
+    func follow(_ targetID: UUID, me: UUID) async throws {
+        try await client.from("follows")
+            .insert(["follower_id": me.uuidString, "following_id": targetID.uuidString])
+            .execute()
+    }
+
+    func unfollow(_ targetID: UUID, me: UUID) async throws {
+        try await client.from("follows").delete()
+            .eq("follower_id", value: me).eq("following_id", value: targetID).execute()
+    }
+
+    func fetchFavorites(me: UUID) async throws -> Set<UUID> {
+        let rows: [FavoriteRow] = try await client.from("favorites")
+            .select().eq("user_id", value: me).execute().value
+        return Set(rows.map(\.favoriteId))
+    }
+
+    func addFavorite(_ targetID: UUID, me: UUID) async throws {
+        try await client.from("favorites")
+            .insert(["user_id": me.uuidString, "favorite_id": targetID.uuidString])
+            .execute()
+    }
+
+    func removeFavorite(_ targetID: UUID, me: UUID) async throws {
+        try await client.from("favorites").delete()
+            .eq("user_id", value: me).eq("favorite_id", value: targetID).execute()
+    }
+
+    func fetchCollaborations() async throws -> [CollaborationRow] {
+        try await client.from("collaborations").select().execute().value
+    }
+
+    func addCollaboration(with targetID: UUID, me: UUID) async throws {
+        let a = min(me.uuidString, targetID.uuidString)
+        let b = max(me.uuidString, targetID.uuidString)
+        try await client.from("collaborations").insert(["a_id": a, "b_id": b]).execute()
+    }
+
+    func removeCollaboration(with targetID: UUID, me: UUID) async throws {
+        let a = min(me.uuidString, targetID.uuidString)
+        let b = max(me.uuidString, targetID.uuidString)
+        try await client.from("collaborations").delete()
+            .eq("a_id", value: a).eq("b_id", value: b).execute()
+    }
+
+    func fetchBlockedUsers(me: UUID) async throws -> Set<UUID> {
+        let rows: [BlockRow] = try await client.from("blocks")
+            .select().eq("blocker_id", value: me).execute().value
+        return Set(rows.map(\.blockedId))
+    }
+
+    func block(_ targetID: UUID, me: UUID) async throws {
+        try await client.from("blocks")
+            .upsert(["blocker_id": me.uuidString, "blocked_id": targetID.uuidString])
+            .execute()
+    }
+
+    func unblock(_ targetID: UUID, me: UUID) async throws {
+        try await client.from("blocks").delete()
+            .eq("blocker_id", value: me).eq("blocked_id", value: targetID).execute()
+    }
+
+    func report(_ targetID: UUID, me: UUID, reason: String, messageID: UUID? = nil) async throws {
+        struct Insert: Encodable {
+            let reporter_id: UUID
+            let reported_id: UUID
+            let message_id: UUID?
+            let reason: String
+        }
+        try await client.from("reports").insert(Insert(
+            reporter_id: me, reported_id: targetID, message_id: messageID, reason: reason
+        )).execute()
+    }
+
+    func deleteMyAccount() async throws {
+        try await client.rpc("delete_my_account").execute()
+    }
+
+    func replyAsDemo(conversationID: UUID) async throws {
+        try await client.rpc("reply_as_demo", params: ["conv_id": conversationID.uuidString]).execute()
+    }
+
     // MARK: - Annonces SOS
 
     /// Feed des annonces à venir. Les annonces en avant-première arrivent
@@ -376,10 +503,21 @@ final class SupabaseBackend: Sendable {
             .eq("participant_b", value: b)
             .execute().value
         if let found = existing.first { return found }
-        let created: ConversationRow = try await client.from("conversations")
-            .insert(["participant_a": a, "participant_b": b])
-            .select().single().execute().value
-        return created
+        do {
+            return try await client.from("conversations")
+                .insert(["participant_a": a, "participant_b": b])
+                .select().single().execute().value
+        } catch {
+            // Une course entre deux ouvertures simultanees peut faire gagner
+            // l'autre INSERT sur la contrainte unique. On relit alors la ligne.
+            let retried: [ConversationRow] = try await client.from("conversations")
+                .select()
+                .eq("participant_a", value: a)
+                .eq("participant_b", value: b)
+                .execute().value
+            if let found = retried.first { return found }
+            throw error
+        }
     }
 
     /// Toutes mes conversations, mappées vers le modèle de l'app.
@@ -423,10 +561,10 @@ final class SupabaseBackend: Sendable {
 
     /// Flux temps réel des nouveaux messages (le serveur ne pousse que ceux
     /// de mes conversations, RLS oblige).
-    func messageStream() async -> (channel: RealtimeChannelV2, stream: AsyncStream<MessageRow>) {
+    func messageStream() async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<MessageRow>) {
         let channel = client.channel("messages-live")
         let inserts = channel.postgresChange(InsertAction.self, schema: "public", table: "messages")
-        await channel.subscribe()
+        try await channel.subscribeWithError()
         let stream = AsyncStream<MessageRow> { continuation in
             let task = Task {
                 for await insert in inserts {

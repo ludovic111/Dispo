@@ -22120,6 +22120,114 @@
           }
         }
       }
+    },
+    "Démo": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Demo" } } }
+    },
+    "Compte de démonstration": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Demo account" } } }
+    },
+    "Compte de démonstration · les réponses peuvent être automatiques": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Demo account · replies may be automated" } } }
+    },
+    "Signaler": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Report" } } }
+    },
+    "Bloquer": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Block" } } }
+    },
+    "Bloquer ce musicien ?": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Block this musician?" } } }
+    },
+    "Vous ne verrez plus ce profil ni ses messages. Le musicien ne sera pas averti.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You will no longer see this profile or their messages. They will not be notified." } } }
+    },
+    "Signalement envoyé. Merci de nous aider à protéger la communauté.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Report sent. Thank you for helping keep the community safe." } } }
+    },
+    "Sécurité": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Safety" } } }
+    },
+    "Contacter le support": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Contact support" } } }
+    },
+    "Supprimer mon compte": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delete my account" } } }
+    },
+    "Supprimer définitivement le compte ?": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Permanently delete the account?" } } }
+    },
+    "Le profil, les messages, les SOS et les relations seront supprimés. Cette action est irréversible.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your profile, messages, SOS posts and relationships will be deleted. This cannot be undone." } } }
+    },
+    "S'abonner · %@": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Subscribe · %@" } } }
+    },
+    "Restaurer mes achats": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Restore purchases" } } }
+    },
+    "Gérer l'abonnement": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Manage subscription" } } }
+    },
+    "Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Payment is charged to your Apple Account. The subscription renews automatically until canceled in App Store settings." } } }
+    },
+    "par an": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "per year" } } }
+    },
+    "par mois": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "per month" } } }
+    },
+    "Indisponible": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Unavailable" } } }
+    },
+    "Alertes en priorité, groupes, 6 vidéos · via l'App Store": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Priority alerts, groups and 6 videos · via the App Store" } } }
+    },
+    "Le filtre par niveau fait partie de Dispo Premium.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Level filtering is part of Dispo Premium." } } }
+    },
+    "Abonnements Premium gérés et tarifés par l'App Store": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Premium subscriptions managed and priced by the App Store" } } }
+    },
+    "Ce contenu ne respecte pas les regles de la communaute.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "This content does not follow the community guidelines." } } }
+    },
+    "La suppression du compte a echoue. Reessaie plus tard.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deletion failed. Please try again later." } } }
+    },
+    "Le signalement n'a pas pu etre envoye.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The report could not be sent." } } }
+    },
+    "Le blocage n'a pas pu etre applique.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The block could not be applied." } } }
+    },
+    "Les abonnements App Store sont momentanement indisponibles.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "App Store subscriptions are temporarily unavailable." } } }
+    },
+    "L'achat n'a pas pu etre finalise.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The purchase could not be completed." } } }
+    },
+    "La restauration des achats a echoue.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Purchase restoration failed." } } }
+    },
+    "Réseau réel et sécurité": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real network and safety" } } }
+    },
+    "Profils réels et comptes de démonstration clairement distingués": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real profiles and demo accounts are clearly distinguished" } } }
+    },
+    "Follows, favoris et collaborations synchronisés sur le réseau": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Follows, favorites and collaborations sync across the network" } } }
+    },
+    "Signalement, blocage et suppression définitive du compte": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Reporting, blocking and permanent account deletion" } } }
+    },
+    "Abonnements Premium sécurisés par StoreKit et restaurables": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Premium subscriptions secured by StoreKit and restorable" } } }
+    },
+    "La messagerie en temps reel n'a pas pu demarrer.": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real-time messaging could not start." } } }
     }
   },
   "version": "1.0"

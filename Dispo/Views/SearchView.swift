@@ -145,6 +145,7 @@ struct SearchMusicianRow: View {
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                        if musician.isDemo { DemoAccountBadge() }
                         SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
                     if store.playedWithAFriend(musician) {

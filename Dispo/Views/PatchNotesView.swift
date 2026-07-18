@@ -12,11 +12,12 @@ struct PatchNote: Identifiable {
     static let all: [PatchNote] = [
         PatchNote(
             version: "0.9.1",
-            title: "Réseau de confiance",
+            title: "Réseau réel et sécurité",
             points: [
-                "Réseau de confiance : découvre qui a déjà joué avec tes amis, et filtre par amis / pote d'un pote / bien notés",
-                "Bouton « J'ai déjà joué avec » sur chaque profil",
-                "Badge « A joué avec un ami » dans la recherche et le feed"
+                "Profils réels et comptes de démonstration clairement distingués",
+                "Follows, favoris et collaborations synchronisés sur le réseau",
+                "Signalement, blocage et suppression définitive du compte",
+                "Abonnements Premium sécurisés par StoreKit et restaurables"
             ]
         ),
         PatchNote(
@@ -50,7 +51,7 @@ struct PatchNote: Identifiable {
                 "Un membre lâche ? SOS pré-rempli depuis le concert du groupe",
                 "Tes liens Instagram, TikTok, YouTube et X cliquables sur ton profil",
                 "Nouvel écran profil : réglages regroupés et liste de favoris",
-                "Nouveaux prix Premium : CHF 9.90/mois ou CHF 79/an (−33 %)"
+                "Abonnements Premium gérés et tarifés par l'App Store"
             ]
         ),
         PatchNote(

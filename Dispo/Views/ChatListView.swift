@@ -45,6 +45,9 @@ struct ChatListView: View {
                                             HStack {
                                                 Text(conversation.contactName)
                                                     .font(.subheadline.weight(.bold))
+                                                if store.isDemoContact(conversation.contactName) {
+                                                    DemoAccountBadge()
+                                                }
                                                 Spacer()
                                                 if let last = conversation.lastMessage {
                                                     Text(last.date.formatted(.relative(presentation: .named)))

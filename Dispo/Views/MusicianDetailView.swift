@@ -5,8 +5,11 @@ import SwiftUI
 /// d'action, puis la grille de démos en bas.
 struct MusicianDetailView: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
     let musician: Musician
     @State private var openedConversation: Conversation?
+    @State private var showBlockConfirmation = false
+    @State private var safetyMessage: String?
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
     /// Stat sociale fictive, stable entre lancements (backend en phase 2b).
@@ -37,6 +40,49 @@ struct MusicianDetailView: View {
         .navigationTitle(Text(verbatim: musician.handle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(JC.bg, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        Task {
+                            let sent = await store.report(musician, reason: "Profil ou contenu inapproprie")
+                            if sent {
+                                safetyMessage = "Signalement envoyé. Merci de nous aider à protéger la communauté."
+                            }
+                        }
+                    } label: {
+                        Label("Signaler", systemImage: "exclamationmark.bubble")
+                    }
+                    Button(role: .destructive) {
+                        showBlockConfirmation = true
+                    } label: {
+                        Label("Bloquer", systemImage: "hand.raised.fill")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .confirmationDialog(
+            "Bloquer ce musicien ?",
+            isPresented: $showBlockConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Bloquer", role: .destructive) {
+                Task { if await store.block(musician) { dismiss() } }
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Vous ne verrez plus ce profil ni ses messages. Le musicien ne sera pas averti.")
+        }
+        .alert("Sécurité", isPresented: Binding(
+            get: { safetyMessage != nil },
+            set: { if !$0 { safetyMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { safetyMessage = nil }
+        } message: {
+            Text(safetyMessage ?? "")
+        }
         .sheet(item: $openedConversation) { conversation in
             NavigationStack {
                 ChatView(conversationID: conversation.id)
@@ -84,6 +130,7 @@ struct MusicianDetailView: View {
             HStack(spacing: 8) {
                 Text(musician.name)
                     .font(.title3.weight(.heavy))
+                if musician.isDemo { DemoAccountBadge() }
                 SocialLinkBadge(link: store.socialLink(with: musician.name))
             }
             if store.playedWithAFriend(musician) {

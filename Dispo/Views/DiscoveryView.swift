@@ -291,6 +291,7 @@ struct HomeView: View {
                                         .font(.caption2.weight(.semibold))
                                         .lineLimit(1)
                                         .frame(width: 72)
+                                    if musician.isDemo { DemoAccountBadge() }
                                     Button {
                                         guard invitingName == nil else { return }
                                         invitingName = musician.name
@@ -379,6 +380,7 @@ struct HomeView: View {
                             Text(musician.name.split(separator: " ").first.map(String.init) ?? "")
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.primary)
+                            if musician.isDemo { DemoAccountBadge() }
                             Text(LocalizedStringKey(musician.instruments.first?.rawValue ?? ""))
                                 .font(.system(size: 9))
                                 .foregroundStyle(.secondary)

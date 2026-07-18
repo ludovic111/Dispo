@@ -592,6 +592,19 @@ struct PremiumBadge: View {
     }
 }
 
+/// Marque explicite des profils echantillons presents sur le reseau live.
+struct DemoAccountBadge: View {
+    var body: some View {
+        Text("Démo")
+            .font(.system(size: 9, weight: .bold))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .foregroundStyle(JC.violet)
+            .background(JC.violet.opacity(0.13), in: Capsule())
+            .accessibilityLabel("Compte de démonstration")
+    }
+}
+
 /// Style de bouton signature : léger enfoncement élastique au toucher.
 struct PressableStyle: ButtonStyle {
     var scale: CGFloat = 0.97

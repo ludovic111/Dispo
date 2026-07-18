@@ -3,6 +3,7 @@ import CoreLocation
 import SwiftUI
 import Supabase
 import UserNotifications
+import StoreKit
 
 /// Affiche les notifications en bannière même quand l'app est au premier plan.
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
@@ -38,6 +39,8 @@ final class AppStore: ObservableObject {
     /// Plan choisi (mensuel / annuel), nil si non abonné.
     @Published var premiumPlan: PremiumPlan?
     @Published var showPaywall: Bool = false
+    @Published private(set) var storeProducts: [PremiumPlan: Product] = [:]
+    @Published private(set) var purchaseInProgress = false
     @Published var hasOnboarded: Bool = false
     /// Préférence d'apparence (système / clair / sombre).
     @Published var theme: AppTheme = .system
@@ -48,6 +51,12 @@ final class AppStore: ObservableObject {
     /// Musiciens avec qui j'ai déjà joué (par nom) — graphe local « a joué avec ».
     /// TODO phase 2b: sync playedWith to Supabase
     @Published var playedWith: Set<String> = []
+    /// Etats UUID exclusivement serveur; les Sets par nom restent le repli demo.
+    private var liveFollowingIDs: Set<UUID> = []
+    private var liveFollowerIDs: Set<UUID> = []
+    private var liveFollowerCounts: [UUID: Int] = [:]
+    private var liveCollaborations: Set<SupabaseBackend.CollaborationRow> = []
+    @Published private(set) var blockedUserIDs: Set<UUID> = []
     /// Notifications locales activées (nouveaux SOS compatibles, messages).
     @Published var notificationsEnabled: Bool = false
     private let notificationDelegate = NotificationDelegate()
@@ -72,6 +81,12 @@ final class AppStore: ObservableObject {
     var isLive: Bool { liveUserID != nil }
     private var messageChannel: RealtimeChannelV2?
     private var messageTask: Task<Void, Never>?
+    private var transactionTask: Task<Void, Never>?
+
+    private static let productIDs: [PremiumPlan: String] = [
+        .monthly: "ch.dispo.app.premium.monthly",
+        .annual: "ch.dispo.app.premium.annual"
+    ]
 
     // MARK: - Admin
 
@@ -148,7 +163,16 @@ final class AppStore: ObservableObject {
         // Reprend la session backend si l'utilisateur était déjà connecté.
         Task {
             await restoreLiveSession()
+            await loadStoreProducts()
+            await refreshPurchasedEntitlements()
             sessionChecked = true
+        }
+        transactionTask = Task { [weak self] in
+            for await update in Transaction.updates {
+                guard case .verified(let transaction) = update else { continue }
+                await transaction.finish()
+                await self?.refreshPurchasedEntitlements()
+            }
         }
 
         if let saved: Set<String> = Self.load(key: Self.favoritesKey) {
@@ -275,16 +299,34 @@ final class AppStore: ObservableObject {
             async let gigsTask = backend.fetchGigs(myID: userID)
             async let conversationsTask = backend.fetchConversations(myID: userID)
             async let profilesTask = backend.fetchProfiles()
-            let (m, g, c, profiles) = try await (
-                musiciansTask, gigsTask, conversationsTask, profilesTask
+            async let followsTask = backend.fetchFollows()
+            async let favoritesTask = backend.fetchFavorites(me: userID)
+            async let collaborationsTask = backend.fetchCollaborations()
+            async let blocksTask = backend.fetchBlockedUsers(me: userID)
+            let (allMusicians, g, allConversations, profiles, follows, favoriteIDs, collaborations, blocks) = try await (
+                musiciansTask, gigsTask, conversationsTask, profilesTask,
+                followsTask, favoritesTask, collaborationsTask, blocksTask
             )
-            musicians = m
+            blockedUserIDs = blocks
+            musicians = allMusicians.filter { !blocks.contains($0.id) }
             events = g.sorted { $0.date < $1.date }
             notifyNewGigs(g)
-            conversations = c.sorted {
+            let blockedNames = Set(profiles.filter { blocks.contains($0.id) }.map(\.name))
+            conversations = allConversations.filter { !blockedNames.contains($0.contactName) }.sorted {
                 ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
+            liveFollowingIDs = Set(follows.filter { $0.followerId == userID }.map(\.followingId))
+            liveFollowerIDs = Set(follows.filter { $0.followingId == userID }.map(\.followerId))
+            liveFollowerCounts = Dictionary(grouping: follows, by: \.followingId).mapValues(\.count)
+            liveCollaborations = Set(collaborations)
             let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
+            following = Set(profiles.filter { liveFollowingIDs.contains($0.id) }.map(\.name))
+            favorites = Set(profiles.filter { favoriteIDs.contains($0.id) }.map(\.name))
+            playedWith = Set(profiles.filter { id in
+                collaborations.contains { edge in
+                    (edge.aId == userID && edge.bId == id.id) || (edge.bId == userID && edge.aId == id.id)
+                }
+            }.map(\.name))
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
@@ -336,6 +378,11 @@ final class AppStore: ObservableObject {
         backendError = nil
         isAdmin = false
         adminLens = .reel
+        liveFollowingIDs = []
+        liveFollowerIDs = []
+        liveFollowerCounts = [:]
+        liveCollaborations = []
+        blockedUserIDs = []
         messageTask?.cancel()
         messageTask = nil
         if let channel = messageChannel {
@@ -371,7 +418,14 @@ final class AppStore: ObservableObject {
     /// conversation (dédoublonnés — notre propre envoi arrive aussi par ici).
     private func startMessageStream() async {
         guard let backend, messageTask == nil else { return }
-        let (channel, stream) = await backend.messageStream()
+        let channel: RealtimeChannelV2
+        let stream: AsyncStream<SupabaseBackend.MessageRow>
+        do {
+            (channel, stream) = try await backend.messageStream()
+        } catch {
+            backendError = tr("La messagerie en temps reel n'a pas pu demarrer.")
+            return
+        }
         messageChannel = channel
         messageTask = Task { [weak self] in
             for await row in stream {
@@ -423,10 +477,12 @@ final class AppStore: ObservableObject {
 
     // MARK: - Relations (amis / abonnés)
 
-    /// Musiciens qui me suivent. Simulation stable côté démo (le vrai graphe
-    /// social viendra du backend en phase 2b).
+    /// Musiciens qui me suivent; graphe reel en live, simulation stable en demo.
     var myFollowers: Set<String> {
-        Set(musicians.filter { abs($0.name.stableHash) % 3 == 0 }.map(\.name))
+        if isLive {
+            return Set(musicians.filter { liveFollowerIDs.contains($0.id) }.map(\.name))
+        }
+        return Set(musicians.filter { abs($0.name.stableHash) % 3 == 0 }.map(\.name))
     }
 
     func socialLink(with name: String) -> SocialLink {
@@ -439,10 +495,35 @@ final class AppStore: ObservableObject {
     }
 
     func isFollowing(_ musician: Musician) -> Bool {
-        following.contains(musician.name)
+        isLive ? liveFollowingIDs.contains(musician.id) : following.contains(musician.name)
     }
 
     func toggleFollow(_ musician: Musician) {
+        if let backend, let userID = liveUserID {
+            let wasFollowing = liveFollowingIDs.contains(musician.id)
+            if wasFollowing {
+                liveFollowingIDs.remove(musician.id)
+                following.remove(musician.name)
+                liveFollowerCounts[musician.id, default: 1] = max(0, liveFollowerCounts[musician.id, default: 1] - 1)
+            } else {
+                liveFollowingIDs.insert(musician.id)
+                following.insert(musician.name)
+                liveFollowerCounts[musician.id, default: 0] += 1
+            }
+            Task {
+                do {
+                    if wasFollowing {
+                        try await backend.unfollow(musician.id, me: userID)
+                    } else {
+                        try await backend.follow(musician.id, me: userID)
+                    }
+                } catch {
+                    backendError = tr("La relation n'a pas pu etre synchronisee.")
+                    await refreshLiveData()
+                }
+            }
+            return
+        }
         if following.contains(musician.name) {
             following.remove(musician.name)
         } else {
@@ -461,6 +542,24 @@ final class AppStore: ObservableObject {
     }
 
     func togglePlayedWith(_ musician: Musician) {
+        if let backend, let userID = liveUserID {
+            let hadPlayed = hasPlayedWith(musician)
+            if hadPlayed { playedWith.remove(musician.name) } else { playedWith.insert(musician.name) }
+            Task {
+                do {
+                    if hadPlayed {
+                        try await backend.removeCollaboration(with: musician.id, me: userID)
+                    } else {
+                        try await backend.addCollaboration(with: musician.id, me: userID)
+                    }
+                    await refreshLiveData()
+                } catch {
+                    backendError = tr("La collaboration n'a pas pu etre synchronisee.")
+                    await refreshLiveData()
+                }
+            }
+            return
+        }
         if playedWith.contains(musician.name) {
             playedWith.remove(musician.name)
         } else {
@@ -472,7 +571,14 @@ final class AppStore: ObservableObject {
 
     /// Noms des musiciens avec qui `musician` a déjà joué (seed / profil).
     func collaborators(of musician: Musician) -> [String] {
-        musician.collaborators
+        if isLive {
+            let ids = liveCollaborations.reduce(into: Set<UUID>()) { result, edge in
+                if edge.aId == musician.id { result.insert(edge.bId) }
+                if edge.bId == musician.id { result.insert(edge.aId) }
+            }
+            return musicians.filter { ids.contains($0.id) }.map(\.name)
+        }
+        return musician.collaborators
     }
 
     /// Parmi mes amis, ceux qui apparaissent dans les collaborateurs du profil.
@@ -526,12 +632,82 @@ final class AppStore: ObservableObject {
     }
 
     func toggleFavorite(_ item: Rateable) {
+        if let musician = item as? Musician, let backend, let userID = liveUserID {
+            let wasFavorite = favorites.contains(musician.name)
+            if wasFavorite { favorites.remove(musician.name) } else { favorites.insert(musician.name) }
+            Task {
+                do {
+                    if wasFavorite {
+                        try await backend.removeFavorite(musician.id, me: userID)
+                    } else {
+                        try await backend.addFavorite(musician.id, me: userID)
+                    }
+                } catch {
+                    backendError = tr("Le favori n'a pas pu etre synchronise.")
+                    await refreshLiveData()
+                }
+            }
+            return
+        }
         if favorites.contains(item.name) {
             favorites.remove(item.name)
         } else {
             favorites.insert(item.name)
         }
         Self.save(favorites, key: Self.favoritesKey)
+    }
+
+    func isDemoContact(_ name: String) -> Bool {
+        musicians.first(where: { $0.name == name })?.isDemo == true
+    }
+
+    func report(_ musician: Musician, reason: String) async -> Bool {
+        guard let backend, let userID = liveUserID else { return false }
+        do {
+            try await backend.report(musician.id, me: userID, reason: reason)
+            return true
+        } catch {
+            backendError = tr("Le signalement n'a pas pu etre envoye.")
+            return false
+        }
+    }
+
+    func block(_ musician: Musician) async -> Bool {
+        guard let backend, let userID = liveUserID else { return false }
+        do {
+            try await backend.block(musician.id, me: userID)
+            blockedUserIDs.insert(musician.id)
+            musicians.removeAll { $0.id == musician.id }
+            conversations.removeAll { $0.contactName == musician.name }
+            return true
+        } catch {
+            backendError = tr("Le blocage n'a pas pu etre applique.")
+            return false
+        }
+    }
+
+    func deleteAccount() async -> Bool {
+        guard let backend, liveUserID != nil else { return false }
+        do {
+            try await backend.deleteMyAccount()
+            await signOutLive()
+            return true
+        } catch {
+            backendError = tr("La suppression du compte a echoue. Reessaie plus tard.")
+            return false
+        }
+    }
+
+    /// Filtre local minimal avant les ecritures UGC; les signalements restent
+    /// le filet principal pour les variantes et le contexte.
+    private func acceptsUserContent(_ text: String) -> Bool {
+        let normalized = Self.normalized(text)
+        let blockedTerms = ["pornographie", "viol explicite", "menace de mort", "nazi", "pedophile"]
+        let accepted = !blockedTerms.contains { normalized.contains($0) }
+        if !accepted {
+            backendError = tr("Ce contenu ne respecte pas les regles de la communaute.")
+        }
+        return accepted
     }
 
     // MARK: - Appréciations (notes de musique)
@@ -571,20 +747,76 @@ final class AppStore: ObservableObject {
         )
     }
 
-    /// Souscription simulée — le vrai paiement passera par StoreKit / App Store en phase 2.
-    func subscribePremium(plan: PremiumPlan) {
-        isPremium = true
-        premiumPlan = plan
-        UserDefaults.standard.set(true, forKey: Self.premiumKey)
-        UserDefaults.standard.set(plan.rawValue, forKey: Self.premiumPlanKey)
-        pushPremiumStatus()
+    func displayPrice(for plan: PremiumPlan) -> String {
+        storeProducts[plan]?.displayPrice ?? tr("Indisponible")
     }
 
-    func cancelPremium() {
-        isPremium = false
-        premiumPlan = nil
-        UserDefaults.standard.set(false, forKey: Self.premiumKey)
-        UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
+    func loadStoreProducts() async {
+        do {
+            let products = try await Product.products(for: Array(Self.productIDs.values))
+            storeProducts = Dictionary(uniqueKeysWithValues: products.compactMap { product in
+                guard let plan = Self.productIDs.first(where: { $0.value == product.id })?.key else { return nil }
+                return (plan, product)
+            })
+        } catch {
+            backendError = tr("Les abonnements App Store sont momentanement indisponibles.")
+        }
+    }
+
+    func purchasePremium(plan: PremiumPlan) async -> Bool {
+        guard let product = storeProducts[plan] else {
+            await loadStoreProducts()
+            return false
+        }
+        purchaseInProgress = true
+        defer { purchaseInProgress = false }
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(.verified(let transaction)):
+                await transaction.finish()
+                await refreshPurchasedEntitlements()
+                return true
+            case .success(.unverified), .pending, .userCancelled:
+                return false
+            @unknown default:
+                return false
+            }
+        } catch {
+            backendError = tr("L'achat n'a pas pu etre finalise.")
+            return false
+        }
+    }
+
+    func restorePurchases() async {
+        purchaseInProgress = true
+        defer { purchaseInProgress = false }
+        do {
+            try await StoreKit.AppStore.sync()
+            await refreshPurchasedEntitlements()
+        } catch {
+            backendError = tr("La restauration des achats a echoue.")
+        }
+    }
+
+    func refreshPurchasedEntitlements() async {
+        var activePlan: PremiumPlan?
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result,
+                  transaction.revocationDate == nil,
+                  let plan = Self.productIDs.first(where: { $0.value == transaction.productID })?.key
+            else { continue }
+            activePlan = plan
+            if plan == .annual { break }
+        }
+        isPremium = activePlan != nil
+        premiumPlan = activePlan
+        UserDefaults.standard.set(isPremium, forKey: Self.premiumKey)
+        if let activePlan {
+            UserDefaults.standard.set(activePlan.rawValue, forKey: Self.premiumPlanKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
+        }
         pushPremiumStatus()
     }
 
@@ -1187,6 +1419,7 @@ final class AppStore: ObservableObject {
     /// Envoie un message dans le groupe. En démo, un membre répond pour
     /// rendre la conversation vivante (temps réel serveur en phase 2b).
     func sendGroupMessage(_ text: String, in group: GroupChat) {
+        guard acceptsUserContent(text) else { return }
         updateGroup(group.id) {
             $0.messages.append(GroupMessage(sender: profile.name, isFromMe: true, text: text, date: Date()))
         }
@@ -1339,7 +1572,8 @@ final class AppStore: ObservableObject {
     /// (le vrai compteur viendra du graphe serveur en phase 2b) + moi si
     /// je le suis.
     func followerCount(of musician: Musician) -> Int {
-        40 + abs(musician.name.stableHash) % 320 + (isFollowing(musician) ? 1 : 0)
+        if isLive { return liveFollowerCounts[musician.id, default: 0] }
+        return 40 + abs(musician.name.stableHash) % 320 + (isFollowing(musician) ? 1 : 0)
     }
 
     // MARK: - Recherche universelle
@@ -1482,6 +1716,7 @@ final class AppStore: ObservableObject {
     // MARK: - Actions
 
     func addEvent(_ event: GigRequest) {
+        guard acceptsUserContent(event.title + " " + event.descriptionText) else { return }
         events.append(event)
         events.sort { $0.date < $1.date }
         persistEvents()
@@ -1514,6 +1749,7 @@ final class AppStore: ObservableObject {
     }
 
     func saveProfile() {
+        guard acceptsUserContent(profile.name + " " + profile.bio) else { return }
         Self.save(profile, key: Self.profileKey)
         if let backend, let userID = liveUserID {
             let snapshot = profile
@@ -1524,6 +1760,7 @@ final class AppStore: ObservableObject {
     /// Envoie un message. En mode live il part sur le serveur (temps réel) ;
     /// en démo, une réponse scriptée rend la conversation vivante.
     func sendMessage(_ text: String, in conversation: Conversation) {
+        guard acceptsUserContent(text) else { return }
         guard let index = conversations.firstIndex(where: { $0.id == conversation.id }) else { return }
 
         if let backend, let userID = liveUserID {
@@ -1536,6 +1773,10 @@ final class AppStore: ObservableObject {
                           !self.conversations[i].messages.contains(where: { $0.id == message.id })
                     else { return }
                     withAnimation { self.conversations[i].messages.append(message) }
+                    if self.isDemoContact(conversation.contactName) {
+                        try? await Task.sleep(for: .seconds(1.2))
+                        try? await backend.replyAsDemo(conversationID: conversationID)
+                    }
                 } catch {
                     self?.backendError = tr("Le message n'a pas pu être envoyé.")
                 }

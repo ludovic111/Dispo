@@ -5,6 +5,8 @@ import SwiftUI
 struct AccountSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteConfirmation = false
+    @State private var deletingAccount = false
 
     var body: some View {
         NavigationStack {
@@ -30,6 +32,22 @@ struct AccountSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") { dismiss() }.font(.headline)
                 }
+            }
+            .confirmationDialog(
+                "Supprimer définitivement le compte ?",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Supprimer mon compte", role: .destructive) {
+                    deletingAccount = true
+                    Task {
+                        if await store.deleteAccount() { dismiss() }
+                        deletingAccount = false
+                    }
+                }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("Le profil, les messages, les SOS et les relations seront supprimés. Cette action est irréversible.")
             }
         }
     }
@@ -81,6 +99,30 @@ struct AccountSheet: View {
                         .padding(.vertical, 12)
                         .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
+                .buttonStyle(PressableStyle())
+
+                Divider()
+
+                if let supportURL = URL(string: "mailto:support@dispo.ch") {
+                    Link(destination: supportURL) {
+                        Label("Contacter le support", systemImage: "envelope.fill")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                }
+
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        if deletingAccount { ProgressView().controlSize(.small) }
+                        Text("Supprimer mon compte")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(JC.coral.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .disabled(deletingAccount)
                 .buttonStyle(PressableStyle())
             }
         }
