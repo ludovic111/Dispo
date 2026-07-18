@@ -52,10 +52,6 @@
 	<string>Dispo se connecte au serveur de développement local sur votre réseau Wi-Fi.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Dispo utilise votre position pour trouver des musiciens proches de vous.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

@@ -44,7 +44,6 @@ targets:
         NSLocationWhenInUseUsageDescription: "Dispo utilise votre position pour trouver des musiciens proches de vous."
         NSLocalNetworkUsageDescription: "Dispo se connecte au serveur de développement local sur votre réseau Wi-Fi."
         ITSAppUsesNonExemptEncryption: false
-        UIBackgroundModes: [remote-notification]
         # Autorise le backend Supabase local (http://<ip-du-mac>:54321) pendant
         # le développement. La prod (https) n'est pas concernée.
         NSAppTransportSecurity:
