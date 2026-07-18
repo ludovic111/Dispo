@@ -723,11 +723,13 @@ struct Musician: Codable, Identifiable, Hashable {
     var collaborators: [String] = []
     /// Compte échantillon clairement distingué des profils réels.
     var isDemo: Bool = false
+    /// Statut Premium réel (serveur) — false pour les profils seed.
+    var isPremium: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
         case instruments, genres, level, bio, availability, repertoire, reviews, photo
-        case socials, collaborators, isDemo
+        case socials, collaborators, isDemo, isPremium
     }
 
     init(
@@ -748,7 +750,8 @@ struct Musician: Codable, Identifiable, Hashable {
         photo: String? = nil,
         socials: [String: String]? = nil,
         collaborators: [String] = [],
-        isDemo: Bool = false
+        isDemo: Bool = false,
+        isPremium: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -768,6 +771,7 @@ struct Musician: Codable, Identifiable, Hashable {
         self.socials = socials
         self.collaborators = collaborators
         self.isDemo = isDemo
+        self.isPremium = isPremium
     }
 
     init(from decoder: Decoder) throws {
@@ -790,6 +794,7 @@ struct Musician: Codable, Identifiable, Hashable {
         // Absent du JSON (backend live, anciennes seeds) → liste vide.
         collaborators = try c.decodeIfPresent([String].self, forKey: .collaborators) ?? []
         isDemo = try c.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
+        isPremium = try c.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
     }
 
     /// Pseudo sur un réseau, s'il est renseigné.

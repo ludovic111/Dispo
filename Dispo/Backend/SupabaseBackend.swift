@@ -204,7 +204,8 @@ final class SupabaseBackend: Sendable {
                 reviews: reviews,
                 photo: photoUrl,
                 socials: socials,
-                isDemo: isDemo ?? false
+                isDemo: isDemo ?? false,
+                isPremium: isPremium
             )
         }
     }

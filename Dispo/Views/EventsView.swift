@@ -128,6 +128,7 @@ struct EventCard: View {
 /// Annonce en avant-première Premium : cachet et instrument visibles (le
 /// teasing), titre et lieu masqués jusqu'à la fin de la minuterie.
 struct LockedEventCard: View {
+    @EnvironmentObject private var store: AppStore
     let event: GigRequest
     let now: Date
 
@@ -154,7 +155,7 @@ struct LockedEventCard: View {
 
                 VStack(alignment: .leading, spacing: 7) {
                     HStack {
-                        Text("Nouveau SOS \(String(localized: String.LocalizationValue(event.genre.rawValue)))")
+                        Text("Nouveau SOS \(store.tr(event.genre.rawValue))")
                             .font(.subheadline.weight(.bold))
                             .lineLimit(1)
                         Spacer(minLength: 0)

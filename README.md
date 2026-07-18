@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.9.2 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.9.3 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|

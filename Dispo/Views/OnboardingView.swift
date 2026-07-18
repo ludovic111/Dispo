@@ -186,7 +186,7 @@ struct OnboardingView: View {
                 conceptRow(
                     icon: "video.fill",
                     title: Text("Écoute avant d'engager"),
-                    text: Text("Chaque profil a sa vidéo de démo. Tu entends le niveau et le style — zéro mauvaise surprise.")
+                    text: Text("Ajoute des vidéos de démo à ton profil. On entend le niveau et le style — zéro mauvaise surprise.")
                 )
                 conceptRow(
                     icon: "person.2.fill",

@@ -18,16 +18,12 @@ struct PaywallView: View {
         Perk(icon: "bolt.fill", title: "Alertes dépannage en priorité",
              text: "Un groupe cherche un remplaçant près de toi ? Tu reçois l'alerte 30 min avant tout le monde — le cachet est pour toi.",
              highlight: true),
-        Perk(icon: "arrow.up.circle.fill", title: "Profil en tête des recherches",
-             text: "Quand un orga cherche en urgence, ton profil sort en premier."),
         Perk(icon: "person.3.fill", title: "Crée et dirige des groupes",
              text: "Leader du groupe : membres, répertoire validé, événements et setlists — rejoindre reste gratuit."),
         Perk(icon: "video.fill", title: "6 vidéos de démo",
              text: "Montre plusieurs styles — un seul extrait en gratuit."),
         Perk(icon: "medal.fill", title: "Tri et niveau des musiciens",
-             text: "Les meilleurs profils en haut, leur niveau affiché."),
-        Perk(icon: "eye.fill", title: "Qui a vu ton profil",
-             text: "Vois quels groupes et musiciens ont regardé ta vidéo.")
+             text: "Les meilleurs profils en haut, leur niveau affiché.")
     ]
 
     var body: some View {
@@ -87,7 +83,7 @@ struct PaywallView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(JC.gold)
             }
-            Text("Un seul concert dépanné (CHF 100–300) rembourse **ton année entière** d'abonnement — dès le premier cachet.")
+            Text("Un seul concert dépanné (souvent CHF 100–300 à Genève) **peut couvrir ton abonnement à l'année**.")
                 .font(.footnote)
                 .foregroundStyle(.primary.opacity(0.9))
             Spacer(minLength: 0)

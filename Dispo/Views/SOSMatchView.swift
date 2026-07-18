@@ -192,6 +192,7 @@ struct SOSMatchRow: View {
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
+                    if match.musician.isDemo { DemoAccountBadge() }
                     SocialLinkBadge(link: store.socialLink(with: match.musician.name))
                 }
                 // Le niveau ne s'affiche qu'en Premium.

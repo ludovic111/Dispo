@@ -85,7 +85,9 @@ struct MyProfileView: View {
                         availabilityCard
                         videosCard
                         favoritesCard
-                        viewersCard
+                        // Vitrine démo uniquement : en live, aucun compteur de
+                        // vues n'existe encore côté serveur — on n'invente rien.
+                        if !store.isLive { viewersCard }
                         if !store.showsPremium { premiumCard }
                         settingsCard
                         footer
@@ -341,15 +343,19 @@ struct MyProfileView: View {
                     title: Text("Nouveautés"),
                     detail: Text(verbatim: "v\(Bundle.main.appVersion) · ") + Text("BÊTA")
                 ) { showPatchNotes = true }
-                Divider().padding(.leading, 52)
 
-                settingsRow(
-                    icon: "arrow.counterclockwise",
-                    color: .red,
-                    title: Text("Réinitialiser la démo"),
-                    detail: nil,
-                    destructive: true
-                ) { showResetConfirmation = true }
+                // Réservé au bac à sable local : sur un compte connecté, ce
+                // reset écraserait l'état réel (profil serveur compris).
+                if !store.isLive {
+                    Divider().padding(.leading, 52)
+                    settingsRow(
+                        icon: "arrow.counterclockwise",
+                        color: .red,
+                        title: Text("Réinitialiser la démo"),
+                        detail: nil,
+                        destructive: true
+                    ) { showResetConfirmation = true }
+                }
             }
         }
     }
@@ -397,7 +403,9 @@ struct MyProfileView: View {
     }
 
     private var footer: some View {
-        Text("Dispo v\(Bundle.main.appVersion) (bêta) — données de démo réinitialisables.")
+        Text(store.isLive
+             ? "Dispo v\(Bundle.main.appVersion) (bêta) — connecté au réseau Dispo."
+             : "Dispo v\(Bundle.main.appVersion) (bêta) — données de démo réinitialisables.")
             .font(.caption2)
             .foregroundStyle(.tertiary)
             .padding(.top, 4)

@@ -1129,10 +1129,15 @@ final class AppStore: ObservableObject {
         isLeader(of: group) && showsPremium
     }
 
-    /// Statut Premium simulé d'un membre (stable) — le vrai flag viendra du
-    /// serveur en phase 2b. Conditionne le transfert de leadership.
-    nonisolated func isPremiumMusician(_ name: String) -> Bool {
-        abs(name.stableHash) % 2 == 0
+    /// Statut Premium d'un membre. En live, c'est le vrai flag serveur
+    /// (`profiles.is_premium`) ; en démo, une simulation stable par nom.
+    /// Conditionne le transfert de leadership.
+    func isPremiumMusician(_ name: String) -> Bool {
+        if isLive {
+            if name == profile.name { return isPremium }
+            return musicians.first(where: { $0.name == name })?.isPremium == true
+        }
+        return abs(name.stableHash) % 2 == 0
     }
 
     // MARK: Membres (leader uniquement — l'UI verrouille)
@@ -1188,15 +1193,16 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Transfère le leadership — uniquement vers un membre Premium.
+    /// Transfère le leadership — uniquement vers un membre Premium
+    /// (statut serveur en live, simulation en démo).
     func transferLeadership(of group: GroupChat, to name: String) {
+        guard isPremiumMusician(name) else { return }
         if isLive {
             guard let backend, let profileID = profileID(for: name) else { return }
             updateGroup(group.id) { $0.leaderName = name }
             syncLive { try await backend.transferLeadership(of: group.id, to: profileID) }
             return
         }
-        guard isPremiumMusician(name) else { return }
         updateGroup(group.id) { $0.leaderName = name }
     }
 
@@ -1542,11 +1548,14 @@ final class AppStore: ObservableObject {
 
     /// Envoie un message dans le groupe. En démo, un membre répond pour
     /// rendre la conversation vivante (temps réel serveur en phase 2b).
+    /// En mode live, jamais de réponse scriptée : les membres sont de vraies
+    /// personnes et on ne fabrique pas de propos en leur nom.
     func sendGroupMessage(_ text: String, in group: GroupChat) {
         guard acceptsUserContent(text) else { return }
         updateGroup(group.id) {
             $0.messages.append(GroupMessage(sender: profile.name, isFromMe: true, text: text, date: Date()))
         }
+        guard !isLive else { return }
         guard let replier = group.memberNames.randomElement() else { return }
         let reply = Self.scriptedGroupReplies.randomElement() ?? "Ça marche !"
         let groupID = group.id
@@ -1966,7 +1975,9 @@ final class AppStore: ObservableObject {
     }
 
     /// Réinitialise la démo (utile pour les présentations).
+    /// Jamais en mode live : le reset écraserait l'état d'un vrai compte.
     func resetDemo() {
+        guard !isLive else { return }
         UserDefaults.standard.removeObject(forKey: Self.eventsKey)
         UserDefaults.standard.removeObject(forKey: Self.conversationsKey)
         UserDefaults.standard.removeObject(forKey: Self.profileKey)

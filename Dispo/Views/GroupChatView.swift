@@ -748,6 +748,7 @@ struct GroupMembersSheet: View {
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                        if !isMe && store.isDemoContact(name) { DemoAccountBadge() }
                         if isLeaderRow {
                             HStack(spacing: 3) {
                                 Image(systemName: "crown.fill")
@@ -844,9 +845,12 @@ struct InviteMemberSheet: View {
                     HStack(spacing: 10) {
                         AvatarView(name: musician.name, size: 38, photo: musician.photo)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(musician.name)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
+                            HStack(spacing: 6) {
+                                Text(musician.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                if musician.isDemo { DemoAccountBadge() }
+                            }
                             Text(verbatim: musician.handle)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -1301,9 +1305,12 @@ struct NewGroupSheet: View {
                             HStack(spacing: 10) {
                                 AvatarView(name: musician.name, size: 34, photo: musician.photo)
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(musician.name)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.primary)
+                                    HStack(spacing: 6) {
+                                        Text(musician.name)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                        if musician.isDemo { DemoAccountBadge() }
+                                    }
                                     Text(verbatim: musician.handle)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)

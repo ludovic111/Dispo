@@ -12,9 +12,7 @@ struct MusicianDetailView: View {
     @State private var safetyMessage: String?
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
-    /// Stat sociale fictive, stable entre lancements (backend en phase 2b).
-    private var gigsPlayed: Int { 3 + abs(musician.name.stableHash) % 40 }
-    /// Nombre de démos fictives, stable par profil (vidéos réelles en 2b).
+    /// Tuiles d'aperçu — uniquement pour la vitrine des profils de démo.
     private var demoCount: Int { 3 + abs(musician.name.stableHash) % 4 }
 
     var body: some View {
@@ -103,10 +101,12 @@ struct MusicianDetailView: View {
                             .overlay(Circle().stroke(JC.bg, lineWidth: 2.5))
                     }
                 }
+            // Trois compteurs réels : appréciations reçues, abonnés,
+            // collaborations « a joué avec » — jamais de chiffres inventés.
             HStack(spacing: 0) {
-                statBlock(value: "\(demoCount)", label: "démos")
+                statBlock(value: "\(store.noteCount(for: musician))", label: "notes")
                 statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
-                statBlock(value: "\(gigsPlayed)", label: "concerts")
+                statBlock(value: "\(store.collaborators(of: musician).count)", label: "collabs")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -160,7 +160,11 @@ struct MusicianDetailView: View {
                     .buttonStyle(PressableStyle())
                 }
             }
-            Text("\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
+            // En live, les coordonnées serveur sont encore des positions par
+            // défaut (géoloc en phase 2b) : afficher un « x.x km » serait faux.
+            Text(store.isLive
+                 ? "\(musician.age) ans · \(musician.neighborhood)"
+                 : "\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if !musician.bio.isEmpty {
@@ -427,19 +431,27 @@ struct MusicianDetailView: View {
 
     // MARK: - Grille de démos (bas de page, façon Instagram)
 
+    /// Vitrine de tuiles fictives pour les profils de démo uniquement.
+    /// Un vrai profil sans vidéos affiche un état vide honnête.
     private var demosGrid: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionTitle("Démos", systemImage: "play.square.stack")
-            let columns = [GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3)]
-            LazyVGrid(columns: columns, spacing: 3) {
-                ForEach(0..<demoCount, id: \.self) { index in
-                    demoTile(index: index)
+            if musician.isDemo {
+                let columns = [GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3)]
+                LazyVGrid(columns: columns, spacing: 3) {
+                    ForEach(0..<demoCount, id: \.self) { index in
+                        demoTile(index: index)
+                    }
                 }
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                Text("Aperçu de démonstration — lecture des vraies vidéos en phase 2.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text("Pas encore de vidéo de démo sur ce profil.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            Text("Lecture des vraies vidéos en phase 2 — extraits de 60 à 90 s.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
         }
     }
 

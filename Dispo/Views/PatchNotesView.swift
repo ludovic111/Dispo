@@ -11,6 +11,16 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.3",
+            title: "Vrai réseau, vraies données",
+            points: [
+                "Badge « Démo » partout — matchs SOS, groupes et invitations : aucun compte d'exemple ne se confond avec un vrai musicien",
+                "Statistiques de profil honnêtes : notes, abonnés et collabs réels, plus aucun chiffre inventé",
+                "Publication des SOS réparée côté serveur, adhésion aux groupes durcie",
+                "Statut Premium des membres lu depuis le serveur (transfert de leadership fiable)"
+            ]
+        ),
+        PatchNote(
             version: "0.9.2",
             title: "Plus claire, plus réactive",
             points: [
@@ -179,7 +189,7 @@ struct PatchNotesView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Dispo est en bêta")
                     .font(.subheadline.weight(.heavy))
-                Text("Merci de tester ! Un pépin, une idée ? Dis-le à Ludovic.")
+                Text("Merci de tester ! Un pépin, une idée ? Écris-nous via l'assistance dispo.lol.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
