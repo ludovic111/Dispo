@@ -45,6 +45,9 @@ final class AppStore: ObservableObject {
     @Published var language: AppLanguage = .systemDefault
     /// Musiciens que je suis (par nom, comme les favoris).
     @Published var following: Set<String> = []
+    /// Musiciens avec qui j'ai déjà joué (par nom) — graphe local « a joué avec ».
+    /// TODO phase 2b: sync playedWith to Supabase
+    @Published var playedWith: Set<String> = []
     /// Notifications locales activées (nouveaux SOS compatibles, messages).
     @Published var notificationsEnabled: Bool = false
     private let notificationDelegate = NotificationDelegate()
@@ -107,7 +110,12 @@ final class AppStore: ObservableObject {
     private static let themeKey = "jamconnect.theme"
     private static let languageKey = "jamconnect.language"
     private static let followingKey = "jamconnect.following"
+    private static let playedWithKey = "jamconnect.playedWith"
     private static let notificationsKey = "jamconnect.notifications"
+    /// Amis de démo (suivent déjà l'utilisateur) — rend le badge « a joué avec » visible.
+    private static let demoFollowing: Set<String> = [
+        "Marco Fernández", "Yann Broillet", "Léa Zbinden"
+    ]
     private static let seenGigsKey = "jamconnect.seenGigs"
     private static let groupsKey = "jamconnect.groups"
 
@@ -156,6 +164,14 @@ final class AppStore: ObservableObject {
         language = UserDefaults.standard.string(forKey: Self.languageKey).flatMap(AppLanguage.init) ?? .systemDefault
         if let saved: Set<String> = Self.load(key: Self.followingKey) {
             following = saved
+        } else {
+            // Démo : quelques amis mutuels pour le réseau « a joué avec ».
+            following = Self.demoFollowing
+            Self.save(following, key: Self.followingKey)
+        }
+        // TODO phase 2b: sync playedWith to Supabase
+        if let saved: Set<String> = Self.load(key: Self.playedWithKey) {
+            playedWith = saved
         }
         notificationsEnabled = UserDefaults.standard.bool(forKey: Self.notificationsKey)
         if let saved: Set<UUID> = Self.load(key: Self.seenGigsKey) {
@@ -438,15 +454,57 @@ final class AppStore: ObservableObject {
     var followingCount: Int { following.count }
     var followersCount: Int { myFollowers.count }
 
+    // MARK: - A joué avec (graphe local)
+
+    func hasPlayedWith(_ musician: Musician) -> Bool {
+        playedWith.contains(musician.name)
+    }
+
+    func togglePlayedWith(_ musician: Musician) {
+        if playedWith.contains(musician.name) {
+            playedWith.remove(musician.name)
+        } else {
+            playedWith.insert(musician.name)
+        }
+        // TODO phase 2b: sync playedWith to Supabase
+        Self.save(playedWith, key: Self.playedWithKey)
+    }
+
+    /// Noms des musiciens avec qui `musician` a déjà joué (seed / profil).
+    func collaborators(of musician: Musician) -> [String] {
+        musician.collaborators
+    }
+
+    /// Parmi mes amis, ceux qui apparaissent dans les collaborateurs du profil.
+    func friendsWhoPlayedWith(_ musician: Musician) -> [Musician] {
+        let names = Set(collaborators(of: musician))
+        return musicians
+            .filter { names.contains($0.name) && socialLink(with: $0.name) == .friend }
+            .sorted { $0.name < $1.name }
+    }
+
+    /// true si ce musicien a déjà joué avec au moins un de mes amis.
+    func playedWithAFriend(_ musician: Musician) -> Bool {
+        !friendsWhoPlayedWith(musician).isEmpty
+    }
+
     // MARK: - Classement des musiciens
 
-    /// Ordre du feed et des matchs : les amis / suivis / abonnés d'abord,
-    /// puis — pour les membres Premium — les meilleurs niveaux en haut.
-    /// Les comptes gratuits n'ont ni le tri ni l'affichage du niveau
-    /// (c'est un argument d'abonnement).
+    /// Score de relation pour le tri : amis → a joué avec un ami → suivis / abonnés.
+    private func relationRank(of musician: Musician) -> Int {
+        let link = socialLink(with: musician.name)
+        if link == .friend { return 40 }
+        if playedWithAFriend(musician) { return 30 }
+        return link.rawValue
+    }
+
+    /// Ordre du feed et des matchs : les amis / « a joué avec un ami » /
+    /// suivis / abonnés d'abord, puis — pour les membres Premium — les
+    /// meilleurs niveaux en haut. Les comptes gratuits n'ont ni le tri ni
+    /// l'affichage du niveau (c'est un argument d'abonnement).
     func rank(_ a: Musician, _ b: Musician) -> Bool {
-        let linkA = socialLink(with: a.name), linkB = socialLink(with: b.name)
-        if linkA != linkB { return linkA > linkB }
+        let rankA = relationRank(of: a), rankB = relationRank(of: b)
+        if rankA != rankB { return rankA > rankB }
         if showsPremium, a.level != b.level { return a.level > b.level }
         if a.availability.urgencyRank != b.availability.urgencyRank {
             return a.availability.urgencyRank > b.availability.urgencyRank
@@ -1545,9 +1603,12 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.premiumKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
         UserDefaults.standard.removeObject(forKey: Self.followingKey)
+        UserDefaults.standard.removeObject(forKey: Self.playedWithKey)
         UserDefaults.standard.removeObject(forKey: Self.groupsKey)
         favorites = []
-        following = []
+        following = Self.demoFollowing
+        Self.save(following, key: Self.followingKey)
+        playedWith = []
         groups = []
         myAppreciations = [:]
         isPremium = false

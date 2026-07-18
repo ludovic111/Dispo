@@ -10,6 +10,12 @@ struct DiscoveryFilters {
     /// répond à cet horizon (« cette semaine » englobe ce soir et le week-end).
     var availability: Availability?
     var radiusKm: Double = 25
+    /// Uniquement mes amis (suivi mutuel).
+    var friendsOnly: Bool = false
+    /// A déjà joué avec au moins un de mes amis.
+    var playedWithAFriend: Bool = false
+    /// Bien notés : ≥ 1 note dorée ou ≥ 3 notes.
+    var wellRated: Bool = false
 
     var activeCount: Int {
         var count = 0
@@ -18,15 +24,22 @@ struct DiscoveryFilters {
         if minLevel != nil { count += 1 }
         if availability != nil { count += 1 }
         if radiusKm < 25 { count += 1 }
+        if friendsOnly { count += 1 }
+        if playedWithAFriend { count += 1 }
+        if wellRated { count += 1 }
         return count
     }
 
-    func matches(_ musician: Musician) -> Bool {
+    @MainActor
+    func matches(_ musician: Musician, store: AppStore) -> Bool {
         if let instrument, !musician.instruments.contains(instrument) { return false }
         if let genre, !musician.genres.contains(genre) { return false }
         if let minLevel, musician.level < minLevel { return false }
         if let availability, !musician.availability.satisfies(availability) { return false }
         if musician.distance(from: AppStore.geneva) > radiusKm { return false }
+        if friendsOnly, store.socialLink(with: musician.name) != .friend { return false }
+        if playedWithAFriend, !store.playedWithAFriend(musician) { return false }
+        if wellRated, !(musician.goldenCount >= 1 || musician.noteCount >= 3) { return false }
         return true
     }
 }
@@ -42,10 +55,10 @@ struct HomeView: View {
     @State private var invitingName: String?
 
     private var filtered: [Musician] {
-        // Amis / suivis / abonnés d'abord, puis niveau (Premium seulement),
+        // Amis / a joué avec un ami / suivis d'abord, puis niveau (Premium),
         // puis urgence de dispo et distance — voir AppStore.rank.
         store.musicians
-            .filter { filters.matches($0) }
+            .filter { filters.matches($0, store: store) }
             .sorted { store.rank($0, $1) }
     }
 

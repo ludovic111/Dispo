@@ -738,11 +738,72 @@ struct Musician: Codable, Identifiable, Hashable {
     var photo: String?
     /// Pseudos réseaux sociaux (clé = SocialNetwork.rawValue).
     var socials: [String: String]?
+    /// Noms des musiciens avec qui cette personne a déjà joué (graphe « a joué avec »).
+    var collaborators: [String] = []
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
         case instruments, genres, level, bio, availability, repertoire, reviews, photo
-        case socials
+        case socials, collaborators
+    }
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        age: Int,
+        neighborhood: String,
+        latitude: Double,
+        longitude: Double,
+        instruments: [Instrument],
+        genres: [Genre],
+        level: Level,
+        bio: String,
+        availability: Availability,
+        availableDates: [Date] = [],
+        repertoire: [String],
+        reviews: [Review],
+        photo: String? = nil,
+        socials: [String: String]? = nil,
+        collaborators: [String] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.age = age
+        self.neighborhood = neighborhood
+        self.latitude = latitude
+        self.longitude = longitude
+        self.instruments = instruments
+        self.genres = genres
+        self.level = level
+        self.bio = bio
+        self.availability = availability
+        self.availableDates = availableDates
+        self.repertoire = repertoire
+        self.reviews = reviews
+        self.photo = photo
+        self.socials = socials
+        self.collaborators = collaborators
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = UUID()
+        name = try c.decode(String.self, forKey: .name)
+        age = try c.decode(Int.self, forKey: .age)
+        neighborhood = try c.decode(String.self, forKey: .neighborhood)
+        latitude = try c.decode(Double.self, forKey: .latitude)
+        longitude = try c.decode(Double.self, forKey: .longitude)
+        instruments = try c.decode([Instrument].self, forKey: .instruments)
+        genres = try c.decode([Genre].self, forKey: .genres)
+        level = try c.decode(Level.self, forKey: .level)
+        bio = try c.decode(String.self, forKey: .bio)
+        availability = try c.decode(Availability.self, forKey: .availability)
+        repertoire = try c.decode([String].self, forKey: .repertoire)
+        reviews = try c.decode([Review].self, forKey: .reviews)
+        photo = try c.decodeIfPresent(String.self, forKey: .photo)
+        socials = try c.decodeIfPresent([String: String].self, forKey: .socials)
+        // Absent du JSON (backend live, anciennes seeds) → liste vide.
+        collaborators = try c.decodeIfPresent([String].self, forKey: .collaborators) ?? []
     }
 
     /// Pseudo sur un réseau, s'il est renseigné.

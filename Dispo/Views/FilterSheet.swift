@@ -93,6 +93,14 @@ struct FilterSheet: View {
                 }
 
                 Section {
+                    Toggle("Amis uniquement", isOn: $filters.friendsOnly)
+                    Toggle("A joué avec un ami", isOn: $filters.playedWithAFriend)
+                    Toggle("Bien notés", isOn: $filters.wellRated)
+                } header: {
+                    Text("Relations")
+                }
+
+                Section {
                     Button("Réinitialiser les filtres", role: .destructive) {
                         filters = DiscoveryFilters()
                     }

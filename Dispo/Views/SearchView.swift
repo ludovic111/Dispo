@@ -147,6 +147,9 @@ struct SearchMusicianRow: View {
                             .lineLimit(1)
                         SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
+                    if store.playedWithAFriend(musician) {
+                        PlayedWithFriendCompactBadge(friends: store.friendsWhoPlayedWith(musician))
+                    }
                     Text(verbatim: musician.handle)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(JC.violet)
@@ -167,5 +170,77 @@ struct SearchMusicianRow: View {
                 }
             }
         }
+    }
+}
+
+/// Badge compact « a joué avec un ami » — appui long pour voir quels amis.
+struct PlayedWithFriendCompactBadge: View {
+    let friends: [Musician]
+
+    private var friendNames: String {
+        friends.map(\.name).joined(separator: ", ")
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 9, weight: .bold))
+            Text("A joué avec un ami")
+                .font(.caption2.weight(.bold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(JC.coral.opacity(0.14), in: Capsule())
+        .overlay(Capsule().stroke(JC.coral.opacity(0.35), lineWidth: 1))
+        .foregroundStyle(JC.coral)
+        .contextMenu {
+            ForEach(friends) { friend in
+                Label(friend.name, systemImage: "person.fill")
+            }
+        }
+        .accessibilityLabel(Text("A joué avec un ami"))
+        .accessibilityHint(Text(verbatim: friendNames))
+        .help(friendNames)
+    }
+}
+
+/// Badge détaillé sur le profil : « A joué avec Marco (ton ami) » / « +N ».
+struct PlayedWithFriendDetailBadge: View {
+    @EnvironmentObject private var store: AppStore
+    let friends: [Musician]
+
+    private var label: String {
+        guard let first = friends.first else { return store.tr("A joué avec un ami") }
+        let firstName = first.name.split(separator: " ").first.map(String.init) ?? first.name
+        if friends.count > 1 {
+            return String(
+                format: store.tr("A joué avec %@ +%lld (ton ami)"),
+                firstName,
+                Int64(friends.count - 1)
+            )
+        }
+        return String(format: store.tr("A joué avec %@ (ton ami)"), firstName)
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 10, weight: .bold))
+            Text(verbatim: label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(JC.coral.opacity(0.14), in: Capsule())
+        .overlay(Capsule().stroke(JC.coral.opacity(0.35), lineWidth: 1))
+        .foregroundStyle(JC.coral)
+        .contextMenu {
+            ForEach(friends) { friend in
+                Label(friend.name, systemImage: "person.fill")
+            }
+        }
+        .accessibilityLabel(Text(verbatim: label))
     }
 }

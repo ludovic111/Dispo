@@ -11,6 +11,15 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.1",
+            title: "Réseau de confiance",
+            points: [
+                "Réseau de confiance : découvre qui a déjà joué avec tes amis, et filtre par amis / pote d'un pote / bien notés",
+                "Bouton « J'ai déjà joué avec » sur chaque profil",
+                "Badge « A joué avec un ami » dans la recherche et le feed"
+            ]
+        ),
+        PatchNote(
             version: "0.9.0",
             title: "Noyau fixe, présence & invitations",
             points: [

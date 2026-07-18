@@ -34,7 +34,14 @@
           "comment": "La clave dans le sang. Il a sauvé notre soirée salsa."
         }
       ],
-      "photo": "pfp_marco"
+      "photo": "pfp_marco",
+      "collaborators": [
+        "Sofia Almeida",
+        "Pablo Gutiérrez",
+        "Yann Broillet",
+        "David Rochat",
+        "Ricardo Mota"
+      ]
     },
     {
       "name": "Sofia Almeida",
@@ -64,7 +71,13 @@
           "comment": "Une voix qui transforme n'importe quel concert."
         }
       ],
-      "photo": "pfp_sofia"
+      "photo": "pfp_sofia",
+      "collaborators": [
+        "Marco Fernández",
+        "Ricardo Mota",
+        "Nadia Benali",
+        "Pablo Gutiérrez"
+      ]
     },
     {
       "name": "Julien Perrin",
@@ -100,7 +113,13 @@
           "comment": "Le pilier de n'importe quel groupe. Fiable à 200 %."
         }
       ],
-      "photo": "pfp_julien"
+      "photo": "pfp_julien",
+      "collaborators": [
+        "David Rochat",
+        "Stefan Meier",
+        "Ingrid Johansson",
+        "Sarah Cohen"
+      ]
     },
     {
       "name": "Anna Kowalska",
@@ -130,7 +149,12 @@
           "comment": "Rigoureuse et pédagogue."
         }
       ],
-      "photo": "pfp_anna"
+      "photo": "pfp_anna",
+      "collaborators": [
+        "Mathilde Favre",
+        "Élise Bonnet",
+        "Ingrid Johansson"
+      ]
     },
     {
       "name": "David Rochat",
@@ -165,7 +189,13 @@
           "comment": "Très bon feel latin."
         }
       ],
-      "photo": "pfp_david"
+      "photo": "pfp_david",
+      "collaborators": [
+        "Julien Perrin",
+        "Stefan Meier",
+        "Marco Fernández",
+        "Yann Broillet"
+      ]
     },
     {
       "name": "Élise Bonnet",
@@ -189,7 +219,12 @@
         "Blue Bossa"
       ],
       "reviews": [],
-      "photo": "pfp_elise"
+      "photo": "pfp_elise",
+      "collaborators": [
+        "Anna Kowalska",
+        "Mathilde Favre",
+        "Ingrid Johansson"
+      ]
     },
     {
       "name": "Karim Haddad",
@@ -219,7 +254,12 @@
           "comment": "Très bon son, super énergie."
         }
       ],
-      "photo": "pfp_karim"
+      "photo": "pfp_karim",
+      "collaborators": [
+        "Léa Zbinden",
+        "Hugo Steiner",
+        "Tom Berger"
+      ]
     },
     {
       "name": "Léa Zbinden",
@@ -249,7 +289,12 @@
           "comment": "Le groove est là. Fiable et ponctuelle."
         }
       ],
-      "photo": "pfp_lea"
+      "photo": "pfp_lea",
+      "collaborators": [
+        "Karim Haddad",
+        "Hugo Steiner",
+        "Antoine Vullioud"
+      ]
     },
     {
       "name": "Pablo Gutiérrez",
@@ -285,7 +330,12 @@
           "comment": "Le feu. La section cuivre rêvée."
         }
       ],
-      "photo": "pfp_pablo"
+      "photo": "pfp_pablo",
+      "collaborators": [
+        "Marco Fernández",
+        "Yann Broillet",
+        "Sofia Almeida"
+      ]
     },
     {
       "name": "Mathilde Favre",
@@ -314,7 +364,11 @@
           "comment": "Très belle sonorité, engagée."
         }
       ],
-      "photo": "pfp_mathilde"
+      "photo": "pfp_mathilde",
+      "collaborators": [
+        "Anna Kowalska",
+        "Élise Bonnet"
+      ]
     },
     {
       "name": "Tom Berger",
@@ -336,7 +390,12 @@
         "Collabs hip-hop"
       ],
       "reviews": [],
-      "photo": "pfp_tom"
+      "photo": "pfp_tom",
+      "collaborators": [
+        "Hugo Steiner",
+        "Karim Haddad",
+        "Antoine Vullioud"
+      ]
     },
     {
       "name": "Nadia Benali",
@@ -367,7 +426,12 @@
           "comment": "Harmonies magnifiques."
         }
       ],
-      "photo": "pfp_nadia"
+      "photo": "pfp_nadia",
+      "collaborators": [
+        "Sofia Almeida",
+        "Antoine Vullioud",
+        "Ingrid Johansson"
+      ]
     },
     {
       "name": "Stefan Meier",
@@ -397,7 +461,13 @@
           "comment": "Beau phrasé, belle écoute."
         }
       ],
-      "photo": "pfp_stefan"
+      "photo": "pfp_stefan",
+      "collaborators": [
+        "Julien Perrin",
+        "David Rochat",
+        "Ingrid Johansson",
+        "Sarah Cohen"
+      ]
     },
     {
       "name": "Camille Dupraz",
@@ -421,7 +491,11 @@
         "Compositions perso"
       ],
       "reviews": [],
-      "photo": "pfp_camille"
+      "photo": "pfp_camille",
+      "collaborators": [
+        "Karim Haddad",
+        "Léa Zbinden"
+      ]
     },
     {
       "name": "Ricardo Mota",
@@ -450,7 +524,12 @@
           "comment": "La bossa comme à Rio."
         }
       ],
-      "photo": "pfp_ricardo"
+      "photo": "pfp_ricardo",
+      "collaborators": [
+        "Sofia Almeida",
+        "Marco Fernández",
+        "Yann Broillet"
+      ]
     },
     {
       "name": "Hugo Steiner",
@@ -480,7 +559,12 @@
           "comment": "Frappe solide, bon local."
         }
       ],
-      "photo": "pfp_hugo"
+      "photo": "pfp_hugo",
+      "collaborators": [
+        "Karim Haddad",
+        "Léa Zbinden",
+        "Tom Berger"
+      ]
     },
     {
       "name": "Ingrid Johansson",
@@ -510,7 +594,13 @@
           "comment": "Un toucher exceptionnel."
         }
       ],
-      "photo": "pfp_ingrid"
+      "photo": "pfp_ingrid",
+      "collaborators": [
+        "Stefan Meier",
+        "Sarah Cohen",
+        "Nadia Benali",
+        "Julien Perrin"
+      ]
     },
     {
       "name": "Yann Broillet",
@@ -540,7 +630,12 @@
           "comment": "Tumbao d'enfer."
         }
       ],
-      "photo": "pfp_yann"
+      "photo": "pfp_yann",
+      "collaborators": [
+        "Marco Fernández",
+        "Pablo Gutiérrez",
+        "David Rochat"
+      ]
     },
     {
       "name": "Sarah Cohen",
@@ -563,7 +658,12 @@
         "God Bless the Child"
       ],
       "reviews": [],
-      "photo": "pfp_sarah"
+      "photo": "pfp_sarah",
+      "collaborators": [
+        "Ingrid Johansson",
+        "Julien Perrin",
+        "Stefan Meier"
+      ]
     },
     {
       "name": "Antoine Vullioud",
@@ -594,7 +694,12 @@
           "comment": "Le son Rhodes parfait."
         }
       ],
-      "photo": "pfp_antoine"
+      "photo": "pfp_antoine",
+      "collaborators": [
+        "Nadia Benali",
+        "Léa Zbinden",
+        "Tom Berger"
+      ]
     }
   ],
   "bands": [
@@ -603,18 +708,40 @@
       "neighborhood": "Carouge",
       "latitude": 46.1815,
       "longitude": 6.1398,
-      "genres": ["Latin / World", "Jazz"],
+      "genres": [
+        "Latin / World",
+        "Jazz"
+      ],
       "level": "Professionnel",
       "bio": "Sextet latin jazz fondé en 2018. Descargas mensuelles au Chat Noir, festivals d'été en Suisse romande. Groove cubain authentique.",
       "availability": "Ce soir",
       "memberCount": 6,
       "foundedYear": 2018,
-      "lookingFor": ["Percussions"],
-      "repertoire": ["Manteca", "Oye Como Va", "Guantanamera", "El Cuarto de Tula"],
+      "lookingFor": [
+        "Percussions"
+      ],
+      "repertoire": [
+        "Manteca",
+        "Oye Como Va",
+        "Guantanamera",
+        "El Cuarto de Tula"
+      ],
       "reviews": [
-        { "author": "Sofia", "appreciation": "golden", "comment": "La meilleure descarga de Genève. Énergie de feu." },
-        { "author": "Julien", "appreciation": "golden", "comment": "Section cuivre + rythmes impeccables." },
-        { "author": "David", "appreciation": "note", "comment": "Très pro, bonne ambiance de scène." }
+        {
+          "author": "Sofia",
+          "appreciation": "golden",
+          "comment": "La meilleure descarga de Genève. Énergie de feu."
+        },
+        {
+          "author": "Julien",
+          "appreciation": "golden",
+          "comment": "Section cuivre + rythmes impeccables."
+        },
+        {
+          "author": "David",
+          "appreciation": "note",
+          "comment": "Très pro, bonne ambiance de scène."
+        }
       ],
       "photo": "cover_latin"
     },
@@ -623,17 +750,34 @@
       "neighborhood": "Eaux-Vives",
       "latitude": 46.2038,
       "longitude": 6.1582,
-      "genres": ["Jazz"],
+      "genres": [
+        "Jazz"
+      ],
       "level": "Professionnel",
       "bio": "Quartet jazz moderne — standards revisités et compositions originales. Résidence au Bateau Genève le jeudi.",
       "availability": "Cette semaine",
       "memberCount": 4,
       "foundedYear": 2015,
-      "lookingFor": ["Saxophone"],
-      "repertoire": ["Autumn Leaves", "Blue Bossa", "Footprints", "So What"],
+      "lookingFor": [
+        "Saxophone"
+      ],
+      "repertoire": [
+        "Autumn Leaves",
+        "Blue Bossa",
+        "Footprints",
+        "So What"
+      ],
       "reviews": [
-        { "author": "Élise", "appreciation": "golden", "comment": "Un quartet de classe mondiale." },
-        { "author": "Nadia", "appreciation": "note", "comment": "Très bon niveau, setlist exigeante." }
+        {
+          "author": "Élise",
+          "appreciation": "golden",
+          "comment": "Un quartet de classe mondiale."
+        },
+        {
+          "author": "Nadia",
+          "appreciation": "note",
+          "comment": "Très bon niveau, setlist exigeante."
+        }
       ],
       "photo": "cover_jazz"
     },
@@ -642,17 +786,33 @@
       "neighborhood": "Plainpalais",
       "latitude": 46.1962,
       "longitude": 6.1425,
-      "genres": ["Gospel / Soul / R&B", "Jazz"],
+      "genres": [
+        "Gospel / Soul / R&B",
+        "Jazz"
+      ],
       "level": "Avancé",
       "bio": "Cinq voix + claviers + batterie. Covers soul des 70s et neo-soul contemporain. Open mic le premier vendredi du mois.",
       "availability": "Ce week-end",
       "memberCount": 5,
       "foundedYear": 2020,
       "lookingFor": [],
-      "repertoire": ["Ain't No Sunshine", "Georgia On My Mind", "Respect", "Compositions neo-soul"],
+      "repertoire": [
+        "Ain't No Sunshine",
+        "Georgia On My Mind",
+        "Respect",
+        "Compositions neo-soul"
+      ],
       "reviews": [
-        { "author": "Marco", "appreciation": "golden", "comment": "Les harmonies nous ont fait pleurer." },
-        { "author": "Léa", "appreciation": "note", "comment": "Super groove, chanteuses au top." }
+        {
+          "author": "Marco",
+          "appreciation": "golden",
+          "comment": "Les harmonies nous ont fait pleurer."
+        },
+        {
+          "author": "Léa",
+          "appreciation": "note",
+          "comment": "Super groove, chanteuses au top."
+        }
       ],
       "photo": "cover_soul"
     },
@@ -660,17 +820,28 @@
       "name": "Quartet Mont-Blanc",
       "neighborhood": "Champel",
       "latitude": 46.1925,
-      "longitude": 6.1510,
-      "genres": ["Jazz", "Classique"],
+      "longitude": 6.151,
+      "genres": [
+        "Jazz",
+        "Classique"
+      ],
       "level": "Professionnel",
       "bio": "Formation hybride jazz-classique. Piano, violon, contrebasse, batterie. Répertoire de Gershwin à Shostakovitch.",
       "availability": "Sur demande",
       "memberCount": 4,
       "foundedYear": 2012,
       "lookingFor": [],
-      "repertoire": ["Rhapsody in Blue", "Summertime", "Jazz Suite No. 2"],
+      "repertoire": [
+        "Rhapsody in Blue",
+        "Summertime",
+        "Jazz Suite No. 2"
+      ],
       "reviews": [
-        { "author": "Anna", "appreciation": "golden", "comment": "Élégance et virtuosité rares." }
+        {
+          "author": "Anna",
+          "appreciation": "golden",
+          "comment": "Élégance et virtuosité rares."
+        }
       ],
       "photo": "cover_classique"
     },
@@ -679,16 +850,29 @@
       "neighborhood": "Pâquis",
       "latitude": 46.2105,
       "longitude": 6.1488,
-      "genres": ["Électronique", "Rock / Pop"],
+      "genres": [
+        "Électronique",
+        "Rock / Pop"
+      ],
       "level": "Intermédiaire",
       "bio": "Trio electro-rock genevois. Synthés analogiques, grooves hypnotiques. On cherche un guitariste pour compléter le live set.",
       "availability": "Cette semaine",
       "memberCount": 3,
       "foundedYear": 2023,
-      "lookingFor": ["Guitare"],
-      "repertoire": ["Sets hybrides", "Live set", "Collabs studio"],
+      "lookingFor": [
+        "Guitare"
+      ],
+      "repertoire": [
+        "Sets hybrides",
+        "Live set",
+        "Collabs studio"
+      ],
       "reviews": [
-        { "author": "Karim", "appreciation": "note", "comment": "Son massif, bonne énergie live." }
+        {
+          "author": "Karim",
+          "appreciation": "note",
+          "comment": "Son massif, bonne énergie live."
+        }
       ],
       "photo": "cover_electro"
     },
@@ -697,17 +881,34 @@
       "neighborhood": "Cité",
       "latitude": 46.2048,
       "longitude": 6.1365,
-      "genres": ["Folk / Acoustique"],
+      "genres": [
+        "Folk / Acoustique"
+      ],
       "level": "Avancé",
       "bio": "Cercle acoustique ouvert — guitare, mandoline, voix. Sessions storytelling autour d'un feu (virtuel) chaque dimanche.",
       "availability": "Ce week-end",
       "memberCount": 7,
       "foundedYear": 2019,
-      "lookingFor": ["Voix", "Violon"],
-      "repertoire": ["Storytelling", "Cercle", "Compositions perso"],
+      "lookingFor": [
+        "Voix",
+        "Violon"
+      ],
+      "repertoire": [
+        "Storytelling",
+        "Cercle",
+        "Compositions perso"
+      ],
       "reviews": [
-        { "author": "Camille", "appreciation": "golden", "comment": "Ambiance unique, très chaleureux." },
-        { "author": "Hugo", "appreciation": "note", "comment": "Belle énergie collective." }
+        {
+          "author": "Camille",
+          "appreciation": "golden",
+          "comment": "Ambiance unique, très chaleureux."
+        },
+        {
+          "author": "Hugo",
+          "appreciation": "note",
+          "comment": "Belle énergie collective."
+        }
       ],
       "photo": "cover_folk"
     }

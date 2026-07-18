@@ -86,6 +86,9 @@ struct MusicianDetailView: View {
                     .font(.title3.weight(.heavy))
                 SocialLinkBadge(link: store.socialLink(with: musician.name))
             }
+            if store.playedWithAFriend(musician) {
+                PlayedWithFriendDetailBadge(friends: store.friendsWhoPlayedWith(musician))
+            }
             HStack(spacing: 8) {
                 Text(verbatim: musician.handle)
                     .font(.caption.weight(.semibold))
@@ -133,56 +136,83 @@ struct MusicianDetailView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        HStack(spacing: 8) {
-            Button {
-                withAnimation(.snappy) { store.toggleFollow(musician) }
-            } label: {
-                Text(store.isFollowing(musician) ? "Suivi" : "Suivre")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(
-                        store.isFollowing(musician) ? AnyShapeStyle(JC.card) : AnyShapeStyle(JC.hero),
-                        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(store.isFollowing(musician) ? JC.cardStroke : .clear, lineWidth: 1)
-                    )
-                    .foregroundStyle(store.isFollowing(musician) ? Color.primary : Color.white)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.snappy) { store.toggleFollow(musician) }
+                } label: {
+                    Text(store.isFollowing(musician) ? "Suivi" : "Suivre")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            store.isFollowing(musician) ? AnyShapeStyle(JC.card) : AnyShapeStyle(JC.hero),
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(store.isFollowing(musician) ? JC.cardStroke : .clear, lineWidth: 1)
+                        )
+                        .foregroundStyle(store.isFollowing(musician) ? Color.primary : Color.white)
+                }
+                .buttonStyle(PressableStyle())
+
+                Button {
+                    Task { openedConversation = await store.conversation(with: musician) }
+                } label: {
+                    Text(musician.isAvailable ? "Demander un dépannage" : "Contacter")
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(JC.cardStroke, lineWidth: 1)
+                        )
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(PressableStyle())
+
+                Button {
+                    withAnimation(.snappy) { store.toggleFavorite(musician) }
+                } label: {
+                    Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(store.isFavorite(musician) ? JC.magenta : Color.primary)
+                        .padding(10)
+                        .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(JC.cardStroke, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(PressableStyle())
             }
-            .buttonStyle(PressableStyle())
 
             Button {
-                Task { openedConversation = await store.conversation(with: musician) }
+                withAnimation(.snappy) { store.togglePlayedWith(musician) }
             } label: {
-                Text(musician.isAvailable ? "Demander un dépannage" : "Contacter")
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(JC.cardStroke, lineWidth: 1)
-                    )
-                    .foregroundStyle(.primary)
-            }
-            .buttonStyle(PressableStyle())
-
-            Button {
-                withAnimation(.snappy) { store.toggleFavorite(musician) }
-            } label: {
-                Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(store.isFavorite(musician) ? JC.magenta : Color.primary)
-                    .padding(10)
-                    .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(JC.cardStroke, lineWidth: 1)
-                    )
+                HStack(spacing: 6) {
+                    Image(systemName: store.hasPlayedWith(musician) ? "person.2.fill" : "person.2")
+                        .font(.caption.weight(.bold))
+                    Text(store.hasPlayedWith(musician) ? "Vous avez joué ensemble" : "J'ai déjà joué avec")
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    store.hasPlayedWith(musician) ? AnyShapeStyle(JC.coral.opacity(0.16)) : AnyShapeStyle(JC.card),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(store.hasPlayedWith(musician) ? JC.coral.opacity(0.45) : JC.cardStroke, lineWidth: 1)
+                )
+                .foregroundStyle(store.hasPlayedWith(musician) ? JC.coral : Color.primary)
             }
             .buttonStyle(PressableStyle())
         }
