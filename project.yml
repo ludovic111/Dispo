@@ -1,4 +1,4 @@
-name: JamConnect
+name: Dispo
 options:
   bundleIdPrefix: com.ludovicmarie
   deploymentTarget:
@@ -10,7 +10,7 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: YYJU63HSD4
+    DEVELOPMENT_TEAM: 2YBQQ56HH8
     MARKETING_VERSION: "0.9.0"
     CURRENT_PROJECT_VERSION: "2"
 packages:
@@ -18,11 +18,11 @@ packages:
     url: https://github.com/supabase/supabase-swift
     from: 2.20.0
 targets:
-  JamConnect:
+  Dispo:
     type: application
     platform: iOS
     sources:
-      - JamConnect
+      - Dispo
     dependencies:
       - package: Supabase
     # Sign in with Apple : capability refusée aux équipes personnelles
@@ -30,11 +30,11 @@ targets:
     # décommenter ce bloc — le bouton Apple apparaîtra tout seul
     # (détection du profil embarqué à l'exécution).
     # entitlements:
-    #   path: JamConnect/Dispo.entitlements
+    #   path: Dispo/Dispo.entitlements
     #   properties:
     #     com.apple.developer.applesignin: [Default]
     info:
-      path: JamConnect/Info.plist
+      path: Dispo/Info.plist
       properties:
         CFBundleDisplayName: Dispo
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
@@ -58,7 +58,7 @@ targets:
             CFBundleURLSchemes: [dispo]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.ludovicmarie.dispo
+        PRODUCT_BUNDLE_IDENTIFIER: ch.dispo.app
         PRODUCT_NAME: Dispo
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark

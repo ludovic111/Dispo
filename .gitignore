@@ -40,6 +40,6 @@ fastlane/test_output
 *.mobileprovision
 
 # Supabase
-JamConnect/Secrets.plist
+Dispo/Secrets.plist
 supabase/.temp/
 supabase/.branches/

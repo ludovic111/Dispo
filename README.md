@@ -2,7 +2,7 @@
 
 **L'app de dépannage concert — un musicien te lâche, tu trouves un remplaçant fiable en quelques minutes. Profil vidéo + dispo temps réel + géolocalisation.**
 
-Version **0.9.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3 — le code et le repo gardent ce nom en interne). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
+Version **0.9.0 (bêta)** — projet mené avec Raphaël, lancé sur la communauté jazz / latin jazz de Genève. Positionnement : 100 % dépannage concert (le concept « jam » a été abandonné en juillet 2026 ; l'app s'est appelée « JamConnect » jusqu'à la v0.3, tout a été renommé « Dispo » depuis). L'historique des versions est consultable dans l'app : *Profil → Nouveautés*.
 
 | | |
 |---|---|
@@ -10,14 +10,14 @@ Version **0.9.0 (bêta)** — projet mené avec Raphaël, lancé sur la communau
 | **Langues** | FR (source), EN, ES, DE, IT, 中文, 日本語 — sélecteur in-app |
 | **Statut** | Démo locale + **mode live** (backend Supabase hébergé) |
 | **Backend** | Supabase `dispo` — Zurich (`cghmmpcwqzpjwgnbiuuw`), Postgres + RLS, Auth e-mail + Apple, Realtime |
-| **Bundle ID** | `com.ludovicmarie.dispo` |
+| **Bundle ID** | `ch.dispo.app` |
 | **Repo** | Privé |
 
 ## Structure du projet
 
 ```
-JamConnect/
-├── JamConnect/              # Code source SwiftUI
+Dispo/
+├── Dispo/              # Code source SwiftUI
 │   ├── Views/               # Écrans (Discovery, Events, Chat, Profil…)
 │   ├── Backend/             # Couche Supabase (config + service)
 │   ├── Assets.xcassets/     # Icônes, couvertures, avatars
@@ -30,7 +30,7 @@ JamConnect/
 │   ├── migrations/          # Schéma SQL (tables, RLS, vue teaser Premium)
 │   ├── seed.sql             # 20 musiciens de dev (mdp « jamconnect-demo »)
 │   └── config.toml          # Config stack locale
-├── JamConnect.xcodeproj/    # Projet Xcode (généré)
+├── Dispo.xcodeproj/    # Projet Xcode (généré)
 ├── project.yml              # Config XcodeGen
 └── README.md
 ```
@@ -51,11 +51,11 @@ Sans `Secrets.plist`, l'app reste en mode démo 100 % locale. Avec, une carte
 ```bash
 brew install supabase/tap/supabase colima
 colima start --cpu 4 --memory 6
-cd JamConnect && supabase start      # migrations + seed appliqués automatiquement
+cd Dispo && supabase start      # migrations + seed appliqués automatiquement
 supabase status                      # → API URL + anon key
 ```
 
-Puis copiez `JamConnect/Secrets.example.plist` en `JamConnect/Secrets.plist` avec
+Puis copiez `Dispo/Secrets.example.plist` en `Dispo/Secrets.plist` avec
 `http://IP-DU-MAC:54321` (iPhone sur le même Wi-Fi) et l'anon key. Rebuild.
 
 - Comptes de test : `marco@demo.dispo.ch` … (20 musiciens du seed), mot de passe `jamconnect-demo`.
@@ -77,7 +77,7 @@ défaut — l'app fonctionne donc partout, pas seulement sur le Wi-Fi du Mac.
   type Resend à prévoir avant le lancement).
 - Jeton CLI + mot de passe BDD : trousseau macOS (`supabase-cli-dispo`,
   `supabase-dispo-db-password`). Re-déployer : `supabase db push`.
-- **Sign in with Apple** : provider activé côté Supabase (`com.ludovicmarie.dispo`).
+- **Sign in with Apple** : provider activé côté Supabase (`ch.dispo.app`).
   Le code iOS est prêt, mais la capability exige le Developer Program (99 $/an) —
   le bouton Apple apparaîtra automatiquement une fois l'app signée avec l'équipe
   payante (décommenter le bloc `entitlements` dans `project.yml`).
@@ -136,8 +136,8 @@ Les données sont fictives et rechargeables : *Profil → Réinitialiser la dém
 
 ## Installer sur votre iPhone
 
-1. Ouvrez `JamConnect.xcodeproj` dans Xcode.
-2. Cliquez sur le projet **JamConnect** (barre latérale) → cible **JamConnect** → onglet **Signing & Capabilities** → **Team** : choisissez votre Apple ID (équipe personnelle « Ludovic Marie »). Si absent : Xcode → Settings → Accounts → « + » pour ajouter votre Apple ID.
+1. Ouvrez `Dispo.xcodeproj` dans Xcode.
+2. Cliquez sur le projet **Dispo** (barre latérale) → cible **Dispo** → onglet **Signing & Capabilities** → **Team** : choisissez votre Apple ID (équipe personnelle « Ludovic Marie »). Si absent : Xcode → Settings → Accounts → « + » pour ajouter votre Apple ID.
 3. Branchez votre iPhone en USB (ou Wi-Fi une fois appairé) et sélectionnez-le comme destination en haut de la fenêtre.
 4. Appuyez sur **▶ Run**.
 5. Sur l'iPhone, à la première installation :
@@ -151,7 +151,7 @@ Les données sont fictives et rechargeables : *Profil → Réinitialiser la dém
 Le `.xcodeproj` est généré par [XcodeGen](https://github.com/yonaskolb/XcodeGen) depuis `project.yml`. Si vous ajoutez/supprimez des fichiers Swift :
 
 ```bash
-cd JamConnect && xcodegen generate
+cd Dispo && xcodegen generate
 ```
 
 ## Prochaines étapes (phase 2b — à discuter avec Raphaël)

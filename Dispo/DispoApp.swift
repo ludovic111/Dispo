@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct JamConnectApp: App {
+struct DispoApp: App {
     @StateObject private var store = AppStore()
 
     init() {
@@ -371,7 +371,7 @@ struct AvatarView: View {
 struct LogoView: View {
     var markSize: CGFloat = 30
     var showWordmark: Bool = true
-    /// Couleur du mot « JamConnect » — adaptative par défaut, blanche sur les fonds dégradés.
+    /// Couleur du mot « Dispo » — adaptative par défaut, blanche sur les fonds dégradés.
     var wordmarkColor: Color = .primary
 
     var body: some View {

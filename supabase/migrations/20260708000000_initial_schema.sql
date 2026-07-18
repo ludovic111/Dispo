@@ -1,4 +1,4 @@
--- JamConnect — schéma initial (Phase 2)
+-- Dispo — schéma initial (Phase 2)
 -- Profils musiciens, annonces SOS dépannage, candidatures, messagerie,
 -- appréciations positives et favoris. RLS partout : l'avant-première
 -- Premium (30 min) est appliquée côté serveur, pas seulement dans l'app.
