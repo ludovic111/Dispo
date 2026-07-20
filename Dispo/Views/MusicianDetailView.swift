@@ -152,7 +152,7 @@ struct MusicianDetailView: View {
                     .foregroundStyle(JC.violet)
                 AvailabilityBadge(availability: musician.availability)
                 // Niveau : avantage Premium.
-                if store.showsPremium {
+                if store.isPremium {
                     TagView(text: musician.level.rawValue, color: JC.gold)
                 } else {
                     Button { store.showPaywall = true } label: {

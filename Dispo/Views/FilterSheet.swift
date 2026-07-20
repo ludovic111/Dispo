@@ -65,7 +65,7 @@ struct FilterSheet: View {
 
                 // Filtre avancé — réservé Premium
                 Section {
-                    if store.showsPremium {
+                    if store.isPremium {
                         Picker("Niveau minimum", selection: $filters.minLevel) {
                             Text("Tous").tag(Level?.none)
                             ForEach(Level.allCases) { level in
@@ -89,7 +89,7 @@ struct FilterSheet: View {
                 } header: {
                     Text("Niveau minimum")
                 } footer: {
-                    if !store.showsPremium {
+                    if !store.isPremium {
                         Text("Le filtre par niveau fait partie de Dispo Premium.")
                     }
                 }

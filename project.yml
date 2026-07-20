@@ -33,6 +33,9 @@ targets:
       path: Dispo/Dispo.entitlements
       properties:
         aps-environment: development
+        # Sign in with Apple — nécessite la capability sur l'App ID
+        # ch.dispo.app (portail Apple Developer) pour les builds signés.
+        com.apple.developer.applesignin: [Default]
     info:
       path: Dispo/Info.plist
       properties:

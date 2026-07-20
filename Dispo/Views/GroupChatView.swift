@@ -686,7 +686,7 @@ struct GroupMembersSheet: View {
                                 name: store.profile.name,
                                 isMe: true,
                                 isLeaderRow: store.isLeader(of: group),
-                                isPremiumMember: store.showsPremium,
+                                isPremiumMember: store.isPremium,
                                 group: group
                             )
                             // Les autres membres

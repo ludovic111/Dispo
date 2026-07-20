@@ -120,32 +120,6 @@ final class AppStore: ObservableObject {
         .annual: "ch.dispo.app.premium.annual"
     ]
 
-    // MARK: - Admin
-
-    /// Rôle admin — accordé côté serveur uniquement (trigger anti-triche).
-    @Published var isAdmin: Bool = false
-
-    /// Lentille admin : prévisualiser l'app comme un utilisateur normal.
-    enum AdminLens: String, CaseIterable, Identifiable {
-        case reel = "Réel"
-        case gratuit = "Gratuit"
-        case premium = "Premium"
-        var id: String { rawValue }
-    }
-    @Published var adminLens: AdminLens = .reel
-
-    /// Statut Premium tel que l'interface doit l'afficher. Pour un admin,
-    /// la lentille peut simuler un compte gratuit ou premium ; l'état réel
-    /// (`isPremium`) et les droits serveur ne changent pas.
-    var showsPremium: Bool {
-        guard isAdmin else { return isPremium }
-        switch adminLens {
-        case .reel: return isPremium
-        case .gratuit: return false
-        case .premium: return true
-        }
-    }
-
     private static let eventsKey = "jamconnect.events"
     private static let conversationsKey = "jamconnect.conversations"
     private static let profileKey = "jamconnect.profile"
@@ -214,7 +188,7 @@ final class AppStore: ObservableObject {
             // écoute seulement l'état client (renouvellements, autre appareil).
             customerInfoTask = Task { [weak self] in
                 for await info in Purchases.shared.customerInfoStream {
-                    await self?.applyCustomerInfo(info)
+                    self?.applyCustomerInfo(info)
                 }
             }
         } else {
@@ -389,7 +363,6 @@ final class AppStore: ObservableObject {
                 )
             }
             isPremium = mine.isPremium
-            isAdmin = mine.isAdmin
         }
         await refreshLiveData()
         await startMessageStream()
@@ -488,8 +461,6 @@ final class AppStore: ObservableObject {
         liveUserID = nil
         liveEmail = nil
         backendError = nil
-        isAdmin = false
-        adminLens = .reel
         liveFollowingIDs = []
         liveFollowerIDs = []
         liveFollowerCounts = [:]
@@ -827,7 +798,7 @@ final class AppStore: ObservableObject {
     func rank(_ a: Musician, _ b: Musician) -> Bool {
         let rankA = relationRank(of: a), rankB = relationRank(of: b)
         if rankA != rankB { return rankA > rankB }
-        if showsPremium, a.level != b.level { return a.level > b.level }
+        if isPremium, a.level != b.level { return a.level > b.level }
         if a.availability.urgencyRank != b.availability.urgencyRank {
             return a.availability.urgencyRank > b.availability.urgencyRank
         }
@@ -1133,12 +1104,6 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.set(true, forKey: Self.onboardedKey)
     }
 
-    /// Rejoue l'onboarding (outil admin — le profil et les données restent).
-    func replayOnboarding() {
-        hasOnboarded = false
-        UserDefaults.standard.set(false, forKey: Self.onboardedKey)
-    }
-
     // MARK: - Notifications
 
     var notificationStatusLabel: String {
@@ -1418,7 +1383,7 @@ final class AppStore: ObservableObject {
     /// il faut aussi être Premium (un abonnement expiré fait retomber au
     /// rang de membre — on ne perd pas le titre, juste les commandes).
     func canLead(_ group: GroupChat) -> Bool {
-        isLeader(of: group) && showsPremium
+        isLeader(of: group) && isPremium
     }
 
     /// Statut Premium d'un membre. En live, c'est le vrai flag serveur
@@ -1982,7 +1947,7 @@ final class AppStore: ObservableObject {
     // MARK: - Médias du profil (photo + vidéos de démo)
 
     /// Nombre maximum de vidéos de démo selon l'abonnement.
-    var videoLimit: Int { showsPremium ? 6 : 1 }
+    var videoLimit: Int { isPremium ? 6 : 1 }
     var canAddVideo: Bool { profile.videos.count < videoLimit }
 
     nonisolated private static var documentsURL: URL {

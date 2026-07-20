@@ -425,7 +425,7 @@ struct HomeView: View {
         LazyVStack(spacing: 18) {
             SectionHeader(
                 title: "Près de chez toi",
-                subtitle: store.showsPremium
+                subtitle: store.isPremium
                     ? "Tes relations d'abord, puis les meilleurs niveaux"
                     : "Tes relations d'abord, puis les plus proches"
             )
@@ -441,7 +441,7 @@ struct HomeView: View {
                     SearchMusicianRow(musician: musician)
                 }
                 .buttonStyle(PressableStyle())
-                if index == min(2, filtered.count - 1), !store.showsPremium {
+                if index == min(2, filtered.count - 1), !store.isPremium {
                     levelUpsellBox
                 }
             }

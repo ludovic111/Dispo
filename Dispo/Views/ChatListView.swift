@@ -89,7 +89,7 @@ struct ChatListView: View {
     /// Groupes Premium : messages d'équipe, partitions, dates de concert.
     @ViewBuilder
     private var groupsSection: some View {
-        if store.groups.isEmpty && !store.showsPremium {
+        if store.groups.isEmpty && !store.isPremium {
             // Teaser pour les comptes gratuits — la porte d'entrée Premium.
             JCPromoBanner(
                 icon: "person.3.fill",
@@ -102,13 +102,13 @@ struct ChatListView: View {
                     SectionHeader(title: "Groupes")
                     Spacer()
                     Button {
-                        if store.showsPremium {
+                        if store.isPremium {
                             showNewGroup = true
                         } else {
                             store.showPaywall = true
                         }
                     } label: {
-                        Label("Nouveau", systemImage: store.showsPremium ? "plus.circle.fill" : "lock.fill")
+                        Label("Nouveau", systemImage: store.isPremium ? "plus.circle.fill" : "lock.fill")
                             .font(.caption.weight(.bold))
                             .padding(.horizontal, 11)
                             .padding(.vertical, 7)

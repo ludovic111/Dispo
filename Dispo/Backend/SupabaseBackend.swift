@@ -156,7 +156,6 @@ final class SupabaseBackend: Sendable {
         var repertoire: [String]
         var photoUrl: String?
         var isPremium: Bool
-        var isAdmin: Bool
         var isDemo: Bool?
         /// Pseudos réseaux sociaux (jsonb côté serveur).
         var socials: [String: String]?
@@ -167,7 +166,6 @@ final class SupabaseBackend: Sendable {
             case availableDates = "available_dates"
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
-            case isAdmin = "is_admin"
             case isDemo = "is_demo"
         }
 

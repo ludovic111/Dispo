@@ -196,7 +196,7 @@ struct SOSMatchRow: View {
                     SocialLinkBadge(link: store.socialLink(with: match.musician.name))
                 }
                 // Le niveau ne s'affiche qu'en Premium.
-                Text(store.showsPremium
+                Text(store.isPremium
                      ? "\(matchedInstruments) · \(store.tr(match.musician.level.rawValue))"
                      : matchedInstruments)
                     .font(.caption)
