@@ -12,7 +12,7 @@ Version **0.9.3 (bêta)** — projet mené avec Raphaël, lancé sur la communau
 | **Backend** | Supabase `dispo` — Zurich (`cghmmpcwqzpjwgnbiuuw`), Postgres + RLS, Auth e-mail + Apple, Realtime |
 | **Bundle ID** | `ch.dispo.app` |
 | **Repo** | Privé |
-| **Site** | `https://dispo.lol` — dépôt séparé `ludovic111/Dispo-Website` |
+| **Site** | `https://dispoapp.net` — dépôt séparé `ludovic111/Dispo-Website` |
 
 ## Structure du projet
 

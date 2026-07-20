@@ -199,7 +199,7 @@ struct PatchNotesView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Dispo est en bêta")
                     .font(.subheadline.weight(.heavy))
-                Text("Merci de tester ! Un pépin, une idée ? Écris-nous via l'assistance dispo.lol.")
+                Text("Merci de tester ! Un pépin, une idée ? Écris-nous via l'assistance dispoapp.net.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

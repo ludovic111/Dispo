@@ -103,7 +103,7 @@ struct AccountSheet: View {
 
                 Divider()
 
-                if let supportURL = URL(string: "mailto:ltrashmail6767@proton.me") {
+                if let supportURL = URL(string: "mailto:ludovic@dispoapp.net") {
                     Link(destination: supportURL) {
                         Label("Contacter le support", systemImage: "envelope.fill")
                             .font(.subheadline.weight(.semibold))
