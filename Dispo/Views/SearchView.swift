@@ -161,6 +161,9 @@ struct SearchMusicianRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                     HStack(spacing: 7) {
+                        if let summary = store.ratingSummary(for: musician) {
+                            RatingBadge(summary: summary)
+                        }
                         Text("\(store.followerCount(of: musician)) abonnés")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)

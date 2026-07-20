@@ -57,19 +57,16 @@ struct MyAvatarView: View {
     }
 }
 
+/// Mon profil — même layout que la fiche d'un autre musicien (photo + stats,
+/// identité, dispo, démos), avec en plus l'édition et l'accès aux réglages.
 struct MyProfileView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showEdit = false
-    @State private var showResetConfirmation = false
-    @State private var showAccount = false
+    @State private var showSettings = false
     @State private var photoItem: PhotosPickerItem?
     @State private var videoItem: PhotosPickerItem?
     @State private var playingVideo: PlayableVideo?
     @State private var importingVideo = false
-    @State private var showPatchNotes = false
-    @State private var showLanguageRegion = false
-    @State private var showFavorites = false
-    @State private var showNotifications = false
     /// Vidéo dont on est en train d'éditer la date.
     @State private var datingVideo: DemoVideo?
 
@@ -79,20 +76,18 @@ struct MyProfileView: View {
                 JCBackground()
 
                 ScrollView {
-                    VStack(spacing: 16) {
-                        heroCard
+                    VStack(alignment: .leading, spacing: 16) {
+                        topBar
+                        header
+                        identity
+                        editButton
                         availabilityCard
                         videosCard
-                        favoritesCard
-                        // Vitrine démo uniquement : en live, aucun compteur de
-                        // vues n'existe encore côté serveur — on n'invente rien.
-                        if !store.isLive { viewersCard }
                         if !store.isPremium { premiumCard }
-                        settingsCard
                         footer
                     }
                     .padding(.horizontal, 18)
-                    .padding(.top, 12)
+                    .padding(.top, 8)
                     .padding(.bottom, 24)
                 }
             }
@@ -100,20 +95,8 @@ struct MyProfileView: View {
             .sheet(isPresented: $showEdit) {
                 EditProfileSheet()
             }
-            .sheet(isPresented: $showAccount) {
-                AccountSheet()
-            }
-            .sheet(isPresented: $showPatchNotes) {
-                PatchNotesView()
-            }
-            .sheet(isPresented: $showLanguageRegion) {
-                LanguageRegionSheet()
-            }
-            .sheet(isPresented: $showFavorites) {
-                FavoritesSheet()
-            }
-            .sheet(isPresented: $showNotifications) {
-                NotificationsSettingsView()
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet()
             }
             .sheet(item: $playingVideo) { video in
                 VideoPlayer(player: AVPlayer(url: video.url))
@@ -139,380 +122,159 @@ struct MyProfileView: View {
                 importingVideo = true
                 Task {
                     if let video = try? await item.loadTransferable(type: PickedVideo.self) {
-                        store.addDemoVideo(from: video.url)
+                        await store.addDemoVideo(from: video.url)
                         try? FileManager.default.removeItem(at: video.url)
                     }
                     videoItem = nil
                     importingVideo = false
                 }
             }
-            .confirmationDialog(
-                "Réinitialiser toutes les données de la démo ?",
-                isPresented: $showResetConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Réinitialiser", role: .destructive) { store.resetDemo() }
-            }
         }
     }
 
-    private var heroCard: some View {
-        let profileSnapshot = store.profile
-        let premiumSnapshot = store.isPremium
-        return ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(JC.hero)
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(.white.opacity(0.15), lineWidth: 1)
+    // MARK: - Barre du haut (titre + réglages)
 
-            VStack(spacing: 14) {
-                // La photo de profil se change d'un tap sur l'avatar.
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    ZStack(alignment: .bottomTrailing) {
-                        MyAvatarView(profile: profileSnapshot, size: 84)
-                            .padding(4)
-                            .background(.white.opacity(0.2), in: Circle())
-                        Image(systemName: premiumSnapshot ? "crown.fill" : "camera.fill")
-                            .font(.caption2.weight(.bold))
-                            .padding(6)
-                            .background(
-                                premiumSnapshot
-                                    ? AnyShapeStyle(JC.premium)
-                                    : AnyShapeStyle(.white.opacity(0.9)),
-                                in: Circle()
-                            )
-                            .foregroundStyle(.black)
-                            .offset(x: 4, y: 4)
-                    }
-                }
-                .buttonStyle(PressableStyle())
-                VStack(spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(store.profile.name)
-                            .font(.title2.weight(.bold))
-                        if store.isPremium { PremiumBadge() }
-                    }
-                    Text(verbatim: store.profile.handle)
-                        .font(.caption.weight(.semibold))
-                        .opacity(0.85)
-                    Text(subtitle)
-                        .font(.caption.weight(.medium))
-                        .opacity(0.88)
-                        .multilineTextAlignment(.center)
-                    HStack(spacing: 14) {
-                        Text("**\(store.followersCount)** abonnés")
-                        Text("**\(store.followingCount)** suivis")
-                    }
-                    .font(.caption)
-                    .opacity(0.92)
-                    .padding(.top, 2)
-                    socialChips
-                }
-            }
-            .foregroundStyle(.white)
-            .padding(20)
-        }
-        .overlay(alignment: .topTrailing) {
+    private var topBar: some View {
+        HStack {
+            Text("Mon profil")
+                .font(.title3.weight(.heavy))
+            Spacer(minLength: 0)
             Button {
-                showEdit = true
+                showSettings = true
             } label: {
-                Image(systemName: "pencil")
+                Image(systemName: "gearshape.fill")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(10)
-                    .background(.white.opacity(0.18), in: Circle())
+                    .background(JC.card, in: Circle())
+                    .overlay(Circle().stroke(JC.cardStroke, lineWidth: 1))
             }
             .buttonStyle(PressableStyle(scale: 0.92))
-            .padding(10)
+            .accessibilityLabel(Text("Réglages"))
         }
     }
 
-    private var subtitle: String {
-        let instruments = store.profile.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")
-        let genres = store.profile.genres.map { store.tr($0.rawValue) }.joined(separator: ", ")
-        return "\(instruments) · \(genres) · \(store.profile.resolvedCity)"
-    }
+    // MARK: - En-tête (photo + stats, comme la fiche des autres)
 
-    /// Logos réseaux sociaux du hero — cliquables (vrais logos dessinés).
-    private var socialChips: some View {
-        SocialLogosRow(socials: store.profile.socials, size: 28)
-            .padding(.top, 4)
-    }
-
-    // MARK: - Favoris
-
-    /// Mes musiciens favoris (cœurs) — accès rapide à leurs profils.
-    private var favoritesCard: some View {
-        Button { showFavorites = true } label: {
-            JCCard {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(JC.magenta.opacity(0.14))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(JC.magenta)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Mes favoris")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                        Text("\(store.favorites.count) musiciens sous le coude")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-        }
-        .buttonStyle(PressableStyle())
-    }
-
-    // MARK: - Réglages (regroupés)
-
-    /// Tous les réglages au même endroit : compte, notifications, langue &
-    /// région, apparence, nouveautés, réinitialisation.
-    private var settingsCard: some View {
-        JCCard(padding: 8) {
-            VStack(spacing: 0) {
-                if store.backend != nil {
-                    settingsRow(
-                        icon: store.isLive ? "checkmark.icloud.fill" : "icloud",
-                        color: store.isLive ? .green : JC.violet,
-                        title: store.isLive ? Text("Mode live") : Text("Rejoindre le réseau"),
-                        detail: store.isLive ? Text(verbatim: store.liveEmail ?? "") : nil
-                    ) { showAccount = true }
-                    Divider().padding(.leading, 52)
-                }
-
-                settingsRow(
-                    icon: "bell.badge.fill",
-                    color: JC.coral,
-                    title: Text("Notifications"),
-                    detail: Text(store.notificationStatusLabel)
-                ) { showNotifications = true }
-                Divider().padding(.leading, 52)
-
-                settingsRow(
-                    icon: "globe",
-                    color: JC.violet,
-                    title: Text("Langue & région"),
-                    detail: Text(verbatim: "\(store.language.flag) \(store.profile.cityLabel)")
-                ) { showLanguageRegion = true }
-                Divider().padding(.leading, 52)
-
-                // Apparence — menu direct, pas d'écran intermédiaire.
-                HStack(spacing: 12) {
-                    settingsIcon(store.theme.symbol, JC.gold)
-                    Text("Apparence")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer(minLength: 0)
-                    Menu {
-                        ForEach(AppTheme.allCases) { option in
-                            Button {
-                                withAnimation(.snappy) { store.setTheme(option) }
-                            } label: {
-                                if store.theme == option {
-                                    Label(LocalizedStringKey(option.label), systemImage: "checkmark")
-                                } else {
-                                    Text(LocalizedStringKey(option.label))
-                                }
+    private var header: some View {
+        // Snapshot : le label de PhotosPicker n'est pas isolé au MainActor.
+        let profileSnapshot = store.profile
+        return HStack(spacing: 18) {
+            // La photo de profil se change d'un tap sur l'avatar.
+            PhotosPicker(selection: $photoItem, matching: .images) {
+                ZStack(alignment: .bottomTrailing) {
+                    MyAvatarView(profile: profileSnapshot, size: 86)
+                        .overlay(alignment: .bottomTrailing) {
+                            if profileSnapshot.isAvailable {
+                                Circle()
+                                    .fill(profileSnapshot.availability.color)
+                                    .frame(width: 16, height: 16)
+                                    .overlay(Circle().stroke(JC.bg, lineWidth: 2.5))
                             }
                         }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(LocalizedStringKey(store.theme.label))
-                                .font(.subheadline.weight(.semibold))
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2.weight(.bold))
-                        }
-                        .foregroundStyle(JC.gold)
-                    }
-                }
-                .padding(10)
-                Divider().padding(.leading, 52)
-
-                settingsRow(
-                    icon: "sparkles",
-                    color: JC.violet,
-                    title: Text("Nouveautés"),
-                    detail: Text(verbatim: "v\(Bundle.main.appVersion) · ") + Text("BÊTA")
-                ) { showPatchNotes = true }
-
-                // Réservé au bac à sable local : sur un compte connecté, ce
-                // reset écraserait l'état réel (profil serveur compris).
-                if !store.isLive {
-                    Divider().padding(.leading, 52)
-                    settingsRow(
-                        icon: "arrow.counterclockwise",
-                        color: .red,
-                        title: Text("Réinitialiser la démo"),
-                        detail: nil,
-                        destructive: true
-                    ) { showResetConfirmation = true }
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(5)
+                        .background(.white.opacity(0.95), in: Circle())
+                        .foregroundStyle(.black)
+                        .offset(x: 2, y: -20)
                 }
             }
+            .buttonStyle(PressableStyle())
+
+            HStack(spacing: 0) {
+                statBlock(
+                    value: store.myRatingSummary.map { "★ \($0.averageLabel)" } ?? "—",
+                    label: "note"
+                )
+                statBlock(value: "\(store.followersCount)", label: "abonnés")
+                statBlock(value: "\(store.playedWith.count)", label: "collabs")
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func settingsIcon(_ symbol: String, _ color: Color) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(color.opacity(0.14))
-                .frame(width: 34, height: 34)
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(color)
+    private func statBlock(value: String, label: LocalizedStringKey) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.heavy))
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
     }
 
-    private func settingsRow(
-        icon: String,
-        color: Color,
-        title: Text,
-        detail: Text?,
-        destructive: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                settingsIcon(icon, color)
-                title
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(destructive ? Color.red : Color.primary)
-                Spacer(minLength: 0)
-                if let detail {
-                    detail
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+    // MARK: - Identité
+
+    private var identity: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(store.profile.name)
+                    .font(.title3.weight(.heavy))
+                if store.isPremium { PremiumBadge() }
+            }
+            HStack(spacing: 8) {
+                Text(verbatim: store.profile.handle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(JC.violet)
+                AvailabilityBadge(availability: store.profile.availability)
+            }
+            Text(verbatim: "\(store.profile.resolvedCountry.flag) \(store.profile.cityLabel)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if !store.profile.bio.isEmpty {
+                Text(store.profile.bio)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary.opacity(0.9))
+                    .padding(.top, 2)
+            }
+            HStack(spacing: 6) {
+                ForEach(store.profile.genres.prefix(3)) { genre in
+                    TagView(text: genre.rawValue, color: genre.color)
                 }
-                Image(systemName: "chevron.right")
+            }
+            .padding(.top, 2)
+            if !store.profile.instruments.isEmpty {
+                Text(verbatim: store.profile.instruments.map { store.tr($0.rawValue) }.joined(separator: " · "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 1)
+            }
+            SocialLogosRow(socials: store.profile.socials)
+                .padding(.top, 4)
+        }
+    }
+
+    /// Bouton principal — comme « Suivre / Contacter » sur les autres profils.
+    private var editButton: some View {
+        Button {
+            showEdit = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "pencil")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.tertiary)
+                Text("Modifier mon profil")
+                    .font(.subheadline.weight(.bold))
             }
-            .padding(10)
-            .contentShape(Rectangle())
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .background(AnyShapeStyle(JC.hero), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .foregroundStyle(Color.white)
         }
         .buttonStyle(PressableStyle())
     }
 
     private var footer: some View {
-        Text(store.isLive
-             ? "Dispo v\(Bundle.main.appVersion) (bêta) — connecté au réseau Dispo."
-             : "Dispo v\(Bundle.main.appVersion) (bêta) — données de démo réinitialisables.")
+        Text(verbatim: "Dispo v\(Bundle.main.appVersion)")
             .font(.caption2)
             .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity)
             .padding(.top, 4)
     }
 
-    /// Vidéos de démo : 1 en gratuit, jusqu'à 6 en Premium. C'est la vitrine
-    /// du profil — on écoute avant d'engager.
-    private var videosCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Label("Mes vidéos de démo", systemImage: "video.fill")
-                        .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(JC.violet)
-                    Spacer()
-                    Text("\(store.profile.videos.count)/\(store.videoLimit)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                }
-                Text("C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+    // MARK: - Dates de dispo
 
-                ForEach(store.profile.videos) { video in
-                    HStack(spacing: 11) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(JC.violet.opacity(0.14))
-                                .frame(width: 40, height: 40)
-                            Image(systemName: "play.fill")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(JC.violet)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Vidéo \((store.profile.videos.firstIndex(of: video) ?? 0) + 1)")
-                                .font(.subheadline.weight(.semibold))
-                            // Date de la vidéo — un tap pour la changer.
-                            Button {
-                                datingVideo = video
-                            } label: {
-                                if let date = video.date {
-                                    Label(
-                                        date.formatted(date: .abbreviated, time: .omitted),
-                                        systemImage: "calendar"
-                                    )
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(JC.violet)
-                                } else {
-                                    Label("Ajouter une date", systemImage: "calendar.badge.plus")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .buttonStyle(PressableStyle())
-                        }
-                        Spacer(minLength: 0)
-                        Button {
-                            store.removeDemoVideo(video)
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.secondary)
-                                .padding(8)
-                        }
-                        .buttonStyle(PressableStyle())
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        playingVideo = PlayableVideo(url: AppStore.mediaURL(for: video.fileName))
-                    }
-                }
-
-                if store.canAddVideo {
-                    PhotosPicker(selection: $videoItem, matching: .videos) {
-                        Label(
-                            importingVideo ? "Import en cours…" : "Ajouter une vidéo",
-                            systemImage: importingVideo ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
-                        )
-                        .font(.subheadline.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .foregroundStyle(JC.violet)
-                    }
-                    .disabled(importingVideo)
-                } else if !store.isPremium {
-                    // Limite gratuite atteinte : l'ajout passe par Premium.
-                    Button { store.showPaywall = true } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "crown.fill")
-                            Text("Jusqu'à 6 vidéos avec Premium")
-                                .font(.caption.weight(.bold))
-                            Spacer(minLength: 0)
-                            Image(systemName: "lock.fill")
-                        }
-                        .font(.caption.weight(.bold))
-                        .padding(11)
-                        .background(JC.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .foregroundStyle(JC.gold)
-                    }
-                    .buttonStyle(PressableStyle())
-                }
-            }
-        }
-    }
-
-    /// Notifications locales : nouveaux SOS compatibles et messages reçus.
-    /// Les alertes serveur (push APNs) arrivent avec TestFlight en phase 2b.
     /// Sélection des dates de dispo dans un vrai calendrier. Le statut
     /// affiché aux autres (🚨 Ce soir, 📅 Cette semaine…) en est dérivé.
     private var dateSelection: Binding<Set<DateComponents>> {
@@ -567,56 +329,125 @@ struct MyProfileView: View {
         }
     }
 
-    /// Compte réseau (mode live) — connexion au backend Supabase.
-    /// « Qui a vu ton profil » — teaser Premium : avatars floutés pour les
-    /// non-abonnés, noms révélés pour les membres Premium.
-    private var viewersCard: some View {
-        let viewers = store.profileViewers
-        return Button {
-            if !store.isPremium { store.showPaywall = true }
-        } label: {
-            JCCard {
-                HStack(spacing: 14) {
-                    HStack(spacing: -14) {
-                        ForEach(viewers.prefix(3)) { viewer in
-                            AvatarView(name: viewer.name, size: 40, photo: viewer.photo)
-                                .overlay(Circle().stroke(JC.card, lineWidth: 2))
-                                .blur(radius: store.isPremium ? 0 : 4)
-                                .clipShape(Circle())
+    // MARK: - Démos (vidéos)
+
+    /// Vidéos de démo : 1 en gratuit, jusqu'à 6 en Premium. C'est la vitrine
+    /// du profil — on écoute avant d'engager.
+    private var videosCard: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Mes démos", systemImage: "play.square.stack")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(JC.violet)
+                    Spacer()
+                    Text(verbatim: "\(store.profile.videos.count)/\(store.videoLimit)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                }
+                Text("C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if store.isLive {
+                    Text("Tes vidéos sont visibles par les autres musiciens sur ton profil.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+
+                ForEach(store.profile.videos) { video in
+                    HStack(spacing: 11) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(JC.violet.opacity(0.14))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "play.fill")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(JC.violet)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Vidéo \((store.profile.videos.firstIndex(of: video) ?? 0) + 1)")
+                                .font(.subheadline.weight(.semibold))
+                            // Date de la vidéo — un tap pour la changer.
+                            Button {
+                                datingVideo = video
+                            } label: {
+                                if let date = video.date {
+                                    Label(
+                                        date.formatted(date: .abbreviated, time: .omitted),
+                                        systemImage: "calendar"
+                                    )
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(JC.violet)
+                                } else {
+                                    Label("Ajouter une date", systemImage: "calendar.badge.plus")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                        Spacer(minLength: 0)
+                        Button {
+                            store.removeDemoVideo(video)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .padding(8)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if let url = video.playbackURL {
+                            playingVideo = PlayableVideo(url: url)
                         }
                     }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("\(viewers.count + 7) pros ont vu ton profil cette semaine")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                        Text(store.isPremium
-                             ? "Dont \(viewers.prefix(2).map { $0.name.split(separator: " ").first.map(String.init) ?? $0.name }.joined(separator: ", ")) — contacte-les !"
-                             : "Découvre qui avec Premium")
-                            .font(.caption)
-                            .foregroundStyle(store.isPremium ? .secondary : JC.gold)
+                }
+
+                if store.canAddVideo {
+                    PhotosPicker(selection: $videoItem, matching: .videos) {
+                        Label(
+                            isBusy ? "Envoi en cours…" : "Ajouter une vidéo",
+                            systemImage: isBusy ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
+                        )
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.violet)
                     }
-                    Spacer(minLength: 0)
-                    if !store.isPremium {
-                        Image(systemName: "lock.fill")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(JC.gold)
+                    .disabled(isBusy)
+                } else if !store.isPremium {
+                    // Limite gratuite atteinte : l'ajout passe par Premium.
+                    Button { store.showPaywall = true } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "crown.fill")
+                            Text("Jusqu'à 6 vidéos avec Premium")
+                                .font(.caption.weight(.bold))
+                            Spacer(minLength: 0)
+                            Image(systemName: "lock.fill")
+                        }
+                        .font(.caption.weight(.bold))
+                        .padding(11)
+                        .background(JC.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.gold)
                     }
+                    .buttonStyle(PressableStyle())
                 }
             }
         }
-        .buttonStyle(PressableStyle())
     }
+
+    private var isBusy: Bool { importingVideo || store.videoUploadInProgress }
 
     private var premiumCard: some View {
         JCPromoBanner(
             icon: "crown.fill",
-            title: store.isPremium ? "Premium actif" : "Ne rate plus un cachet",
-            subtitle: store.isPremium
-                ? "Alertes dépannage prioritaires · gérer mon abonnement"
-                : "Alertes en priorité, groupes, 6 vidéos · via l'App Store"
+            title: "Ne rate plus un cachet",
+            subtitle: "Alertes en priorité, groupes, 6 vidéos · via l'App Store"
         ) { store.showPaywall = true }
     }
-
 }
 
 // MARK: - Date d'une vidéo de démo
@@ -890,54 +721,6 @@ struct LanguageRegionSheet: View {
                     store.profile.city = city.name
                     store.profile.postalCode = city.postalCode
                     store.saveProfile()
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Mes favoris
-
-/// Liste des musiciens mis en favori (cœur) — accès direct aux profils.
-struct FavoritesSheet: View {
-    @EnvironmentObject private var store: AppStore
-    @Environment(\.dismiss) private var dismiss
-
-    private var favoriteMusicians: [Musician] {
-        store.musicians
-            .filter { store.favorites.contains($0.name) }
-            .sorted { store.rank($0, $1) }
-    }
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                JCBackground()
-                ScrollView {
-                    VStack(spacing: 12) {
-                        if favoriteMusicians.isEmpty {
-                            JCEmptyState(
-                                icon: "heart",
-                                title: "Aucun favori",
-                                message: "Mets un cœur aux musiciens fiables pour les retrouver ici en un tap."
-                            )
-                        }
-                        ForEach(favoriteMusicians) { musician in
-                            NavigationLink(value: musician) {
-                                SearchMusicianRow(musician: musician)
-                            }
-                            .buttonStyle(PressableStyle())
-                        }
-                    }
-                    .padding(18)
-                }
-            }
-            .navigationTitle("Mes favoris")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { dismiss() }.font(.headline)
                 }
             }
         }

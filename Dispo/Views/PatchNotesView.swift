@@ -12,11 +12,14 @@ struct PatchNote: Identifiable {
     static let all: [PatchNote] = [
         PatchNote(
             version: "0.9.5",
-            title: "Des conversations vivantes",
+            title: "Notes, vidéos & conversations vivantes",
             points: [
-                "Coches « reçu / lu » sous tes messages, comme sur WhatsApp : tu sais quand ton dépannage est vu",
-                "« En train d'écrire… » : tu vois quand ton contact te répond",
-                "Le message que tu regardes est marqué lu immédiatement — plus de fausse notification"
+                "Note les musiciens avec qui tu as joué : 1 à 5 étoiles, note anonyme — seule la moyenne et le nombre d'avis s'affichent",
+                "Tes vidéos de démo sont maintenant en ligne : les autres musiciens les regardent depuis ton profil",
+                "Ta photo de profil est visible par les autres musiciens",
+                "Ton profil s'affiche comme les autres le voient, avec un bouton pour le modifier",
+                "Nouveaux réglages rangés par catégories : compte, notifications, préférences, abonnement, aide",
+                "Coches « reçu / lu » sous tes messages et « en train d'écrire… », comme sur WhatsApp"
             ]
         ),
         PatchNote(

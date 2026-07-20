@@ -15,6 +15,7 @@
 		2F07596B9A0B43477E677D98 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5533270AA3C516AC1B6E955 /* OnboardingView.swift */; };
 		31F84DDE0AE254845CA85880 /* SOSRequestSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */; };
 		3542850C3EEC170B6CEEC39A /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD83E23B1E36D79D22DA9E36 /* ChatListView.swift */; };
+		43B5A63ABAA371B6D2C4DC30 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A16E3CB4050DB245D44B20D /* SettingsView.swift */; };
 		48CB3AE64BB899CAEBC33239 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 261EC6F531BEE7612BA65B4B /* AppStore.swift */; };
 		4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */; };
 		530F93F51F41638A7C9A249B /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 104977E6E486E674D51AF98E /* RevenueCat */; };
@@ -54,6 +55,7 @@
 		44466866F267B8632340A4B3 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		45D10ACFB71CC40CFF3DFAC7 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSRequestSheet.swift; sourceTree = "<group>"; };
+		5A16E3CB4050DB245D44B20D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		6CEE8CF8E49314AC43A8F44F /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
 		6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
 		6F9726C6D699E4D63934DBB1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -128,6 +130,7 @@
 				998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */,
 				2BA029833082A56A604FC4F5 /* PaywallView.swift */,
 				B3F7B7D2ABAA2E0458C61619 /* SearchView.swift */,
+				5A16E3CB4050DB245D44B20D /* SettingsView.swift */,
 				C0BF7594E5DECA397D60C3C0 /* SOSMatchView.swift */,
 				5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */,
 			);
@@ -277,6 +280,7 @@
 				89CAF17D56DDCD16E989299F /* SOSMatchView.swift in Sources */,
 				31F84DDE0AE254845CA85880 /* SOSRequestSheet.swift in Sources */,
 				D84EDF3C9DF396F3799D656C /* SearchView.swift in Sources */,
+				43B5A63ABAA371B6D2C4DC30 /* SettingsView.swift in Sources */,
 				4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -339,7 +343,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -399,7 +403,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

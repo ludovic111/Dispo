@@ -653,22 +653,19 @@ enum AppTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Appréciation post-concert
+// MARK: - Avis (historique seed)
 
-/// Système d'appréciation positif : soit une note de musique (« j'ai aimé »),
-/// soit une note dorée animée (« coup de cœur »). Pas de note négative possible.
+/// Ancien système d'appréciation (notes de musique / notes dorées) — conservé
+/// uniquement pour décoder SeedData.json ; les avis seed alimentent la note
+/// étoilée simulée des profils de démo.
 enum Appreciation: String, Codable, Hashable, CaseIterable, Identifiable {
-    case note   // j'ai aimé
-    case golden // j'ai adoré (coup de cœur)
+    case note   // j'ai aimé  → 4 étoiles
+    case golden // coup de cœur → 5 étoiles
 
     var id: String { rawValue }
 
-    var label: String {
-        switch self {
-        case .note: return "J'ai aimé"
-        case .golden: return "Coup de cœur"
-        }
-    }
+    /// Équivalent étoiles du système historique.
+    var stars: Int { self == .golden ? 5 : 4 }
 }
 
 struct Review: Codable, Identifiable, Hashable {
@@ -680,19 +677,16 @@ struct Review: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey { case author, appreciation, comment }
 }
 
-// MARK: - Rateable (appréciations)
+/// Moyenne + nombre d'avis d'un profil. Les notes individuelles sont
+/// anonymes : personne ne voit qui a mis combien d'étoiles.
+struct RatingSummary: Hashable {
+    var average: Double
+    var count: Int
 
-/// Entité pouvant recevoir des appréciations (musicien).
-protocol Rateable {
-    var name: String { get }
-    var reviews: [Review] { get }
-}
-
-extension Rateable {
-    /// Nombre total de notes de musique reçues (appréciations positives).
-    var noteCount: Int { reviews.count }
-    /// Nombre de notes dorées reçues (coups de cœur).
-    var goldenCount: Int { reviews.filter { $0.appreciation == .golden }.count }
+    /// « 4,6 » dans la locale de l'utilisateur.
+    var averageLabel: String {
+        average.formatted(.number.precision(.fractionLength(1)))
+    }
 }
 
 // MARK: - Musicien
@@ -728,6 +722,12 @@ struct Musician: Codable, Identifiable, Hashable {
     /// false quand les coordonnées sont un simple placeholder (profil live
     /// sans géoloc partagée) : ni distance affichée, ni filtre rayon.
     var hasLocation: Bool = true
+    /// Note moyenne (1–5 étoiles) reçue sur le serveur — nil sans avis.
+    var ratingAvg: Double?
+    /// Nombre d'avis étoilés reçus sur le serveur.
+    var ratingCount: Int = 0
+    /// Vidéos de démo hébergées (mode live) — lisibles par tous.
+    var demoVideos: [DemoVideo] = []
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
@@ -755,7 +755,10 @@ struct Musician: Codable, Identifiable, Hashable {
         collaborators: [String] = [],
         isDemo: Bool = false,
         isPremium: Bool = false,
-        hasLocation: Bool = true
+        hasLocation: Bool = true,
+        ratingAvg: Double? = nil,
+        ratingCount: Int = 0,
+        demoVideos: [DemoVideo] = []
     ) {
         self.id = id
         self.name = name
@@ -777,6 +780,9 @@ struct Musician: Codable, Identifiable, Hashable {
         self.isDemo = isDemo
         self.isPremium = isPremium
         self.hasLocation = hasLocation
+        self.ratingAvg = ratingAvg
+        self.ratingCount = ratingCount
+        self.demoVideos = demoVideos
     }
 
     init(from decoder: Decoder) throws {
@@ -830,8 +836,6 @@ struct Musician: Codable, Identifiable, Hashable {
         return a.distance(from: b) / 1000
     }
 }
-
-extension Musician: Rateable {}
 
 // MARK: - Matching SOS ↔ musiciens
 
@@ -1212,11 +1216,25 @@ struct MyProfile: Codable {
 }
 
 /// Une vidéo de démo du profil, avec sa date (enregistrement / concert).
+/// En mode live elle est hébergée sur le serveur (`path` + `url`) et visible
+/// par tous ; en démo elle reste un fichier local (`fileName`).
 struct DemoVideo: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
+    /// Fichier local dans Documents (mode démo / anciens profils).
     var fileName: String
     /// Date de la vidéo, affichée sous le titre (nil = non renseignée).
     var date: Date?
+    /// Chemin dans le bucket Supabase `demo-videos` (mode live).
+    var storagePath: String?
+    /// URL publique de lecture (mode live).
+    var remoteURL: String?
+
+    /// URL de lecture : le serveur d'abord, sinon le fichier local.
+    var playbackURL: URL? {
+        if let remoteURL, let url = URL(string: remoteURL) { return url }
+        guard !fileName.isEmpty else { return nil }
+        return AppStore.mediaURL(for: fileName)
+    }
 }
 
 // MARK: - Relations (amis / abonnés)

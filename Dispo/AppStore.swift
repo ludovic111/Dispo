@@ -2,6 +2,7 @@ import Foundation
 import CoreLocation
 import SwiftUI
 import Supabase
+import AVFoundation
 @preconcurrency import UserNotifications
 import StoreKit
 import RevenueCat
@@ -40,11 +41,14 @@ final class AppStore: ObservableObject {
     @Published var conversations: [Conversation] = []
     @Published var profile: MyProfile
 
-    /// Favoris (par nom — les ids des musiciens seed changent à chaque lancement).
-    @Published var favorites: Set<String> = []
-    /// Appréciations données par l'utilisateur (par nom de musicien). Positif uniquement :
-    /// note de musique (« aimé ») ou note dorée (« coup de cœur »).
-    @Published var myAppreciations: [String: Appreciation] = [:]
+    /// Mes notes étoilées données (par nom en démo ; le serveur fait foi en
+    /// live via `liveMyRatings`). Noter quelqu'un vaut déclaration « on a
+    /// joué ensemble » — les deux systèmes sont fusionnés.
+    @Published var myStarRatings: [String: Int] = [:]
+    /// Mes notes données côté serveur (UUID du musicien → étoiles).
+    private var liveMyRatings: [UUID: Int] = [:]
+    /// Ma propre note agrégée (moyenne + nb d'avis), lue du serveur.
+    @Published private(set) var myRatingSummary: RatingSummary?
     /// Abonnement Premium — RevenueCat en production (StoreKit pur en repli),
     /// état local en démo. Le serveur (webhook RevenueCat) reste seul juge de
     /// `is_premium` côté base.
@@ -132,8 +136,7 @@ final class AppStore: ObservableObject {
     private static let eventsKey = "jamconnect.events"
     private static let conversationsKey = "jamconnect.conversations"
     private static let profileKey = "jamconnect.profile"
-    private static let favoritesKey = "jamconnect.favorites"
-    private static let appreciationsKey = "jamconnect.appreciations"
+    private static let starRatingsKey = "dispo.starRatings"
     private static let premiumKey = "jamconnect.premium"
     private static let premiumPlanKey = "jamconnect.premiumPlan"
     private static let onboardedKey = "jamconnect.onboarded"
@@ -210,11 +213,8 @@ final class AppStore: ObservableObject {
             }
         }
 
-        if let saved: Set<String> = Self.load(key: Self.favoritesKey) {
-            favorites = saved
-        }
-        if let saved: [String: Appreciation] = Self.load(key: Self.appreciationsKey) {
-            myAppreciations = saved
+        if let saved: [String: Int] = Self.load(key: Self.starRatingsKey) {
+            myStarRatings = saved
         }
         isPremium = UserDefaults.standard.bool(forKey: Self.premiumKey)
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
@@ -362,14 +362,7 @@ final class AppStore: ObservableObject {
             if mine.name.isEmpty {
                 try? await backend.saveProfile(profile, userID: userID)
             } else {
-                profile = MyProfile(
-                    name: mine.name,
-                    instruments: mine.instruments.compactMap(Instrument.init(rawValue:)),
-                    genres: mine.genres.compactMap(Genre.init(rawValue:)),
-                    level: Level(rawValue: mine.level) ?? .intermediaire,
-                    bio: mine.bio,
-                    availableDates: mine.parsedDates
-                )
+                applyServerProfile(mine)
             }
             isPremium = mine.isPremium
         }
@@ -388,12 +381,12 @@ final class AppStore: ObservableObject {
             async let conversationsTask = backend.fetchConversations(myID: userID)
             async let profilesTask = backend.fetchProfiles()
             async let followsTask = backend.fetchFollows()
-            async let favoritesTask = backend.fetchFavorites(me: userID)
+            async let ratingsTask = backend.fetchMyRatings(me: userID)
             async let collaborationsTask = backend.fetchCollaborations()
             async let blocksTask = backend.fetchBlockedUsers(me: userID)
-            let (allMusicians, g, allConversations, profiles, follows, favoriteIDs, collaborations, blocks) = try await (
+            let (allMusicians, g, allConversations, profiles, follows, myRatingRows, collaborations, blocks) = try await (
                 musiciansTask, gigsTask, conversationsTask, profilesTask,
-                followsTask, favoritesTask, collaborationsTask, blocksTask
+                followsTask, ratingsTask, collaborationsTask, blocksTask
             )
             blockedUserIDs = blocks
             musicians = allMusicians.filter { !blocks.contains($0.id) }
@@ -412,12 +405,23 @@ final class AppStore: ObservableObject {
             liveCollaborations = Set(collaborations)
             let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
             following = Set(profiles.filter { liveFollowingIDs.contains($0.id) }.map(\.name))
-            favorites = Set(profiles.filter { favoriteIDs.contains($0.id) }.map(\.name))
+            liveMyRatings = Dictionary(uniqueKeysWithValues: myRatingRows.map { ($0.ratedId, $0.stars) })
             playedWith = Set(profiles.filter { id in
                 collaborations.contains { edge in
                     (edge.aId == userID && edge.bId == id.id) || (edge.bId == userID && edge.aId == id.id)
                 }
             }.map(\.name))
+            // Mon propre profil serveur : note agrégée + vidéos hébergées.
+            // (On ne réécrit pas les champs éditables — l'édition locale en
+            // cours ferait des allers-retours ; ni isPremium, géré par
+            // RevenueCat pour éviter un flottement le temps du webhook.)
+            if let mine = profiles.first(where: { $0.id == userID }) {
+                myRatingSummary = (mine.ratingCount ?? 0) > 0
+                    ? RatingSummary(average: mine.ratingAvg ?? 0, count: mine.ratingCount ?? 0)
+                    : nil
+                profile.demoVideos = (mine.demoVideos ?? []).map(\.asDemoVideo)
+                profile.videoFileNames = nil
+            }
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
@@ -439,6 +443,28 @@ final class AppStore: ObservableObject {
         } catch {
             backendError = tr("Connexion au serveur impossible — vérifie le réseau.")
         }
+    }
+
+    /// Reflète mon profil serveur en local, sans perdre les champs qui ne
+    /// vivent que sur l'appareil (photo locale, pays / ville choisis).
+    private func applyServerProfile(_ mine: SupabaseBackend.ProfileRow) {
+        var updated = profile
+        updated.name = mine.name
+        updated.instruments = mine.instruments.compactMap(Instrument.init(rawValue:))
+        updated.genres = mine.genres.compactMap(Genre.init(rawValue:))
+        updated.level = Level(rawValue: mine.level) ?? .intermediaire
+        updated.bio = mine.bio
+        updated.availableDates = mine.parsedDates
+        if let socials = mine.socials, !socials.isEmpty {
+            updated.socials = socials
+        }
+        // Les vidéos hébergées font foi en live (elles suivent le compte).
+        updated.demoVideos = (mine.demoVideos ?? []).map(\.asDemoVideo)
+        updated.videoFileNames = nil
+        profile = updated
+        myRatingSummary = (mine.ratingCount ?? 0) > 0
+            ? RatingSummary(average: mine.ratingAvg ?? 0, count: mine.ratingCount ?? 0)
+            : nil
     }
 
     /// UUID profil pour un nom affiché (moi ou musicien du feed).
@@ -847,38 +873,10 @@ final class AppStore: ObservableObject {
     var followingCount: Int { following.count }
     var followersCount: Int { myFollowers.count }
 
-    // MARK: - A joué avec (graphe local)
+    // MARK: - A joué avec (dérivé des notes étoilées)
 
     func hasPlayedWith(_ musician: Musician) -> Bool {
         playedWith.contains(musician.name)
-    }
-
-    func togglePlayedWith(_ musician: Musician) {
-        if let backend, let userID = liveUserID {
-            let hadPlayed = hasPlayedWith(musician)
-            if hadPlayed { playedWith.remove(musician.name) } else { playedWith.insert(musician.name) }
-            Task {
-                do {
-                    if hadPlayed {
-                        try await backend.removeCollaboration(with: musician.id, me: userID)
-                    } else {
-                        try await backend.addCollaboration(with: musician.id, me: userID)
-                    }
-                    await refreshLiveData()
-                } catch {
-                    backendError = tr("La collaboration n'a pas pu etre synchronisee.")
-                    await refreshLiveData()
-                }
-            }
-            return
-        }
-        if playedWith.contains(musician.name) {
-            playedWith.remove(musician.name)
-        } else {
-            playedWith.insert(musician.name)
-        }
-        // TODO phase 2b: sync playedWith to Supabase
-        Self.save(playedWith, key: Self.playedWithKey)
     }
 
     /// Noms des musiciens avec qui `musician` a déjà joué (seed / profil).
@@ -945,37 +943,6 @@ final class AppStore: ObservableObject {
         return musicians.first(where: { $0.name.hasPrefix(name + " ") })?.photo
     }
 
-    /// Favori (musicien ou groupe — géré par nom).
-    func isFavorite(_ item: Rateable) -> Bool {
-        favorites.contains(item.name)
-    }
-
-    func toggleFavorite(_ item: Rateable) {
-        if let musician = item as? Musician, let backend, let userID = liveUserID {
-            let wasFavorite = favorites.contains(musician.name)
-            if wasFavorite { favorites.remove(musician.name) } else { favorites.insert(musician.name) }
-            Task {
-                do {
-                    if wasFavorite {
-                        try await backend.removeFavorite(musician.id, me: userID)
-                    } else {
-                        try await backend.addFavorite(musician.id, me: userID)
-                    }
-                } catch {
-                    backendError = tr("Le favori n'a pas pu etre synchronise.")
-                    await refreshLiveData()
-                }
-            }
-            return
-        }
-        if favorites.contains(item.name) {
-            favorites.remove(item.name)
-        } else {
-            favorites.insert(item.name)
-        }
-        Self.save(favorites, key: Self.favoritesKey)
-    }
-
     func isDemoContact(_ name: String) -> Bool {
         musicians.first(where: { $0.name == name })?.isDemo == true
     }
@@ -1029,41 +996,93 @@ final class AppStore: ObservableObject {
         return accepted
     }
 
-    // MARK: - Appréciations (notes de musique)
+    // MARK: - Notes étoilées (1–5, anonymes)
 
-    /// L'appréciation donnée par l'utilisateur à ce musicien / groupe, s'il y en a une.
-    func appreciation(for item: Rateable) -> Appreciation? {
-        myAppreciations[item.name]
+    /// Ma note (1–5) donnée à ce musicien, s'il y en a une.
+    func myRating(for musician: Musician) -> Int? {
+        if isLive { return liveMyRatings[musician.id] }
+        return myStarRatings[musician.name]
     }
 
-    /// Donne (ou retire, si nil) une appréciation. Positif uniquement.
-    func setAppreciation(_ appreciation: Appreciation?, for item: Rateable) {
-        if let appreciation {
-            myAppreciations[item.name] = appreciation
-        } else {
-            myAppreciations.removeValue(forKey: item.name)
+    /// Note affichée d'un musicien : moyenne + nombre d'avis, anonyme.
+    /// Live : agrégat serveur. Démo : avis seed convertis en étoiles
+    /// (note = 4, note dorée = 5), fusionnés avec ma note locale.
+    func ratingSummary(for musician: Musician) -> RatingSummary? {
+        if isLive {
+            guard musician.ratingCount > 0, let avg = musician.ratingAvg else { return nil }
+            return RatingSummary(average: avg, count: musician.ratingCount)
         }
-        Self.save(myAppreciations, key: Self.appreciationsKey)
+        var total = musician.reviews.reduce(0) { $0 + $1.appreciation.stars }
+        var count = musician.reviews.count
+        if let mine = myRating(for: musician) { total += mine; count += 1 }
+        guard count > 0 else { return nil }
+        return RatingSummary(average: Double(total) / Double(count), count: count)
     }
 
-    /// Total des notes de musique reçues (avis seed + appréciation de l'utilisateur).
-    func noteCount(for item: Rateable) -> Int {
-        item.noteCount + (myAppreciations[item.name] != nil ? 1 : 0)
+    /// Note un musicien (1–5). Noter vaut déclaration « on a joué
+    /// ensemble » : la collaboration est enregistrée en même temps.
+    func rate(_ musician: Musician, stars: Int) {
+        let clamped = min(5, max(1, stars))
+        if let backend, let userID = liveUserID {
+            let previous = liveMyRatings[musician.id]
+            liveMyRatings[musician.id] = clamped
+            applyLocalRating(musicianID: musician.id, previous: previous, new: clamped)
+            playedWith.insert(musician.name)
+            Task {
+                do {
+                    try await backend.upsertRating(clamped, on: musician.id, me: userID)
+                    if previous == nil {
+                        try await backend.addCollaboration(with: musician.id, me: userID)
+                    }
+                    await refreshLiveData()
+                } catch {
+                    backendError = tr("La note n'a pas pu être enregistrée.")
+                    await refreshLiveData()
+                }
+            }
+            return
+        }
+        myStarRatings[musician.name] = clamped
+        playedWith.insert(musician.name)
+        Self.save(myStarRatings, key: Self.starRatingsKey)
+        Self.save(playedWith, key: Self.playedWithKey)
     }
 
-    /// Total des notes dorées reçues (coups de cœur, seed + utilisateur).
-    func goldenCount(for item: Rateable) -> Int {
-        item.goldenCount + (myAppreciations[item.name] == .golden ? 1 : 0)
+    /// Retire ma note (et la collaboration déclarée avec).
+    func removeRating(for musician: Musician) {
+        if let backend, let userID = liveUserID {
+            guard let previous = liveMyRatings.removeValue(forKey: musician.id) else { return }
+            applyLocalRating(musicianID: musician.id, previous: previous, new: nil)
+            playedWith.remove(musician.name)
+            Task {
+                do {
+                    try await backend.deleteRating(on: musician.id, me: userID)
+                    try await backend.removeCollaboration(with: musician.id, me: userID)
+                    await refreshLiveData()
+                } catch {
+                    backendError = tr("La note n'a pas pu être retirée.")
+                    await refreshLiveData()
+                }
+            }
+            return
+        }
+        myStarRatings.removeValue(forKey: musician.name)
+        playedWith.remove(musician.name)
+        Self.save(myStarRatings, key: Self.starRatingsKey)
+        Self.save(playedWith, key: Self.playedWithKey)
     }
 
-    /// « Qui a vu ton profil » — sélection stable de musiciens seed pour la
-    /// démo (la vraie donnée viendra du backend en phase 2).
-    var profileViewers: [Musician] {
-        Array(
-            musicians
-                .sorted { abs($0.name.stableHash) % 97 < abs($1.name.stableHash) % 97 }
-                .prefix(5)
-        )
+    /// Ajuste l'agrégat local d'un musicien en attendant le serveur.
+    private func applyLocalRating(musicianID: UUID, previous: Int?, new: Int?) {
+        guard let index = musicians.firstIndex(where: { $0.id == musicianID }) else { return }
+        var musician = musicians[index]
+        var total = (musician.ratingAvg ?? 0) * Double(musician.ratingCount)
+        var count = musician.ratingCount
+        if let previous { total -= Double(previous); count -= 1 }
+        if let new { total += Double(new); count += 1 }
+        musician.ratingCount = max(0, count)
+        musician.ratingAvg = musician.ratingCount > 0 ? total / Double(musician.ratingCount) : nil
+        musicians[index] = musician
     }
 
     func displayPrice(for plan: PremiumPlan) -> String {
@@ -2074,6 +2093,8 @@ final class AppStore: ObservableObject {
     /// Nombre maximum de vidéos de démo selon l'abonnement.
     var videoLimit: Int { isPremium ? 6 : 1 }
     var canAddVideo: Bool { profile.videos.count < videoLimit }
+    /// true pendant la compression + l'envoi d'une vidéo au serveur.
+    @Published private(set) var videoUploadInProgress = false
 
     nonisolated private static var documentsURL: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -2083,7 +2104,8 @@ final class AppStore: ObservableObject {
         documentsURL.appendingPathComponent(fileName)
     }
 
-    /// Enregistre la photo de profil choisie (remplace l'ancienne).
+    /// Enregistre la photo de profil choisie (remplace l'ancienne). En live
+    /// elle est aussi téléversée pour être visible des autres musiciens.
     func setProfilePhoto(_ data: Data) {
         let fileName = "profile_photo_\(Int(Date().timeIntervalSince1970)).jpg"
         if let old = profile.photoFileName {
@@ -2095,6 +2117,17 @@ final class AppStore: ObservableObject {
             saveProfile()
         } catch {
             backendError = tr("La photo n'a pas pu être enregistrée.")
+            return
+        }
+        if let backend, let userID = liveUserID {
+            Task {
+                do {
+                    let url = try await backend.uploadAvatar(data, userID: userID)
+                    try await backend.updatePhotoURL(url.absoluteString, userID: userID)
+                } catch {
+                    backendError = tr("La photo n'a pas pu être publiée sur ton profil réseau.")
+                }
+            }
         }
     }
 
@@ -2104,38 +2137,113 @@ final class AppStore: ObservableObject {
         }
         profile.photoFileName = nil
         saveProfile()
+        if let backend, let userID = liveUserID {
+            Task { try? await backend.updatePhotoURL(nil, userID: userID) }
+        }
     }
 
-    /// Ajoute une vidéo de démo (données déjà copiées depuis la photothèque),
-    /// datée du jour par défaut. Vérifier `canAddVideo` avant.
-    func addDemoVideo(from sourceURL: URL) {
+    /// Erreurs d'import vidéo, montrées telles quelles à l'utilisateur.
+    enum VideoImportError: Error {
+        case tooLong
+        case tooLarge
+        case exportFailed
+    }
+
+    /// Ajoute une vidéo de démo. En live : compression 720p puis envoi sur le
+    /// serveur (visible par tous) ; en démo : simple copie locale.
+    /// Vérifier `canAddVideo` avant.
+    func addDemoVideo(from sourceURL: URL) async {
         guard canAddVideo else { return }
-        let fileName = "demo_video_\(Int(Date().timeIntervalSince1970)).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)"
-        do {
-            try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
-            saveVideos(profile.videos + [DemoVideo(fileName: fileName, date: Date())])
-        } catch {
-            backendError = tr("La vidéo n'a pas pu être enregistrée.")
+        guard let backend, let userID = liveUserID else {
+            let fileName = "demo_video_\(Int(Date().timeIntervalSince1970)).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)"
+            do {
+                try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
+                saveVideos(profile.videos + [DemoVideo(fileName: fileName, date: Date())])
+            } catch {
+                backendError = tr("La vidéo n'a pas pu être enregistrée.")
+            }
+            return
         }
+        videoUploadInProgress = true
+        defer { videoUploadInProgress = false }
+        do {
+            let compressed = try await Self.compressVideoForUpload(sourceURL)
+            defer { try? FileManager.default.removeItem(at: compressed) }
+            let data = try Data(contentsOf: compressed)
+            guard data.count <= Self.maxVideoBytes else { throw VideoImportError.tooLarge }
+            let (path, url) = try await backend.uploadDemoVideo(data, userID: userID)
+            let video = DemoVideo(fileName: "", date: Date(), storagePath: path, remoteURL: url.absoluteString)
+            saveVideos(profile.videos + [video])
+        } catch VideoImportError.tooLong {
+            backendError = tr("Vidéo trop longue — 3 minutes maximum.")
+        } catch VideoImportError.tooLarge {
+            backendError = tr("Vidéo trop lourde — raccourcis-la et réessaie.")
+        } catch {
+            backendError = tr("La vidéo n'a pas pu être envoyée — vérifie le réseau.")
+        }
+    }
+
+    /// Taille maximale d'une vidéo envoyée (limite du bucket : 50 Mo).
+    nonisolated private static let maxVideoBytes = 50 * 1024 * 1024
+
+    /// Compresse la vidéo en MP4 720p pour l'envoi. Sur iOS 17, l'export
+    /// moderne n'existe pas : la vidéo part telle quelle si elle tient sous
+    /// la limite de taille.
+    nonisolated private static func compressVideoForUpload(_ sourceURL: URL) async throws -> URL {
+        let asset = AVURLAsset(url: sourceURL)
+        let duration = try await asset.load(.duration)
+        guard duration.seconds <= 181 else { throw VideoImportError.tooLong }
+        if #available(iOS 18.0, *) {
+            guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1280x720) else {
+                throw VideoImportError.exportFailed
+            }
+            session.shouldOptimizeForNetworkUse = true
+            let output = URL.temporaryDirectory.appendingPathComponent("upload_\(UUID().uuidString).mp4")
+            try await session.export(to: output, as: .mp4)
+            return output
+        }
+        // iOS 17 : pas de compression — copie telle quelle (la limite de
+        // taille est vérifiée par l'appelant).
+        let output = URL.temporaryDirectory.appendingPathComponent("upload_\(UUID().uuidString).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)")
+        try FileManager.default.copyItem(at: sourceURL, to: output)
+        return output
     }
 
     /// Change la date d'une vidéo (date du concert / de l'enregistrement).
     func setVideoDate(_ date: Date?, for video: DemoVideo) {
         saveVideos(profile.videos.map {
-            $0.id == video.id ? DemoVideo(id: $0.id, fileName: $0.fileName, date: date) : $0
+            $0.id == video.id
+                ? DemoVideo(id: $0.id, fileName: $0.fileName, date: date, storagePath: $0.storagePath, remoteURL: $0.remoteURL)
+                : $0
         })
     }
 
     func removeDemoVideo(_ video: DemoVideo) {
-        try? FileManager.default.removeItem(at: Self.mediaURL(for: video.fileName))
+        if !video.fileName.isEmpty {
+            try? FileManager.default.removeItem(at: Self.mediaURL(for: video.fileName))
+        }
+        if let path = video.storagePath, !path.isEmpty, let backend, isLive {
+            Task { try? await backend.deleteDemoVideoFile(path: path) }
+        }
         saveVideos(profile.videos.filter { $0.id != video.id })
     }
 
-    /// Écrit la liste au nouveau format daté (migre l'ancien au passage).
+    /// Écrit la liste au nouveau format daté (migre l'ancien au passage) et
+    /// la pousse sur le profil serveur en live.
     private func saveVideos(_ videos: [DemoVideo]) {
         profile.demoVideos = videos
         profile.videoFileNames = nil
         saveProfile()
+        if let backend, let userID = liveUserID {
+            let hosted = videos.filter { $0.storagePath?.isEmpty == false }
+            Task {
+                do {
+                    try await backend.updateDemoVideos(hosted, userID: userID)
+                } catch {
+                    backendError = tr("Les vidéos n'ont pas pu être synchronisées.")
+                }
+            }
+        }
     }
 
     // MARK: - Abonnés d'un musicien
@@ -2434,19 +2542,17 @@ final class AppStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: Self.eventsKey)
         UserDefaults.standard.removeObject(forKey: Self.conversationsKey)
         UserDefaults.standard.removeObject(forKey: Self.profileKey)
-        UserDefaults.standard.removeObject(forKey: Self.favoritesKey)
-        UserDefaults.standard.removeObject(forKey: Self.appreciationsKey)
+        UserDefaults.standard.removeObject(forKey: Self.starRatingsKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumKey)
         UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
         UserDefaults.standard.removeObject(forKey: Self.followingKey)
         UserDefaults.standard.removeObject(forKey: Self.playedWithKey)
         UserDefaults.standard.removeObject(forKey: Self.groupsKey)
-        favorites = []
         following = Self.demoFollowing
         Self.save(following, key: Self.followingKey)
         playedWith = []
         groups = []
-        myAppreciations = [:]
+        myStarRatings = [:]
         isPremium = false
         premiumPlan = nil
         let seed = Self.loadSeed()

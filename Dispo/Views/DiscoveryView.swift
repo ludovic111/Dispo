@@ -14,7 +14,7 @@ struct DiscoveryFilters {
     var friendsOnly: Bool = false
     /// A déjà joué avec au moins un de mes amis.
     var playedWithAFriend: Bool = false
-    /// Bien notés : ≥ 1 note dorée ou ≥ 3 notes.
+    /// Bien notés : moyenne ≥ 4 étoiles avec au moins 3 avis.
     var wellRated: Bool = false
 
     var activeCount: Int {
@@ -41,7 +41,11 @@ struct DiscoveryFilters {
         if let distance = store.distance(to: musician), distance > radiusKm { return false }
         if friendsOnly, store.socialLink(with: musician.name) != .friend { return false }
         if playedWithAFriend, !store.playedWithAFriend(musician) { return false }
-        if wellRated, !(musician.goldenCount >= 1 || musician.noteCount >= 3) { return false }
+        if wellRated {
+            guard let summary = store.ratingSummary(for: musician),
+                  summary.count >= 3, summary.average >= 4
+            else { return false }
+        }
         return true
     }
 }

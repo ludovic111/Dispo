@@ -82,7 +82,7 @@ struct AccountSheet: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.liveEmail ?? store.tr("Connecté"))
                             .font(.subheadline.weight(.bold))
-                        Text("Mode live — données du serveur")
+                        Text("Compte connecté")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

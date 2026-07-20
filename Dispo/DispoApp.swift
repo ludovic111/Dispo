@@ -351,20 +351,38 @@ struct AvatarView: View {
 
     var body: some View {
         ZStack {
-            if let photo, UIImage(named: photo) != nil {
+            if let photo, photo.hasPrefix("http"), let url = URL(string: photo) {
+                // Photo hébergée (profil réel) — pastille d'initiales en
+                // attendant le chargement.
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    placeholder
+                }
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+            } else if let photo, UIImage(named: photo) != nil {
                 Image(photo)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(Circle())
             } else {
-                Circle().fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                Text(initials)
-                    .font(.system(size: size * 0.38, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white)
+                placeholder
             }
         }
         .frame(width: size, height: size)
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            Circle().fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
+            Text(initials)
+                .font(.system(size: size * 0.38, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
     }
 
     private var initials: String {
@@ -541,48 +559,46 @@ struct SocialLogosRow: View {
     }
 }
 
-/// Note de musique dorée animée — le « coup de cœur ». Pulse et scintille en continu.
-struct GoldenNoteView: View {
-    var size: CGFloat = 16
-    @State private var animate = false
+/// Rangée de 5 étoiles remplies selon la moyenne (demi-étoiles comprises).
+struct StarsView: View {
+    let rating: Double
+    var size: CGFloat = 12
+    var color: Color = JC.gold
 
     var body: some View {
-        Image(systemName: "music.note")
-            .font(.system(size: size, weight: .black))
-            .foregroundStyle(JC.premium)
-            .scaleEffect(animate ? 1.14 : 0.9)
-            .rotationEffect(.degrees(animate ? 7 : -7))
-            .shadow(color: JC.gold.opacity(animate ? 0.85 : 0.25), radius: animate ? size * 0.45 : 2)
-            .animation(.spring(response: 0.85, dampingFraction: 0.55).repeatForever(autoreverses: true), value: animate)
-            .onAppear { animate = true }
+        HStack(spacing: 2) {
+            ForEach(1...5, id: \.self) { index in
+                Image(systemName: symbol(for: index))
+                    .font(.system(size: size, weight: .semibold))
+            }
+        }
+        .foregroundStyle(color)
+    }
+
+    private func symbol(for index: Int) -> String {
+        let value = rating - Double(index - 1)
+        if value >= 0.75 { return "star.fill" }
+        if value >= 0.25 { return "star.leadinghalf.filled" }
+        return "star"
     }
 }
 
-/// Récapitulatif des appréciations reçues : notes de musique + coups de cœur dorés.
-/// Système strictement positif — pas de note négative.
-struct NoteRatingView: View {
-    let notes: Int
-    let golden: Int
+/// Pastille compacte « ★ 4,6 (12) » — moyenne + nombre d'avis, anonyme.
+struct RatingBadge: View {
+    let summary: RatingSummary
 
     var body: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 3) {
-                Image(systemName: "music.note")
-                    .font(.caption2.weight(.bold))
-                Text("\(notes)")
-                    .font(.caption2.weight(.bold))
-            }
-            .foregroundStyle(JC.violet)
-
-            if golden > 0 {
-                HStack(spacing: 3) {
-                    GoldenNoteView(size: 12)
-                    Text("\(golden)")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(JC.gold)
-                }
-            }
+        HStack(spacing: 3) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 9, weight: .bold))
+            Text(verbatim: summary.averageLabel)
+                .font(.caption2.weight(.bold))
+            Text(verbatim: "(\(summary.count))")
+                .font(.caption2)
+                .opacity(0.8)
         }
+        .foregroundStyle(JC.gold)
+        .accessibilityLabel(Text(verbatim: "\(summary.averageLabel)/5 · \(summary.count)"))
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 
 /// Page profil d'un musicien — layout façon Instagram : photo + stats en
 /// haut, identité (nom, @pseudo, niveau, bio, réseaux sociaux), boutons
@@ -11,6 +12,7 @@ struct MusicianDetailView: View {
     @State private var showSOSRequest = false
     @State private var showBlockConfirmation = false
     @State private var safetyMessage: String?
+    @State private var playingVideo: PlayableVideo?
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
     /// Tuiles d'aperçu — uniquement pour la vitrine des profils de démo.
@@ -28,7 +30,6 @@ struct MusicianDetailView: View {
                     availabilityRow
                     repertoireCard
                     rateCard
-                    reviewsCard
                     demosGrid
                 }
                 .padding(.horizontal, 18)
@@ -87,6 +88,11 @@ struct MusicianDetailView: View {
                 ChatView(conversationID: conversation.id)
             }
         }
+        .sheet(item: $playingVideo) { video in
+            VideoPlayer(player: AVPlayer(url: video.url))
+                .ignoresSafeArea()
+                .presentationDetents([.large])
+        }
         .sheet(isPresented: $showSOSRequest) {
             SOSRequestSheet(musician: musician) { conversation in
                 // Laisser la feuille se refermer avant d'ouvrir la conversation.
@@ -111,10 +117,13 @@ struct MusicianDetailView: View {
                             .overlay(Circle().stroke(JC.bg, lineWidth: 2.5))
                     }
                 }
-            // Trois compteurs réels : appréciations reçues, abonnés,
-            // collaborations « a joué avec » — jamais de chiffres inventés.
+            // Trois compteurs réels : note moyenne, abonnés, collaborations
+            // « a joué avec » — jamais de chiffres inventés.
             HStack(spacing: 0) {
-                statBlock(value: "\(store.noteCount(for: musician))", label: "notes")
+                statBlock(
+                    value: store.ratingSummary(for: musician).map { "★ \($0.averageLabel)" } ?? "—",
+                    label: "note"
+                )
                 statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
                 statBlock(value: "\(store.collaborators(of: musician).count)", label: "collabs")
             }
@@ -259,47 +268,7 @@ struct MusicianDetailView: View {
                         .foregroundStyle(.primary)
                 }
                 .buttonStyle(PressableStyle())
-
-                Button {
-                    withAnimation(.snappy) { store.toggleFavorite(musician) }
-                } label: {
-                    Image(systemName: store.isFavorite(musician) ? "heart.fill" : "heart")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(store.isFavorite(musician) ? JC.magenta : Color.primary)
-                        .padding(10)
-                        .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(JC.cardStroke, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(PressableStyle())
             }
-
-            Button {
-                withAnimation(.snappy) { store.togglePlayedWith(musician) }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: store.hasPlayedWith(musician) ? "person.2.fill" : "person.2")
-                        .font(.caption.weight(.bold))
-                    Text(store.hasPlayedWith(musician) ? "Vous avez joué ensemble" : "J'ai déjà joué avec")
-                        .font(.subheadline.weight(.bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    store.hasPlayedWith(musician) ? AnyShapeStyle(JC.coral.opacity(0.16)) : AnyShapeStyle(JC.card),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(store.hasPlayedWith(musician) ? JC.coral.opacity(0.45) : JC.cardStroke, lineWidth: 1)
-                )
-                .foregroundStyle(store.hasPlayedWith(musician) ? JC.coral : Color.primary)
-            }
-            .buttonStyle(PressableStyle())
         }
     }
 
@@ -357,120 +326,88 @@ struct MusicianDetailView: View {
         musician.name.split(separator: " ").first.map(String.init) ?? musician.name
     }
 
-    // MARK: - Appréciations
+    // MARK: - Note étoilée (fusion « j'ai joué avec » + note)
 
-    /// Carte interactive : l'utilisateur donne une note de musique ou une note dorée.
+    /// Carte interactive : déclarer qu'on a joué ensemble = donner une note
+    /// de 1 à 5 étoiles. Les notes sont anonymes ; seule la moyenne et le
+    /// nombre d'avis sont visibles.
     private var rateCard: some View {
-        let given = store.appreciation(for: musician)
+        let summary = store.ratingSummary(for: musician)
+        let mine = store.myRating(for: musician)
         return JCCard {
             VStack(alignment: .leading, spacing: 12) {
-                sectionTitle("Tu as joué avec \(firstName) ?", systemImage: "hand.thumbsup.fill")
-                Text("Laisse-lui une note de musique — ou une note dorée si c'était un coup de cœur. Ici on ne partage que le positif : pas de mauvaise note.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 12) {
-                    appreciationButton(.note, given: given)
-                    appreciationButton(.golden, given: given)
-                }
-            }
-        }
-    }
-
-    private func appreciationButton(_ appreciation: Appreciation, given: Appreciation?) -> some View {
-        let isSelected = given == appreciation
-        let isGolden = appreciation == .golden
-        let accent = isGolden ? JC.gold : JC.violet
-        return Button {
-            withAnimation(.snappy) {
-                store.setAppreciation(isSelected ? nil : appreciation, for: musician)
-            }
-        } label: {
-            VStack(spacing: 8) {
-                if isGolden {
-                    GoldenNoteView(size: 26)
-                } else {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(isSelected ? JC.violet : Color.primary)
-                }
-                Text(isGolden ? "J'ai adoré" : "J'ai aimé")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(isSelected ? accent : Color.primary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                isSelected ? accent.opacity(0.16) : JC.inset,
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? accent.opacity(0.6) : JC.cardStroke, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressableStyle())
-    }
-
-    private var reviewsCard: some View {
-        JCCard {
-            VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    sectionTitle("Ce qu'ils en disent", systemImage: "music.note")
+                    sectionTitle("Tu as joué avec \(firstName) ?", systemImage: "star.fill")
                     Spacer()
-                    if store.noteCount(for: musician) > 0 {
-                        NoteRatingView(
-                            notes: store.noteCount(for: musician),
-                            golden: store.goldenCount(for: musician)
-                        )
+                    if let summary {
+                        RatingBadge(summary: summary)
                     }
                 }
-                if musician.reviews.isEmpty {
+                if let summary {
+                    HStack(spacing: 8) {
+                        StarsView(rating: summary.average, size: 13)
+                        Text("\(summary.count) avis")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
                     Text("Pas encore de note — sois le premier à jouer avec \(firstName) !")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else {
-                    ForEach(musician.reviews) { review in
-                        HStack(alignment: .top, spacing: 10) {
-                            AvatarView(name: review.author, size: 32, photo: store.photo(forName: review.author))
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(spacing: 6) {
-                                    Text(review.author).font(.caption.weight(.bold))
-                                    reviewMark(review.appreciation)
-                                }
-                                Text(review.comment)
-                                    .font(.caption)
-                                    .foregroundStyle(.primary.opacity(0.85))
-                            }
+                }
+                Divider()
+                Text(mine == nil
+                     ? "Note ton expérience de jeu avec \(firstName) — ta note est anonyme et compte comme « on a joué ensemble »."
+                     : "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    ForEach(1...5, id: \.self) { stars in
+                        Button {
+                            withAnimation(.snappy) { store.rate(musician, stars: stars) }
+                        } label: {
+                            Image(systemName: (mine ?? 0) >= stars ? "star.fill" : "star")
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundStyle((mine ?? 0) >= stars ? JC.gold : Color.secondary.opacity(0.5))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .contentShape(Rectangle())
                         }
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .buttonStyle(PressableStyle(scale: 0.85))
+                        .accessibilityLabel(Text(verbatim: "\(stars)/5"))
                     }
                 }
+                if mine != nil {
+                    Button {
+                        withAnimation(.snappy) { store.removeRating(for: musician) }
+                    } label: {
+                        Label("Retirer ma note", systemImage: "star.slash")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func reviewMark(_ appreciation: Appreciation) -> some View {
-        switch appreciation {
-        case .golden:
-            GoldenNoteView(size: 12)
-        case .note:
-            Image(systemName: "music.note")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(JC.violet)
         }
     }
 
     // MARK: - Grille de démos (bas de page, façon Instagram)
 
-    /// Vitrine de tuiles fictives pour les profils de démo uniquement.
-    /// Un vrai profil sans vidéos affiche un état vide honnête.
+    /// Vidéos de démo du musicien : les vraies vidéos hébergées quand il y en
+    /// a ; vitrine fictive pour les profils de démo ; état vide honnête sinon.
     private var demosGrid: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let videos = musician.demoVideos.filter { $0.playbackURL != nil }
+        return VStack(alignment: .leading, spacing: 10) {
             sectionTitle("Démos", systemImage: "play.square.stack")
-            if musician.isDemo {
+            if !videos.isEmpty {
+                let columns = [GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3)]
+                LazyVGrid(columns: columns, spacing: 3) {
+                    ForEach(videos) { video in
+                        videoTile(video)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            } else if musician.isDemo {
                 let columns = [GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3), GridItem(.flexible(), spacing: 3)]
                 LazyVGrid(columns: columns, spacing: 3) {
                     ForEach(0..<demoCount, id: \.self) { index in
@@ -478,7 +415,7 @@ struct MusicianDetailView: View {
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                Text("Aperçu de démonstration — lecture des vraies vidéos en phase 2.")
+                Text("Aperçu de démonstration — profil d'exemple.")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             } else {
@@ -487,6 +424,36 @@ struct MusicianDetailView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// Tuile d'une vraie vidéo hébergée — un tap pour la lire.
+    private func videoTile(_ video: DemoVideo) -> some View {
+        Button {
+            if let url = video.playbackURL {
+                playingVideo = PlayableVideo(url: url)
+            }
+        } label: {
+            ZStack(alignment: .bottomLeading) {
+                GenreCover(genre: mainGenre)
+                    .aspectRatio(1, contentMode: .fill)
+                Image(systemName: "play.circle.fill")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.95))
+                    .shadow(radius: 4)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if let date = video.date {
+                    Text(date.formatted(.dateTime.day().month(.abbreviated).year()))
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.45), in: Capsule())
+                        .padding(5)
+                }
+            }
+            .clipped()
+        }
+        .buttonStyle(PressableStyle(scale: 0.95))
     }
 
     private func demoTile(index: Int) -> some View {

@@ -159,6 +159,11 @@ final class SupabaseBackend: Sendable {
         var isDemo: Bool?
         /// Pseudos réseaux sociaux (jsonb côté serveur).
         var socials: [String: String]?
+        /// Note moyenne étoilée (maintenue par trigger — anonyme).
+        var ratingAvg: Double?
+        var ratingCount: Int?
+        /// Vidéos de démo hébergées (jsonb côté serveur).
+        var demoVideos: [DemoVideoPayload]?
 
         enum CodingKeys: String, CodingKey {
             case id, name, age, neighborhood, latitude, longitude
@@ -167,6 +172,9 @@ final class SupabaseBackend: Sendable {
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
             case isDemo = "is_demo"
+            case ratingAvg = "rating_avg"
+            case ratingCount = "rating_count"
+            case demoVideos = "demo_videos"
         }
 
         var parsedDates: [Date] {
@@ -180,7 +188,7 @@ final class SupabaseBackend: Sendable {
             !name.isEmpty
         }
 
-        func asMusician(reviews: [Review]) -> Musician? {
+        func asMusician() -> Musician? {
             guard isComplete else { return nil }
             let dates = parsedDates
             return Musician(
@@ -200,12 +208,41 @@ final class SupabaseBackend: Sendable {
                 availability: .derived(from: dates),
                 availableDates: dates,
                 repertoire: repertoire,
-                reviews: reviews,
+                reviews: [],
                 photo: photoUrl,
                 socials: socials,
                 isDemo: isDemo ?? false,
                 isPremium: isPremium,
-                hasLocation: latitude != nil && longitude != nil
+                hasLocation: latitude != nil && longitude != nil,
+                ratingAvg: ratingAvg,
+                ratingCount: ratingCount ?? 0,
+                demoVideos: (demoVideos ?? []).map(\.asDemoVideo)
+            )
+        }
+    }
+
+    /// Forme JSON d'une vidéo de démo dans `profiles.demo_videos`.
+    struct DemoVideoPayload: Codable, Hashable {
+        var id: UUID
+        var path: String
+        var url: String
+        /// « yyyy-MM-dd » — nil si non renseignée.
+        var date: String?
+
+        init(from video: DemoVideo) {
+            id = video.id
+            path = video.storagePath ?? ""
+            url = video.remoteURL ?? ""
+            date = video.date.map { SupabaseBackend.dayFormatter.string(from: $0) }
+        }
+
+        var asDemoVideo: DemoVideo {
+            DemoVideo(
+                id: id,
+                fileName: "",
+                date: date.flatMap { SupabaseBackend.dayFormatter.date(from: $0) },
+                storagePath: path,
+                remoteURL: url
             )
         }
     }
@@ -219,12 +256,14 @@ final class SupabaseBackend: Sendable {
         }
     }
 
-    struct FavoriteRow: Codable, Hashable {
-        var userId: UUID
-        var favoriteId: UUID
+    struct RatingRow: Codable, Hashable {
+        var raterId: UUID
+        var ratedId: UUID
+        var stars: Int
         enum CodingKeys: String, CodingKey {
-            case userId = "user_id"
-            case favoriteId = "favorite_id"
+            case stars
+            case raterId = "rater_id"
+            case ratedId = "rated_id"
         }
     }
 
@@ -243,19 +282,6 @@ final class SupabaseBackend: Sendable {
         enum CodingKeys: String, CodingKey {
             case blockerId = "blocker_id"
             case blockedId = "blocked_id"
-        }
-    }
-
-    struct AppreciationRow: Codable {
-        var giverId: UUID
-        var receiverId: UUID
-        var kind: String
-        var comment: String
-
-        enum CodingKeys: String, CodingKey {
-            case giverId = "giver_id"
-            case receiverId = "receiver_id"
-            case kind, comment
         }
     }
 
@@ -346,30 +372,13 @@ final class SupabaseBackend: Sendable {
         try await client.from("profiles").select().execute().value
     }
 
-    func fetchAppreciations() async throws -> [AppreciationRow] {
-        try await client.from("appreciations").select().execute().value
-    }
-
-    /// Musiciens du feed (profils complets, sauf moi), avis inclus.
+    /// Musiciens du feed (profils complets, sauf moi). La note étoilée
+    /// arrive agrégée sur le profil (moyenne + nombre, jamais le détail).
     func fetchMusicians(excluding myID: UUID) async throws -> [Musician] {
-        async let profilesTask = fetchProfiles()
-        async let appreciationsTask = fetchAppreciations()
-        let (profiles, appreciations) = try await (profilesTask, appreciationsTask)
-
-        let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
-        var reviewsByReceiver: [UUID: [Review]] = [:]
-        for a in appreciations {
-            let review = Review(
-                author: nameByID[a.giverId]?.split(separator: " ").first.map(String.init) ?? "Un musicien",
-                appreciation: Appreciation(rawValue: a.kind) ?? .note,
-                comment: a.comment
-            )
-            reviewsByReceiver[a.receiverId, default: []].append(review)
-        }
-
+        let profiles = try await fetchProfiles()
         return profiles
             .filter { $0.id != myID }
-            .compactMap { $0.asMusician(reviews: reviewsByReceiver[$0.id] ?? []) }
+            .compactMap { $0.asMusician() }
     }
 
     /// Formateur des colonnes Postgres `date` (« 2026-07-08 »).
@@ -413,6 +422,68 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    // MARK: - Vidéos de démo (Supabase Storage)
+
+    /// Bucket public des vidéos de démo.
+    static let demoVideosBucket = "demo-videos"
+
+    /// Téléverse une vidéo compressée et retourne son URL publique.
+    /// Chemin : `<userID>/<uuid>.mp4` — les policies Storage n'autorisent
+    /// l'écriture que dans son propre dossier.
+    func uploadDemoVideo(_ data: Data, userID: UUID) async throws -> (path: String, url: URL) {
+        let path = "\(userID.uuidString.lowercased())/\(UUID().uuidString.lowercased()).mp4"
+        try await client.storage.from(Self.demoVideosBucket).upload(
+            path,
+            data: data,
+            options: FileOptions(contentType: "video/mp4")
+        )
+        let url = try client.storage.from(Self.demoVideosBucket).getPublicURL(path: path)
+        return (path, url)
+    }
+
+    /// Supprime le fichier d'une vidéo retirée du profil.
+    func deleteDemoVideoFile(path: String) async throws {
+        _ = try await client.storage.from(Self.demoVideosBucket).remove(paths: [path])
+    }
+
+    /// Pousse la liste des vidéos de démo sur mon profil (jsonb).
+    func updateDemoVideos(_ videos: [DemoVideo], userID: UUID) async throws {
+        struct Update: Encodable { let demo_videos: [DemoVideoPayload] }
+        try await client.from("profiles")
+            .update(Update(demo_videos: videos.map(DemoVideoPayload.init(from:))))
+            .eq("id", value: userID)
+            .execute()
+    }
+
+    // MARK: - Photo de profil (Supabase Storage)
+
+    /// Bucket public des photos de profil.
+    static let avatarsBucket = "avatars"
+
+    /// Téléverse ma photo de profil (JPEG déjà compressé) et retourne son
+    /// URL publique — horodatée pour invalider les caches à chaque envoi.
+    func uploadAvatar(_ data: Data, userID: UUID) async throws -> URL {
+        let path = "\(userID.uuidString.lowercased())/avatar.jpg"
+        try await client.storage.from(Self.avatarsBucket).upload(
+            path,
+            data: data,
+            options: FileOptions(cacheControl: "3600", contentType: "image/jpeg", upsert: true)
+        )
+        let base = try client.storage.from(Self.avatarsBucket).getPublicURL(path: path)
+        var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "v", value: "\(Int(Date().timeIntervalSince1970))")]
+        return components?.url ?? base
+    }
+
+    /// Écrit (ou efface) l'URL publique de ma photo de profil.
+    func updatePhotoURL(_ url: String?, userID: UUID) async throws {
+        struct Update: Encodable { let photo_url: String? }
+        try await client.from("profiles")
+            .update(Update(photo_url: url))
+            .eq("id", value: userID)
+            .execute()
+    }
+
     // MARK: - Graphe social et securite
 
     func fetchFollows() async throws -> [FollowRow] {
@@ -430,21 +501,31 @@ final class SupabaseBackend: Sendable {
             .eq("follower_id", value: me).eq("following_id", value: targetID).execute()
     }
 
-    func fetchFavorites(me: UUID) async throws -> Set<UUID> {
-        let rows: [FavoriteRow] = try await client.from("favorites")
-            .select().eq("user_id", value: me).execute().value
-        return Set(rows.map(\.favoriteId))
+    // MARK: - Notes étoilées (anonymes)
+
+    /// Mes notes données (RLS : personne d'autre ne peut lire le détail —
+    /// les autres ne voient que la moyenne agrégée sur le profil).
+    func fetchMyRatings(me: UUID) async throws -> [RatingRow] {
+        try await client.from("ratings")
+            .select().eq("rater_id", value: me).execute().value
     }
 
-    func addFavorite(_ targetID: UUID, me: UUID) async throws {
-        try await client.from("favorites")
-            .insert(["user_id": me.uuidString, "favorite_id": targetID.uuidString])
+    /// Pose (ou met à jour) ma note 1–5 sur un musicien.
+    func upsertRating(_ stars: Int, on targetID: UUID, me: UUID) async throws {
+        struct Upsert: Encodable {
+            let rater_id: UUID
+            let rated_id: UUID
+            let stars: Int
+        }
+        try await client.from("ratings")
+            .upsert(Upsert(rater_id: me, rated_id: targetID, stars: stars))
             .execute()
     }
 
-    func removeFavorite(_ targetID: UUID, me: UUID) async throws {
-        try await client.from("favorites").delete()
-            .eq("user_id", value: me).eq("favorite_id", value: targetID).execute()
+    /// Retire ma note sur un musicien.
+    func deleteRating(on targetID: UUID, me: UUID) async throws {
+        try await client.from("ratings").delete()
+            .eq("rater_id", value: me).eq("rated_id", value: targetID).execute()
     }
 
     func fetchCollaborations() async throws -> [CollaborationRow] {
@@ -454,7 +535,8 @@ final class SupabaseBackend: Sendable {
     func addCollaboration(with targetID: UUID, me: UUID) async throws {
         let a = min(me.uuidString, targetID.uuidString)
         let b = max(me.uuidString, targetID.uuidString)
-        try await client.from("collaborations").insert(["a_id": a, "b_id": b]).execute()
+        // Upsert : re-déclarer une collaboration existante ne casse rien.
+        try await client.from("collaborations").upsert(["a_id": a, "b_id": b]).execute()
     }
 
     func removeCollaboration(with targetID: UUID, me: UUID) async throws {

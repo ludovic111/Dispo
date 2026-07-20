@@ -161,6 +161,46 @@
         }
       }
     },
+    "%lld avis": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Bewertungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld reviews"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld reseñas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld recensioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件の評価"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 条评价"
+          }
+        }
+      }
+    },
     "%lld concerts cherchent un musicien": {
       "localizations": {
         "de": {
@@ -1041,6 +1081,166 @@
         }
       }
     },
+    "A joué avec %@ (ton ami)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hat mit %@ gespielt (dein Freund)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Played with %@ (your friend)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha tocado con %@ (tu amigo)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha suonato con %@ (il tuo amico)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（友だち）と演奏済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和%@（你的朋友）一起演过"
+          }
+        }
+      }
+    },
+    "A joué avec %@ +%lld (ton ami)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hat mit %@ +%lld gespielt (dein Freund)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Played with %@ +%lld (your friend)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha tocado con %@ +%lld (tu amigo)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha suonato con %@ +%lld (il tuo amico)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ +%lld（友だち）と演奏済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和%@ +%lld（你的朋友）一起演过"
+          }
+        }
+      }
+    },
+    "A joué avec un ami": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem Freund gespielt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Played with a friend"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha tocado con un amigo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ha suonato con un amico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友人と演奏済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和朋友一起演过"
+          }
+        }
+      }
+    },
+    "Abonnement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscription"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suscripción"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbonamento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブスクリプション"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅"
+          }
+        }
+      }
+    },
     "Abonnement annuel actif": {
       "localizations": {
         "de": {
@@ -1117,6 +1317,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "月度订阅已开通"
+          }
+        }
+      }
+    },
+    "Abonnements Premium gérés et tarifés par l'App Store": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium subscriptions managed and priced by the App Store"
+          }
+        }
+      }
+    },
+    "Abonnements Premium sécurisés par StoreKit et restaurables": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium subscriptions secured by StoreKit and restorable"
           }
         }
       }
@@ -1357,6 +1577,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "非洲节拍/高雅生活"
+          }
+        }
+      }
+    },
+    "Aide & infos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilfe & Infos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help & info"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayuda e información"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aiuto e info"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘルプと情報"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帮助与信息"
           }
         }
       }
@@ -1761,6 +2021,46 @@
         }
       }
     },
+    "Alertes en avance, groupes, 6 vidéos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühe Alerts, Gruppen, 6 Videos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Early alerts, groups, 6 videos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alertas anticipadas, grupos, 6 vídeos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi in anticipo, gruppi, 6 video"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先行通知・グループ・動画6本"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "抢先提醒、乐队群组、6 个视频"
+          }
+        }
+      }
+    },
     "Alertes en priorité, groupes, 6 vidéos · dès CHF 6.60/mois": {
       "localizations": {
         "de": {
@@ -1797,6 +2097,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "优先提醒、群组、6个视频 · 每月6.60瑞郎起"
+          }
+        }
+      }
+    },
+    "Alertes en priorité, groupes, 6 vidéos · via l'App Store": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Priority alerts, groups and 6 videos · via the App Store"
           }
         }
       }
@@ -2001,6 +2311,46 @@
         }
       }
     },
+    "Amis uniquement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Freunde"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friends only"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo amigos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo amici"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "友だちのみ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅好友"
+          }
+        }
+      }
+    },
     "Annonce introuvable": {
       "localizations": {
         "de": {
@@ -2117,6 +2467,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        }
+      }
+    },
+    "Aperçu de démonstration — profil d'exemple.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo-Vorschau — Beispielprofil."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo preview — sample profile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vista de demostración — perfil de ejemplo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima dimostrativa — profilo di esempio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモプレビュー — サンプルプロフィールです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演示预览 — 示例账号。"
           }
         }
       }
@@ -2841,6 +3231,46 @@
         }
       }
     },
+    "Badge « A joué avec un ami » dans la recherche et le feed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badge „Mit einem Freund gespielt“ in Suche und Feed"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Played with a friend” badge in search and the feed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insignia «Ha tocado con un amigo» en la búsqueda y el feed"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badge «Ha suonato con un amico» nella ricerca e nel feed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索とフィードに「友人と演奏済み」バッジ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索和动态中的「和朋友一起演过」徽章"
+          }
+        }
+      }
+    },
     "Balkan / Klezmer": {
       "localizations": {
         "de": {
@@ -3241,6 +3671,46 @@
         }
       }
     },
+    "Bien notés": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gut bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Well rated"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bien valorados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ben valutati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高評価"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好评"
+          }
+        }
+      }
+    },
     "Bio": {
       "localizations": {
         "de": {
@@ -3277,6 +3747,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "简介"
+          }
+        }
+      }
+    },
+    "Bloquer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block"
+          }
+        }
+      }
+    },
+    "Bloquer ce musicien ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block this musician?"
           }
         }
       }
@@ -3557,6 +4047,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "每个SOS匹配都有“邀请”按钮——预填消息即刻发送"
+          }
+        }
+      }
+    },
+    "Bouton « J'ai déjà joué avec » sur chaque profil": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schaltfläche „Ich habe schon mit ihnen gespielt“ auf jedem Profil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“I've played with them” button on every profile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botón «Ya he tocado con ellos» en cada perfil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsante «Ho già suonato con loro» su ogni profilo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各プロフィールに「一緒に演奏した」ボタン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个资料页上的「我和他们一起演过」按钮"
           }
         }
       }
@@ -4041,6 +4571,16 @@
         }
       }
     },
+    "Ce contenu ne respecte pas les regles de la communaute.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This content does not follow the community guidelines."
+          }
+        }
+      }
+    },
     "Ce qu'ils en disent": {
       "localizations": {
         "de": {
@@ -4157,6 +4697,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "本周末"
+          }
+        }
+      }
+    },
+    "Centre d'aide": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilfe-Center"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help center"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centro de ayuda"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centro assistenza"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘルプセンター"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帮助中心"
           }
         }
       }
@@ -4801,6 +5381,56 @@
         }
       }
     },
+    "Coches « reçu / lu » sous tes messages et « en train d'écrire… », comme sur WhatsApp": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Häkchen „zugestellt / gelesen“ unter deinen Nachrichten und „schreibt …“, wie bei WhatsApp"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delivered/read ticks under your messages and “typing…”, just like WhatsApp"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marcas de «entregado / leído» bajo tus mensajes y «escribiendo…», como en WhatsApp"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spunte «consegnato / letto» sotto i messaggi e «sta scrivendo…», come su WhatsApp"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージに「配信済み／既読」チェックと「入力中…」表示 — WhatsApp風"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消息下方显示“送达/已读”和“正在输入…”，如同 WhatsApp"
+          }
+        }
+      }
+    },
+    "Coches « reçu / lu » sous tes messages, comme sur WhatsApp : tu sais quand ton dépannage est vu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delivered / read checkmarks under your messages, WhatsApp-style: you know when your gig request has been seen"
+          }
+        }
+      }
+    },
     "Collab studio": {
       "localizations": {
         "de": {
@@ -4877,6 +5507,106 @@
           "stringUnit": {
             "state": "translated",
             "value": "随意组合：乐器、街区、风格、名字或@用户名。"
+          }
+        }
+      }
+    },
+    "Compte": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuenta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账户"
+          }
+        }
+      }
+    },
+    "Compte connecté": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto verbunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuenta conectada"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account connesso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已登录"
+          }
+        }
+      }
+    },
+    "Compte de démonstration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo account"
+          }
+        }
+      }
+    },
+    "Compte de démonstration · les réponses peuvent être automatiques": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo account · replies may be automated"
           }
         }
       }
@@ -5037,6 +5767,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "演出"
+          }
+        }
+      }
+    },
+    "Confidentialité": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutz"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidad"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私"
           }
         }
       }
@@ -5437,6 +6207,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "联系"
+          }
+        }
+      }
+    },
+    "Contacter le support": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact support"
           }
         }
       }
@@ -6281,6 +7061,16 @@
         }
       }
     },
+    "Des conversations vivantes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations that feel alive"
+          }
+        }
+      }
+    },
     "Description": {
       "localizations": {
         "de": {
@@ -7001,6 +7791,56 @@
         }
       }
     },
+    "Découvrir Premium": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium entdecken"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discover Premium"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descubre Premium"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scopri Premium"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premiumを見る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "了解 Premium"
+          }
+        }
+      }
+    },
+    "Démo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo"
+          }
+        }
+      }
+    },
     "Démo : paiement simulé — l'achat réel passera par l'App Store (StoreKit) en phase 2.": {
       "localizations": {
         "de": {
@@ -7241,6 +8081,46 @@
         }
       }
     },
+    "Efface les données d'exemple de cet appareil. Disponible uniquement hors connexion.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löscht die Beispieldaten auf diesem Gerät. Nur ohne Anmeldung verfügbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clears the sample data on this device. Only available while signed out."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borra los datos de ejemplo de este dispositivo. Solo disponible sin sesión iniciada."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella i dati di esempio su questo dispositivo. Disponibile solo da disconnessi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この端末のサンプルデータを消去します。ログアウト時のみ利用できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除此设备上的示例数据。仅在未登录时可用。"
+          }
+        }
+      }
+    },
     "En attente": {
       "localizations": {
         "de": {
@@ -7401,6 +8281,86 @@
         }
       }
     },
+    "En train d'écrire…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreibt …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typing…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribiendo…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sta scrivendo…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力中…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在输入…"
+          }
+        }
+      }
+    },
+    "Envoi en cours…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird hochgeladen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uploading…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subiendo…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricamento…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップロード中…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上传中…"
+          }
+        }
+      }
+    },
     "Envoi impossible — vérifie l'adresse et le réseau.": {
       "localizations": {
         "de": {
@@ -7477,6 +8437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "发送测试通知"
+          }
+        }
+      }
+    },
+    "Envoyé": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesendet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inviato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已发送"
           }
         }
       }
@@ -8121,6 +9121,16 @@
         }
       }
     },
+    "Follows, favoris et collaborations synchronisés sur le réseau": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follows, favorites and collaborations sync across the network"
+          }
+        }
+      }
+    },
     "France": {
       "localizations": {
         "de": {
@@ -8601,6 +9611,56 @@
         }
       }
     },
+    "Gérer l'abonnement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage subscription"
+          }
+        }
+      }
+    },
+    "Gérer mon abonnement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mein Abo verwalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage my subscription"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestionar mi suscripción"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestisci il mio abbonamento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブスクリプションを管理"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理订阅"
+          }
+        }
+      }
+    },
     "Hard rock / Metal": {
       "localizations": {
         "de": {
@@ -9043,40 +10103,10 @@
     },
     "Indisponible": {
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nicht verfügbar"
-          }
-        },
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Unavailable"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No disponible"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Non disponibile"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "対応不可"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不可用"
           }
         }
       }
@@ -9481,6 +10511,46 @@
         }
       }
     },
+    "J'ai déjà joué avec": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich habe schon mit ihnen gespielt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I've played with them"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya he tocado con ellos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ho già suonato con loro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一緒に演奏したことがある"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我和他们一起演过"
+          }
+        }
+      }
+    },
     "Jam": {
       "localizations": {
         "de": {
@@ -9721,6 +10791,16 @@
         }
       }
     },
+    "L'achat n'a pas pu etre finalise.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The purchase could not be completed."
+          }
+        }
+      }
+    },
     "L'annonce n'a pas pu être publiée sur le serveur.": {
       "localizations": {
         "de": {
@@ -9881,6 +10961,96 @@
         }
       }
     },
+    "La messagerie en temps reel n'a pas pu demarrer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real-time messaging could not start."
+          }
+        }
+      }
+    },
+    "La note n'a pas pu être enregistrée.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Note konnte nicht gespeichert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your rating couldn't be saved."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar la nota."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare il voto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価を保存できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评分保存失败。"
+          }
+        }
+      }
+    },
+    "La note n'a pas pu être retirée.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Note konnte nicht entfernt werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your rating couldn't be removed."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo quitar la nota."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile rimuovere il voto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価を削除できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评分删除失败。"
+          }
+        }
+      }
+    },
     "La photo n'a pas pu être enregistrée.": {
       "localizations": {
         "de": {
@@ -9917,6 +11087,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "照片未能保存。"
+          }
+        }
+      }
+    },
+    "La photo n'a pas pu être publiée sur ton profil réseau.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Foto konnte nicht auf deinem Netzwerkprofil veröffentlicht werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your photo couldn't be published to your network profile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo publicar la foto en tu perfil de red."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile pubblicare la foto sul tuo profilo di rete."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写真をネットワークプロフィールに公開できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片未能发布到你的网络个人资料。"
           }
         }
       }
@@ -9961,6 +11171,26 @@
         }
       }
     },
+    "La restauration des achats a echoue.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchase restoration failed."
+          }
+        }
+      }
+    },
+    "La suppression du compte a echoue. Reessaie plus tard.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account deletion failed. Please try again later."
+          }
+        }
+      }
+    },
     "La vidéo n'a pas pu être enregistrée.": {
       "localizations": {
         "de": {
@@ -9997,6 +11227,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "视频未能保存。"
+          }
+        }
+      }
+    },
+    "La vidéo n'a pas pu être envoyée — vérifie le réseau.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Video konnte nicht hochgeladen werden — prüfe deine Verbindung."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The video couldn't be uploaded — check your connection."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo subir el vídeo — comprueba la conexión."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile caricare il video — controlla la connessione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画をアップロードできませんでした — 通信環境をご確認ください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频上传失败 — 请检查网络。"
           }
         }
       }
@@ -10281,6 +11551,16 @@
         }
       }
     },
+    "Le blocage n'a pas pu etre applique.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The block could not be applied."
+          }
+        }
+      }
+    },
     "Le concert": {
       "localizations": {
         "de": {
@@ -10397,6 +11677,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "按水平筛选是Dispo Premium功能（每月6.60瑞郎起）。"
+          }
+        }
+      }
+    },
+    "Le filtre par niveau fait partie de Dispo Premium.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level filtering is part of Dispo Premium."
           }
         }
       }
@@ -10521,6 +11811,26 @@
         }
       }
     },
+    "Le message que tu regardes est marqué lu immédiatement — plus de fausse notification": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messages you are looking at are marked read instantly — no more stray notifications"
+          }
+        }
+      }
+    },
+    "Le profil, les messages, les SOS et les relations seront supprimés. Cette action est irréversible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your profile, messages, SOS posts and relationships will be deleted. This cannot be undone."
+          }
+        }
+      }
+    },
     "Le réseau des musiciens\nqui se dépannent": {
       "localizations": {
         "de": {
@@ -10557,6 +11867,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "音乐人互助\n救场网络"
+          }
+        }
+      }
+    },
+    "Le signalement n'a pas pu etre envoye.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The report could not be sent."
           }
         }
       }
@@ -10721,6 +12041,16 @@
         }
       }
     },
+    "Les abonnements App Store sont momentanement indisponibles.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store subscriptions are temporarily unavailable."
+          }
+        }
+      }
+    },
     "Les autres te voient : %@ %@": {
       "localizations": {
         "de": {
@@ -10837,6 +12167,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "最佳档案置顶，水平一目了然。"
+          }
+        }
+      }
+    },
+    "Les vidéos n'ont pas pu être synchronisées.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Videos konnten nicht synchronisiert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your videos couldn't be synced."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudieron sincronizar los vídeos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile sincronizzare i video."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画を同期できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频同步失败。"
           }
         }
       }
@@ -11077,6 +12447,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "现场演出"
+          }
+        }
+      }
+    },
+    "Lu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gelesen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leído"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既読"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已读"
           }
         }
       }
@@ -11477,6 +12887,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的空闲日期"
+          }
+        }
+      }
+    },
+    "Mes démos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Demos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My demos"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis demos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le mie demo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイデモ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的演示"
           }
         }
       }
@@ -12157,6 +13607,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的水平"
+          }
+        }
+      }
+    },
+    "Mon profil": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mein Profil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My profile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mi perfil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il mio profilo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイプロフィール"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的资料"
           }
         }
       }
@@ -13201,6 +14691,166 @@
         }
       }
     },
+    "Note les musiciens avec qui tu as joué : 1 à 5 étoiles, note anonyme — seule la moyenne et le nombre d'avis s'affichent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewerte Musiker, mit denen du gespielt hast: 1 bis 5 Sterne, anonym — nur Durchschnitt und Anzahl werden angezeigt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate the musicians you've played with: 1 to 5 stars, anonymously — only the average and review count are shown"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valora a los músicos con los que has tocado: de 1 a 5 estrellas, de forma anónima — solo se muestran la media y el número de reseñas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valuta i musicisti con cui hai suonato: da 1 a 5 stelle, in anonimo — si vedono solo media e numero di recensioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共演したミュージシャンを1〜5つ星で匿名評価 — 表示されるのは平均と件数だけ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为合作过的乐手打 1–5 星，匿名评分 — 只显示平均分和评价数"
+          }
+        }
+      }
+    },
+    "Note ton expérience": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewerte deine Erfahrung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate your experience"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valora tu experiencia"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valuta la tua esperienza"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "体験を評価"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评价你的体验"
+          }
+        }
+      }
+    },
+    "Note ton expérience de jeu avec %@ — ta note est anonyme et compte comme « on a joué ensemble ».": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewerte, wie es war, mit %@ zu spielen — deine Note ist anonym und zählt als „wir haben zusammen gespielt“."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate your experience playing with %@ — your rating is anonymous and counts as “we played together”."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valora tu experiencia tocando con %@ — tu nota es anónima y cuenta como «hemos tocado juntos»."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valuta la tua esperienza suonando con %@ — il tuo voto è anonimo e vale come «abbiamo suonato insieme»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@との演奏を評価しよう — 評価は匿名で、「共演した」として記録されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为与%@的合奏体验打分 — 评分匿名，并记录为“我们合作过”。"
+          }
+        }
+      }
+    },
+    "Notes, vidéos & conversations vivantes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noten, Videos & lebendige Chats"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ratings, videos & lively chats"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notas, vídeos y conversaciones vivas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voti, video e chat vive"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価・動画・生きた会話"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评分、视频与鲜活对话"
+          }
+        }
+      }
+    },
     "Notifications": {
       "localizations": {
         "de": {
@@ -13437,6 +15087,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "全新Premium价格：每月9.90瑞郎或每年79瑞郎（−33%）"
+          }
+        }
+      }
+    },
+    "Nouveaux réglages rangés par catégories : compte, notifications, préférences, abonnement, aide": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Einstellungen nach Kategorien: Konto, Mitteilungen, Präferenzen, Abo, Hilfe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New settings organized by category: account, notifications, preferences, subscription, help"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevos ajustes organizados por categorías: cuenta, notificaciones, preferencias, suscripción, ayuda"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuove impostazioni per categorie: account, notifiche, preferenze, abbonamento, aiuto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定をカテゴリー別に整理 — アカウント・通知・環境設定・サブスク・ヘルプ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全新设置按类别整理：账户、通知、偏好、订阅、帮助"
           }
         }
       }
@@ -13801,6 +15491,16 @@
         }
       }
     },
+    "Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment is charged to your Apple Account. The subscription renews automatically until canceled in App Store settings."
+          }
+        }
+      }
+    },
     "Parle de toi…": {
       "localizations": {
         "de": {
@@ -13957,6 +15657,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有音符——成为第一个和%@合作的人吧！"
+          }
+        }
+      }
+    },
+    "Pas encore de vidéo de démo sur ce profil.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Demo-Videos auf diesem Profil."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No demo videos on this profile yet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay vídeos de demo en este perfil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun video demo su questo profilo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプロフィールにはまだデモ動画がありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该资料还没有演示视频。"
           }
         }
       }
@@ -14961,6 +16701,16 @@
         }
       }
     },
+    "Profils réels et comptes de démonstration clairement distingués": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real profiles and demo accounts are clearly distinguished"
+          }
+        }
+      }
+    },
     "Près de chez toi": {
       "localizations": {
         "de": {
@@ -14997,6 +16747,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "在你附近"
+          }
+        }
+      }
+    },
+    "Préférences": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Präferenzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferences"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferencias"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preferenze"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境設定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "偏好设置"
           }
         }
       }
@@ -15961,6 +17751,56 @@
         }
       }
     },
+    "Relations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbindungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connections"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relaciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "つながり"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关系"
+          }
+        }
+      }
+    },
+    "Restaurer mes achats": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore purchases"
+          }
+        }
+      }
+    },
     "Retirer la date": {
       "localizations": {
         "de": {
@@ -16041,6 +17881,46 @@
         }
       }
     },
+    "Retirer ma note": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Note entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove my rating"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar mi nota"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi il mio voto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価を削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除我的评分"
+          }
+        }
+      }
+    },
     "Revoir l'onboarding": {
       "localizations": {
         "de": {
@@ -16077,6 +17957,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新查看新手引导"
+          }
+        }
+      }
+    },
+    "Reçu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugestellt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delivered"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entregado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consegnato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配信済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已送达"
           }
         }
       }
@@ -16237,6 +18157,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "英国"
+          }
+        }
+      }
+    },
+    "Réglages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
           }
         }
       }
@@ -16641,6 +18601,96 @@
         }
       }
     },
+    "Réseau de confiance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertrauensnetzwerk"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trust network"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red de confianza"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rete di fiducia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信頼のネットワーク"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信任网络"
+          }
+        }
+      }
+    },
+    "Réseau de confiance : découvre qui a déjà joué avec tes amis, et filtre par amis / pote d'un pote / bien notés": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertrauensnetzwerk: sieh, wer schon mit deinen Freunden gespielt hat, und filter nach Freunden / Freundesfreund / gut bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trust network: see who has already played with your friends, and filter by friends / friend-of-a-friend / well rated"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red de confianza: descubre quién ya ha tocado con tus amigos, y filtra por amigos / amigo de un amigo / bien valorados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rete di fiducia: scopri chi ha già suonato con i tuoi amici e filtra per amici / amico di un amico / ben valutati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信頼のネットワーク：友だちが一緒に演奏した人を見つけ、友だち／友だちの友だち／高評価で絞り込み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信任网络：发现谁已和你的朋友一起演过，并按好友／朋友的朋友／好评筛选"
+          }
+        }
+      }
+    },
+    "Réseau réel et sécurité": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real network and safety"
+          }
+        }
+      }
+    },
     "Réseaux sociaux": {
       "localizations": {
         "de": {
@@ -16757,6 +18807,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "把乐队聚到一起：消息、乐谱和演出日程都在这里。"
+          }
+        }
+      }
+    },
+    "S'abonner · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscribe · %@"
           }
         }
       }
@@ -17441,6 +19501,36 @@
         }
       }
     },
+    "Signalement envoyé. Merci de nous aider à protéger la communauté.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report sent. Thank you for helping keep the community safe."
+          }
+        }
+      }
+    },
+    "Signalement, blocage et suppression définitive du compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reporting, blocking and permanent account deletion"
+          }
+        }
+      }
+    },
+    "Signaler": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report"
+          }
+        }
+      }
+    },
     "Singer-songwriter": {
       "localizations": {
         "de": {
@@ -18081,6 +20171,16 @@
         }
       }
     },
+    "Supprimer définitivement le compte ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently delete the account?"
+          }
+        }
+      }
+    },
     "Supprimer l'événement": {
       "localizations": {
         "de": {
@@ -18157,6 +20257,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除群组"
+          }
+        }
+      }
+    },
+    "Supprimer mon compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete my account"
           }
         }
       }
@@ -18317,6 +20427,96 @@
           "stringUnit": {
             "state": "translated",
             "value": "跟随系统"
+          }
+        }
+      }
+    },
+    "Sécurité": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safety"
+          }
+        }
+      }
+    },
+    "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Note (anonym) — jederzeit änderbar oder entfernbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your rating (anonymous) — change or remove it anytime."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu nota (anónima) — cámbiala o quítala cuando quieras."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo voto (anonimo) — modificalo o rimuovilo quando vuoi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの評価（匿名）— いつでも変更・削除できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的评分（匿名）— 随时可以修改或删除。"
+          }
+        }
+      }
+    },
+    "Ta photo de profil est visible par les autres musiciens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Profilfoto ist für andere Musiker sichtbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your profile photo is visible to other musicians"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu foto de perfil es visible para otros músicos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua foto profilo è visibile agli altri musicisti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィール写真が他のミュージシャンに表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他乐手可以看到你的头像"
           }
         }
       }
@@ -18597,6 +20797,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "先看你的关系网，再按距离排序"
+          }
+        }
+      }
+    },
+    "Tes vidéos de démo sont maintenant en ligne : les autres musiciens les regardent depuis ton profil": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Demo-Videos sind jetzt online: andere Musiker sehen sie auf deinem Profil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your demo videos are now online: other musicians can watch them on your profile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus vídeos de demo ya están en línea: otros músicos pueden verlos en tu perfil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi video demo ora sono online: gli altri musicisti li guardano dal tuo profilo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモ動画がオンラインに対応 — 他のミュージシャンがプロフィールから視聴できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演示视频已上线：其他乐手可以在你的资料页观看"
+          }
+        }
+      }
+    },
+    "Tes vidéos sont visibles par les autres musiciens sur ton profil.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Videos sind für andere Musiker auf deinem Profil sichtbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your videos are visible to other musicians on your profile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus vídeos son visibles para otros músicos en tu perfil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi video sono visibili agli altri musicisti sul tuo profilo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの動画はプロフィール上で他のミュージシャンに公開されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他乐手可以在你的资料页看到你的视频。"
           }
         }
       }
@@ -19157,6 +21437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的档案将对其他音乐人可见——实时SOS信息和消息。"
+          }
+        }
+      }
+    },
+    "Ton profil s'affiche comme les autres le voient, avec un bouton pour le modifier": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Profil sieht aus wie für andere — mit einem Bearbeiten-Button"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your profile now looks the way others see it, with an edit button"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu perfil se muestra como lo ven los demás, con un botón para editarlo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo profilo appare come lo vedono gli altri, con un pulsante per modificarlo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィールが他の人からの見え方で表示され、編集ボタン付きに"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料以他人视角展示，并带有编辑按钮"
           }
         }
       }
@@ -20241,6 +22561,86 @@
         }
       }
     },
+    "Vidéo trop longue — 3 minutes maximum.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video zu lang — maximal 3 Minuten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video too long — 3 minutes max."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vídeo demasiado largo — máximo 3 minutos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video troppo lungo — massimo 3 minuti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画が長すぎます — 最大3分です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频太长 — 最长 3 分钟。"
+          }
+        }
+      }
+    },
+    "Vidéo trop lourde — raccourcis-la et réessaie.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video zu groß — kürze es und versuch es erneut."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video too large — trim it and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vídeo demasiado pesado — recórtalo e inténtalo de nuevo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video troppo pesante — accorcialo e riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画が大きすぎます — 短くしてもう一度お試しください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频太大 — 请剪短后重试。"
+          }
+        }
+      }
+    },
     "Ville / région": {
       "localizations": {
         "de": {
@@ -20561,6 +22961,56 @@
         }
       }
     },
+    "Vous avez joué ensemble": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr habt zusammen gespielt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You've played together"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Habéis tocado juntos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avete suonato insieme"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一緒に演奏したことがあります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你们一起演过"
+          }
+        }
+      }
+    },
+    "Vous ne verrez plus ce profil ni ses messages. Le musicien ne sera pas averti.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You will no longer see this profile or their messages. They will not be notified."
+          }
+        }
+      }
+    },
     "Vrais groupes, profils façon Insta & invitations": {
       "localizations": {
         "de": {
@@ -20761,6 +23211,46 @@
         }
       }
     },
+    "note": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rating"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nota"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "voto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評価"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评分"
+          }
+        }
+      }
+    },
     "notes": {
       "localizations": {
         "de": {
@@ -20837,6 +23327,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "或使用邮箱"
+          }
+        }
+      }
+    },
+    "par an": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "per year"
+          }
+        }
+      }
+    },
+    "par mois": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "per month"
           }
         }
       }
@@ -21077,6 +23587,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“周六找贝斯手，Chat Noir，酬劳150瑞郎”"
+          }
+        }
+      }
+    },
+    "« En train d'écrire… » : tu vois quand ton contact te répond": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Typing…”: see when your contact is replying"
           }
         }
       }
@@ -21640,618 +24160,6 @@
           }
         }
       }
-    },
-    "J'ai déjà joué avec": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "I've played with them"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ich habe schon mit ihnen gespielt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya he tocado con ellos"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ho già suonato con loro"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一緒に演奏したことがある"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "我和他们一起演过"
-          }
-        }
-      }
-    },
-    "Vous avez joué ensemble": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You've played together"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ihr habt zusammen gespielt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Habéis tocado juntos"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avete suonato insieme"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一緒に演奏したことがあります"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你们一起演过"
-          }
-        }
-      }
-    },
-    "A joué avec un ami": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Played with a friend"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mit einem Freund gespielt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ha tocado con un amigo"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ha suonato con un amico"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "友人と演奏済み"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "和朋友一起演过"
-          }
-        }
-      }
-    },
-    "A joué avec %@ (ton ami)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Played with %@ (your friend)"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hat mit %@ gespielt (dein Freund)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ha tocado con %@ (tu amigo)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ha suonato con %@ (il tuo amico)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@（友だち）と演奏済み"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "和%@（你的朋友）一起演过"
-          }
-        }
-      }
-    },
-    "A joué avec %@ +%lld (ton ami)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Played with %@ +%lld (your friend)"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hat mit %@ +%lld gespielt (dein Freund)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ha tocado con %@ +%lld (tu amigo)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ha suonato con %@ +%lld (il tuo amico)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ +%lld（友だち）と演奏済み"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "和%@ +%lld（你的朋友）一起演过"
-          }
-        }
-      }
-    },
-    "Relations": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connections"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verbindungen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Relaciones"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Relazioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "つながり"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关系"
-          }
-        }
-      }
-    },
-    "Amis uniquement": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Friends only"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nur Freunde"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo amigos"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo amici"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "友だちのみ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仅好友"
-          }
-        }
-      }
-    },
-    "Bien notés": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Well rated"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gut bewertet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bien valorados"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ben valutati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高評価"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好评"
-          }
-        }
-      }
-    },
-    "Réseau de confiance": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trust network"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vertrauensnetzwerk"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Red de confianza"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rete di fiducia"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "信頼のネットワーク"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "信任网络"
-          }
-        }
-      }
-    },
-    "Réseau de confiance : découvre qui a déjà joué avec tes amis, et filtre par amis / pote d'un pote / bien notés": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trust network: see who has already played with your friends, and filter by friends / friend-of-a-friend / well rated"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vertrauensnetzwerk: sieh, wer schon mit deinen Freunden gespielt hat, und filter nach Freunden / Freundesfreund / gut bewertet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Red de confianza: descubre quién ya ha tocado con tus amigos, y filtra por amigos / amigo de un amigo / bien valorados"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rete di fiducia: scopri chi ha già suonato con i tuoi amici e filtra per amici / amico di un amico / ben valutati"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "信頼のネットワーク：友だちが一緒に演奏した人を見つけ、友だち／友だちの友だち／高評価で絞り込み"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "信任网络：发现谁已和你的朋友一起演过，并按好友／朋友的朋友／好评筛选"
-          }
-        }
-      }
-    },
-    "Bouton « J'ai déjà joué avec » sur chaque profil": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“I've played with them” button on every profile"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schaltfläche „Ich habe schon mit ihnen gespielt“ auf jedem Profil"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Botón «Ya he tocado con ellos» en cada perfil"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pulsante «Ho già suonato con loro» su ogni profilo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "各プロフィールに「一緒に演奏した」ボタン"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每个资料页上的「我和他们一起演过」按钮"
-          }
-        }
-      }
-    },
-    "Badge « A joué avec un ami » dans la recherche et le feed": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Played with a friend” badge in search and the feed"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Badge „Mit einem Freund gespielt“ in Suche und Feed"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Insignia «Ha tocado con un amigo» en la búsqueda y el feed"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Badge «Ha suonato con un amico» nella ricerca e nel feed"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "検索とフィードに「友人と演奏済み」バッジ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索和动态中的「和朋友一起演过」徽章"
-          }
-        }
-      }
-    },
-    "Démo": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Demo" } } }
-    },
-    "Compte de démonstration": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Demo account" } } }
-    },
-    "Compte de démonstration · les réponses peuvent être automatiques": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Demo account · replies may be automated" } } }
-    },
-    "Signaler": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Report" } } }
-    },
-    "Bloquer": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Block" } } }
-    },
-    "Bloquer ce musicien ?": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Block this musician?" } } }
-    },
-    "Vous ne verrez plus ce profil ni ses messages. Le musicien ne sera pas averti.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You will no longer see this profile or their messages. They will not be notified." } } }
-    },
-    "Signalement envoyé. Merci de nous aider à protéger la communauté.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Report sent. Thank you for helping keep the community safe." } } }
-    },
-    "Sécurité": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Safety" } } }
-    },
-    "Contacter le support": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Contact support" } } }
-    },
-    "Supprimer mon compte": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delete my account" } } }
-    },
-    "Supprimer définitivement le compte ?": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Permanently delete the account?" } } }
-    },
-    "Le profil, les messages, les SOS et les relations seront supprimés. Cette action est irréversible.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your profile, messages, SOS posts and relationships will be deleted. This cannot be undone." } } }
-    },
-    "S'abonner · %@": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Subscribe · %@" } } }
-    },
-    "Restaurer mes achats": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Restore purchases" } } }
-    },
-    "Gérer l'abonnement": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Manage subscription" } } }
-    },
-    "Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Payment is charged to your Apple Account. The subscription renews automatically until canceled in App Store settings." } } }
-    },
-    "par an": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "per year" } } }
-    },
-    "par mois": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "per month" } } }
-    },
-    "Indisponible": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Unavailable" } } }
-    },
-    "Alertes en priorité, groupes, 6 vidéos · via l'App Store": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Priority alerts, groups and 6 videos · via the App Store" } } }
-    },
-    "Le filtre par niveau fait partie de Dispo Premium.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Level filtering is part of Dispo Premium." } } }
-    },
-    "Abonnements Premium gérés et tarifés par l'App Store": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Premium subscriptions managed and priced by the App Store" } } }
-    },
-    "Ce contenu ne respecte pas les regles de la communaute.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "This content does not follow the community guidelines." } } }
-    },
-    "La suppression du compte a echoue. Reessaie plus tard.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deletion failed. Please try again later." } } }
-    },
-    "Le signalement n'a pas pu etre envoye.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The report could not be sent." } } }
-    },
-    "Le blocage n'a pas pu etre applique.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The block could not be applied." } } }
-    },
-    "Les abonnements App Store sont momentanement indisponibles.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "App Store subscriptions are temporarily unavailable." } } }
-    },
-    "L'achat n'a pas pu etre finalise.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The purchase could not be completed." } } }
-    },
-    "La restauration des achats a echoue.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Purchase restoration failed." } } }
-    },
-    "Réseau réel et sécurité": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real network and safety" } } }
-    },
-    "Profils réels et comptes de démonstration clairement distingués": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real profiles and demo accounts are clearly distinguished" } } }
-    },
-    "Follows, favoris et collaborations synchronisés sur le réseau": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Follows, favorites and collaborations sync across the network" } } }
-    },
-    "Signalement, blocage et suppression définitive du compte": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Reporting, blocking and permanent account deletion" } } }
-    },
-    "Abonnements Premium sécurisés par StoreKit et restaurables": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Premium subscriptions secured by StoreKit and restorable" } } }
-    },
-    "La messagerie en temps reel n'a pas pu demarrer.": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real-time messaging could not start." } } }
-    },
-    "Envoyé": {
-      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Gesendet" } }, "en": { "stringUnit": { "state": "translated", "value": "Sent" } }, "es": { "stringUnit": { "state": "translated", "value": "Enviado" } }, "it": { "stringUnit": { "state": "translated", "value": "Inviato" } }, "ja": { "stringUnit": { "state": "translated", "value": "送信済み" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "已发送" } } }
-    },
-    "Reçu": {
-      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Zugestellt" } }, "en": { "stringUnit": { "state": "translated", "value": "Delivered" } }, "es": { "stringUnit": { "state": "translated", "value": "Entregado" } }, "it": { "stringUnit": { "state": "translated", "value": "Consegnato" } }, "ja": { "stringUnit": { "state": "translated", "value": "配信済み" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "已送达" } } }
-    },
-    "Lu": {
-      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Gelesen" } }, "en": { "stringUnit": { "state": "translated", "value": "Read" } }, "es": { "stringUnit": { "state": "translated", "value": "Leído" } }, "it": { "stringUnit": { "state": "translated", "value": "Letto" } }, "ja": { "stringUnit": { "state": "translated", "value": "既読" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "已读" } } }
-    },
-    "Des conversations vivantes": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Conversations that feel alive" } } }
-    },
-    "Coches « reçu / lu » sous tes messages, comme sur WhatsApp : tu sais quand ton dépannage est vu": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delivered / read checkmarks under your messages, WhatsApp-style: you know when your gig request has been seen" } } }
-    },
-    "« En train d'écrire… » : tu vois quand ton contact te répond": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "“Typing…”: see when your contact is replying" } } }
-    },
-    "Le message que tu regardes est marqué lu immédiatement — plus de fausse notification": {
-      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Messages you are looking at are marked read instantly — no more stray notifications" } } }
-    },
-    "En train d'écrire…": {
-      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Schreibt …" } }, "en": { "stringUnit": { "state": "translated", "value": "Typing…" } }, "es": { "stringUnit": { "state": "translated", "value": "Escribiendo…" } }, "it": { "stringUnit": { "state": "translated", "value": "Sta scrivendo…" } }, "ja": { "stringUnit": { "state": "translated", "value": "入力中…" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在输入…" } } }
     }
   },
   "version": "1.0"
