@@ -725,6 +725,9 @@ struct Musician: Codable, Identifiable, Hashable {
     var isDemo: Bool = false
     /// Statut Premium réel (serveur) — false pour les profils seed.
     var isPremium: Bool = false
+    /// false quand les coordonnées sont un simple placeholder (profil live
+    /// sans géoloc partagée) : ni distance affichée, ni filtre rayon.
+    var hasLocation: Bool = true
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
@@ -751,7 +754,8 @@ struct Musician: Codable, Identifiable, Hashable {
         socials: [String: String]? = nil,
         collaborators: [String] = [],
         isDemo: Bool = false,
-        isPremium: Bool = false
+        isPremium: Bool = false,
+        hasLocation: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -772,6 +776,7 @@ struct Musician: Codable, Identifiable, Hashable {
         self.collaborators = collaborators
         self.isDemo = isDemo
         self.isPremium = isPremium
+        self.hasLocation = hasLocation
     }
 
     init(from decoder: Decoder) throws {

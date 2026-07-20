@@ -190,8 +190,9 @@ final class SupabaseBackend: Sendable {
                 name: name,
                 age: age ?? 0,
                 neighborhood: neighborhood,
-                // Sans géoloc (phase 2b), le profil est posé au centre de
-                // Genève pour rester visible dans le feed et sur la carte.
+                // Sans géoloc partagée, le profil est posé au centre de Genève
+                // pour rester visible sur la carte — mais `hasLocation: false`
+                // interdit d'afficher une distance ou de filtrer par rayon.
                 latitude: latitude ?? AppStore.geneva.latitude,
                 longitude: longitude ?? AppStore.geneva.longitude,
                 instruments: instruments.compactMap(Instrument.init(rawValue:)),
@@ -205,7 +206,8 @@ final class SupabaseBackend: Sendable {
                 photo: photoUrl,
                 socials: socials,
                 isDemo: isDemo ?? false,
-                isPremium: isPremium
+                isPremium: isPremium,
+                hasLocation: latitude != nil && longitude != nil
             )
         }
     }
@@ -373,7 +375,9 @@ final class SupabaseBackend: Sendable {
         return formatter
     }()
 
-    /// Pousse mon profil local vers le backend.
+    /// Pousse mon profil local vers le backend. Les coordonnées ne passent
+    /// jamais par ici : seule `updateLocation` (géoloc réelle, arrondie) les
+    /// écrit — plus de placeholder Genève en base.
     func saveProfile(_ profile: MyProfile, userID: UUID) async throws {
         struct Update: Encodable {
             let name: String
@@ -383,9 +387,6 @@ final class SupabaseBackend: Sendable {
             let bio: String
             let available_dates: [String]
             let socials: [String: String]
-            // Position par défaut : centre de Genève (vraie géoloc en phase 2b).
-            let latitude: Double
-            let longitude: Double
         }
         let update = Update(
             name: profile.name,
@@ -394,16 +395,15 @@ final class SupabaseBackend: Sendable {
             level: profile.level.rawValue,
             bio: profile.bio,
             available_dates: profile.availableDates.map { Self.dayFormatter.string(from: $0) },
-            socials: profile.socials ?? [:],
-            latitude: AppStore.geneva.latitude,
-            longitude: AppStore.geneva.longitude
+            socials: profile.socials ?? [:]
         )
         try await client.from("profiles").update(update).eq("id", value: userID).execute()
     }
 
-    func setPremium(_ isPremium: Bool, userID: UUID) async throws {
+    /// Écrit ma position (déjà arrondie à ~1 km par LocationService).
+    func updateLocation(latitude: Double, longitude: Double, userID: UUID) async throws {
         try await client.from("profiles")
-            .update(["is_premium": isPremium])
+            .update(["latitude": latitude, "longitude": longitude])
             .eq("id", value: userID)
             .execute()
     }

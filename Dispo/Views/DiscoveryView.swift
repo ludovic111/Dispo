@@ -36,7 +36,9 @@ struct DiscoveryFilters {
         if let genre, !musician.genres.contains(genre) { return false }
         if let minLevel, musician.level < minLevel { return false }
         if let availability, !musician.availability.satisfies(availability) { return false }
-        if musician.distance(from: AppStore.geneva) > radiusKm { return false }
+        // Rayon appliqué uniquement quand la distance est fiable (ma position
+        // et la sienne connues) — on ne cache jamais un profil sans géoloc.
+        if let distance = store.distance(to: musician), distance > radiusKm { return false }
         if friendsOnly, store.socialLink(with: musician.name) != .friend { return false }
         if playedWithAFriend, !store.playedWithAFriend(musician) { return false }
         if wellRated, !(musician.goldenCount >= 1 || musician.noteCount >= 3) { return false }
@@ -496,15 +498,22 @@ struct SocialLinkBadge: View {
 // MARK: - Carte MapKit
 
 struct MusicianMapView: View {
+    @EnvironmentObject private var store: AppStore
     let musicians: [Musician]
     @State private var selected: Musician?
 
+    /// Jamais d'épingle à une position placeholder : seuls les profils avec
+    /// une vraie géoloc apparaissent sur la carte.
+    private var locatedMusicians: [Musician] {
+        musicians.filter(\.hasLocation)
+    }
+
     var body: some View {
         Map(initialPosition: .region(MKCoordinateRegion(
-            center: AppStore.geneva,
+            center: store.referenceCoordinate ?? AppStore.geneva,
             span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
         ))) {
-            ForEach(musicians) { musician in
+            ForEach(locatedMusicians) { musician in
                 Annotation(musician.name, coordinate: musician.coordinate) {
                     Button {
                         selected = musician

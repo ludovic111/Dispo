@@ -4,6 +4,7 @@ import SwiftUI
 import Supabase
 @preconcurrency import UserNotifications
 import StoreKit
+import RevenueCat
 
 /// État global de la démo. Charge les données fictives depuis SeedData.json
 /// et persiste les actions de l'utilisateur (événements créés, messages,
@@ -11,8 +12,28 @@ import StoreKit
 @MainActor
 final class AppStore: ObservableObject {
 
-    /// Position simulée de l'utilisateur : centre de Genève (place du Molard).
+    /// Position de repli (démo, ou live sans géoloc) : centre de Genève (place du Molard).
     nonisolated static let geneva = CLLocationCoordinate2D(latitude: 46.2044, longitude: 6.1432)
+
+    /// Ma position réelle, arrondie à ~1 km (nil tant que l'utilisateur n'a
+    /// pas partagé sa géoloc). Persistée pour rester utilisable hors ligne.
+    @Published private(set) var myCoordinate: CLLocationCoordinate2D?
+    private let locationService = LocationService()
+
+    /// Point de référence des distances : ma vraie position en live, Genève en
+    /// démo. nil en live tant que la géoloc n'est pas partagée — dans ce cas
+    /// ni le filtre rayon ni les « x km » ne s'appliquent.
+    var referenceCoordinate: CLLocationCoordinate2D? {
+        isLive ? myCoordinate : Self.geneva
+    }
+
+    /// Distance en km jusqu'à un musicien, nil si elle ne peut pas être
+    /// calculée honnêtement (pas de référence, ou profil sans géoloc en live).
+    func distance(to musician: Musician) -> Double? {
+        guard let reference = referenceCoordinate else { return nil }
+        if isLive && !musician.hasLocation { return nil }
+        return musician.distance(from: reference)
+    }
 
     @Published var musicians: [Musician] = []
     @Published var events: [GigRequest] = []
@@ -24,13 +45,19 @@ final class AppStore: ObservableObject {
     /// Appréciations données par l'utilisateur (par nom de musicien). Positif uniquement :
     /// note de musique (« aimé ») ou note dorée (« coup de cœur »).
     @Published var myAppreciations: [String: Appreciation] = [:]
-    /// Abonnement Premium — StoreKit en production, état local de repli en démo.
+    /// Abonnement Premium — RevenueCat en production (StoreKit pur en repli),
+    /// état local en démo. Le serveur (webhook RevenueCat) reste seul juge de
+    /// `is_premium` côté base.
     @Published var isPremium: Bool = false
     /// Plan choisi (mensuel / annuel), nil si non abonné.
     @Published var premiumPlan: PremiumPlan?
     @Published var showPaywall: Bool = false
     @Published private(set) var storeProducts: [PremiumPlan: Product] = [:]
+    /// Offre RevenueCat courante (clé API présente dans Secrets.plist).
+    @Published private(set) var rcPackages: [PremiumPlan: Package] = [:]
     @Published private(set) var purchaseInProgress = false
+    /// true si le SDK RevenueCat est configuré — sinon repli StoreKit direct.
+    let revenueCatEnabled: Bool
     @Published var hasOnboarded: Bool = false
     /// Préférence d'apparence (système / clair / sombre).
     @Published var theme: AppTheme = .system
@@ -84,6 +111,9 @@ final class AppStore: ObservableObject {
     /// coalesce les rafales d'événements en un seul rechargement.
     private var pendingGroupRefresh: Task<Void, Never>?
     private var transactionTask: Task<Void, Never>?
+    /// Écoute des mises à jour d'abonnement RevenueCat (renouvellement,
+    /// expiration, achat sur un autre appareil…).
+    private var customerInfoTask: Task<Void, Never>?
 
     private static let productIDs: [PremiumPlan: String] = [
         .monthly: "ch.dispo.app.premium.monthly",
@@ -136,8 +166,17 @@ final class AppStore: ObservableObject {
     ]
     private static let seenGigsKey = "jamconnect.seenGigs"
     private static let groupsKey = "jamconnect.groups"
+    private static let myLatitudeKey = "dispo.myLatitude"
+    private static let myLongitudeKey = "dispo.myLongitude"
 
     init() {
+        if let rcKey = BackendConfig.revenueCatAPIKey() {
+            Purchases.logLevel = .warn
+            Purchases.configure(withAPIKey: rcKey)
+            revenueCatEnabled = true
+        } else {
+            revenueCatEnabled = false
+        }
         backend = BackendConfig.load().map(SupabaseBackend.init)
         let seed = Self.loadSeed()
         musicians = seed.musicians
@@ -170,11 +209,21 @@ final class AppStore: ObservableObject {
             await refreshPurchasedEntitlements()
             sessionChecked = true
         }
-        transactionTask = Task { [weak self] in
-            for await update in Transaction.updates {
-                guard case .verified(let transaction) = update else { continue }
-                await transaction.finish()
-                await self?.refreshPurchasedEntitlements()
+        if revenueCatEnabled {
+            // RevenueCat observe et finalise les transactions lui-même ; on
+            // écoute seulement l'état client (renouvellements, autre appareil).
+            customerInfoTask = Task { [weak self] in
+                for await info in Purchases.shared.customerInfoStream {
+                    await self?.applyCustomerInfo(info)
+                }
+            }
+        } else {
+            transactionTask = Task { [weak self] in
+                for await update in Transaction.updates {
+                    guard case .verified(let transaction) = update else { continue }
+                    await transaction.finish()
+                    await self?.refreshPurchasedEntitlements()
+                }
             }
         }
 
@@ -215,6 +264,43 @@ final class AppStore: ObservableObject {
         // Reprogramme les rappels de présence au lancement (les triggers
         // locaux survivent au kill, mais on resynchronise après un reset).
         rescheduleAllAttendanceNotifications()
+
+        // Position partagée lors d'une session précédente — restaurée pour que
+        // le rayon et les distances fonctionnent dès le lancement.
+        if let latitude = UserDefaults.standard.object(forKey: Self.myLatitudeKey) as? Double,
+           let longitude = UserDefaults.standard.object(forKey: Self.myLongitudeKey) as? Double {
+            myCoordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        }
+        locationService.onUpdate = { [weak self] coordinate in
+            self?.handleLocationUpdate(coordinate)
+        }
+    }
+
+    // MARK: - Géolocalisation
+
+    /// Demande la position (autorisation incluse). Appelée à la connexion
+    /// live — en démo la position simulée (Genève) suffit.
+    func requestLocation() {
+        locationService.request()
+    }
+
+    /// Nouvelle position (déjà arrondie à ~1 km par LocationService) : on la
+    /// garde localement et on la pousse sur mon profil serveur pour que le
+    /// rayon des autres s'applique à ma vraie position.
+    private func handleLocationUpdate(_ coordinate: CLLocationCoordinate2D) {
+        let changed = myCoordinate?.latitude != coordinate.latitude
+            || myCoordinate?.longitude != coordinate.longitude
+        myCoordinate = coordinate
+        UserDefaults.standard.set(coordinate.latitude, forKey: Self.myLatitudeKey)
+        UserDefaults.standard.set(coordinate.longitude, forKey: Self.myLongitudeKey)
+        guard changed, let backend, let userID = liveUserID else { return }
+        Task {
+            try? await backend.updateLocation(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                userID: userID
+            )
+        }
     }
 
     /// Profil par défaut de la démo.
@@ -273,6 +359,17 @@ final class AppStore: ObservableObject {
         liveUserID = userID
         liveEmail = await backend.currentUserEmail()
         backendError = nil
+
+        // Relie l'abonné RevenueCat au compte Supabase : le webhook serveur
+        // pourra alors activer is_premium sur le bon profil.
+        if revenueCatEnabled {
+            if let result = try? await Purchases.shared.logIn(userID.uuidString) {
+                applyCustomerInfo(result.customerInfo)
+            }
+        }
+        // Géoloc réelle : demandée à la connexion (autorisation « pendant
+        // l'utilisation »), la démo garde la position simulée de Genève.
+        requestLocation()
 
         // Premier passage : si le profil serveur est vide, on pousse le
         // profil local ; sinon le serveur fait foi. Premium et admin
@@ -383,6 +480,9 @@ final class AppStore: ObservableObject {
         guard let backend else { return }
         if let token = pushDeviceToken {
             try? await backend.deletePushDevice(token: token)
+        }
+        if revenueCatEnabled {
+            _ = try? await Purchases.shared.logOut()
         }
         await backend.signOut()
         liveUserID = nil
@@ -731,7 +831,14 @@ final class AppStore: ObservableObject {
         if a.availability.urgencyRank != b.availability.urgencyRank {
             return a.availability.urgencyRank > b.availability.urgencyRank
         }
-        return a.distance(from: Self.geneva) < b.distance(from: Self.geneva)
+        // Distance croissante quand elle est connue ; les profils sans géoloc
+        // passent après ceux dont la distance est fiable.
+        switch (distance(to: a), distance(to: b)) {
+        case (let da?, let db?): return da < db
+        case (.some, nil): return true
+        case (nil, .some): return false
+        case (nil, nil): return a.name < b.name
+        }
     }
 
     // MARK: - Social & Premium
@@ -864,10 +971,38 @@ final class AppStore: ObservableObject {
     }
 
     func displayPrice(for plan: PremiumPlan) -> String {
-        storeProducts[plan]?.displayPrice ?? tr("Indisponible")
+        if revenueCatEnabled {
+            return rcPackages[plan]?.storeProduct.localizedPriceString ?? tr("Indisponible")
+        }
+        return storeProducts[plan]?.displayPrice ?? tr("Indisponible")
+    }
+
+    /// true si le plan est achetable maintenant (offre chargée).
+    func planAvailable(_ plan: PremiumPlan) -> Bool {
+        revenueCatEnabled ? rcPackages[plan] != nil : storeProducts[plan] != nil
     }
 
     func loadStoreProducts() async {
+        if revenueCatEnabled {
+            do {
+                let offerings = try await Purchases.shared.offerings()
+                var packages: [PremiumPlan: Package] = [:]
+                for package in offerings.current?.availablePackages ?? [] {
+                    switch package.packageType {
+                    case .annual: packages[.annual] = package
+                    case .monthly: packages[.monthly] = package
+                    default:
+                        if let plan = Self.productIDs.first(where: { $0.value == package.storeProduct.productIdentifier })?.key {
+                            packages[plan] = package
+                        }
+                    }
+                }
+                rcPackages = packages
+            } catch {
+                backendError = tr("Les abonnements App Store sont momentanement indisponibles.")
+            }
+            return
+        }
         do {
             let products = try await Product.products(for: Array(Self.productIDs.values))
             storeProducts = Dictionary(uniqueKeysWithValues: products.compactMap { product in
@@ -880,6 +1015,23 @@ final class AppStore: ObservableObject {
     }
 
     func purchasePremium(plan: PremiumPlan) async -> Bool {
+        if revenueCatEnabled {
+            guard let package = rcPackages[plan] else {
+                await loadStoreProducts()
+                return false
+            }
+            purchaseInProgress = true
+            defer { purchaseInProgress = false }
+            do {
+                let result = try await Purchases.shared.purchase(package: package)
+                guard !result.userCancelled else { return false }
+                applyCustomerInfo(result.customerInfo)
+                return isPremium
+            } catch {
+                backendError = tr("L'achat n'a pas pu etre finalise.")
+                return false
+            }
+        }
         guard let product = storeProducts[plan] else {
             await loadStoreProducts()
             return false
@@ -907,6 +1059,15 @@ final class AppStore: ObservableObject {
     func restorePurchases() async {
         purchaseInProgress = true
         defer { purchaseInProgress = false }
+        if revenueCatEnabled {
+            do {
+                let info = try await Purchases.shared.restorePurchases()
+                applyCustomerInfo(info)
+            } catch {
+                backendError = tr("La restauration des achats a echoue.")
+            }
+            return
+        }
         do {
             try await StoreKit.AppStore.sync()
             await refreshPurchasedEntitlements()
@@ -915,7 +1076,35 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Identifiant de l'entitlement RevenueCat représentant Premium.
+    private static let premiumEntitlementID = "premium"
+
+    /// Applique l'état d'abonnement RevenueCat (achat, renouvellement,
+    /// expiration, autre appareil). `is_premium` côté serveur est mis à jour
+    /// par le webhook RevenueCat, jamais par le client — on recharge juste le
+    /// feed quand le statut change (l'avant-première SOS dépend de la RLS).
+    private func applyCustomerInfo(_ info: CustomerInfo) {
+        let entitlement = info.entitlements[Self.premiumEntitlementID]
+        let active = entitlement?.isActive == true
+        let plan = entitlement.flatMap { ent in
+            Self.productIDs.first { ent.productIdentifier.hasPrefix($0.value) }?.key
+        }
+        let changed = active != isPremium
+        isPremium = active
+        premiumPlan = active ? plan : nil
+        persistPremiumState()
+        if changed, isLive {
+            Task { await refreshLiveData() }
+        }
+    }
+
     func refreshPurchasedEntitlements() async {
+        if revenueCatEnabled {
+            if let info = try? await Purchases.shared.customerInfo() {
+                applyCustomerInfo(info)
+            }
+            return
+        }
         var activePlan: PremiumPlan?
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result,
@@ -927,23 +1116,15 @@ final class AppStore: ObservableObject {
         }
         isPremium = activePlan != nil
         premiumPlan = activePlan
-        UserDefaults.standard.set(isPremium, forKey: Self.premiumKey)
-        if let activePlan {
-            UserDefaults.standard.set(activePlan.rawValue, forKey: Self.premiumPlanKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
-        }
-        pushPremiumStatus()
+        persistPremiumState()
     }
 
-    /// En mode live, le statut Premium vit côté serveur (il conditionne la
-    /// RLS de l'avant-première) — on le pousse puis on recharge le feed.
-    private func pushPremiumStatus() {
-        guard let backend, let userID = liveUserID else { return }
-        let premium = isPremium
-        Task {
-            try? await backend.setPremium(premium, userID: userID)
-            await refreshLiveData()
+    private func persistPremiumState() {
+        UserDefaults.standard.set(isPremium, forKey: Self.premiumKey)
+        if let premiumPlan {
+            UserDefaults.standard.set(premiumPlan.rawValue, forKey: Self.premiumPlanKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
         }
     }
 
@@ -1678,6 +1859,9 @@ final class AppStore: ObservableObject {
                         groupID: groupID,
                         senderID: userID
                     )
+                    // Livre les notifications que le trigger vient de mettre
+                    // en file pour les autres membres du groupe.
+                    await backend.deliverPendingPushNotifications()
                 } catch {
                     // L'envoi a échoué : retirer le message optimiste pour ne
                     // pas laisser croire qu'il est parti.

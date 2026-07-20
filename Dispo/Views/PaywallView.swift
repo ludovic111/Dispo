@@ -201,7 +201,7 @@ struct PaywallView: View {
                     .foregroundStyle(.black)
                 }
                 .buttonStyle(PressableStyle())
-                .disabled(store.purchaseInProgress || store.storeProducts[selectedPlan] == nil)
+                .disabled(store.purchaseInProgress || !store.planAvailable(selectedPlan))
 
                 Text("Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.")
                     .font(.caption)

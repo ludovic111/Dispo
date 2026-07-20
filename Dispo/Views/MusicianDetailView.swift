@@ -170,11 +170,13 @@ struct MusicianDetailView: View {
                     .buttonStyle(PressableStyle())
                 }
             }
-            // En live, les coordonnées serveur sont encore des positions par
-            // défaut (géoloc en phase 2b) : afficher un « x.x km » serait faux.
-            Text(store.isLive
-                 ? "\(musician.age) ans · \(musician.neighborhood)"
-                 : "\(musician.age) ans · \(musician.neighborhood) · \(String(format: "%.1f km", musician.distance(from: AppStore.geneva)))")
+            // La distance ne s'affiche que quand elle est fiable : ma géoloc
+            // partagée ET la sienne (toujours vrai en démo).
+            Text({
+                let base = "\(musician.age) ans · \(musician.neighborhood)"
+                guard let distance = store.distance(to: musician) else { return base }
+                return base + " · " + String(format: "%.1f km", distance)
+            }())
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if !musician.bio.isEmpty {

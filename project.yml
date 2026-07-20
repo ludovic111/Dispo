@@ -11,12 +11,15 @@ settings:
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
-    MARKETING_VERSION: "0.9.3"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "0.9.4"
+    CURRENT_PROJECT_VERSION: "7"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: 2.20.0
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios-spm
+    from: 5.0.0
 targets:
   Dispo:
     type: application
@@ -25,6 +28,7 @@ targets:
       - Dispo
     dependencies:
       - package: Supabase
+      - package: RevenueCat
     entitlements:
       path: Dispo/Dispo.entitlements
       properties:

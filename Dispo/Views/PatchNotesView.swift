@@ -11,6 +11,16 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.4",
+            title: "Autour de toi, pour de vrai",
+            points: [
+                "Géolocalisation réelle : le rayon de recherche et les distances s'appuient sur ta vraie position (arrondie à ~1 km, jamais ton adresse exacte)",
+                "Les profils sans géoloc restent visibles — simplement sans distance affichée",
+                "Abonnements Premium gérés par RevenueCat et validés côté serveur : ton statut te suit sur tous tes appareils",
+                "Notification push quand un message arrive dans un de tes groupes"
+            ]
+        ),
+        PatchNote(
             version: "0.9.3",
             title: "Vrai réseau, vraies données",
             points: [

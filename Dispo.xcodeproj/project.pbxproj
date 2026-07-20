@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		048EC7F8C6151CB7386307E0 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E6D4C225C9452004F0539F2 /* LocationService.swift */; };
 		129CB47FDC4AF657C12ED767 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = D3464C170F8FAE9B2A6C8F07 /* Localizable.xcstrings */; };
 		271F0846BCAEB87F906E3A45 /* PushNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DD095B72FFD09E7389249C /* PushNotifications.swift */; };
 		28667B59FEA0218FA34C8302 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66A53149AFFBB1CABA9601 /* CreateEventView.swift */; };
@@ -16,6 +17,7 @@
 		3542850C3EEC170B6CEEC39A /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD83E23B1E36D79D22DA9E36 /* ChatListView.swift */; };
 		48CB3AE64BB899CAEBC33239 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 261EC6F531BEE7612BA65B4B /* AppStore.swift */; };
 		4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */; };
+		530F93F51F41638A7C9A249B /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 104977E6E486E674D51AF98E /* RevenueCat */; };
 		5F68902EA546C88E91CDCA9E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1CF4EDC24A0E508B590C65E7 /* Supabase */; };
 		62DA359C3C872606E6F85770 /* PatchNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */; };
 		684AAD0BDF544BFCA23723C5 /* NotificationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 047421D42EA7C1DBEFE4FA2E /* NotificationsSettingsView.swift */; };
@@ -46,6 +48,7 @@
 		0F66A53149AFFBB1CABA9601 /* CreateEventView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateEventView.swift; sourceTree = "<group>"; };
 		261EC6F531BEE7612BA65B4B /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		2BA029833082A56A604FC4F5 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		2E6D4C225C9452004F0539F2 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		31DA5F3B8B8851CC225E3A6E /* Dispo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dispo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
 		44466866F267B8632340A4B3 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
@@ -82,6 +85,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5F68902EA546C88E91CDCA9E /* Supabase in Frameworks */,
+				530F93F51F41638A7C9A249B /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -148,6 +152,7 @@
 				6F9726C6D699E4D63934DBB1 /* Info.plist */,
 				D3464C170F8FAE9B2A6C8F07 /* Localizable.xcstrings */,
 				8137A13EBE04B692A857CF97 /* Locations.swift */,
+				2E6D4C225C9452004F0539F2 /* LocationService.swift */,
 				D128C9A5713A4BEA6CB5CDF1 /* Models.swift */,
 				04DD095B72FFD09E7389249C /* PushNotifications.swift */,
 				C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */,
@@ -177,6 +182,7 @@
 			name = Dispo;
 			packageProductDependencies = (
 				1CF4EDC24A0E508B590C65E7 /* Supabase */,
+				104977E6E486E674D51AF98E /* RevenueCat */,
 			);
 			productName = Dispo;
 			productReference = 31DA5F3B8B8851CC225E3A6E /* Dispo.app */;
@@ -213,6 +219,7 @@
 			mainGroup = 1A6381FB7A3E91ADB11DC80C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				7A31238BD1170557B0593884 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				07A7C7423BB5CB6BC0DB97E4 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -257,6 +264,7 @@
 				E890AEA9164880D8D280E60A /* EventsView.swift in Sources */,
 				9EA9F23A7A804B91F2AB0664 /* FilterSheet.swift in Sources */,
 				77906F0491C295B70667B651 /* GroupChatView.swift in Sources */,
+				048EC7F8C6151CB7386307E0 /* LocationService.swift in Sources */,
 				EF7D0276B64BAF6134B9DFBA /* Locations.swift in Sources */,
 				7AF0430FCB7DB66B78E0D64C /* Models.swift in Sources */,
 				D7DE32D1745AF72A345DF15B /* MusicianDetailView.swift in Sources */,
@@ -331,7 +339,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -345,7 +353,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.9.3;
+				MARKETING_VERSION = 0.9.4;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -391,7 +399,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -411,7 +419,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.9.3;
+				MARKETING_VERSION = 0.9.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -475,9 +483,22 @@
 				minimumVersion = 2.20.0;
 			};
 		};
+		7A31238BD1170557B0593884 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		104977E6E486E674D51AF98E /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A31238BD1170557B0593884 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
 		1CF4EDC24A0E508B590C65E7 /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 07A7C7423BB5CB6BC0DB97E4 /* XCRemoteSwiftPackageReference "supabase-swift" */;

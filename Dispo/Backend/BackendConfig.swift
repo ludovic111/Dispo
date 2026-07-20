@@ -12,14 +12,25 @@ struct BackendConfig {
 
     /// nil si Secrets.plist est absent ou incomplet (mode démo).
     static func load() -> BackendConfig? {
-        guard let plistURL = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
-              let data = try? Data(contentsOf: plistURL),
-              let dict = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+        guard let dict = secrets(),
               let urlString = dict["SUPABASE_URL"] as? String,
               let url = URL(string: urlString),
               let key = dict["SUPABASE_ANON_KEY"] as? String,
               !key.isEmpty
         else { return nil }
         return BackendConfig(url: url, anonKey: key)
+    }
+
+    /// Clé API publique RevenueCat (achats intégrés). nil : repli StoreKit pur.
+    static func revenueCatAPIKey() -> String? {
+        guard let key = secrets()?["REVENUECAT_API_KEY"] as? String, !key.isEmpty else { return nil }
+        return key
+    }
+
+    private static func secrets() -> [String: Any]? {
+        guard let plistURL = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+              let data = try? Data(contentsOf: plistURL)
+        else { return nil }
+        return try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
     }
 }
