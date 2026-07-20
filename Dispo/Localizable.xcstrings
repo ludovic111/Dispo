@@ -22228,6 +22228,30 @@
     },
     "La messagerie en temps reel n'a pas pu demarrer.": {
       "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Real-time messaging could not start." } } }
+    },
+    "Envoyé": {
+      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Gesendet" } }, "en": { "stringUnit": { "state": "translated", "value": "Sent" } }, "es": { "stringUnit": { "state": "translated", "value": "Enviado" } }, "it": { "stringUnit": { "state": "translated", "value": "Inviato" } }, "ja": { "stringUnit": { "state": "translated", "value": "送信済み" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "已发送" } } }
+    },
+    "Reçu": {
+      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Zugestellt" } }, "en": { "stringUnit": { "state": "translated", "value": "Delivered" } }, "es": { "stringUnit": { "state": "translated", "value": "Entregado" } }, "it": { "stringUnit": { "state": "translated", "value": "Consegnato" } }, "ja": { "stringUnit": { "state": "translated", "value": "配信済み" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "已送达" } } }
+    },
+    "Lu": {
+      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Gelesen" } }, "en": { "stringUnit": { "state": "translated", "value": "Read" } }, "es": { "stringUnit": { "state": "translated", "value": "Leído" } }, "it": { "stringUnit": { "state": "translated", "value": "Letto" } }, "ja": { "stringUnit": { "state": "translated", "value": "既読" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "已读" } } }
+    },
+    "Des conversations vivantes": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Conversations that feel alive" } } }
+    },
+    "Coches « reçu / lu » sous tes messages, comme sur WhatsApp : tu sais quand ton dépannage est vu": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delivered / read checkmarks under your messages, WhatsApp-style: you know when your gig request has been seen" } } }
+    },
+    "« En train d'écrire… » : tu vois quand ton contact te répond": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "“Typing…”: see when your contact is replying" } } }
+    },
+    "Le message que tu regardes est marqué lu immédiatement — plus de fausse notification": {
+      "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Messages you are looking at are marked read instantly — no more stray notifications" } } }
+    },
+    "En train d'écrire…": {
+      "localizations": { "de": { "stringUnit": { "state": "translated", "value": "Schreibt …" } }, "en": { "stringUnit": { "state": "translated", "value": "Typing…" } }, "es": { "stringUnit": { "state": "translated", "value": "Escribiendo…" } }, "it": { "stringUnit": { "state": "translated", "value": "Sta scrivendo…" } }, "ja": { "stringUnit": { "state": "translated", "value": "入力中…" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在输入…" } } }
     }
   },
   "version": "1.0"

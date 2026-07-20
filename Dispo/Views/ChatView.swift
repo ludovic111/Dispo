@@ -9,6 +9,10 @@ struct ChatView: View {
         store.conversations.first(where: { $0.id == conversationID })
     }
 
+    private var isContactTyping: Bool {
+        store.typingConversationIDs.contains(conversationID)
+    }
+
     var body: some View {
         ZStack {
             JCBackground()
@@ -32,12 +36,22 @@ struct ChatView: View {
                                 MessageBubble(message: message)
                                     .id(message.id)
                             }
+                            if isContactTyping {
+                                TypingBubble()
+                                    .id("typing")
+                                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            }
                         }
                         .padding()
                     }
                     .onChange(of: conversation?.messages.count) {
                         if let lastID = conversation?.messages.last?.id {
                             withAnimation { proxy.scrollTo(lastID, anchor: .bottom) }
+                        }
+                    }
+                    .onChange(of: isContactTyping) {
+                        if isContactTyping {
+                            withAnimation { proxy.scrollTo("typing", anchor: .bottom) }
                         }
                     }
                     .onAppear {
@@ -53,6 +67,9 @@ struct ChatView: View {
 
                 HStack(spacing: 10) {
                     TextField("Ton message…", text: $draft, axis: .vertical)
+                        .onChange(of: draft) {
+                            if !draft.isEmpty { store.userIsTyping(in: conversationID) }
+                        }
                         .lineLimit(1...4)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -78,6 +95,8 @@ struct ChatView: View {
         .navigationTitle(conversation?.contactName ?? store.tr("Conversation"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(JC.bg, for: .navigationBar)
+        .onAppear { store.chatOpened(conversationID) }
+        .onDisappear { store.chatClosed(conversationID) }
     }
 
     private func send() {
@@ -111,11 +130,77 @@ struct MessageBubble: View {
                             .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
                     )
                     .foregroundStyle(message.isFromMe ? Color.white : Color.primary)
-                Text(message.date.formatted(date: .omitted, time: .shortened))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                HStack(spacing: 4) {
+                    Text(message.date.formatted(date: .omitted, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    if message.isFromMe {
+                        ReceiptChecks(receipt: message.receipt)
+                    }
+                }
             }
             if !message.isFromMe { Spacer(minLength: 56) }
+        }
+    }
+}
+
+/// Coches façon WhatsApp : ✓ envoyé, ✓✓ reçu, ✓✓ bleues lu.
+struct ReceiptChecks: View {
+    let receipt: Message.Receipt
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Image(systemName: "checkmark")
+            if receipt != .sent {
+                Image(systemName: "checkmark").offset(x: 4.5)
+            }
+        }
+        .font(.system(size: 10, weight: .bold))
+        .foregroundStyle(receipt == .read ? AnyShapeStyle(Color.blue) : AnyShapeStyle(.tertiary))
+        .padding(.trailing, receipt == .sent ? 0 : 4.5)
+        .animation(.easeInOut(duration: 0.2), value: receipt)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: Text {
+        switch receipt {
+        case .sent: Text("Envoyé")
+        case .delivered: Text("Reçu")
+        case .read: Text("Lu")
+        }
+    }
+}
+
+/// Bulle « … » animée quand le contact est en train d'écrire.
+struct TypingBubble: View {
+    @State private var phase = 0
+
+    var body: some View {
+        HStack {
+            HStack(spacing: 5) {
+                ForEach(0..<3, id: \.self) { dot in
+                    Circle()
+                        .frame(width: 7, height: 7)
+                        .foregroundStyle(.secondary)
+                        .opacity(phase == dot ? 1 : 0.35)
+                        .offset(y: phase == dot ? -2 : 0)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(JC.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(JC.cardStroke, lineWidth: 1)
+            )
+            .accessibilityLabel(Text("En train d'écrire…"))
+            Spacer(minLength: 56)
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(320))
+                withAnimation(.easeInOut(duration: 0.25)) { phase = (phase + 1) % 3 }
+            }
         }
     }
 }

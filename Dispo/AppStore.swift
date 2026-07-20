@@ -107,6 +107,15 @@ final class AppStore: ObservableObject {
     private var messageTask: Task<Void, Never>?
     private var groupChannel: RealtimeChannelV2?
     private var groupTask: Task<Void, Never>?
+    /// Conversation affichée à l'écran (ChatView) — sert à marquer « lu » en
+    /// direct et à couper la notification locale du message qu'on regarde.
+    private var visibleConversationID: UUID?
+    /// Conversations où le contact est en train d'écrire (expiration auto).
+    @Published private(set) var typingConversationIDs: Set<UUID> = []
+    private var typingChannel: RealtimeChannelV2?
+    private var typingTask: Task<Void, Never>?
+    private var typingExpiries: [UUID: Task<Void, Never>] = [:]
+    private var lastTypingPingAt: Date = .distantPast
     /// Rafraîchissement des groupes en attente (déclenché par le realtime) —
     /// coalesce les rafales d'événements en un seul rechargement.
     private var pendingGroupRefresh: Task<Void, Never>?
@@ -394,6 +403,9 @@ final class AppStore: ObservableObject {
             conversations = allConversations.filter { !blockedNames.contains($0.contactName) }.sorted {
                 ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
+            // Tout ce qui vient d'être chargé est arrivé jusqu'à moi : les
+            // expéditeurs peuvent passer leurs coches à « reçu ».
+            acknowledgeDelivery()
             liveFollowingIDs = Set(follows.filter { $0.followerId == userID }.map(\.followingId))
             liveFollowerIDs = Set(follows.filter { $0.followingId == userID }.map(\.followerId))
             liveFollowerCounts = Dictionary(grouping: follows, by: \.followingId).mapValues(\.count)
@@ -480,6 +492,11 @@ final class AppStore: ObservableObject {
             await backend.client.removeChannel(channel)
             groupChannel = nil
         }
+        stopTypingChannel()
+        typingExpiries.values.forEach { $0.cancel() }
+        typingExpiries = [:]
+        typingConversationIDs = []
+        visibleConversationID = nil
         reloadDemoData()
     }
 
@@ -510,7 +527,7 @@ final class AppStore: ObservableObject {
     private func startMessageStream() async {
         guard let backend, messageTask == nil else { return }
         let channel: RealtimeChannelV2
-        let stream: AsyncStream<SupabaseBackend.MessageRow>
+        let stream: AsyncStream<SupabaseBackend.MessageEvent>
         do {
             (channel, stream) = try await backend.messageStream()
         } catch {
@@ -519,8 +536,11 @@ final class AppStore: ObservableObject {
         }
         messageChannel = channel
         messageTask = Task { [weak self] in
-            for await row in stream {
-                await self?.handleIncomingMessage(row)
+            for await event in stream {
+                switch event {
+                case .inserted(let row): await self?.handleIncomingMessage(row)
+                case .updated(let row): self?.handleMessageUpdate(row)
+                }
             }
         }
     }
@@ -534,14 +554,119 @@ final class AppStore: ObservableObject {
                 conversations[index].messages.append(message)
             }
             if !message.isFromMe {
-                pushLocal(
-                    title: conversations[index].contactName,
-                    body: message.text
-                )
+                // Le contact a forcément fini d'écrire.
+                setTyping(false, in: row.conversationId)
+                if visibleConversationID == row.conversationId {
+                    // Je regarde la conversation : lu immédiatement, pas de bannière.
+                    markConversationRead(row.conversationId)
+                } else {
+                    acknowledgeDelivery()
+                    pushLocal(
+                        title: conversations[index].contactName,
+                        body: message.text
+                    )
+                }
             }
         } else {
             // Conversation inconnue : quelqu'un vient de m'écrire pour la première fois.
             await refreshLiveData()
+        }
+    }
+
+    /// UPDATE realtime sur un message : les coches « reçu / lu » bougent.
+    private func handleMessageUpdate(_ row: SupabaseBackend.MessageRow) {
+        guard let userID = liveUserID,
+              let c = conversations.firstIndex(where: { $0.id == row.conversationId }),
+              let m = conversations[c].messages.firstIndex(where: { $0.id == row.id })
+        else { return }
+        var message = row.asMessage(myID: userID)
+        // Le texte ne change jamais côté serveur ; seuls les accusés bougent.
+        message.text = conversations[c].messages[m].text
+        conversations[c].messages[m] = message
+    }
+
+    // MARK: - Accusés de réception
+
+    /// Préviens le serveur que tout ce qui m'était destiné est arrivé ici.
+    private func acknowledgeDelivery() {
+        guard let backend, isLive else { return }
+        Task { try? await backend.markMessagesDelivered() }
+    }
+
+    /// Marque « lu » côté serveur et reflète l'état en local.
+    private func markConversationRead(_ conversationID: UUID) {
+        guard let backend, isLive else { return }
+        Task { try? await backend.markConversationRead(conversationID) }
+    }
+
+    // MARK: - Conversation ouverte & indicateur de saisie
+
+    /// ChatView vient d'apparaître : marquer lu et écouter le typing.
+    func chatOpened(_ conversationID: UUID) {
+        visibleConversationID = conversationID
+        guard isLive else { return }
+        markConversationRead(conversationID)
+        startTypingChannel(conversationID)
+    }
+
+    /// ChatView disparaît : plus de « lu » automatique ni d'écoute typing.
+    func chatClosed(_ conversationID: UUID) {
+        if visibleConversationID == conversationID { visibleConversationID = nil }
+        setTyping(false, in: conversationID)
+        stopTypingChannel()
+    }
+
+    /// Appelé par ChatView à chaque frappe — throttlé pour ne pas mitrailler.
+    func userIsTyping(in conversationID: UUID) {
+        guard isLive, let backend, let userID = liveUserID,
+              let channel = typingChannel,
+              Date().timeIntervalSince(lastTypingPingAt) > 2
+        else { return }
+        lastTypingPingAt = Date()
+        Task { await backend.sendTypingPing(on: channel, myID: userID) }
+    }
+
+    private func startTypingChannel(_ conversationID: UUID) {
+        guard let backend, isLive else { return }
+        stopTypingChannel()
+        typingTask = Task { [weak self] in
+            do {
+                let (channel, stream) = try await backend.typingChannel(conversationID: conversationID)
+                self?.typingChannel = channel
+                for await senderID in stream {
+                    guard let self, senderID != self.liveUserID else { continue }
+                    self.setTyping(true, in: conversationID)
+                }
+            } catch {
+                // Pas de canal typing : la conversation reste utilisable.
+            }
+        }
+    }
+
+    private func stopTypingChannel() {
+        typingTask?.cancel()
+        typingTask = nil
+        if let channel = typingChannel, let backend {
+            typingChannel = nil
+            Task { await backend.client.removeChannel(channel) }
+        }
+    }
+
+    /// Allume/éteint « en train d'écrire » ; l'allumage expire tout seul.
+    private func setTyping(_ typing: Bool, in conversationID: UUID) {
+        typingExpiries[conversationID]?.cancel()
+        typingExpiries[conversationID] = nil
+        if typing {
+            if !typingConversationIDs.contains(conversationID) {
+                withAnimation { _ = typingConversationIDs.insert(conversationID) }
+            }
+            typingExpiries[conversationID] = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(4))
+                guard !Task.isCancelled else { return }
+                self?.setTyping(false, in: conversationID)
+            }
+        } else if typingConversationIDs.contains(conversationID) {
+            withAnimation { _ = typingConversationIDs.remove(conversationID) }
         }
     }
 
@@ -2228,6 +2353,8 @@ final class AppStore: ObservableObject {
                     else { return }
                     withAnimation { self.conversations[i].messages.append(message) }
                     if self.isDemoContact(conversation.contactName) {
+                        // Petit théâtre : le compte démo « écrit » avant de répondre.
+                        self.setTyping(true, in: conversationID)
                         try? await Task.sleep(for: .seconds(1.2))
                         try? await backend.replyAsDemo(conversationID: conversationID)
                     }
@@ -2238,15 +2365,26 @@ final class AppStore: ObservableObject {
             return
         }
 
-        conversations[index].messages.append(Message(text: text, isFromMe: true, date: Date()))
+        conversations[index].messages.append(
+            Message(text: text, isFromMe: true, date: Date(), deliveredAt: Date())
+        )
         persistConversations()
 
         let conversationID = conversation.id
         let reply = Self.scriptedReplies.randomElement() ?? "Super, à bientôt !"
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Double.random(in: 1.2...2.2)))
+            try? await Task.sleep(for: .seconds(0.6))
+            self?.setTyping(true, in: conversationID)
+            try? await Task.sleep(for: .seconds(Double.random(in: 0.8...1.8)))
             guard let self, let i = self.conversations.firstIndex(where: { $0.id == conversationID }) else { return }
+            self.setTyping(false, in: conversationID)
             withAnimation {
+                // Le contact démo répond : il a forcément lu mes messages.
+                for m in self.conversations[i].messages.indices where self.conversations[i].messages[m].isFromMe {
+                    if self.conversations[i].messages[m].readAt == nil {
+                        self.conversations[i].messages[m].readAt = Date()
+                    }
+                }
                 self.conversations[i].messages.append(Message(text: reply, isFromMe: false, date: Date()))
             }
             self.persistConversations()
@@ -2266,7 +2404,8 @@ final class AppStore: ObservableObject {
                     id: row.id,
                     contactName: musician.name,
                     contactInstrument: musician.instruments.first ?? .voix,
-                    messages: []
+                    messages: [],
+                    contactID: musician.id
                 )
                 conversations.insert(new, at: 0)
                 return new

@@ -1120,8 +1120,19 @@ struct Message: Codable, Identifiable, Hashable {
     var text: String
     var isFromMe: Bool
     var date: Date
+    /// Accusés de réception (mes envois uniquement) — nil = simple « envoyé ».
+    var deliveredAt: Date?
+    var readAt: Date?
 
-    enum CodingKeys: String, CodingKey { case id, text, isFromMe, date }
+    enum CodingKeys: String, CodingKey { case id, text, isFromMe, date, deliveredAt, readAt }
+
+    /// État de la coche affichée sous mes messages.
+    enum Receipt { case sent, delivered, read }
+    var receipt: Receipt {
+        if readAt != nil { return .read }
+        if deliveredAt != nil { return .delivered }
+        return .sent
+    }
 }
 
 struct Conversation: Codable, Identifiable, Hashable {
@@ -1129,8 +1140,10 @@ struct Conversation: Codable, Identifiable, Hashable {
     var contactName: String
     var contactInstrument: Instrument
     var messages: [Message]
+    /// UUID du contact côté serveur (nil pour les conversations de démo).
+    var contactID: UUID?
 
-    enum CodingKeys: String, CodingKey { case id, contactName, contactInstrument, messages }
+    enum CodingKeys: String, CodingKey { case id, contactName, contactInstrument, messages, contactID }
 
     var lastMessage: Message? { messages.max(by: { $0.date < $1.date }) }
 }

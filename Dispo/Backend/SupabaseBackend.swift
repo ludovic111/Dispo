@@ -320,16 +320,23 @@ final class SupabaseBackend: Sendable {
         var senderId: UUID
         var text: String
         var createdAt: Date
+        var deliveredAt: Date?
+        var readAt: Date?
 
         enum CodingKeys: String, CodingKey {
             case id, text
             case conversationId = "conversation_id"
             case senderId = "sender_id"
             case createdAt = "created_at"
+            case deliveredAt = "delivered_at"
+            case readAt = "read_at"
         }
 
         func asMessage(myID: UUID) -> Message {
-            Message(id: id, text: text, isFromMe: senderId == myID, date: createdAt)
+            Message(
+                id: id, text: text, isFromMe: senderId == myID, date: createdAt,
+                deliveredAt: deliveredAt, readAt: readAt
+            )
         }
     }
 
@@ -611,14 +618,31 @@ final class SupabaseBackend: Sendable {
         let messagesByConversation = Dictionary(grouping: messages, by: \.conversationId)
 
         return rows.map { row in
-            let other = profileByID[row.other(than: myID)]
+            let otherID = row.other(than: myID)
+            let other = profileByID[otherID]
             return Conversation(
                 id: row.id,
                 contactName: other?.name ?? "Musicien",
                 contactInstrument: other?.instruments.first.flatMap(Instrument.init(rawValue:)) ?? .voix,
-                messages: (messagesByConversation[row.id] ?? []).map { $0.asMessage(myID: myID) }
+                messages: (messagesByConversation[row.id] ?? []).map { $0.asMessage(myID: myID) },
+                contactID: otherID
             )
         }
+    }
+
+    // MARK: - Accusés de réception
+
+    /// Marque « reçu » tout ce qui vient d'arriver pour moi (toutes conversations).
+    func markMessagesDelivered() async throws {
+        try await client.rpc("mark_messages_delivered").execute()
+    }
+
+    /// Marque « lu » les messages de l'autre dans cette conversation.
+    func markConversationRead(_ conversationID: UUID) async throws {
+        try await client.rpc(
+            "mark_conversation_read",
+            params: ["conv_id": conversationID.uuidString]
+        ).execute()
     }
 
     @discardableResult
@@ -633,24 +657,72 @@ final class SupabaseBackend: Sendable {
         return row.asMessage(myID: senderID)
     }
 
-    /// Flux temps réel des nouveaux messages (le serveur ne pousse que ceux
-    /// de mes conversations, RLS oblige).
-    func messageStream() async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<MessageRow>) {
+    /// Évènement du flux messages : nouveau message, ou accusés mis à jour.
+    enum MessageEvent {
+        case inserted(MessageRow)
+        case updated(MessageRow)
+    }
+
+    /// Flux temps réel des messages (le serveur ne pousse que ceux de mes
+    /// conversations, RLS oblige) : INSERT pour les nouveaux, UPDATE pour les
+    /// accusés « reçu / lu ».
+    func messageStream() async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<MessageEvent>) {
         let channel = client.channel("messages-live")
         let inserts = channel.postgresChange(InsertAction.self, schema: "public", table: "messages")
+        let updates = channel.postgresChange(UpdateAction.self, schema: "public", table: "messages")
         try await channel.subscribeWithError()
-        let stream = AsyncStream<MessageRow> { continuation in
-            let task = Task {
+        let stream = AsyncStream<MessageEvent> { continuation in
+            let insertTask = Task {
                 for await insert in inserts {
                     if let row = try? insert.decodeRecord(as: MessageRow.self, decoder: Self.realtimeDecoder) {
-                        continuation.yield(row)
+                        continuation.yield(.inserted(row))
                     }
                 }
-                continuation.finish()
+            }
+            let updateTask = Task {
+                for await update in updates {
+                    if let row = try? update.decodeRecord(as: MessageRow.self, decoder: Self.realtimeDecoder) {
+                        continuation.yield(.updated(row))
+                    }
+                }
+            }
+            continuation.onTermination = { _ in
+                insertTask.cancel()
+                updateTask.cancel()
+            }
+        }
+        return (channel, stream)
+    }
+
+    // MARK: - Indicateur de saisie
+
+    /// Canal broadcast éphémère « X est en train d'écrire » d'une
+    /// conversation. Rien n'est persisté : de simples pings, filtrés côté
+    /// réception par l'UUID de l'expéditeur.
+    func typingChannel(
+        conversationID: UUID
+    ) async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<UUID>) {
+        let channel = client.channel("typing-\(conversationID.uuidString)")
+        let broadcasts = channel.broadcastStream(event: "typing")
+        try await channel.subscribeWithError()
+        let stream = AsyncStream<UUID> { continuation in
+            let task = Task {
+                for await payload in broadcasts {
+                    // Le payload arrive soit à plat, soit enveloppé sous "payload".
+                    let object = payload["payload"]?.objectValue ?? payload
+                    if let raw = object["user_id"]?.stringValue, let id = UUID(uuidString: raw) {
+                        continuation.yield(id)
+                    }
+                }
             }
             continuation.onTermination = { _ in task.cancel() }
         }
         return (channel, stream)
+    }
+
+    /// Signale que je suis en train d'écrire dans cette conversation.
+    func sendTypingPing(on channel: RealtimeChannelV2, myID: UUID) async {
+        await channel.broadcast(event: "typing", message: ["user_id": .string(myID.uuidString)])
     }
 
     /// Décodeur pour les payloads realtime (dates ISO 8601, avec ou sans fractions).

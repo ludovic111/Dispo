@@ -11,6 +11,15 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.5",
+            title: "Des conversations vivantes",
+            points: [
+                "Coches « reçu / lu » sous tes messages, comme sur WhatsApp : tu sais quand ton dépannage est vu",
+                "« En train d'écrire… » : tu vois quand ton contact te répond",
+                "Le message que tu regardes est marqué lu immédiatement — plus de fausse notification"
+            ]
+        ),
+        PatchNote(
             version: "0.9.4",
             title: "Autour de toi, pour de vrai",
             points: [
