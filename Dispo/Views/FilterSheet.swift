@@ -57,6 +57,8 @@ struct FilterSheet: View {
                         Text("5 km").tag(5.0)
                         Text("10 km").tag(10.0)
                         Text("25 km").tag(25.0)
+                        Text("50 km").tag(50.0)
+                        Text("100 km").tag(100.0)
                     }
                     .pickerStyle(.segmented)
                 }

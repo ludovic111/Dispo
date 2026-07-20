@@ -728,6 +728,31 @@ final class SupabaseBackend: Sendable {
         }
     }
 
+    struct GroupMessageRow: Codable {
+        var id: UUID
+        var groupId: UUID
+        var senderId: UUID
+        var text: String
+        var createdAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case id, text
+            case groupId = "group_id"
+            case senderId = "sender_id"
+            case createdAt = "created_at"
+        }
+
+        func asGroupMessage(myID: UUID, myName: String, nameByID: [UUID: String]) -> GroupMessage {
+            GroupMessage(
+                id: id,
+                sender: senderId == myID ? myName : (nameByID[senderId] ?? "Musicien"),
+                isFromMe: senderId == myID,
+                text: text,
+                date: createdAt
+            )
+        }
+    }
+
     /// Forme JSON des morceaux (répertoire / setlist) côté Postgres.
     struct SongPayload: Codable, Hashable {
         var id: UUID
@@ -765,8 +790,8 @@ final class SupabaseBackend: Sendable {
         }
     }
 
-    /// Charge les groupes dont je suis membre (RLS), avec membres, événements
-    /// et présence. Les messages / partitions restent locaux à l'appareil.
+    /// Charge les groupes dont je suis membre (RLS), avec membres, événements,
+    /// présence et messages. Seules les partitions restent locales à l'appareil.
     func fetchGroups(myID: UUID, myName: String, nameByID: [UUID: String]) async throws -> [GroupChat] {
         let groupRows: [MusicGroupRow] = try await client.from("music_groups")
             .select()
@@ -785,6 +810,13 @@ final class SupabaseBackend: Sendable {
             .order("date")
             .execute().value
         let (members, events) = try await (membersTask, eventsTask)
+        // Tolérant si la migration group_messages n'est pas encore appliquée :
+        // les groupes restent utilisables, juste sans historique de messages.
+        let groupMessages: [GroupMessageRow] = (try? await client.from("group_messages")
+            .select()
+            .in("group_id", values: groupIDs)
+            .order("created_at")
+            .execute().value) ?? []
 
         let eventIDs = events.map(\.id.uuidString)
         let attendance: [EventAttendanceRow]
@@ -800,6 +832,7 @@ final class SupabaseBackend: Sendable {
         let membersByGroup = Dictionary(grouping: members, by: \.groupId)
         let eventsByGroup = Dictionary(grouping: events, by: \.groupId)
         let attendanceByEvent = Dictionary(grouping: attendance, by: \.eventId)
+        let messagesByGroup = Dictionary(grouping: groupMessages, by: \.groupId)
 
         return groupRows.map { row in
             let leaderName = row.leaderId == myID ? nil : nameByID[row.leaderId]
@@ -839,7 +872,9 @@ final class SupabaseBackend: Sendable {
                 leaderName: leaderName,
                 memberNames: memberNames,
                 memberKinds: kinds,
-                messages: [],
+                messages: (messagesByGroup[row.id] ?? []).map {
+                    $0.asGroupMessage(myID: myID, myName: myName, nameByID: nameByID)
+                },
                 docs: [],
                 repertoire: row.repertoire.map(\.asSong),
                 events: mappedEvents
@@ -971,5 +1006,63 @@ final class SupabaseBackend: Sendable {
             .update(Update(setlist: songs.map(SongPayload.init(from:))))
             .eq("id", value: eventID)
             .execute()
+    }
+
+    // MARK: - Groupes : messages + temps réel
+
+    /// Envoie un message de groupe. L'id est fourni par le client pour que
+    /// l'écho realtime (notre propre INSERT revient aussi par le canal) se
+    /// dédoublonne proprement.
+    func sendGroupMessage(id: UUID, text: String, groupID: UUID, senderID: UUID) async throws {
+        struct Insert: Encodable {
+            let id: UUID
+            let group_id: UUID
+            let sender_id: UUID
+            let text: String
+        }
+        try await client.from("group_messages")
+            .insert(Insert(id: id, group_id: groupID, sender_id: senderID, text: text))
+            .execute()
+    }
+
+    /// Événement temps réel côté groupes : un message arrive en incrémental,
+    /// tout le reste (événements, présence, membres, répertoire) déclenche un
+    /// rechargement des groupes.
+    enum GroupRealtimeEvent {
+        case message(GroupMessageRow)
+        case groupsChanged
+    }
+
+    /// Flux temps réel des groupes (RLS : le serveur ne pousse que ce qui
+    /// concerne mes groupes).
+    func groupStream() async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<GroupRealtimeEvent>) {
+        let channel = client.channel("groups-live")
+        let messageInserts = channel.postgresChange(InsertAction.self, schema: "public", table: "group_messages")
+        let eventChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_events")
+        let attendanceChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "event_attendance")
+        let memberChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_members")
+        let groupChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "music_groups")
+        try await channel.subscribeWithError()
+        let stream = AsyncStream<GroupRealtimeEvent> { continuation in
+            let messageTask = Task {
+                for await insert in messageInserts {
+                    if let row = try? insert.decodeRecord(as: GroupMessageRow.self, decoder: Self.realtimeDecoder) {
+                        continuation.yield(.message(row))
+                    }
+                }
+            }
+            let changeTasks = [eventChanges, attendanceChanges, memberChanges, groupChanges].map { changes in
+                Task {
+                    for await _ in changes {
+                        continuation.yield(.groupsChanged)
+                    }
+                }
+            }
+            continuation.onTermination = { _ in
+                messageTask.cancel()
+                changeTasks.forEach { $0.cancel() }
+            }
+        }
+        return (channel, stream)
     }
 }

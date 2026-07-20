@@ -8,6 +8,7 @@ struct MusicianDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let musician: Musician
     @State private var openedConversation: Conversation?
+    @State private var showSOSRequest = false
     @State private var showBlockConfirmation = false
     @State private var safetyMessage: String?
 
@@ -84,6 +85,15 @@ struct MusicianDetailView: View {
         .sheet(item: $openedConversation) { conversation in
             NavigationStack {
                 ChatView(conversationID: conversation.id)
+            }
+        }
+        .sheet(isPresented: $showSOSRequest) {
+            SOSRequestSheet(musician: musician) { conversation in
+                // Laisser la feuille se refermer avant d'ouvrir la conversation.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    openedConversation = conversation
+                }
             }
         }
     }
@@ -188,6 +198,28 @@ struct MusicianDetailView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 8) {
+            // La demande de dépannage n'est pas un simple message : c'est un
+            // formulaire (instrument, date, lieu, cachet) envoyé balisé 🚨.
+            if musician.isAvailable {
+                Button {
+                    showSOSRequest = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bolt.fill")
+                            .font(.caption.weight(.bold))
+                        Text("Demander un dépannage")
+                            .font(.subheadline.weight(.bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(AnyShapeStyle(JC.hero), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .foregroundStyle(Color.white)
+                }
+                .buttonStyle(PressableStyle())
+            }
+
             HStack(spacing: 8) {
                 Button {
                     withAnimation(.snappy) { store.toggleFollow(musician) }
@@ -211,7 +243,7 @@ struct MusicianDetailView: View {
                 Button {
                     Task { openedConversation = await store.conversation(with: musician) }
                 } label: {
-                    Text(musician.isAvailable ? "Demander un dépannage" : "Contacter")
+                    Text("Contacter")
                         .font(.subheadline.weight(.bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)

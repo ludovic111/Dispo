@@ -58,7 +58,8 @@ final class AppStore: ObservableObject {
     private var notificationObservers: [NSObjectProtocol] = []
     /// SOS déjà vus — pour ne notifier que les vraies nouveautés.
     private var seenGigIDs: Set<UUID> = []
-    /// Groupes (messagerie d'équipe Premium) — locaux, serveur en phase 2b.
+    /// Groupes (messagerie d'équipe Premium) — synchronisés serveur en live
+    /// (messages, événements, présence, membres) ; partitions locales.
     @Published var groups: [GroupChat] = []
 
     // MARK: - Backend (mode live)
@@ -77,6 +78,11 @@ final class AppStore: ObservableObject {
     var isLive: Bool { liveUserID != nil }
     private var messageChannel: RealtimeChannelV2?
     private var messageTask: Task<Void, Never>?
+    private var groupChannel: RealtimeChannelV2?
+    private var groupTask: Task<Void, Never>?
+    /// Rafraîchissement des groupes en attente (déclenché par le realtime) —
+    /// coalesce les rafales d'événements en un seul rechargement.
+    private var pendingGroupRefresh: Task<Void, Never>?
     private var transactionTask: Task<Void, Never>?
 
     private static let productIDs: [PremiumPlan: String] = [
@@ -290,6 +296,7 @@ final class AppStore: ObservableObject {
         }
         await refreshLiveData()
         await startMessageStream()
+        await startGroupStream()
         await refreshNotificationAuthorization(registerIfAllowed: true)
     }
 
@@ -334,12 +341,12 @@ final class AppStore: ObservableObject {
                 myName: profile.name,
                 nameByID: nameByID
             )
-            // Messages / partitions restent locaux — on les rattache au même id.
+            // Les messages viennent du serveur ; seules les partitions
+            // (fichiers sur l'appareil) restent locales.
             let localByID = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
             groups = remoteGroups.map { remote in
                 var merged = remote
                 if let local = localByID[remote.id] {
-                    merged.messages = local.messages
                     merged.docs = local.docs
                 }
                 return merged
@@ -393,6 +400,14 @@ final class AppStore: ObservableObject {
         if let channel = messageChannel {
             await backend.client.removeChannel(channel)
             messageChannel = nil
+        }
+        groupTask?.cancel()
+        groupTask = nil
+        pendingGroupRefresh?.cancel()
+        pendingGroupRefresh = nil
+        if let channel = groupChannel {
+            await backend.client.removeChannel(channel)
+            groupChannel = nil
         }
         reloadDemoData()
     }
@@ -456,6 +471,102 @@ final class AppStore: ObservableObject {
         } else {
             // Conversation inconnue : quelqu'un vient de m'écrire pour la première fois.
             await refreshLiveData()
+        }
+    }
+
+    /// Écoute les groupes en temps réel : les messages arrivent en
+    /// incrémental, les autres changements (événement créé, présence,
+    /// membres, répertoire) déclenchent un rechargement des groupes.
+    private func startGroupStream() async {
+        guard let backend, groupTask == nil else { return }
+        let channel: RealtimeChannelV2
+        let stream: AsyncStream<SupabaseBackend.GroupRealtimeEvent>
+        do {
+            (channel, stream) = try await backend.groupStream()
+        } catch {
+            backendError = tr("La synchro des groupes en temps réel n'a pas pu démarrer.")
+            return
+        }
+        groupChannel = channel
+        groupTask = Task { [weak self] in
+            for await event in stream {
+                switch event {
+                case .message(let row):
+                    await self?.handleIncomingGroupMessage(row)
+                case .groupsChanged:
+                    self?.scheduleGroupRefresh()
+                }
+            }
+        }
+    }
+
+    private func handleIncomingGroupMessage(_ row: SupabaseBackend.GroupMessageRow) async {
+        guard let userID = liveUserID else { return }
+        guard let index = groups.firstIndex(where: { $0.id == row.groupId }) else {
+            // Groupe inconnu (on vient de m'y inviter) : recharger la liste.
+            await refreshGroups()
+            return
+        }
+        guard !groups[index].messages.contains(where: { $0.id == row.id }) else { return }
+        let senderName = row.senderId == userID
+            ? profile.name
+            : (musicians.first(where: { $0.id == row.senderId })?.name ?? "Musicien")
+        let message = GroupMessage(
+            id: row.id,
+            sender: senderName,
+            isFromMe: row.senderId == userID,
+            text: row.text,
+            date: row.createdAt
+        )
+        withAnimation {
+            groups[index].messages.append(message)
+        }
+        persistGroups()
+        if !message.isFromMe {
+            pushLocal(
+                title: "\(groups[index].emoji) \(groups[index].name)",
+                body: "\(message.sender) : \(message.text)"
+            )
+        }
+    }
+
+    /// Coalesce les rafales d'événements realtime en un seul rechargement.
+    private func scheduleGroupRefresh() {
+        guard pendingGroupRefresh == nil else { return }
+        pendingGroupRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            await self?.refreshGroups()
+            self?.pendingGroupRefresh = nil
+        }
+    }
+
+    /// Recharge uniquement les groupes depuis le serveur (plus léger que
+    /// refreshLiveData — utilisé par le temps réel).
+    private func refreshGroups() async {
+        guard let backend, let userID = liveUserID else { return }
+        do {
+            let profiles = try await backend.fetchProfiles()
+            let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
+            let remoteGroups = try await backend.fetchGroups(
+                myID: userID,
+                myName: profile.name,
+                nameByID: nameByID
+            )
+            let localByID = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
+            withAnimation {
+                groups = remoteGroups.map { remote in
+                    var merged = remote
+                    if let local = localByID[remote.id] {
+                        merged.docs = local.docs
+                    }
+                    return merged
+                }
+            }
+            persistGroups()
+            rescheduleAllAttendanceNotifications()
+        } catch {
+            // Silencieux : le prochain événement ou refreshLiveData rattrapera.
         }
     }
 
@@ -1546,14 +1657,36 @@ final class AppStore: ObservableObject {
         persistGroups()
     }
 
-    /// Envoie un message dans le groupe. En démo, un membre répond pour
-    /// rendre la conversation vivante (temps réel serveur en phase 2b).
-    /// En mode live, jamais de réponse scriptée : les membres sont de vraies
-    /// personnes et on ne fabrique pas de propos en leur nom.
+    /// Envoie un message dans le groupe. En live il part sur le serveur et
+    /// arrive chez tous les membres en temps réel ; en démo, un membre répond
+    /// pour rendre la conversation vivante. Jamais de réponse scriptée en
+    /// live : les membres sont de vraies personnes et on ne fabrique pas de
+    /// propos en leur nom.
     func sendGroupMessage(_ text: String, in group: GroupChat) {
         guard acceptsUserContent(text) else { return }
+        let message = GroupMessage(sender: profile.name, isFromMe: true, text: text, date: Date())
         updateGroup(group.id) {
-            $0.messages.append(GroupMessage(sender: profile.name, isFromMe: true, text: text, date: Date()))
+            $0.messages.append(message)
+        }
+        if let backend, let userID = liveUserID {
+            let groupID = group.id
+            Task { [weak self] in
+                do {
+                    try await backend.sendGroupMessage(
+                        id: message.id,
+                        text: text,
+                        groupID: groupID,
+                        senderID: userID
+                    )
+                } catch {
+                    // L'envoi a échoué : retirer le message optimiste pour ne
+                    // pas laisser croire qu'il est parti.
+                    self?.updateGroup(groupID) {
+                        $0.messages.removeAll { $0.id == message.id }
+                    }
+                    self?.backendError = self?.tr("Le message n'a pas pu être envoyé.")
+                }
+            }
         }
         guard !isLive else { return }
         guard let replier = group.memberNames.randomElement() else { return }
@@ -1628,6 +1761,38 @@ final class AppStore: ObservableObject {
             instruments, gig.title, dateLabel, gig.place, tr(gig.feeLabel)
         )
         sendMessage(text, in: conversation)
+    }
+
+    /// Envoie une demande de dépannage structurée à un musicien : ouvre (ou
+    /// crée) la conversation et y poste la demande balisée 🚨 avec ses
+    /// options (instrument, date, lieu, cachet). Distinct d'un simple
+    /// message privé envoyé via « Contacter ».
+    func sendSOSRequest(
+        to musician: Musician,
+        instrument: Instrument,
+        date: Date,
+        place: String,
+        fee: Int?,
+        note: String
+    ) async -> Conversation {
+        let conversation = await conversation(with: musician)
+        let dateLabel = date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
+        var lines = [
+            tr("🚨 Demande de dépannage"),
+            String(format: tr("🎸 Instrument : %@"), tr(instrument.rawValue)),
+            String(format: tr("📅 Date : %@"), dateLabel)
+        ]
+        let trimmedPlace = place.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPlace.isEmpty {
+            lines.append(String(format: tr("📍 Lieu : %@"), trimmedPlace))
+        }
+        lines.append(String(format: tr("💰 Cachet : %@"), fee.map { "CHF \($0)" } ?? tr("À discuter")))
+        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedNote.isEmpty {
+            lines.append(trimmedNote)
+        }
+        sendMessage(lines.joined(separator: "\n"), in: conversation)
+        return conversation
     }
 
     // MARK: - Médias du profil (photo + vidéos de démo)

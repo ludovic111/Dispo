@@ -12,6 +12,7 @@
 		28667B59FEA0218FA34C8302 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66A53149AFFBB1CABA9601 /* CreateEventView.swift */; };
 		2A295B2FFFD3982F05A2469E /* SeedData.json in Resources */ = {isa = PBXBuildFile; fileRef = D28AF59E7DDA753B03F53947 /* SeedData.json */; };
 		2F07596B9A0B43477E677D98 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5533270AA3C516AC1B6E955 /* OnboardingView.swift */; };
+		31F84DDE0AE254845CA85880 /* SOSRequestSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */; };
 		3542850C3EEC170B6CEEC39A /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD83E23B1E36D79D22DA9E36 /* ChatListView.swift */; };
 		48CB3AE64BB899CAEBC33239 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 261EC6F531BEE7612BA65B4B /* AppStore.swift */; };
 		4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */; };
@@ -49,6 +50,7 @@
 		3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
 		44466866F267B8632340A4B3 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		45D10ACFB71CC40CFF3DFAC7 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSRequestSheet.swift; sourceTree = "<group>"; };
 		6CEE8CF8E49314AC43A8F44F /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
 		6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
 		6F9726C6D699E4D63934DBB1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 				2BA029833082A56A604FC4F5 /* PaywallView.swift */,
 				B3F7B7D2ABAA2E0458C61619 /* SearchView.swift */,
 				C0BF7594E5DECA397D60C3C0 /* SOSMatchView.swift */,
+				5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -264,6 +267,7 @@
 				D4526921E773D3278B4AB38F /* PaywallView.swift in Sources */,
 				271F0846BCAEB87F906E3A45 /* PushNotifications.swift in Sources */,
 				89CAF17D56DDCD16E989299F /* SOSMatchView.swift in Sources */,
+				31F84DDE0AE254845CA85880 /* SOSRequestSheet.swift in Sources */,
 				D84EDF3C9DF396F3799D656C /* SearchView.swift in Sources */,
 				4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */,
 			);

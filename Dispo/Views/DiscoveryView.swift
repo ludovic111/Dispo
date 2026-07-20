@@ -23,7 +23,7 @@ struct DiscoveryFilters {
         if genre != nil { count += 1 }
         if minLevel != nil { count += 1 }
         if availability != nil { count += 1 }
-        if radiusKm < 25 { count += 1 }
+        if radiusKm != 25 { count += 1 }
         if friendsOnly { count += 1 }
         if playedWithAFriend { count += 1 }
         if wellRated { count += 1 }
