@@ -1,6 +1,7 @@
 import SwiftUI
 import QuickLook
 import UniformTypeIdentifiers
+import PhotosUI
 
 // MARK: - Aperçu de document (partitions PDF / images)
 
@@ -66,6 +67,7 @@ struct GroupChatView: View {
     /// Événement en attente de SOS, présenté après fermeture de sa feuille.
     @State private var pendingSOSEvent: GroupEvent?
     @State private var showDeleteConfirm = false
+    @State private var showGroupSettings = false
     @Environment(\.dismiss) private var dismiss
 
     private var group: GroupChat? {
@@ -107,6 +109,11 @@ struct GroupChatView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 if isLeader {
                     Menu {
+                        Button {
+                            showGroupSettings = true
+                        } label: {
+                            Label("Photo & visibilité", systemImage: "gearshape")
+                        }
                         Button(role: .destructive) {
                             showDeleteConfirm = true
                         } label: {
@@ -116,6 +123,12 @@ struct GroupChatView: View {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
+            }
+        }
+        .sheet(isPresented: $showGroupSettings) {
+            if let group {
+                GroupSettingsSheet(groupID: group.id)
+                    .presentationDetents([.medium])
             }
         }
         .confirmationDialog(
@@ -181,19 +194,25 @@ struct GroupChatView: View {
         }
     }
 
-    /// Bandeau d'identité : leader + membres, en un coup d'œil.
+    /// Bandeau d'identité : photo, leader + membres, en un coup d'œil.
     private func groupHeader(_ group: GroupChat) -> some View {
         Button { showMembers = true } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "crown.fill")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(JC.gold)
-                Text(verbatim: store.leaderDisplayName(of: group))
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.primary)
-                Text("· \(group.memberNames.count + 1) membres")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                GroupAvatarView(group: group, size: 34)
+                HStack(spacing: 8) {
+                    Image(systemName: "crown.fill")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(JC.gold)
+                    Text(verbatim: store.leaderDisplayName(of: group))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("· \(group.memberNames.count + 1) membres")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if group.isPublic == true {
+                        TagView(text: "Public", color: .teal)
+                    }
+                }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.bold))
@@ -649,6 +668,8 @@ struct GroupMembersSheet: View {
     @State private var showInvite = false
     /// Membre en attente de confirmation pour devenir leader.
     @State private var pendingLeader: String?
+    /// Fiche du membre qu'on consulte.
+    @State private var viewingMusician: Musician?
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
@@ -721,6 +742,12 @@ struct GroupMembersSheet: View {
             .sheet(isPresented: $showInvite) {
                 if let group { InviteMemberSheet(group: group) }
             }
+            .sheet(item: $viewingMusician) { musician in
+                NavigationStack {
+                    MusicianDetailView(musician: musician)
+                }
+                .presentationDetents([.large])
+            }
             .confirmationDialog(
                 pendingLeader.map { String(format: store.tr("Nommer %@ leader ? Tu perdras la gestion du groupe."), $0) } ?? "",
                 isPresented: Binding(get: { pendingLeader != nil }, set: { if !$0 { pendingLeader = nil } }),
@@ -741,7 +768,17 @@ struct GroupMembersSheet: View {
         let kind = group.memberKind(for: name)
         return JCCard(padding: 11) {
             HStack(spacing: 11) {
-                AvatarView(name: name, size: 42, photo: store.photo(forName: name))
+                // Un tap sur un membre ouvre sa fiche profil.
+                Button {
+                    guard !isMe,
+                          let musician = store.musicians.first(where: { $0.name == name })
+                    else { return }
+                    viewingMusician = musician
+                } label: {
+                    AvatarView(name: name, size: 42, photo: store.photo(forName: name))
+                }
+                .buttonStyle(PressableStyle())
+                .accessibilityLabel(Text("Voir le profil"))
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(isMe ? store.tr("Toi") : name)
@@ -813,6 +850,77 @@ struct GroupMembersSheet: View {
                             .foregroundStyle(.secondary)
                             .padding(6)
                     }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Réglages du groupe (leader)
+
+/// Photo et visibilité du groupe — réservé au leader. Un groupe public
+/// s'affiche sur les profils de ses membres ; un groupe privé reste
+/// invisible du reste du réseau.
+struct GroupSettingsSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let groupID: GroupChat.ID
+    @State private var photoItem: PhotosPickerItem?
+
+    private var group: GroupChat? {
+        store.groups.first { $0.id == groupID }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if let group {
+                    Section("Photo du groupe") {
+                        HStack(spacing: 14) {
+                            GroupAvatarView(group: group, size: 64)
+                            PhotosPicker(selection: $photoItem, matching: .images) {
+                                Label(
+                                    group.photoURL == nil ? "Ajouter une photo" : "Changer la photo",
+                                    systemImage: "camera.fill"
+                                )
+                                .font(.subheadline.weight(.semibold))
+                            }
+                        }
+                    }
+
+                    Section {
+                        Toggle(
+                            "Groupe public",
+                            isOn: Binding(
+                                get: { group.isPublic ?? false },
+                                set: { store.setGroupVisibility($0, in: group) }
+                            )
+                        )
+                        .tint(.teal)
+                    } header: {
+                        Text("Visibilité")
+                    } footer: {
+                        Text("Public : le groupe apparaît sur les profils de ses membres (nom, photo, effectif). Privé : il reste entre vous.")
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Photo & visibilité")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+            .onChange(of: photoItem) { _, item in
+                guard let item, let group else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let jpeg = UIImage(data: data)?.resizedJPEG(maxSide: 600) {
+                        store.setGroupPhoto(jpeg, in: group)
+                    }
+                    photoItem = nil
                 }
             }
         }

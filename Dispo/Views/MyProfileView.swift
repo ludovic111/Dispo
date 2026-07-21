@@ -67,8 +67,8 @@ struct MyProfileView: View {
     @State private var videoItem: PhotosPickerItem?
     @State private var playingVideo: PlayableVideo?
     @State private var importingVideo = false
-    /// Vidéo dont on est en train d'éditer la date.
-    @State private var datingVideo: DemoVideo?
+    /// Vidéo dont on édite le titre et la date.
+    @State private var editingVideo: DemoVideo?
 
     var body: some View {
         NavigationStack {
@@ -83,6 +83,7 @@ struct MyProfileView: View {
                         editButton
                         availabilityCard
                         videosCard
+                        myGroupsCard
                         if !store.isPremium { premiumCard }
                         footer
                     }
@@ -99,13 +100,11 @@ struct MyProfileView: View {
                 SettingsSheet()
             }
             .sheet(item: $playingVideo) { video in
-                VideoPlayer(player: AVPlayer(url: video.url))
-                    .ignoresSafeArea()
-                    .presentationDetents([.large])
+                VideoPlayerSheet(url: video.url)
             }
-            .sheet(item: $datingVideo) { video in
-                VideoDateSheet(video: video)
-                    .presentationDetents([.medium])
+            .sheet(item: $editingVideo) { video in
+                VideoDetailsSheet(video: video)
+                    .presentationDetents([.medium, .large])
             }
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
@@ -355,38 +354,50 @@ struct MyProfileView: View {
                 }
 
                 ForEach(store.profile.videos) { video in
+                    let index = store.profile.videos.firstIndex(of: video) ?? 0
                     HStack(spacing: 11) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(JC.violet.opacity(0.14))
-                                .frame(width: 40, height: 40)
+                            VideoThumbView(
+                                video: video,
+                                fallbackGenre: store.profile.genres.first ?? .jazz
+                            )
+                            .frame(width: 44, height: 44)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             Image(systemName: "play.fill")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(JC.violet)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.white)
+                                .shadow(radius: 3)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Vidéo \((store.profile.videos.firstIndex(of: video) ?? 0) + 1)")
+                            Text(verbatim: video.displayTitle(index: index, tr: store.tr))
                                 .font(.subheadline.weight(.semibold))
-                            // Date de la vidéo — un tap pour la changer.
-                            Button {
-                                datingVideo = video
-                            } label: {
-                                if let date = video.date {
-                                    Label(
-                                        date.formatted(date: .abbreviated, time: .omitted),
-                                        systemImage: "calendar"
-                                    )
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(JC.violet)
-                                } else {
-                                    Label("Ajouter une date", systemImage: "calendar.badge.plus")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                }
+                                .lineLimit(1)
+                            if let date = video.date {
+                                Label(
+                                    date.formatted(date: .abbreviated, time: .omitted),
+                                    systemImage: "calendar"
+                                )
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            } else {
+                                Text("Titre et date : bouton crayon")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
                             }
-                            .buttonStyle(PressableStyle())
                         }
                         Spacer(minLength: 0)
+                        // Édite titre + date.
+                        Button {
+                            editingVideo = video
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(JC.violet)
+                                .padding(8)
+                                .background(JC.violet.opacity(0.12), in: Circle())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityLabel(Text("Modifier le titre et la date"))
                         Button {
                             store.removeDemoVideo(video)
                         } label: {
@@ -441,6 +452,62 @@ struct MyProfileView: View {
 
     private var isBusy: Bool { importingVideo || store.videoUploadInProgress }
 
+    // MARK: - Mes groupes
+
+    /// Mes groupes, avec leur visibilité : un groupe public s'affiche sur
+    /// les profils de ses membres, un groupe privé reste entre vous.
+    @ViewBuilder
+    private var myGroupsCard: some View {
+        if !store.groups.isEmpty {
+            JCCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label("Mes groupes", systemImage: "person.3.fill")
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundStyle(JC.violet)
+                        Spacer()
+                        Button {
+                            store.selectedTab = .messages
+                        } label: {
+                            Text("Ouvrir")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(JC.violet)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                    ForEach(store.groups) { group in
+                        HStack(spacing: 11) {
+                            GroupAvatarView(group: group, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(group.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(1)
+                                    if store.isLeader(of: group) {
+                                        Image(systemName: "crown.fill")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(JC.gold)
+                                    }
+                                }
+                                Text("\(group.memberNames.count + 1) membres")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            TagView(
+                                text: group.isPublic == true ? "Public" : "Privé",
+                                color: group.isPublic == true ? .teal : .gray
+                            )
+                        }
+                    }
+                    Text("Le leader choisit dans le groupe s'il est public (visible sur vos profils) ou privé.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
     private var premiumCard: some View {
         JCPromoBanner(
             icon: "crown.fill",
@@ -450,43 +517,45 @@ struct MyProfileView: View {
     }
 }
 
-// MARK: - Date d'une vidéo de démo
+// MARK: - Titre & date d'une vidéo de démo
 
-/// Petite feuille pour dater une vidéo (date du concert / enregistrement).
-struct VideoDateSheet: View {
+/// Feuille d'édition d'une vidéo : titre (affiché sur la grille de démos)
+/// et date du concert / de l'enregistrement.
+struct VideoDetailsSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     let video: DemoVideo
+    @State private var title: String = ""
+    @State private var hasDate = false
     @State private var date: Date = Date()
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                JCBackground()
-                VStack(spacing: 14) {
-                    DatePicker(
-                        "Date de la vidéo",
-                        selection: $date,
-                        in: ...Date(),
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                    .tint(JC.violet)
-                    .padding(.horizontal, 12)
-
-                    if video.date != nil {
-                        Button(role: .destructive) {
-                            store.setVideoDate(nil, for: video)
-                            dismiss()
-                        } label: {
-                            Text("Retirer la date")
-                                .font(.caption.weight(.bold))
-                        }
-                    }
+            Form {
+                Section("Titre") {
+                    TextField("Ex. Solo au Chat Noir", text: $title)
                 }
-                .padding(.top, 6)
+                Section {
+                    Toggle("Dater la vidéo", isOn: $hasDate.animation())
+                    if hasDate {
+                        DatePicker(
+                            "Date de la vidéo",
+                            selection: $date,
+                            in: ...Date(),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .tint(JC.violet)
+                    }
+                } header: {
+                    Text("Date")
+                } footer: {
+                    Text("Le titre et la date s'affichent sur ta grille de démos.")
+                }
             }
-            .navigationTitle("Date de la vidéo")
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Ma vidéo")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -494,13 +563,18 @@ struct VideoDateSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") {
-                        store.setVideoDate(date, for: video)
+                        store.setVideoTitle(title, for: video)
+                        store.setVideoDate(hasDate ? date : nil, for: video)
                         dismiss()
                     }
                     .font(.headline)
                 }
             }
-            .onAppear { date = video.date ?? Date() }
+            .onAppear {
+                title = video.title ?? ""
+                hasDate = video.date != nil
+                date = video.date ?? Date()
+            }
         }
     }
 }

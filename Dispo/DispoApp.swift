@@ -13,9 +13,11 @@ struct DispoApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .preferredColorScheme(store.theme.colorScheme)
                 // Langue choisie dans l'app : les Text localisés suivent la
                 // locale d'environnement ; le .id force le re-rendu complet.
+                // (L'apparence clair/sombre est appliquée au niveau UIWindow
+                // par AppStore.applyThemeToWindows — instantané partout,
+                // feuilles comprises.)
                 .environment(\.locale, store.language.locale)
                 .id(store.language)
                 .tint(JC.coral)
@@ -29,6 +31,11 @@ struct DispoApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var store: AppStore
+    @Environment(\.scenePhase) private var scenePhase
+    #if DEBUG
+    /// Écran profond présenté par la route de capture (outillage screenshots).
+    @State private var debugCover: DebugScreenshotCover?
+    #endif
 
     var body: some View {
         ZStack {
@@ -36,6 +43,9 @@ struct RootView: View {
                 HomeView()
                     .tabItem { Label("Accueil", systemImage: "house.fill") }
                     .tag(AppTab.home)
+                MapTabView()
+                    .tabItem { Label("Carte", systemImage: "map.fill") }
+                    .tag(AppTab.map)
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
                     .tag(AppTab.sos)
@@ -104,7 +114,81 @@ struct RootView: View {
         .animation(.snappy(duration: 0.3), value: store.backendError)
         .animation(.snappy(duration: 0.35), value: store.liveUserID)
         .animation(.snappy(duration: 0.35), value: store.sessionChecked)
+        .onAppear { store.applyThemeToWindows() }
+        .onChange(of: scenePhase) { _, phase in
+            // Retour au premier plan : ré-applique le thème aux fenêtres
+            // (re)créées et rafraîchit position + données pour rester
+            // trouvable dans les recherches.
+            guard phase == .active else { return }
+            store.applyThemeToWindows()
+            store.appBecameActive()
+        }
+        #if DEBUG
+        .task { await applyScreenshotRoute() }
+        .fullScreenCover(item: $debugCover) { cover in
+            NavigationStack {
+                switch cover {
+                case .chat(let id): ChatView(conversationID: id)
+                case .musician(let musician): MusicianDetailView(musician: musician)
+                case .search(let query): SearchView(initialQuery: query)
+                case .matching(let gig): SOSMatchView(gig: gig) {}
+                case .settings: SettingsSheet()
+                }
+            }
+        }
+        #endif
     }
+
+    #if DEBUG
+    /// Route de capture d'écran (`-screenshotRoute chat`…) — builds Debug
+    /// uniquement : outille les captures App Store sans interaction manuelle.
+    enum DebugScreenshotCover: Identifiable {
+        case chat(Conversation.ID)
+        case musician(Musician)
+        case search(String)
+        case matching(GigRequest)
+        case settings
+        var id: String {
+            switch self {
+            case .chat: return "chat"
+            case .musician: return "musician"
+            case .search: return "search"
+            case .matching: return "matching"
+            case .settings: return "settings"
+            }
+        }
+    }
+
+    private func applyScreenshotRoute() async {
+        guard let route = UserDefaults.standard.string(forKey: "screenshotRoute") else { return }
+        // Laisse la démo se charger et la TabView se poser.
+        try? await Task.sleep(for: .milliseconds(800))
+        switch route {
+        case "map": store.selectedTab = .map
+        case "sos": store.selectedTab = .sos
+        case "messages": store.selectedTab = .messages
+        case "profile": store.selectedTab = .profile
+        case "paywall": store.showPaywall = true
+        case "chat":
+            if let conversation = store.conversations.first(where: { !$0.messages.isEmpty }) {
+                debugCover = .chat(conversation.id)
+            }
+        case "musician":
+            if let musician = store.musicians.first(where: { $0.name.hasPrefix("Marco") }) ?? store.musicians.first {
+                debugCover = .musician(musician)
+            }
+        case "search":
+            debugCover = .search(UserDefaults.standard.string(forKey: "screenshotQuery") ?? "")
+        case "matching":
+            if let gig = store.events.first(where: { !$0.wantedInstruments.isEmpty }) {
+                debugCover = .matching(gig)
+            }
+        case "settings":
+            debugCover = .settings
+        default: break
+        }
+    }
+    #endif
 }
 
 // MARK: - Design system « nuit de jazz »

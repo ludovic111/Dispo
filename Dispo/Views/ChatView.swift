@@ -95,6 +95,29 @@ struct ChatView: View {
         .navigationTitle(conversation?.contactName ?? store.tr("Conversation"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(JC.bg, for: .navigationBar)
+        .toolbar {
+            // Le nom en titre ouvre la fiche du musicien — un tap.
+            if let conversation, let musician = store.musician(for: conversation) {
+                ToolbarItem(placement: .principal) {
+                    NavigationLink(value: musician) {
+                        HStack(spacing: 8) {
+                            AvatarView(name: musician.name, size: 28, photo: musician.photo)
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(musician.name)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text("Voir le profil")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .buttonStyle(PressableStyle())
+                    .accessibilityLabel(Text("Voir le profil"))
+                }
+            }
+        }
         .onAppear { store.chatOpened(conversationID) }
         .onDisappear { store.chatClosed(conversationID) }
     }

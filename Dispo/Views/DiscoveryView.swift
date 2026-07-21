@@ -1,14 +1,13 @@
 import SwiftUI
-import MapKit
 
 /// Filtres de découverte.
 struct DiscoveryFilters {
     var instrument: Instrument?
     var genre: Genre?
     var minLevel: Level?
-    /// nil = tout le monde ; sinon uniquement les musiciens dont le statut
-    /// répond à cet horizon (« cette semaine » englobe ce soir et le week-end).
-    var availability: Availability?
+    /// nil = peu importe quand ; sinon uniquement les musiciens dispo ce
+    /// jour-là (date cochée dans leur calendrier).
+    var neededDate: Date?
     var radiusKm: Double = 25
     /// Uniquement mes amis (suivi mutuel).
     var friendsOnly: Bool = false
@@ -22,7 +21,7 @@ struct DiscoveryFilters {
         if instrument != nil { count += 1 }
         if genre != nil { count += 1 }
         if minLevel != nil { count += 1 }
-        if availability != nil { count += 1 }
+        if neededDate != nil { count += 1 }
         if radiusKm != 25 { count += 1 }
         if friendsOnly { count += 1 }
         if playedWithAFriend { count += 1 }
@@ -35,7 +34,7 @@ struct DiscoveryFilters {
         if let instrument, !musician.instruments.contains(instrument) { return false }
         if let genre, !musician.genres.contains(genre) { return false }
         if let minLevel, musician.level < minLevel { return false }
-        if let availability, !musician.availability.satisfies(availability) { return false }
+        if let neededDate, !musician.isAvailable(on: neededDate) { return false }
         // Rayon appliqué uniquement quand la distance est fiable (ma position
         // et la sienne connues) — on ne cache jamais un profil sans géoloc.
         if let distance = store.distance(to: musician), distance > radiusKm { return false }
@@ -56,7 +55,6 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
-    @State private var showMap = false
     /// Musicien en cours d'invitation depuis l'accueil (un tap).
     @State private var invitingName: String?
 
@@ -66,11 +64,6 @@ struct HomeView: View {
         store.musicians
             .filter { filters.matches($0, store: store) }
             .sorted { store.rank($0, $1) }
-    }
-
-    /// Mobilisables immédiatement — la rangée d'urgence.
-    private var availableTonight: [Musician] {
-        store.musicians.filter { $0.availability == .tonight }
     }
 
     /// Prochain événement de groupe (7 jours) — pour le rappel + invitations.
@@ -100,16 +93,9 @@ struct HomeView: View {
                         searchBar
                         groupEventReminder
                         availableInviteRow
-                        tonightRow
+                        suggestionsRow
                         actionBar
-
-                        if showMap {
-                            MusicianMapView(musicians: filtered)
-                                .frame(height: 480)
-                                .clipShape(RoundedRectangle(cornerRadius: 24))
-                        } else {
-                            feed
-                        }
+                        feed
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 24)
@@ -137,10 +123,10 @@ struct HomeView: View {
                     .font(.system(size: 25, weight: .bold))
                     .tracking(-0.3)
                 HStack(spacing: 6) {
-                    Image(systemName: "bolt.fill")
+                    Image(systemName: "person.2.fill")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(JC.coral)
-                    Text("\(availableTonight.count) musiciens mobilisables ce soir")
+                    Text("\(store.musicians.count) musiciens sur le réseau")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -345,59 +331,28 @@ struct HomeView: View {
         }
     }
 
-    /// Rangée principale : mobilisables immédiatement, le cœur de l'app.
-    private var tonightRow: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "bolt.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(JC.coral)
-                Text("Dispo ce soir")
-                    .font(.subheadline.weight(.bold))
-                Spacer()
-                Text("\(availableTonight.count)")
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(JC.coral)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(JC.coral.opacity(0.14), in: Capsule())
-            }
-            if availableTonight.isEmpty {
-                Text("Personne pour l'instant — reviens en fin d'après-midi.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                storiesScroller(availableTonight, ringColors: [JC.coral, JC.magenta])
-            }
-        }
-    }
-
-    private func storiesScroller(_ musicians: [Musician],
-                                 ringColors: [Color],
-                                 avatarSize: CGFloat = 62) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                ForEach(musicians) { musician in
-                    NavigationLink(value: musician) {
-                        VStack(spacing: 6) {
-                            AvatarView(name: musician.name, size: avatarSize, photo: musician.photo)
-                                .padding(4)
-                                .overlay(
-                                    Circle().stroke(
-                                        LinearGradient(colors: ringColors,
-                                                       startPoint: .top, endPoint: .bottom),
-                                        lineWidth: 2.5
-                                    )
-                                )
-                            Text(musician.name.split(separator: " ").first.map(String.init) ?? "")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            if musician.isDemo { DemoAccountBadge() }
-                            Text(LocalizedStringKey(musician.instruments.first?.rawValue ?? ""))
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
+    /// Suggestions de profils à suivre — affinité de styles, bien notés,
+    /// proches ou déjà croisés via un ami.
+    @ViewBuilder
+    private var suggestionsRow: some View {
+        let suggestions = store.followSuggestions
+        if !suggestions.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(JC.magenta)
+                    Text("Suggestions pour toi")
+                        .font(.subheadline.weight(.bold))
+                    Spacer(minLength: 0)
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(suggestions) { musician in
+                            SuggestionCard(musician: musician)
                         }
                     }
+                    .padding(.vertical, 2)
                 }
             }
         }
@@ -410,13 +365,6 @@ struct HomeView: View {
                 icon: "slider.horizontal.3",
                 isActive: filters.activeCount > 0
             ) { showFilters = true }
-
-            JCPillButton(
-                title: showMap ? "Liste" : "Carte",
-                icon: showMap ? "list.bullet" : "map.fill",
-                isActive: showMap,
-                activeColor: JC.violet
-            ) { withAnimation(.snappy) { showMap.toggle() } }
 
             Spacer()
             Text("\(filtered.count) profils")
@@ -499,48 +447,58 @@ struct SocialLinkBadge: View {
     }
 }
 
-// MARK: - Carte MapKit
+// MARK: - Carte de suggestion « à suivre »
 
-struct MusicianMapView: View {
+/// Carte compacte d'un profil suggéré : identité + bouton Suivre en un tap.
+struct SuggestionCard: View {
     @EnvironmentObject private var store: AppStore
-    let musicians: [Musician]
-    @State private var selected: Musician?
-
-    /// Jamais d'épingle à une position placeholder : seuls les profils avec
-    /// une vraie géoloc apparaissent sur la carte.
-    private var locatedMusicians: [Musician] {
-        musicians.filter(\.hasLocation)
-    }
+    let musician: Musician
 
     var body: some View {
-        Map(initialPosition: .region(MKCoordinateRegion(
-            center: store.referenceCoordinate ?? AppStore.geneva,
-            span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
-        ))) {
-            ForEach(locatedMusicians) { musician in
-                Annotation(musician.name, coordinate: musician.coordinate) {
-                    Button {
-                        selected = musician
-                    } label: {
-                        AvatarView(name: musician.name, size: 36, photo: musician.photo)
-                            .overlay(alignment: .topTrailing) {
-                                // Pastille colorée selon l'horizon de dispo.
-                                if musician.isAvailable {
-                                    Circle()
-                                        .fill(musician.availability.color)
-                                        .frame(width: 11, height: 11)
-                                        .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                                }
-                            }
+        VStack(spacing: 8) {
+            NavigationLink(value: musician) {
+                VStack(spacing: 8) {
+                    AvatarView(name: musician.name, size: 58, photo: musician.photo)
+                    VStack(spacing: 2) {
+                        Text(musician.name.split(separator: " ").first.map(String.init) ?? musician.name)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text(LocalizedStringKey(musician.instruments.first?.rawValue ?? ""))
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        if let summary = store.ratingSummary(for: musician) {
+                            RatingBadge(summary: summary)
+                        } else if musician.isDemo {
+                            DemoAccountBadge()
+                        }
                     }
                 }
             }
-        }
-        .sheet(item: $selected) { musician in
-            NavigationStack {
-                MusicianDetailView(musician: musician)
+            .buttonStyle(PressableStyle())
+
+            Button {
+                withAnimation(.snappy) { store.toggleFollow(musician) }
+            } label: {
+                Text(store.isFollowing(musician) ? "Suivi" : "Suivre")
+                    .font(.caption.weight(.heavy))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(
+                        store.isFollowing(musician) ? AnyShapeStyle(JC.inset) : AnyShapeStyle(JC.hero),
+                        in: Capsule()
+                    )
+                    .foregroundStyle(store.isFollowing(musician) ? Color.primary : Color.white)
             }
-            .presentationDetents([.large])
+            .buttonStyle(PressableStyle())
         }
+        .frame(width: 116)
+        .padding(10)
+        .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(JC.cardStroke, lineWidth: 1)
+        )
     }
 }

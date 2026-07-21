@@ -4,8 +4,13 @@ import SwiftUI
 /// et annonces SOS — en complément des filtres de l'accueil.
 struct SearchView: View {
     @EnvironmentObject private var store: AppStore
-    @State private var query = ""
+    @State private var query: String
     @FocusState private var focused: Bool
+
+    /// Requête pré-remplie (outillage captures d'écran Debug).
+    init(initialQuery: String = "") {
+        _query = State(initialValue: initialQuery)
+    }
 
     private var results: AppStore.SearchResults { store.search(query) }
     private var hasQuery: Bool {

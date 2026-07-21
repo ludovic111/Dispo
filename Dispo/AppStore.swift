@@ -16,10 +16,22 @@ final class AppStore: ObservableObject {
     /// Position de repli (démo, ou live sans géoloc) : centre de Genève (place du Molard).
     nonisolated static let geneva = CLLocationCoordinate2D(latitude: 46.2044, longitude: 6.1432)
 
-    /// Ma position réelle, arrondie à ~1 km (nil tant que l'utilisateur n'a
-    /// pas partagé sa géoloc). Persistée pour rester utilisable hors ligne.
+    /// Ma position réelle, arrondie à ~100 m (nil tant que l'utilisateur n'a
+    /// pas partagé sa géoloc). Reste sur l'appareil : ce qui part sur le
+    /// serveur est flouté selon `locationPrecision`. Persistée pour rester
+    /// utilisable hors ligne.
     @Published private(set) var myCoordinate: CLLocationCoordinate2D?
+    /// Ce que les autres voient de ma position (ville par défaut).
+    @Published private(set) var locationPrecision: LocationPrecision = .city
     private let locationService = LocationService()
+
+    /// Grille « niveau ville » (~5 km) appliquée avant toute publication.
+    nonisolated static func cityRounded(_ coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude: (coordinate.latitude / 0.05).rounded() * 0.05,
+            longitude: (coordinate.longitude / 0.05).rounded() * 0.05
+        )
+    }
 
     /// Point de référence des distances : ma vraie position en live, Genève en
     /// démo. nil en live tant que la géoloc n'est pas partagée — dans ce cas
@@ -34,6 +46,16 @@ final class AppStore: ObservableObject {
         guard let reference = referenceCoordinate else { return nil }
         if isLive && !musician.hasLocation { return nil }
         return musician.distance(from: reference)
+    }
+
+    /// Distance affichable : précise (« 2,3 km ») si le musicien partage sa
+    /// position exacte, sinon honnêtement approximative (« ≈ 5 km »).
+    func distanceLabel(to musician: Musician) -> String? {
+        guard let distance = distance(to: musician) else { return nil }
+        if !isLive || musician.hasExactLocation {
+            return String(format: "%.1f km", distance)
+        }
+        return String(format: "≈ %.0f km", max(1, distance.rounded()))
     }
 
     @Published var musicians: [Musician] = []
@@ -154,6 +176,7 @@ final class AppStore: ObservableObject {
     private static let groupsKey = "jamconnect.groups"
     private static let myLatitudeKey = "dispo.myLatitude"
     private static let myLongitudeKey = "dispo.myLongitude"
+    private static let locationPrecisionKey = "dispo.locationPrecision"
 
     init() {
         if let rcKey = BackendConfig.revenueCatAPIKey() {
@@ -254,36 +277,89 @@ final class AppStore: ObservableObject {
            let longitude = UserDefaults.standard.object(forKey: Self.myLongitudeKey) as? Double {
             myCoordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
         }
+        locationPrecision = UserDefaults.standard.string(forKey: Self.locationPrecisionKey)
+            .flatMap(LocationPrecision.init) ?? .city
         locationService.onUpdate = { [weak self] coordinate in
             self?.handleLocationUpdate(coordinate)
         }
+        applyThemeToWindows()
     }
 
     // MARK: - Géolocalisation
 
     /// Demande la position (autorisation incluse). Appelée à la connexion
-    /// live — en démo la position simulée (Genève) suffit.
+    /// live et à chaque retour au premier plan — c'est ce qui te rend
+    /// trouvable dans les recherches sans jamais te suivre en arrière-plan.
     func requestLocation() {
         locationService.request()
     }
 
-    /// Nouvelle position (déjà arrondie à ~1 km par LocationService) : on la
-    /// garde localement et on la pousse sur mon profil serveur pour que le
-    /// rayon des autres s'applique à ma vraie position.
+    /// Dernier refresh « retour au premier plan » — évite de mitrailler le
+    /// serveur quand on bascule rapidement entre apps.
+    private var lastForegroundRefresh: Date = .distantPast
+
+    /// À chaque retour au premier plan en mode live : position rafraîchie et
+    /// données serveur rechargées (au plus une fois par minute).
+    func appBecameActive() {
+        guard isLive else { return }
+        requestLocation()
+        guard Date().timeIntervalSince(lastForegroundRefresh) > 60 else { return }
+        lastForegroundRefresh = Date()
+        Task { await refreshLiveData() }
+    }
+
+    /// Nouvelle position (~100 m, jamais plus fin) : gardée sur l'appareil
+    /// pour les distances et la carte, puis publiée floutée selon ma
+    /// préférence — niveau ville pour tout le monde, position exacte en
+    /// plus si je l'ai choisi (amis ou tous).
     private func handleLocationUpdate(_ coordinate: CLLocationCoordinate2D) {
         let changed = myCoordinate?.latitude != coordinate.latitude
             || myCoordinate?.longitude != coordinate.longitude
         myCoordinate = coordinate
         UserDefaults.standard.set(coordinate.latitude, forKey: Self.myLatitudeKey)
         UserDefaults.standard.set(coordinate.longitude, forKey: Self.myLongitudeKey)
-        guard changed, let backend, let userID = liveUserID else { return }
+        guard changed else { return }
+        pushLocationToServer()
+    }
+
+    /// Publie ma position selon la préférence courante.
+    private func pushLocationToServer() {
+        guard let backend, let userID = liveUserID, let coordinate = myCoordinate else { return }
+        let city = Self.cityRounded(coordinate)
+        let precision = locationPrecision
         Task {
-            try? await backend.updateLocation(
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
+            try? await backend.updateCityLocation(
+                latitude: city.latitude,
+                longitude: city.longitude,
                 userID: userID
             )
+            if precision == .city {
+                try? await backend.deleteExactLocation(userID: userID)
+            } else {
+                try? await backend.upsertExactLocation(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    userID: userID
+                )
+            }
         }
+    }
+
+    /// Change la préférence de partage de position et met le serveur en
+    /// cohérence immédiatement (position exacte posée ou effacée).
+    func setLocationPrecision(_ precision: LocationPrecision) {
+        locationPrecision = precision
+        UserDefaults.standard.set(precision.rawValue, forKey: Self.locationPrecisionKey)
+        guard let backend, let userID = liveUserID else { return }
+        Task {
+            do {
+                try await backend.updateLocationPrecision(precision, userID: userID)
+            } catch {
+                backendError = tr("Le réglage de position n'a pas pu être enregistré.")
+            }
+        }
+        pushLocationToServer()
+        if myCoordinate == nil { requestLocation() }
     }
 
     /// Profil par défaut de la démo.
@@ -365,11 +441,17 @@ final class AppStore: ObservableObject {
                 applyServerProfile(mine)
             }
             isPremium = mine.isPremium
+            // La préférence de partage de position suit le compte.
+            if let precision = mine.locationPrecision.flatMap(LocationPrecision.init(rawValue:)) {
+                locationPrecision = precision
+                UserDefaults.standard.set(precision.rawValue, forKey: Self.locationPrecisionKey)
+            }
         }
         await refreshLiveData()
         await startMessageStream()
         await startGroupStream()
         await refreshNotificationAuthorization(registerIfAllowed: true)
+        backfillVideoThumbnails()
     }
 
     /// Recharge musiciens, annonces, conversations et groupes depuis le serveur.
@@ -384,12 +466,28 @@ final class AppStore: ObservableObject {
             async let ratingsTask = backend.fetchMyRatings(me: userID)
             async let collaborationsTask = backend.fetchCollaborations()
             async let blocksTask = backend.fetchBlockedUsers(me: userID)
+            async let exactLocationsTask = backend.fetchExactLocations()
             let (allMusicians, g, allConversations, profiles, follows, myRatingRows, collaborations, blocks) = try await (
                 musiciansTask, gigsTask, conversationsTask, profilesTask,
                 followsTask, ratingsTask, collaborationsTask, blocksTask
             )
             blockedUserIDs = blocks
-            musicians = allMusicians.filter { !blocks.contains($0.id) }
+            // Positions exactes partagées avec moi (RLS) : elles remplacent
+            // la position ville des profils concernés.
+            let exactByID = Dictionary(
+                uniqueKeysWithValues: ((try? await exactLocationsTask) ?? []).map { ($0.userId, $0) }
+            )
+            musicians = allMusicians
+                .filter { !blocks.contains($0.id) }
+                .map { musician in
+                    guard let exact = exactByID[musician.id] else { return musician }
+                    var updated = musician
+                    updated.latitude = exact.latitude
+                    updated.longitude = exact.longitude
+                    updated.hasLocation = true
+                    updated.hasExactLocation = true
+                    return updated
+                }
             events = g.sorted { $0.date < $1.date }
             notifyNewGigs(g)
             let blockedNames = Set(profiles.filter { blocks.contains($0.id) }.map(\.name))
@@ -523,6 +621,7 @@ final class AppStore: ObservableObject {
         typingExpiries = [:]
         typingConversationIDs = []
         visibleConversationID = nil
+        publicGroupsByProfile = [:]
         reloadDemoData()
     }
 
@@ -792,10 +891,30 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Change et persiste la préférence d'apparence.
+    /// Change et persiste la préférence d'apparence — effet immédiat sur
+    /// toutes les fenêtres, feuilles comprises.
     func setTheme(_ newTheme: AppTheme) {
         theme = newTheme
         UserDefaults.standard.set(newTheme.rawValue, forKey: Self.themeKey)
+        applyThemeToWindows()
+    }
+
+    /// Applique l'apparence au niveau UIWindow : contrairement à
+    /// `preferredColorScheme` (limité à la présentation racine), l'override
+    /// UIKit se propage instantanément aux sheets, alertes et barres.
+    func applyThemeToWindows() {
+        let style: UIUserInterfaceStyle
+        switch theme {
+        case .system: style = .unspecified
+        case .light: style = .light
+        case .dark: style = .dark
+        }
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = style
+            }
+        }
     }
 
     // MARK: - Langue
@@ -2066,6 +2185,7 @@ final class AppStore: ObservableObject {
         date: Date,
         place: String,
         fee: Int?,
+        paymentMethod: String?,
         note: String
     ) async -> Conversation {
         let conversation = await conversation(with: musician)
@@ -2079,7 +2199,11 @@ final class AppStore: ObservableObject {
         if !trimmedPlace.isEmpty {
             lines.append(String(format: tr("📍 Lieu : %@"), trimmedPlace))
         }
-        lines.append(String(format: tr("💰 Cachet : %@"), fee.map { "CHF \($0)" } ?? tr("À discuter")))
+        var feeLine = String(format: tr("💰 Cachet : %@"), fee.map { "CHF \($0)" } ?? tr("À discuter"))
+        if let paymentMethod, !paymentMethod.isEmpty {
+            feeLine += " · " + tr(PaymentMethod.displayLabel(for: paymentMethod))
+        }
+        lines.append(feeLine)
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedNote.isEmpty {
             lines.append(trimmedNote)
@@ -2172,7 +2296,19 @@ final class AppStore: ObservableObject {
             let data = try Data(contentsOf: compressed)
             guard data.count <= Self.maxVideoBytes else { throw VideoImportError.tooLarge }
             let (path, url) = try await backend.uploadDemoVideo(data, userID: userID)
-            let video = DemoVideo(fileName: "", date: Date(), storagePath: path, remoteURL: url.absoluteString)
+            // Miniature générée sur place — son absence ne bloque jamais l'envoi.
+            var thumbURL: String?
+            if let thumbData = await Self.generateVideoThumbnail(from: compressed) {
+                thumbURL = (try? await backend.uploadDemoVideoThumbnail(thumbData, userID: userID))?
+                    .url.absoluteString
+            }
+            let video = DemoVideo(
+                fileName: "",
+                date: Date(),
+                storagePath: path,
+                remoteURL: url.absoluteString,
+                thumbURL: thumbURL
+            )
             saveVideos(profile.videos + [video])
         } catch VideoImportError.tooLong {
             backendError = tr("Vidéo trop longue — 3 minutes maximum.")
@@ -2212,9 +2348,21 @@ final class AppStore: ObservableObject {
     /// Change la date d'une vidéo (date du concert / de l'enregistrement).
     func setVideoDate(_ date: Date?, for video: DemoVideo) {
         saveVideos(profile.videos.map {
-            $0.id == video.id
-                ? DemoVideo(id: $0.id, fileName: $0.fileName, date: date, storagePath: $0.storagePath, remoteURL: $0.remoteURL)
-                : $0
+            guard $0.id == video.id else { return $0 }
+            var updated = $0
+            updated.date = date
+            return updated
+        })
+    }
+
+    /// Change le titre d'une vidéo (vide = retour à « Vidéo N »).
+    func setVideoTitle(_ title: String?, for video: DemoVideo) {
+        let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveVideos(profile.videos.map {
+            guard $0.id == video.id else { return $0 }
+            var updated = $0
+            updated.title = (trimmed?.isEmpty == false) ? trimmed : nil
+            return updated
         })
     }
 
@@ -2222,10 +2370,63 @@ final class AppStore: ObservableObject {
         if !video.fileName.isEmpty {
             try? FileManager.default.removeItem(at: Self.mediaURL(for: video.fileName))
         }
-        if let path = video.storagePath, !path.isEmpty, let backend, isLive {
-            Task { try? await backend.deleteDemoVideoFile(path: path) }
+        if let backend, isLive {
+            var paths: [String] = []
+            if let path = video.storagePath, !path.isEmpty { paths.append(path) }
+            if let thumbPath = Self.storagePath(fromPublicURL: video.thumbURL) {
+                paths.append(thumbPath)
+            }
+            if !paths.isEmpty {
+                Task { try? await backend.deleteDemoVideoFiles(paths: paths) }
+            }
         }
         saveVideos(profile.videos.filter { $0.id != video.id })
+    }
+
+    /// Retrouve le chemin Storage d'une miniature depuis son URL publique.
+    nonisolated private static func storagePath(fromPublicURL urlString: String?) -> String? {
+        guard let urlString,
+              let range = urlString.range(of: "/demo-videos/") else { return nil }
+        let tail = String(urlString[range.upperBound...])
+        return tail.split(separator: "?").first.map(String.init)
+    }
+
+    /// Génère une miniature JPEG (~720 px) d'une vidéo, locale ou distante.
+    nonisolated static func generateVideoThumbnail(from url: URL) async -> Data? {
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 720, height: 720)
+        let time = CMTime(seconds: 1, preferredTimescale: 600)
+        guard let cgImage = try? await generator.image(at: time).image else { return nil }
+        return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.75)
+    }
+
+    /// Complète les miniatures manquantes de MES vidéos déjà en ligne
+    /// (envoyées avant la 0.9.6) — silencieux, au mieux.
+    private func backfillVideoThumbnails() {
+        guard let backend, let userID = liveUserID else { return }
+        let missing = profile.videos.filter {
+            $0.thumbURL == nil && ($0.remoteURL?.isEmpty == false)
+        }
+        guard !missing.isEmpty else { return }
+        Task { [weak self] in
+            var updates: [UUID: String] = [:]
+            for video in missing {
+                guard let remote = video.remoteURL, let url = URL(string: remote),
+                      let data = await Self.generateVideoThumbnail(from: url),
+                      let uploaded = try? await backend.uploadDemoVideoThumbnail(data, userID: userID)
+                else { continue }
+                updates[video.id] = uploaded.url.absoluteString
+            }
+            guard !updates.isEmpty, let self else { return }
+            self.saveVideos(self.profile.videos.map {
+                guard let thumb = updates[$0.id] else { return $0 }
+                var updated = $0
+                updated.thumbURL = thumb
+                return updated
+            })
+        }
     }
 
     /// Écrit la liste au nouveau format daté (migre l'ancien au passage) et
@@ -2254,6 +2455,101 @@ final class AppStore: ObservableObject {
     func followerCount(of musician: Musician) -> Int {
         if isLive { return liveFollowerCounts[musician.id, default: 0] }
         return 40 + abs(musician.name.stableHash) % 320 + (isFollowing(musician) ? 1 : 0)
+    }
+
+    // MARK: - Suggestions de musiciens à suivre
+
+    /// Profils recommandés : pas encore suivis, classés par affinité —
+    /// styles partagés, instrument complémentaire, bien notés, proches,
+    /// déjà croisés via un ami ou déjà abonnés à moi.
+    var followSuggestions: [Musician] {
+        let myGenres = Set(profile.genres)
+        let myInstruments = Set(profile.instruments)
+        return musicians
+            .filter { !isFollowing($0) }
+            .map { musician -> (musician: Musician, score: Double) in
+                var score = 0.0
+                score += Double(min(3, Set(musician.genres).intersection(myGenres).count)) * 2
+                if Set(musician.instruments).isDisjoint(with: myInstruments),
+                   !musician.instruments.isEmpty {
+                    score += 1 // complémentaire : on peut jouer ensemble
+                }
+                if let summary = ratingSummary(for: musician), summary.average >= 4 {
+                    score += 1.5
+                }
+                if let distance = distance(to: musician), distance <= 25 {
+                    score += 1
+                }
+                if playedWithAFriend(musician) { score += 2 }
+                if socialLink(with: musician.name) == .follower { score += 2.5 }
+                return (musician, score)
+            }
+            .filter { $0.score > 0 }
+            .sorted {
+                if $0.score != $1.score { return $0.score > $1.score }
+                return followerCount(of: $0.musician) > followerCount(of: $1.musician)
+            }
+            .prefix(8)
+            .map(\.musician)
+    }
+
+    // MARK: - Groupes : photo, visibilité, profils publics
+
+    /// Groupes publics par profil, chargés à l'ouverture d'une fiche.
+    @Published private(set) var publicGroupsByProfile: [UUID: [PublicGroup]] = [:]
+
+    /// Charge (une fois) les groupes publics d'un musicien pour sa fiche.
+    func loadPublicGroups(of musicianID: UUID) async {
+        guard isLive, let backend, publicGroupsByProfile[musicianID] == nil else { return }
+        let groups = (try? await backend.fetchPublicGroups(of: musicianID)) ?? []
+        publicGroupsByProfile[musicianID] = groups
+    }
+
+    /// Photo du groupe (leader uniquement — l'UI verrouille). Hébergée dans
+    /// le dossier Storage du leader, puis visible par tous les membres.
+    func setGroupPhoto(_ data: Data, in group: GroupChat) {
+        guard let backend, let userID = liveUserID else {
+            backendError = tr("Connecte-toi pour ajouter une photo de groupe.")
+            return
+        }
+        let groupID = group.id
+        Task { [weak self] in
+            do {
+                let url = try await backend.uploadGroupPhoto(data, leaderID: userID, groupID: groupID)
+                try await backend.updateGroupPhotoURL(url.absoluteString, groupID: groupID)
+                self?.updateGroup(groupID) { $0.photoURL = url.absoluteString }
+            } catch {
+                self?.backendError = self?.tr("La photo du groupe n'a pas pu être envoyée.")
+            }
+        }
+    }
+
+    /// Rend le groupe visible (ou non) sur les profils de ses membres.
+    func setGroupVisibility(_ isPublic: Bool, in group: GroupChat) {
+        updateGroup(group.id) { $0.isPublic = isPublic }
+        if let backend, isLive {
+            syncLive { try await backend.setGroupVisibility(isPublic, groupID: group.id) }
+        }
+    }
+
+    // MARK: - Divers
+
+    /// Musicien du feed correspondant à une conversation (fiche profil
+    /// ouvrable depuis le chat). UUID serveur d'abord, nom en repli (démo).
+    func musician(for conversation: Conversation) -> Musician? {
+        if let id = conversation.contactID,
+           let match = musicians.first(where: { $0.id == id }) {
+            return match
+        }
+        return musicians.first(where: { $0.name == conversation.contactName })
+    }
+
+    /// Active la sortie audio même si l'iPhone est en mode silencieux —
+    /// sans elle, les vidéos de démo semblent muettes (catégorie ambiante).
+    nonisolated static func activatePlaybackAudio() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .moviePlayback)
+        try? session.setActive(true)
     }
 
     // MARK: - Recherche universelle

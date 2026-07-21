@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
-    MARKETING_VERSION: "0.9.5"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "0.9.6"
+    CURRENT_PROJECT_VERSION: "11"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -20,6 +20,18 @@ packages:
   RevenueCat:
     url: https://github.com/RevenueCat/purchases-ios-spm
     from: 5.0.0
+schemes:
+  Dispo:
+    build:
+      targets:
+        Dispo: all
+    run:
+      config: Debug
+      # Abonnements factices en simulateur (paywall testable hors App Store).
+      # Ne concerne que le RUN local — l'archive Release n'embarque rien.
+      storeKitConfiguration: Dispo/Products.storekit
+    archive:
+      config: Release
 targets:
   Dispo:
     type: application
@@ -64,5 +76,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: ch.dispo.app
         PRODUCT_NAME: Dispo
         TARGETED_DEVICE_FAMILY: "1"
-        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        # Pas de UIUserInterfaceStyle forcé : il verrouillait UIKit en sombre
+        # et le choix d'apparence des réglages ne s'appliquait pas en direct.
         GENERATE_INFOPLIST_FILE: false

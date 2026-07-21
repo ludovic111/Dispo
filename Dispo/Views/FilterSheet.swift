@@ -39,28 +39,56 @@ struct FilterSheet: View {
                 }
 
                 Section {
-                    Picker("J'ai besoin d'un musicien", selection: $filters.availability) {
-                        Text("Peu importe quand").tag(Availability?.none)
-                        Label("Ce soir", systemImage: Availability.tonight.symbol).tag(Availability?.some(.tonight))
-                        Label("Cette semaine", systemImage: Availability.thisWeek.symbol).tag(Availability?.some(.thisWeek))
-                        Label("Ce week-end", systemImage: Availability.weekend.symbol).tag(Availability?.some(.weekend))
-                        Label("Avec préavis", systemImage: Availability.onRequest.symbol).tag(Availability?.some(.onRequest))
+                    Toggle("Dispo à une date précise", isOn: Binding(
+                        get: { filters.neededDate != nil },
+                        set: { on in
+                            filters.neededDate = on
+                                ? Calendar.current.startOfDay(for: Date())
+                                : nil
+                        }
+                    ))
+                    if filters.neededDate != nil {
+                        DatePicker(
+                            "Date recherchée",
+                            selection: Binding(
+                                get: { filters.neededDate ?? Date() },
+                                set: { filters.neededDate = $0 }
+                            ),
+                            in: Calendar.current.startOfDay(for: Date())...,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .tint(JC.coral)
                     }
                 } header: {
                     Text("Disponibilité")
                 } footer: {
-                    Text("« Cette semaine » inclut les musiciens dispo ce soir et le week-end.")
+                    Text("Choisis le jour où tu as besoin d'un musicien — seuls ceux qui l'ont coché dans leur calendrier restent affichés.")
                 }
 
-                Section("Rayon de recherche") {
-                    Picker("Rayon", selection: $filters.radiusKm) {
-                        Text("5 km").tag(5.0)
-                        Text("10 km").tag(10.0)
-                        Text("25 km").tag(25.0)
-                        Text("50 km").tag(50.0)
-                        Text("100 km").tag(100.0)
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Rayon")
+                            Spacer()
+                            Text(verbatim: "\(Int(filters.radiusKm)) km")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(JC.coral)
+                        }
+                        Slider(value: $filters.radiusKm, in: 5...100, step: 5)
+                            .tint(JC.coral)
+                        HStack {
+                            Text(verbatim: "5 km")
+                            Spacer()
+                            Text(verbatim: "100 km")
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                     }
-                    .pickerStyle(.segmented)
+                } header: {
+                    Text("Rayon de recherche")
+                } footer: {
+                    Text("Le rayon s'applique aux musiciens dont la position est connue — les autres restent affichés.")
                 }
 
                 // Filtre avancé — réservé Premium

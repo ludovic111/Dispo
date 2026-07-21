@@ -1,9 +1,10 @@
 import CoreLocation
 
-/// Position de l'utilisateur pour le rayon de recherche. La coordonnée est
-/// arrondie à ~1 km AVANT de quitter cette classe : assez précise pour des
-/// rayons de 5 à 100 km, assez floue pour ne jamais exposer un domicile —
-/// c'est cette valeur arrondie qui part sur le serveur.
+/// Position de l'utilisateur pour le rayon de recherche et la carte. La
+/// coordonnée est arrondie à ~100 m avant de quitter cette classe (jamais
+/// l'adresse au mètre) ; c'est AppStore qui décide ensuite de ce qui part
+/// sur le serveur selon la préférence de partage : niveau ville (~5 km)
+/// pour tout le monde, position exacte réservée aux amis ou à tous.
 final class LocationService: NSObject, CLLocationManagerDelegate {
 
     private let manager = CLLocationManager()
@@ -41,8 +42,8 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let coordinate = locations.last?.coordinate else { return }
         let rounded = CLLocationCoordinate2D(
-            latitude: (coordinate.latitude * 100).rounded() / 100,
-            longitude: (coordinate.longitude * 100).rounded() / 100
+            latitude: (coordinate.latitude * 1000).rounded() / 1000,
+            longitude: (coordinate.longitude * 1000).rounded() / 1000
         )
         Task { @MainActor [onUpdate] in onUpdate?(rounded) }
     }

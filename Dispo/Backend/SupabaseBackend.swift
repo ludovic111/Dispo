@@ -164,6 +164,8 @@ final class SupabaseBackend: Sendable {
         var ratingCount: Int?
         /// Vidéos de démo hébergées (jsonb côté serveur).
         var demoVideos: [DemoVideoPayload]?
+        /// Préférence de partage de position (city / exact_friends / exact_everyone).
+        var locationPrecision: String?
 
         enum CodingKeys: String, CodingKey {
             case id, name, age, neighborhood, latitude, longitude
@@ -175,6 +177,7 @@ final class SupabaseBackend: Sendable {
             case ratingAvg = "rating_avg"
             case ratingCount = "rating_count"
             case demoVideos = "demo_videos"
+            case locationPrecision = "location_precision"
         }
 
         var parsedDates: [Date] {
@@ -228,22 +231,42 @@ final class SupabaseBackend: Sendable {
         var url: String
         /// « yyyy-MM-dd » — nil si non renseignée.
         var date: String?
+        /// Titre choisi par le musicien (nil = « Vidéo N »).
+        var title: String?
+        /// URL publique de la miniature (nil pour les vidéos d'avant 0.9.6).
+        var thumb: String?
 
         init(from video: DemoVideo) {
             id = video.id
             path = video.storagePath ?? ""
             url = video.remoteURL ?? ""
             date = video.date.map { SupabaseBackend.dayFormatter.string(from: $0) }
+            title = video.title
+            thumb = video.thumbURL
         }
 
         var asDemoVideo: DemoVideo {
             DemoVideo(
                 id: id,
                 fileName: "",
+                title: title,
                 date: date.flatMap { SupabaseBackend.dayFormatter.date(from: $0) },
                 storagePath: path,
-                remoteURL: url
+                remoteURL: url,
+                thumbURL: thumb
             )
+        }
+    }
+
+    /// Position exacte d'un profil (table `profile_locations`, RLS : on ne
+    /// reçoit que ce que chacun a choisi de partager avec nous).
+    struct ExactLocationRow: Codable, Hashable {
+        var userId: UUID
+        var latitude: Double
+        var longitude: Double
+        enum CodingKeys: String, CodingKey {
+            case latitude, longitude
+            case userId = "user_id"
         }
     }
 
@@ -298,6 +321,7 @@ final class SupabaseBackend: Sendable {
         var description: String?
         var postedAt: Date
         var isLocked: Bool
+        var paymentMethod: String?
 
         enum CodingKeys: String, CodingKey {
             case id, date, genre, fee, description, title, place, neighborhood
@@ -305,6 +329,7 @@ final class SupabaseBackend: Sendable {
             case wantedInstruments = "wanted_instruments"
             case postedAt = "posted_at"
             case isLocked = "is_locked"
+            case paymentMethod = "payment_method"
         }
 
         func asGigRequest(hostName: String, isMine: Bool, applied: Bool) -> GigRequest {
@@ -318,6 +343,7 @@ final class SupabaseBackend: Sendable {
                 genre: Genre(rawValue: genre) ?? .jazz,
                 wantedInstruments: wantedInstruments.compactMap(Instrument.init(rawValue:)),
                 fee: fee,
+                paymentMethod: paymentMethod,
                 descriptionText: description ?? "",
                 applied: applied,
                 isMine: isMine,
@@ -414,12 +440,47 @@ final class SupabaseBackend: Sendable {
         try await client.from("profiles").update(update).eq("id", value: userID).execute()
     }
 
-    /// Écrit ma position (déjà arrondie à ~1 km par LocationService).
-    func updateLocation(latitude: Double, longitude: Double, userID: UUID) async throws {
+    /// Écrit ma position publique niveau ville (déjà floutée par AppStore).
+    func updateCityLocation(latitude: Double, longitude: Double, userID: UUID) async throws {
         try await client.from("profiles")
             .update(["latitude": latitude, "longitude": longitude])
             .eq("id", value: userID)
             .execute()
+    }
+
+    /// Écrit ma préférence de partage de position.
+    func updateLocationPrecision(_ precision: LocationPrecision, userID: UUID) async throws {
+        try await client.from("profiles")
+            .update(["location_precision": precision.rawValue])
+            .eq("id", value: userID)
+            .execute()
+    }
+
+    /// Pose (ou met à jour) ma position exacte — lisible uniquement selon
+    /// ma préférence (amis mutuels ou tout le monde), RLS côté serveur.
+    func upsertExactLocation(latitude: Double, longitude: Double, userID: UUID) async throws {
+        struct Upsert: Encodable {
+            let user_id: UUID
+            let latitude: Double
+            let longitude: Double
+        }
+        try await client.from("profile_locations")
+            .upsert(Upsert(user_id: userID, latitude: latitude, longitude: longitude))
+            .execute()
+    }
+
+    /// Efface ma position exacte (retour au niveau ville pour tout le monde).
+    func deleteExactLocation(userID: UUID) async throws {
+        try await client.from("profile_locations")
+            .delete()
+            .eq("user_id", value: userID)
+            .execute()
+    }
+
+    /// Positions exactes que j'ai le droit de voir (les miennes + celles
+    /// partagées avec moi) — la RLS filtre côté serveur.
+    func fetchExactLocations() async throws -> [ExactLocationRow] {
+        try await client.from("profile_locations").select().execute().value
     }
 
     // MARK: - Vidéos de démo (Supabase Storage)
@@ -441,9 +502,28 @@ final class SupabaseBackend: Sendable {
         return (path, url)
     }
 
+    /// Téléverse la miniature JPEG d'une vidéo de démo (même bucket, même
+    /// dossier) et retourne son URL publique.
+    func uploadDemoVideoThumbnail(_ data: Data, userID: UUID) async throws -> (path: String, url: URL) {
+        let path = "\(userID.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
+        try await client.storage.from(Self.demoVideosBucket).upload(
+            path,
+            data: data,
+            options: FileOptions(cacheControl: "86400", contentType: "image/jpeg")
+        )
+        let url = try client.storage.from(Self.demoVideosBucket).getPublicURL(path: path)
+        return (path, url)
+    }
+
     /// Supprime le fichier d'une vidéo retirée du profil.
     func deleteDemoVideoFile(path: String) async throws {
         _ = try await client.storage.from(Self.demoVideosBucket).remove(paths: [path])
+    }
+
+    /// Supprime plusieurs fichiers du bucket vidéos (vidéo + miniature).
+    func deleteDemoVideoFiles(paths: [String]) async throws {
+        guard !paths.isEmpty else { return }
+        _ = try await client.storage.from(Self.demoVideosBucket).remove(paths: paths)
     }
 
     /// Pousse la liste des vidéos de démo sur mon profil (jsonb).
@@ -623,6 +703,7 @@ final class SupabaseBackend: Sendable {
             let genre: String
             let wanted_instruments: [String]
             let fee: Int?
+            let payment_method: String?
             let description: String
         }
         let insert = Insert(
@@ -635,6 +716,7 @@ final class SupabaseBackend: Sendable {
             genre: gig.genre.rawValue,
             wanted_instruments: gig.wantedInstruments.map(\.rawValue),
             fee: gig.fee,
+            payment_method: gig.paymentMethod,
             description: gig.descriptionText
         )
         try await client.from("gig_requests").insert(insert).execute()
@@ -834,10 +916,14 @@ final class SupabaseBackend: Sendable {
         var emoji: String
         var leaderId: UUID
         var repertoire: [SongPayload]
+        var photoUrl: String?
+        var isPublic: Bool?
 
         enum CodingKeys: String, CodingKey {
             case id, name, emoji, repertoire
             case leaderId = "leader_id"
+            case photoUrl = "photo_url"
+            case isPublic = "is_public"
         }
     }
 
@@ -1021,6 +1107,8 @@ final class SupabaseBackend: Sendable {
                 id: row.id,
                 name: row.name,
                 emoji: row.emoji,
+                photoURL: row.photoUrl,
+                isPublic: row.isPublic ?? false,
                 leaderName: leaderName,
                 memberNames: memberNames,
                 memberKinds: kinds,
@@ -1096,6 +1184,74 @@ final class SupabaseBackend: Sendable {
 
     func deleteGroup(_ groupID: UUID) async throws {
         try await client.from("music_groups").delete().eq("id", value: groupID).execute()
+    }
+
+    // MARK: - Groupes : photo, visibilité, profils publics
+
+    /// Bucket des photos de groupe : celui des avatars, dans le dossier du
+    /// leader (`<leaderUID>/group_<groupID>.jpg`) — les policies Storage
+    /// n'autorisent l'écriture que dans son propre dossier.
+    func uploadGroupPhoto(_ data: Data, leaderID: UUID, groupID: UUID) async throws -> URL {
+        let path = "\(leaderID.uuidString.lowercased())/group_\(groupID.uuidString.lowercased()).jpg"
+        try await client.storage.from(Self.avatarsBucket).upload(
+            path,
+            data: data,
+            options: FileOptions(cacheControl: "3600", contentType: "image/jpeg", upsert: true)
+        )
+        let base = try client.storage.from(Self.avatarsBucket).getPublicURL(path: path)
+        var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "v", value: "\(Int(Date().timeIntervalSince1970))")]
+        return components?.url ?? base
+    }
+
+    /// Écrit (ou efface) l'URL de la photo du groupe.
+    func updateGroupPhotoURL(_ url: String?, groupID: UUID) async throws {
+        struct Update: Encodable { let photo_url: String? }
+        try await client.from("music_groups")
+            .update(Update(photo_url: url))
+            .eq("id", value: groupID)
+            .execute()
+    }
+
+    /// Rend le groupe public (affiché sur les profils des membres) ou privé.
+    func setGroupVisibility(_ isPublic: Bool, groupID: UUID) async throws {
+        try await client.from("music_groups")
+            .update(["is_public": isPublic])
+            .eq("id", value: groupID)
+            .execute()
+    }
+
+    private struct PublicGroupRow: Decodable {
+        var id: UUID
+        var name: String
+        var emoji: String
+        var photoUrl: String?
+        var memberCount: Int
+        var isLeader: Bool
+        enum CodingKeys: String, CodingKey {
+            case id, name, emoji
+            case photoUrl = "photo_url"
+            case memberCount = "member_count"
+            case isLeader = "is_leader"
+        }
+    }
+
+    /// Groupes publics d'un musicien (fonction SECURITY DEFINER côté
+    /// serveur — la RLS « membres uniquement » des groupes reste intacte).
+    func fetchPublicGroups(of profileID: UUID) async throws -> [PublicGroup] {
+        let rows: [PublicGroupRow] = try await client
+            .rpc("profile_public_groups", params: ["target": profileID.uuidString])
+            .execute().value
+        return rows.map {
+            PublicGroup(
+                id: $0.id,
+                name: $0.name,
+                emoji: $0.emoji,
+                photoURL: $0.photoUrl,
+                memberCount: $0.memberCount,
+                isLeader: $0.isLeader
+            )
+        }
     }
 
     func createEvent(_ event: GroupEvent, groupID: UUID) async throws {

@@ -11,6 +11,22 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "0.9.6",
+            title: "Carte, position maîtrisée & groupes publics",
+            points: [
+                "Nouvel onglet Carte : les musiciens autour de toi, plein écran",
+                "Ta position est approximative (niveau ville) par défaut — partage exact possible, pour tes amis ou pour tous, dans les réglages",
+                "Rayon de recherche au curseur (5 à 100 km) et filtre par date précise de dispo",
+                "Accueil et messages allégés : suggestions de musiciens à suivre, conversations et groupes séparés",
+                "Ouvre le profil d'un musicien d'un tap depuis la conversation",
+                "SOS : moyen de versement du cachet (Twint, virement, espèces, Cash App ou autre) et carte du lieu",
+                "Vidéos de démo : titre, miniatures et son même en mode silencieux",
+                "Groupes : photo de groupe et option « groupe public » affichée sur vos profils",
+                "Le changement d'apparence (clair / sombre) s'applique instantanément",
+                "Corrigé : le remplacement de la photo de profil échouait"
+            ]
+        ),
+        PatchNote(
             version: "0.9.5",
             title: "Notes, vidéos & conversations vivantes",
             points: [

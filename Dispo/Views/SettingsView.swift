@@ -30,6 +30,7 @@ struct SettingsSheet: View {
                 accountSection
                 notificationsSection
                 preferencesSection
+                locationSection
                 premiumSection
                 helpSection
                 if !store.isLive { demoSection }
@@ -131,6 +132,49 @@ struct SettingsSheet: View {
                     chevron
                 }
             }
+        }
+    }
+
+    // MARK: - Position
+
+    /// Ce que les autres voient de ma position. Par défaut : niveau ville.
+    /// La position exacte est un choix explicite — pour mes amis (suivi
+    /// mutuel) ou pour tout le monde.
+    private var locationSection: some View {
+        Section {
+            ForEach(LocationPrecision.allCases) { option in
+                Button {
+                    store.setLocationPrecision(option)
+                } label: {
+                    HStack(spacing: 12) {
+                        settingsIcon(option.symbol, option == .city ? .teal : JC.coral)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(LocalizedStringKey(option.label))
+                                .foregroundStyle(.primary)
+                            Text(LocalizedStringKey(descriptionKey(for: option)))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if store.locationPrecision == option {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(JC.coral)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Ma position")
+        } footer: {
+            Text("Ta position est relevée quand tu ouvres l'app, jamais en arrière-plan. En approximatif, les autres te situent à ~5 km près — assez pour te trouver dans les recherches, sans révéler ton adresse.")
+        }
+    }
+
+    private func descriptionKey(for option: LocationPrecision) -> String {
+        switch option {
+        case .city: return "Recommandé — visible à ~5 km près"
+        case .exactFriends: return "Position précise pour les amis (suivi mutuel)"
+        case .exactEveryone: return "Position précise pour tout le réseau"
         }
     }
 

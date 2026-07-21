@@ -12,6 +12,9 @@ struct CreateEventView: View {
     @State private var genre: Genre = .latin
     @State private var wanted: Set<Instrument> = []
     @State private var feeText = ""
+    @State private var paymentMethod: PaymentMethod?
+    @State private var customPayment = ""
+    @State private var useCustomPayment = false
     @State private var descriptionText = ""
     /// L'annonce venant d'être publiée — déclenche l'écran de matching.
     @State private var published: GigRequest?
@@ -105,6 +108,11 @@ struct CreateEventView: View {
                 Section {
                     TextField("Ex. 150", text: $feeText)
                         .keyboardType(.numberPad)
+                    PaymentMethodField(
+                        method: $paymentMethod,
+                        custom: $customPayment,
+                        useCustom: $useCustomPayment
+                    )
                 } header: {
                     Text("Cachet (CHF)")
                 } footer: {
@@ -141,6 +149,11 @@ struct CreateEventView: View {
                             genre: genre,
                             wantedInstruments: Array(wanted).sorted { $0.rawValue < $1.rawValue },
                             fee: Int(feeText.trimmingCharacters(in: .whitespaces)),
+                            paymentMethod: PaymentMethodField.storedValue(
+                                method: paymentMethod,
+                                custom: customPayment,
+                                useCustom: useCustomPayment
+                            ),
                             descriptionText: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
                             isMine: true
                         )
@@ -150,5 +163,73 @@ struct CreateEventView: View {
                     .disabled(!isValid)
                 }
             }
+    }
+}
+
+// MARK: - Moyen de versement du cachet
+
+/// Sélecteur du moyen de versement : Twint, virement, espèces, Cash App —
+/// ou un moyen personnalisé saisi librement. Partagé entre la publication
+/// d'un SOS et la demande de dépannage directe.
+struct PaymentMethodField: View {
+    @Binding var method: PaymentMethod?
+    @Binding var custom: String
+    @Binding var useCustom: Bool
+
+    /// Valeur stockée : token connu, texte libre, ou nil si rien de choisi.
+    static func storedValue(method: PaymentMethod?, custom: String, useCustom: Bool) -> String? {
+        if useCustom {
+            let trimmed = custom.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return method?.rawValue
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Versé par")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(PaymentMethod.allCases) { option in
+                        chip(
+                            label: option.label,
+                            icon: option.symbol,
+                            isOn: !useCustom && method == option
+                        ) {
+                            useCustom = false
+                            method = (method == option) ? nil : option
+                        }
+                    }
+                    chip(label: "Autre…", icon: "square.and.pencil", isOn: useCustom) {
+                        useCustom.toggle()
+                        if useCustom { method = nil }
+                    }
+                }
+            }
+            if useCustom {
+                TextField("Ex. PayPal, Revolut…", text: $custom)
+                    .textInputAutocapitalization(.words)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func chip(label: String, icon: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+                Text(LocalizedStringKey(label))
+                    .font(.caption.weight(.semibold))
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(isOn ? JC.gold.opacity(0.2) : JC.inset, in: Capsule())
+            .overlay(Capsule().stroke(isOn ? JC.gold.opacity(0.5) : .clear, lineWidth: 1))
+            .foregroundStyle(isOn ? JC.gold : .primary)
+        }
+        .buttonStyle(.plain)
     }
 }

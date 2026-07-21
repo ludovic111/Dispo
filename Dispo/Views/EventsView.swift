@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct EventsView: View {
     @EnvironmentObject private var store: AppStore
@@ -15,10 +16,18 @@ struct EventsView: View {
                             title: "SOS dépannage",
                             subtitle: "\(store.events.count) concerts cherchent un musicien",
                             icon: "bolt.fill",
-                            iconColor: JC.coral
+                            iconColor: JC.coral,
+                            trailing: AnyView(createButton)
                         )
 
-                        createBanner
+                        if store.events.isEmpty {
+                            JCEmptyState(
+                                icon: "bolt.slash",
+                                title: "Aucun SOS en cours",
+                                message: "Un musicien te lâche ? Publie ton SOS avec le bouton +.",
+                                iconColor: JC.coral
+                            )
+                        }
 
                         // Les annonces fraîches (< 30 min) sont en avant-première
                         // Premium : les non-abonnés voient le cachet mais pas le
@@ -57,13 +66,22 @@ struct EventsView: View {
         }
     }
 
-    private var createBanner: some View {
-        JCPromoBanner(
-            icon: "plus.circle.fill",
-            title: "Publie ton SOS",
-            subtitle: "« Cherche bassiste samedi, Chat Noir, cachet CHF 150 »",
-            style: .hero
-        ) { showCreate = true }
+    /// Publier un SOS — bouton compact du header, l'écran reste épuré.
+    private var createButton: some View {
+        Button { showCreate = true } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "plus")
+                    .font(.caption.weight(.heavy))
+                Text("SOS")
+                    .font(.caption.weight(.heavy))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(JC.hero, in: Capsule())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityLabel(Text("Publier un SOS"))
     }
 }
 
@@ -112,6 +130,9 @@ struct EventCard: View {
                         TagView(text: instrument.rawValue, color: .teal)
                     }
                     TagView(text: event.feeLabel, color: JC.gold)
+                    if let payment = event.paymentLabel {
+                        TagView(text: payment, color: JC.violet)
+                    }
                 }
             }
             .padding(13)
@@ -237,21 +258,17 @@ struct EventDetailView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        // Bandeau photo du genre
-                        ZStack {
-                            GenreCover(genre: event.genre)
-                                .frame(height: 130)
-                                .clipShape(RoundedRectangle(cornerRadius: 26))
-                            VStack(spacing: 5) {
-                                Text(event.title)
-                                    .font(.title3.weight(.heavy))
-                                    .multilineTextAlignment(.center)
+                        // En-tête épuré — plus de photo de couverture.
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(event.title)
+                                .font(.title2.weight(.heavy))
+                                .tracking(-0.4)
+                            HStack(spacing: 8) {
                                 Text("Publié par \(event.hostName)")
-                                    .font(.caption.weight(.medium))
-                                    .opacity(0.9)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                TagView(text: event.genre.rawValue, color: event.genre.color)
                             }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal)
                         }
                         .padding(.top, 8)
 
@@ -260,11 +277,19 @@ struct EventDetailView: View {
                                 Label(event.date.formatted(date: .complete, time: .shortened), systemImage: "calendar")
                                 Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
                                 Label("\(store.tr(event.genre.rawValue)) — \(event.genre.codes.map { store.tr($0) }.joined(separator: ", "))", systemImage: "music.quarternote.3")
-                                Label("Cachet : \(store.tr(event.feeLabel))", systemImage: "banknote")
-                                    .foregroundStyle(JC.gold)
+                                Label {
+                                    Text("Cachet : \(store.tr(event.feeLabel))")
+                                    + Text(verbatim: event.paymentLabel.map { " · \(store.tr($0))" } ?? "")
+                                } icon: {
+                                    Image(systemName: "banknote")
+                                }
+                                .foregroundStyle(JC.gold)
                             }
                             .font(.subheadline)
                         }
+
+                        // Le lieu sur la carte — géocodé à la volée.
+                        GigPlaceMapCard(event: event)
 
                         JCCard {
                             VStack(alignment: .leading, spacing: 10) {
@@ -339,7 +364,7 @@ struct EventDetailView: View {
     }
 
     @ViewBuilder
-    private func bottomBar(for event: GigRequest) -> some View {
+    fileprivate func bottomBar(for event: GigRequest) -> some View {
                 if !event.isMine {
                     Button {
                         store.toggleApply(event)
@@ -364,5 +389,72 @@ struct EventDetailView: View {
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial)
         }
+    }
+}
+
+// MARK: - Carte du lieu du SOS
+
+/// Mini-carte du lieu du concert, géocodée depuis « salle · quartier ».
+/// Un tap ouvre Plans pour l'itinéraire. Invisible si le lieu est
+/// introuvable — jamais de fausse épingle.
+struct GigPlaceMapCard: View {
+    let event: GigRequest
+    @State private var coordinate: CLLocationCoordinate2D?
+    @State private var lookupDone = false
+
+    private var query: String {
+        "\(event.place), \(event.neighborhood)"
+    }
+
+    var body: some View {
+        Group {
+            if let coordinate {
+                JCCard(padding: 0) {
+                    VStack(spacing: 0) {
+                        Map(initialPosition: .region(MKCoordinateRegion(
+                            center: coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
+                        ))) {
+                            Marker(event.place, systemImage: "music.mic", coordinate: coordinate)
+                                .tint(JC.coral)
+                        }
+                        .frame(height: 150)
+                        .allowsHitTesting(false)
+
+                        Button {
+                            openInMaps(coordinate)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
+                                    .font(.subheadline.weight(.bold))
+                                Text("Itinéraire vers \(event.place)")
+                                    .font(.caption.weight(.bold))
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(12)
+                            .foregroundStyle(JC.violet)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                }
+            }
+        }
+        .task(id: event.id) {
+            guard !lookupDone else { return }
+            lookupDone = true
+            let placemarks = try? await CLGeocoder().geocodeAddressString(query)
+            coordinate = placemarks?.first?.location?.coordinate
+        }
+    }
+
+    private func openInMaps(_ coordinate: CLLocationCoordinate2D) {
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let item = MKMapItem(placemark: placemark)
+        item.name = event.place
+        item.openInMaps()
     }
 }

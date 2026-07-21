@@ -26,11 +26,13 @@
 		7AF0430FCB7DB66B78E0D64C /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D128C9A5713A4BEA6CB5CDF1 /* Models.swift */; };
 		7D8885F2E241C09E56C1C339 /* BackendConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29B18D3DD55BFEDCE6D109D /* BackendConfig.swift */; };
 		7FFC99269986DF7164276E64 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD32389AB32CF9529D343 /* AuthGateView.swift */; };
+		84085AE3A4E5476432E24A20 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = ABF5FA7903422EEE29AE8955 /* Products.storekit */; };
 		89CAF17D56DDCD16E989299F /* SOSMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BF7594E5DECA397D60C3C0 /* SOSMatchView.swift */; };
 		9EA9F23A7A804B91F2AB0664 /* FilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */; };
 		A21CFD4B8CD824BD4EA45150 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6CEE8CF8E49314AC43A8F44F /* Secrets.plist */; };
 		ABDC5A4D00EC694DC10929E2 /* DispoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */; };
 		B0D6FC9FF9B73F6BCC3D0567 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D10ACFB71CC40CFF3DFAC7 /* ChatView.swift */; };
+		B1CA40A340EF9F9C5D09D8CF /* MapTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060B57A59EF73723DEE287D /* MapTabView.swift */; };
 		BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */; };
 		D11DDD8DADF839CA686C2611 /* AccountSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B3F83842515BEBAEE6211B /* AccountSheet.swift */; };
 		D4526921E773D3278B4AB38F /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA029833082A56A604FC4F5 /* PaywallView.swift */; };
@@ -67,11 +69,13 @@
 		8E39C5830D6125D24F3DC7D5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		94BACE4F239852EC03210322 /* EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsView.swift; sourceTree = "<group>"; };
 		998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatchNotesView.swift; sourceTree = "<group>"; };
+		ABF5FA7903422EEE29AE8955 /* Products.storekit */ = {isa = PBXFileReference; path = Products.storekit; sourceTree = "<group>"; };
 		B3F7B7D2ABAA2E0458C61619 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		B9B3F83842515BEBAEE6211B /* AccountSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSheet.swift; sourceTree = "<group>"; };
 		BD83E23B1E36D79D22DA9E36 /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
 		C0BF7594E5DECA397D60C3C0 /* SOSMatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSMatchView.swift; sourceTree = "<group>"; };
 		C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.example.plist; sourceTree = "<group>"; };
+		D060B57A59EF73723DEE287D /* MapTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapTabView.swift; sourceTree = "<group>"; };
 		D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DispoApp.swift; sourceTree = "<group>"; };
 		D128C9A5713A4BEA6CB5CDF1 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		D28AF59E7DDA753B03F53947 /* SeedData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SeedData.json; sourceTree = "<group>"; };
@@ -123,6 +127,7 @@
 				94BACE4F239852EC03210322 /* EventsView.swift */,
 				E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */,
 				76B25DEE5FD8CA4F02312D54 /* GroupChatView.swift */,
+				D060B57A59EF73723DEE287D /* MapTabView.swift */,
 				6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */,
 				8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */,
 				047421D42EA7C1DBEFE4FA2E /* NotificationsSettingsView.swift */,
@@ -157,6 +162,7 @@
 				8137A13EBE04B692A857CF97 /* Locations.swift */,
 				2E6D4C225C9452004F0539F2 /* LocationService.swift */,
 				D128C9A5713A4BEA6CB5CDF1 /* Models.swift */,
+				ABF5FA7903422EEE29AE8955 /* Products.storekit */,
 				04DD095B72FFD09E7389249C /* PushNotifications.swift */,
 				C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */,
 				6CEE8CF8E49314AC43A8F44F /* Secrets.plist */,
@@ -242,6 +248,7 @@
 			files = (
 				DA7FE7F0923349BABC374F6F /* Assets.xcassets in Resources */,
 				129CB47FDC4AF657C12ED767 /* Localizable.xcstrings in Resources */,
+				84085AE3A4E5476432E24A20 /* Products.storekit in Resources */,
 				FC46796225E74812DD8D86F9 /* Secrets.example.plist in Resources */,
 				A21CFD4B8CD824BD4EA45150 /* Secrets.plist in Resources */,
 				2A295B2FFFD3982F05A2469E /* SeedData.json in Resources */,
@@ -269,6 +276,7 @@
 				77906F0491C295B70667B651 /* GroupChatView.swift in Sources */,
 				048EC7F8C6151CB7386307E0 /* LocationService.swift in Sources */,
 				EF7D0276B64BAF6134B9DFBA /* Locations.swift in Sources */,
+				B1CA40A340EF9F9C5D09D8CF /* MapTabView.swift in Sources */,
 				7AF0430FCB7DB66B78E0D64C /* Models.swift in Sources */,
 				D7DE32D1745AF72A345DF15B /* MusicianDetailView.swift in Sources */,
 				BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */,
@@ -296,7 +304,6 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Dispo/Info.plist;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -343,7 +350,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -357,7 +364,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.9.5;
+				MARKETING_VERSION = 0.9.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -403,7 +410,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -423,7 +430,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.9.5;
+				MARKETING_VERSION = 0.9.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -443,7 +450,6 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Dispo/Info.plist;
-				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

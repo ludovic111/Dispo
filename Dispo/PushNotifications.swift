@@ -59,6 +59,7 @@ final class DispoAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
 
 enum AppTab: String, Hashable {
     case home
+    case map
     case sos
     case messages
     case profile

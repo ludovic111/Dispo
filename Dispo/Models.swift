@@ -439,6 +439,75 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Partage de position
+
+/// Ce que les autres voient de ma position. Par défaut, tout le monde est
+/// au « niveau ville » (grille ~5 km) ; la position exacte (~100 m) est un
+/// choix explicite, pour tous ou pour les amis (suivi mutuel) seulement.
+enum LocationPrecision: String, Codable, CaseIterable, Identifiable {
+    case city = "city"
+    case exactFriends = "exact_friends"
+    case exactEveryone = "exact_everyone"
+
+    var id: String { rawValue }
+
+    /// Clé de traduction du libellé.
+    var label: String {
+        switch self {
+        case .city: return "Approximative (ville)"
+        case .exactFriends: return "Exacte pour mes amis"
+        case .exactEveryone: return "Exacte pour tous"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .city: return "building.2"
+        case .exactFriends: return "person.2.fill"
+        case .exactEveryone: return "location.fill"
+        }
+    }
+}
+
+// MARK: - Moyen de versement du cachet
+
+/// Moyens de versement proposés pour un cachet SOS. Un token connu est
+/// stocké tel quel (`twint`, `transfer`…) ; tout autre texte est un moyen
+/// personnalisé saisi par l'utilisateur.
+enum PaymentMethod: String, CaseIterable, Identifiable {
+    case twint
+    case transfer
+    case cash
+    case cashapp
+
+    var id: String { rawValue }
+
+    /// Clé de traduction du libellé (les noms propres restent tels quels).
+    var label: String {
+        switch self {
+        case .twint: return "Twint"
+        case .transfer: return "Virement"
+        case .cash: return "Espèces"
+        case .cashapp: return "Cash App"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .twint: return "iphone.gen3"
+        case .transfer: return "building.columns"
+        case .cash: return "banknote"
+        case .cashapp: return "dollarsign.circle"
+        }
+    }
+
+    /// Libellé (clé de traduction) d'une valeur stockée : token connu →
+    /// libellé standard, sinon le texte libre de l'utilisateur.
+    static func displayLabel(for stored: String) -> String {
+        PaymentMethod(rawValue: stored)?.label ?? stored
+    }
+}
+
 // MARK: - Niveau
 
 enum Level: String, Codable, CaseIterable, Identifiable, Comparable {
@@ -722,6 +791,10 @@ struct Musician: Codable, Identifiable, Hashable {
     /// false quand les coordonnées sont un simple placeholder (profil live
     /// sans géoloc partagée) : ni distance affichée, ni filtre rayon.
     var hasLocation: Bool = true
+    /// true quand la position affichée est la position exacte partagée par
+    /// ce musicien (avec tous, ou avec moi en tant qu'ami) — sinon la
+    /// position est au niveau ville et les distances restent approximatives.
+    var hasExactLocation: Bool = false
     /// Note moyenne (1–5 étoiles) reçue sur le serveur — nil sans avis.
     var ratingAvg: Double?
     /// Nombre d'avis étoilés reçus sur le serveur.
@@ -1031,6 +1104,11 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var name: String
     var emoji: String = "🎶"
+    /// Photo du groupe (URL hébergée) — optionnelle, choisie par le leader.
+    var photoURL: String?
+    /// Groupe visible sur les profils publics de ses membres (nil = privé,
+    /// optionnel pour décoder les groupes sauvegardés avant la 0.9.6).
+    var isPublic: Bool?
     /// Leader du groupe (rôle transférable à un membre Premium uniquement).
     /// Optionnel pour décoder les groupes v0.7 — nil = moi.
     var leaderName: String?
@@ -1070,6 +1148,17 @@ struct GroupChat: Codable, Identifiable, Hashable {
     }
 }
 
+/// Un groupe public affiché sur le profil d'un musicien (le sien ou celui
+/// d'un autre) — lecture seule, données servies par le serveur.
+struct PublicGroup: Codable, Identifiable, Hashable {
+    var id: UUID
+    var name: String
+    var emoji: String
+    var photoURL: String?
+    var memberCount: Int
+    var isLeader: Bool
+}
+
 // MARK: - Annonce SOS dépannage
 
 /// Un groupe / organisateur cherche un musicien pour dépanner un concert.
@@ -1084,6 +1173,8 @@ struct GigRequest: Codable, Identifiable, Hashable {
     var wantedInstruments: [Instrument]
     /// Cachet proposé en CHF (nil = à discuter).
     var fee: Int?
+    /// Moyen de versement du cachet (token PaymentMethod ou texte libre).
+    var paymentMethod: String?
     var descriptionText: String
     /// L'utilisateur a postulé à cette annonce.
     var applied: Bool = false
@@ -1094,12 +1185,18 @@ struct GigRequest: Codable, Identifiable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, title, hostName, date, place, neighborhood, genre
-        case wantedInstruments, fee, descriptionText, applied, isMine, postedAt
+        case wantedInstruments, fee, paymentMethod, descriptionText, applied, isMine, postedAt
     }
 
     var feeLabel: String {
         if let fee { return "CHF \(fee)" }
         return "À discuter"
+    }
+
+    /// Clé de traduction du moyen de versement affiché, nil si non renseigné.
+    var paymentLabel: String? {
+        guard let paymentMethod, !paymentMethod.isEmpty else { return nil }
+        return PaymentMethod.displayLabel(for: paymentMethod)
     }
 
     /// Durée de l'avant-première Premium après publication.
@@ -1222,18 +1319,28 @@ struct DemoVideo: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     /// Fichier local dans Documents (mode démo / anciens profils).
     var fileName: String
+    /// Titre donné par le musicien (nil = « Vidéo N »).
+    var title: String?
     /// Date de la vidéo, affichée sous le titre (nil = non renseignée).
     var date: Date?
     /// Chemin dans le bucket Supabase `demo-videos` (mode live).
     var storagePath: String?
     /// URL publique de lecture (mode live).
     var remoteURL: String?
+    /// URL publique de la miniature (mode live, générée à l'envoi).
+    var thumbURL: String?
 
     /// URL de lecture : le serveur d'abord, sinon le fichier local.
     var playbackURL: URL? {
         if let remoteURL, let url = URL(string: remoteURL) { return url }
         guard !fileName.isEmpty else { return nil }
         return AppStore.mediaURL(for: fileName)
+    }
+
+    /// Titre affiché : celui du musicien, sinon « Vidéo N » (1-indexé).
+    func displayTitle(index: Int, tr: (String) -> String) -> String {
+        if let title, !title.trimmingCharacters(in: .whitespaces).isEmpty { return title }
+        return String(format: tr("Vidéo %lld"), Int64(index + 1))
     }
 }
 

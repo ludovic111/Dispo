@@ -193,23 +193,30 @@ struct SOSMatchRow: View {
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     if match.musician.isDemo { DemoAccountBadge() }
-                    SocialLinkBadge(link: store.socialLink(with: match.musician.name))
                 }
-                // Le niveau ne s'affiche qu'en Premium.
-                Text(store.isPremium
-                     ? "\(matchedInstruments) · \(store.tr(match.musician.level.rawValue))"
-                     : matchedInstruments)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                // Le niveau ne s'affiche qu'en Premium ; le badge de relation
+                // vit sur la 2e ligne pour ne jamais écraser la 1re.
+                HStack(spacing: 6) {
+                    SocialLinkBadge(link: store.socialLink(with: match.musician.name))
+                        .fixedSize()
+                    Text(store.isPremium
+                         ? "\(matchedInstruments) · \(store.tr(match.musician.level.rawValue))"
+                         : matchedInstruments)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
             if match.dateConfirmed {
                 TagView(text: "Dispo ✓", color: .green)
+                    .fixedSize()
             } else {
                 TagView(text: "Sur demande", color: JC.violet)
+                    .fixedSize()
             }
             inviteButton
+                .fixedSize()
         }
         .padding(.vertical, 3)
         .contentShape(Rectangle())

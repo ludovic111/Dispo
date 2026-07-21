@@ -14,6 +14,9 @@ struct SOSRequestSheet: View {
     @State private var date: Date = SOSRequestSheet.defaultDate
     @State private var place: String = ""
     @State private var feeText: String = ""
+    @State private var paymentMethod: PaymentMethod?
+    @State private var customPayment = ""
+    @State private var useCustomPayment = false
     @State private var note: String = ""
     @State private var isSending = false
 
@@ -88,6 +91,11 @@ struct SOSRequestSheet: View {
                 Section {
                     TextField("Montant en CHF (vide = à discuter)", text: $feeText)
                         .keyboardType(.numberPad)
+                    PaymentMethodField(
+                        method: $paymentMethod,
+                        custom: $customPayment,
+                        useCustom: $useCustomPayment
+                    )
                 } header: {
                     Text("Cachet proposé")
                 }
@@ -135,6 +143,11 @@ struct SOSRequestSheet: View {
                 date: date,
                 place: place,
                 fee: fee,
+                paymentMethod: PaymentMethodField.storedValue(
+                    method: paymentMethod,
+                    custom: customPayment,
+                    useCustom: useCustomPayment
+                ),
                 note: note
             )
             dismiss()

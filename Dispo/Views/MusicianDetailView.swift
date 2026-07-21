@@ -28,6 +28,7 @@ struct MusicianDetailView: View {
                     identity
                     actionButtons
                     availabilityRow
+                    groupsCard
                     repertoireCard
                     rateCard
                     demosGrid
@@ -36,6 +37,9 @@ struct MusicianDetailView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 24)
             }
+        }
+        .task(id: musician.id) {
+            await store.loadPublicGroups(of: musician.id)
         }
         .navigationTitle(Text(verbatim: musician.handle))
         .navigationBarTitleDisplayMode(.inline)
@@ -86,12 +90,11 @@ struct MusicianDetailView: View {
         .sheet(item: $openedConversation) { conversation in
             NavigationStack {
                 ChatView(conversationID: conversation.id)
+                    .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             }
         }
         .sheet(item: $playingVideo) { video in
-            VideoPlayer(player: AVPlayer(url: video.url))
-                .ignoresSafeArea()
-                .presentationDetents([.large])
+            VideoPlayerSheet(url: video.url)
         }
         .sheet(isPresented: $showSOSRequest) {
             SOSRequestSheet(musician: musician) { conversation in
@@ -180,11 +183,12 @@ struct MusicianDetailView: View {
                 }
             }
             // La distance ne s'affiche que quand elle est fiable : ma géoloc
-            // partagée ET la sienne (toujours vrai en démo).
+            // partagée ET la sienne. « ≈ » quand la position est au niveau
+            // ville, précise quand le musicien partage sa position exacte.
             Text({
-                let base = "\(musician.age) ans · \(musician.neighborhood)"
-                guard let distance = store.distance(to: musician) else { return base }
-                return base + " · " + String(format: "%.1f km", distance)
+                let base = String(format: store.tr("%lld ans"), Int64(musician.age)) + " · \(musician.neighborhood)"
+                guard let label = store.distanceLabel(to: musician) else { return base }
+                return base + " · " + label
             }())
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -296,6 +300,42 @@ struct MusicianDetailView: View {
                         text: date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
                         color: musician.availability.color
                     )
+                }
+            }
+        }
+    }
+
+    // MARK: - Groupes publics
+
+    /// Groupes que ce musicien affiche publiquement sur son profil.
+    @ViewBuilder
+    private var groupsCard: some View {
+        if let groups = store.publicGroupsByProfile[musician.id], !groups.isEmpty {
+            JCCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    sectionTitle("Groupes", systemImage: "person.3.fill")
+                    ForEach(groups) { group in
+                        HStack(spacing: 11) {
+                            PublicGroupAvatarView(group: group, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(group.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(1)
+                                    if group.isLeader {
+                                        Image(systemName: "crown.fill")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(JC.gold)
+                                            .accessibilityLabel(Text("Leader"))
+                                    }
+                                }
+                                Text("\(group.memberCount) membres")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
                 }
             }
         }
@@ -426,32 +466,46 @@ struct MusicianDetailView: View {
         }
     }
 
-    /// Tuile d'une vraie vidéo hébergée — un tap pour la lire.
+    /// Tuile d'une vraie vidéo hébergée — miniature si disponible, un tap
+    /// pour la lire.
     private func videoTile(_ video: DemoVideo) -> some View {
-        Button {
+        let index = musician.demoVideos.firstIndex(of: video) ?? 0
+        return Button {
             if let url = video.playbackURL {
                 playingVideo = PlayableVideo(url: url)
             }
         } label: {
             ZStack(alignment: .bottomLeading) {
-                GenreCover(genre: mainGenre)
+                VideoThumbView(video: video, fallbackGenre: mainGenre)
                     .aspectRatio(1, contentMode: .fill)
                 Image(systemName: "play.circle.fill")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.white.opacity(0.95))
                     .shadow(radius: 4)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                if let date = video.date {
-                    Text(date.formatted(.dateTime.day().month(.abbreviated).year()))
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(.black.opacity(0.45), in: Capsule())
-                        .padding(5)
+                VStack(alignment: .leading, spacing: 2) {
+                    if let title = video.title, !title.isEmpty {
+                        Text(title)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.black.opacity(0.45), in: Capsule())
+                    }
+                    if let date = video.date {
+                        Text(date.formatted(.dateTime.day().month(.abbreviated).year()))
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.black.opacity(0.45), in: Capsule())
+                    }
                 }
+                .padding(5)
             }
             .clipped()
+            .accessibilityLabel(Text(verbatim: video.displayTitle(index: index, tr: store.tr)))
         }
         .buttonStyle(PressableStyle(scale: 0.95))
     }
@@ -484,5 +538,79 @@ struct MusicianDetailView: View {
         Label(title, systemImage: systemImage)
             .font(.subheadline.weight(.heavy))
             .foregroundStyle(JC.coral)
+    }
+}
+
+// MARK: - Composants vidéos & groupes
+
+/// Miniature d'une vidéo de démo : l'image générée à l'envoi si elle
+/// existe, sinon la couverture du genre (vidéos d'avant 0.9.6).
+struct VideoThumbView: View {
+    let video: DemoVideo
+    let fallbackGenre: Genre
+
+    var body: some View {
+        if let thumb = video.thumbURL, let url = URL(string: thumb) {
+            Color.clear.overlay(
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    GenreCover(genre: fallbackGenre)
+                }
+            )
+        } else {
+            GenreCover(genre: fallbackGenre)
+        }
+    }
+}
+
+/// Lecteur vidéo plein écran : lance la lecture tout seul et active la
+/// sortie audio même si l'iPhone est en mode silencieux.
+struct VideoPlayerSheet: View {
+    let url: URL
+    @State private var player: AVPlayer?
+
+    var body: some View {
+        VideoPlayer(player: player)
+            .ignoresSafeArea()
+            .presentationDetents([.large])
+            .onAppear {
+                AppStore.activatePlaybackAudio()
+                let player = AVPlayer(url: url)
+                self.player = player
+                player.play()
+            }
+            .onDisappear {
+                player?.pause()
+            }
+    }
+}
+
+/// Avatar d'un groupe public : photo si le leader en a mis une, sinon emoji.
+struct PublicGroupAvatarView: View {
+    let group: PublicGroup
+    var size: CGFloat = 40
+
+    var body: some View {
+        if let photo = group.photoURL, let url = URL(string: photo) {
+            AsyncImage(url: url) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                emojiCircle
+            }
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+        } else {
+            emojiCircle
+        }
+    }
+
+    private var emojiCircle: some View {
+        ZStack {
+            Circle()
+                .fill(JC.violet.opacity(0.15))
+                .frame(width: size, height: size)
+            Text(group.emoji)
+        }
     }
 }
