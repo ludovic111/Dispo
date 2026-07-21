@@ -122,6 +122,9 @@ final class AppStore: ObservableObject {
     /// Identifiant de l'utilisateur connecté au backend, nil hors ligne.
     @Published var liveUserID: UUID?
     @Published var liveEmail: String?
+    /// true si le compte connecté a une identité Apple liée (connexion en
+    /// un tap avec « Se connecter avec Apple »).
+    @Published private(set) var appleLinked = false
     /// Erreur backend à montrer à l'utilisateur (bannière discrète).
     @Published var backendError: String?
     /// true une fois la restauration de session terminée — évite d'afficher
@@ -417,6 +420,7 @@ final class AppStore: ObservableObject {
         guard let backend else { return }
         liveUserID = userID
         liveEmail = await backend.currentUserEmail()
+        appleLinked = await backend.isAppleLinked()
         backendError = nil
 
         // Relie l'abonné RevenueCat au compte Supabase : le webhook serveur
@@ -596,6 +600,7 @@ final class AppStore: ObservableObject {
         await backend.signOut()
         liveUserID = nil
         liveEmail = nil
+        appleLinked = false
         backendError = nil
         liveFollowingIDs = []
         liveFollowerIDs = []
@@ -2547,6 +2552,22 @@ final class AppStore: ObservableObject {
         updateGroup(group.id) { $0.isPublic = isPublic }
         if let backend, isLive {
             syncLive { try await backend.setGroupVisibility(isPublic, groupID: group.id) }
+        }
+    }
+
+    // MARK: - Liaison du compte Apple
+
+    /// Lie l'identité Apple au compte connecté. Ensuite, le bouton
+    /// « Se connecter avec Apple » ouvre ce compte en un tap.
+    func linkAppleAccount(idToken: String, nonce: String) async -> Bool {
+        guard let backend, isLive else { return false }
+        do {
+            try await backend.linkApple(idToken: idToken, nonce: nonce)
+            appleLinked = true
+            return true
+        } catch {
+            backendError = tr("La liaison avec Apple a échoué — réessaie.")
+            return false
         }
     }
 

@@ -275,14 +275,15 @@ struct AuthForm: View {
     }
 
     /// Nonce aléatoire (anti-rejeu) : brut → Supabase, hash SHA-256 → Apple.
-    private static func randomNonce(length: Int = 32) -> String {
+    /// Interne : aussi utilisé par la liaison de compte dans les réglages.
+    static func randomNonce(length: Int = 32) -> String {
         let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
         var bytes = [UInt8](repeating: 0, count: length)
         _ = SecRandomCopyBytes(kSecRandomDefault, length, &bytes)
         return String(bytes.map { charset[Int($0) % charset.count] })
     }
 
-    private static func sha256(_ input: String) -> String {
+    static func sha256(_ input: String) -> String {
         SHA256.hash(data: Data(input.utf8))
             .map { String(format: "%02x", $0) }
             .joined()

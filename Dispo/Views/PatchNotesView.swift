@@ -21,6 +21,8 @@ struct PatchNote: Identifiable {
                 "Ouvre le profil d'un musicien d'un tap depuis la conversation",
                 "SOS : moyen de versement du cachet (Twint, virement, espèces, Cash App ou autre) et carte du lieu",
                 "Vidéos de démo : titre, miniatures et son même en mode silencieux",
+                "Écoute chaque morceau du répertoire sur Apple Music, Spotify, YouTube Music ou Deezer (bouton casque)",
+                "Lie ton compte Apple dans les réglages : reconnexion en un tap, sans mot de passe",
                 "Groupes : photo de groupe et option « groupe public » affichée sur vos profils",
                 "Le changement d'apparence (clair / sombre) s'applique instantanément",
                 "Corrigé : le remplacement de la photo de profil échouait"

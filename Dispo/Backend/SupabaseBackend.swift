@@ -134,6 +134,20 @@ final class SupabaseBackend: Sendable {
         return session.user.id
     }
 
+    /// Lie l'identité Apple au compte déjà connecté (flux natif) : ensuite,
+    /// « Se connecter avec Apple » ouvre ce même compte.
+    func linkApple(idToken: String, nonce: String) async throws {
+        _ = try await client.auth.linkIdentityWithIdToken(
+            credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
+        )
+    }
+
+    /// true si le compte connecté a déjà une identité Apple liée.
+    func isAppleLinked() async -> Bool {
+        ((try? await client.auth.userIdentities()) ?? [])
+            .contains { $0.provider == "apple" }
+    }
+
     func signOut() async {
         try? await client.auth.signOut()
     }

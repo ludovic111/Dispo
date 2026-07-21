@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 /// Réglages de l'application — séparés du profil, rangés par catégories :
 /// compte, notifications, préférences, abonnement, aide & infos.
@@ -10,6 +11,7 @@ struct SettingsSheet: View {
     @State private var showLanguageRegion = false
     @State private var showPatchNotes = false
     @State private var showResetConfirmation = false
+    @State private var showLinkApple = false
 
     /// Pages d'assistance du site, dans la langue de l'interface.
     private var supportURL: URL? {
@@ -49,6 +51,10 @@ struct SettingsSheet: View {
             .sheet(isPresented: $showNotifications) { NotificationsSettingsView() }
             .sheet(isPresented: $showLanguageRegion) { LanguageRegionSheet() }
             .sheet(isPresented: $showPatchNotes) { PatchNotesView() }
+            .sheet(isPresented: $showLinkApple) {
+                LinkAppleSheet()
+                    .presentationDetents([.medium])
+            }
             .confirmationDialog(
                 "Réinitialiser toutes les données de la démo ?",
                 isPresented: $showResetConfirmation,
@@ -80,6 +86,35 @@ struct SettingsSheet: View {
                     }
                     Spacer()
                     chevron
+                }
+            }
+            // Liaison du compte Apple — connexion en un tap ensuite.
+            if store.isLive && AuthForm.isAppleSignInAvailable {
+                if store.appleLinked {
+                    HStack(spacing: 12) {
+                        settingsIcon("applelogo", .primary)
+                        Text("Compte Apple")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Label("Lié", systemImage: "checkmark.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.green)
+                    }
+                } else {
+                    Button { showLinkApple = true } label: {
+                        HStack(spacing: 12) {
+                            settingsIcon("applelogo", .primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Lier mon compte Apple")
+                                    .foregroundStyle(.primary)
+                                Text("Connexion en un tap, sans mot de passe")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            chevron
+                        }
+                    }
                 }
             }
         }
@@ -344,6 +379,92 @@ struct SettingsSheet: View {
             Image(systemName: symbol)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(color)
+        }
+    }
+}
+
+// MARK: - Liaison du compte Apple
+
+/// Lie le compte Dispo (e-mail) au compte Apple : ensuite, le bouton
+/// « Se connecter avec Apple » ouvre ce même compte en un tap.
+struct LinkAppleSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var nonce = ""
+    @State private var isLinking = false
+    @State private var errorText: String?
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "applelogo")
+                            .font(.title2.weight(.semibold))
+                        Image(systemName: "link")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                        AvatarView(name: store.profile.name, size: 34)
+                    }
+                    Text("Lier mon compte Apple")
+                        .font(.title3.weight(.heavy))
+                    Text("Ton compte Dispo reste le même — tu pourras simplement te reconnecter en un tap avec « Se connecter avec Apple », sans mot de passe.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    if let errorText {
+                        Label(errorText, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(JC.coral)
+                    }
+
+                    SignInWithAppleButton(.continue) { request in
+                        let raw = AuthForm.randomNonce()
+                        nonce = raw
+                        request.nonce = AuthForm.sha256(raw)
+                    } onCompletion: { result in
+                        handle(result)
+                    }
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                    .frame(height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .disabled(isLinking)
+                    .overlay {
+                        if isLinking { ProgressView() }
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .padding(22)
+            }
+            .navigationTitle("Compte Apple")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func handle(_ result: Result<ASAuthorization, Error>) {
+        guard case .success(let authorization) = result,
+              let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8)
+        else { return } // Annulé par l'utilisateur : pas d'erreur à afficher.
+        isLinking = true
+        errorText = nil
+        Task {
+            let linked = await store.linkAppleAccount(idToken: idToken, nonce: nonce)
+            isLinking = false
+            if linked {
+                dismiss()
+            } else {
+                errorText = store.tr("La liaison avec Apple a échoué — réessaie.")
+            }
         }
     }
 }

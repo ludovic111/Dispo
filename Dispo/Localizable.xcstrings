@@ -6391,6 +6391,46 @@
         }
       }
     },
+    "Compte Apple" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple-Account"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple account"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuenta de Apple"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account Apple"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleアカウント"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple账户"
+          }
+        }
+      }
+    },
     "Compte connecté" : {
       "localizations" : {
         "de" : {
@@ -7007,6 +7047,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法连接服务器——请检查网络。"
+          }
+        }
+      }
+    },
+    "Connexion en un tap, sans mot de passe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anmeldung mit einem Tipp, ohne Passwort"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One-tap sign-in, no password"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicio de sesión con un toque, sin contraseña"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accesso con un tocco, senza password"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワンタップでログイン、パスワード不要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一键登录，无需密码"
           }
         }
       }
@@ -12681,6 +12761,46 @@
         }
       }
     },
+    "La liaison avec Apple a échoué — réessaie." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verknüpfung mit Apple ist fehlgeschlagen — versuch es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linking with Apple failed — try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La vinculación con Apple falló: inténtalo de nuevo."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il collegamento con Apple non è riuscito: riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleとのリンクに失敗しました。もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与Apple关联失败——请重试。"
+          }
+        }
+      }
+    },
     "La messagerie en temps reel n'a pas pu demarrer." : {
       "localizations" : {
         "en" : {
@@ -14371,6 +14491,46 @@
         }
       }
     },
+    "Lie ton compte Apple dans les réglages : reconnexion en un tap, sans mot de passe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpfe deinen Apple-Account in den Einstellungen: Anmeldung mit einem Tipp, ohne Passwort"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link your Apple account in the settings: one-tap sign-in, no password"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vincula tu cuenta de Apple en los ajustes: inicio de sesión con un toque, sin contraseña"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega il tuo account Apple nelle impostazioni: accesso con un tocco, senza password"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定でAppleアカウントをリンク：ワンタップで再ログイン、パスワード不要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置中关联你的Apple账户：一键重新登录，无需密码"
+          }
+        }
+      }
+    },
     "Lien de connexion invalide ou expiré." : {
       "localizations" : {
         "de" : {
@@ -14407,6 +14567,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登录链接无效或已过期。"
+          }
+        }
+      }
+    },
+    "Lier mon compte Apple" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meinen Apple-Account verknüpfen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link my Apple account"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vincular mi cuenta de Apple"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collega il mio account Apple"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appleアカウントをリンク"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关联我的Apple账户"
           }
         }
       }
@@ -14647,6 +14847,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "静默送达"
+          }
+        }
+      }
+    },
+    "Lié" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verknüpft"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vinculada"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collegato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リンク済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关联"
           }
         }
       }
@@ -24801,6 +25041,46 @@
         }
       }
     },
+    "Ton compte Dispo reste le même — tu pourras simplement te reconnecter en un tap avec « Se connecter avec Apple », sans mot de passe." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Dispo-Konto bleibt dasselbe — du kannst dich künftig einfach mit einem Tipp über „Mit Apple anmelden“ anmelden, ohne Passwort."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your Dispo account stays the same — you'll simply be able to sign back in with one tap using “Sign in with Apple”, no password needed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu cuenta de Dispo sigue siendo la misma: podrás volver a entrar con un toque con «Iniciar sesión con Apple», sin contraseña."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo account Dispo resta lo stesso: potrai riaccedere con un tocco tramite «Accedi con Apple», senza password."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispoのアカウントはそのまま。今後は「Appleでサインイン」からワンタップで、パスワードなしで再ログインできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的Dispo账户保持不变——以后只需通过“通过Apple登录”一键重新登录，无需密码。"
+          }
+        }
+      }
+    },
     "Ton message…" : {
       "localizations" : {
         "de" : {
@@ -27997,6 +28277,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先试听再邀请"
+          }
+        }
+      }
+    },
+    "Écoute chaque morceau du répertoire sur Apple Music, Spotify, YouTube Music ou Deezer (bouton casque)" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höre jeden Titel des Repertoires auf Apple Music, Spotify, YouTube Music oder Deezer (Kopfhörer-Taste)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listen to any repertoire song on Apple Music, Spotify, YouTube Music or Deezer (headphones button)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escucha cada canción del repertorio en Apple Music, Spotify, YouTube Music o Deezer (botón de auriculares)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ascolta ogni brano del repertorio su Apple Music, Spotify, YouTube Music o Deezer (pulsante cuffie)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レパートリーの各曲をApple Music、Spotify、YouTube Music、Deezerで再生（ヘッドホンボタン）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在Apple Music、Spotify、YouTube Music或Deezer上收听曲目库中的每首歌（耳机按钮）"
           }
         }
       }
