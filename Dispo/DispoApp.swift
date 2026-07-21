@@ -133,6 +133,7 @@ struct RootView: View {
                 case .search(let query): SearchView(initialQuery: query)
                 case .matching(let gig): SOSMatchView(gig: gig) {}
                 case .settings: SettingsSheet()
+                case .songs: DebugSongRowsPreview()
                 }
             }
         }
@@ -148,6 +149,7 @@ struct RootView: View {
         case search(String)
         case matching(GigRequest)
         case settings
+        case songs
         var id: String {
             switch self {
             case .chat: return "chat"
@@ -155,6 +157,7 @@ struct RootView: View {
             case .search: return "search"
             case .matching: return "matching"
             case .settings: return "settings"
+            case .songs: return "songs"
             }
         }
     }
@@ -185,11 +188,37 @@ struct RootView: View {
             }
         case "settings":
             debugCover = .settings
+        case "songs":
+            debugCover = .songs
         default: break
         }
     }
     #endif
 }
+
+#if DEBUG
+/// Aperçu de lignes de morceaux (capture / QA du menu d'écoute).
+struct DebugSongRowsPreview: View {
+    private let songs = [
+        Song(title: "Oye Como Va", artist: "Santana",
+             artworkURL: nil, trackURL: "https://music.apple.com/us/album/oye-como-va/1443839135",
+             suggestedBy: "Marco Fernández", isApproved: true),
+        Song(title: "Autumn Leaves", artist: "Bill Evans",
+             artworkURL: nil, suggestedBy: "Léa Zbinden", isApproved: false)
+    ]
+
+    var body: some View {
+        ZStack {
+            JCBackground()
+            VStack(spacing: 12) {
+                SongRow(song: songs[0], isLeader: false, onReject: {})
+                SongRow(song: songs[1], isLeader: true, onApprove: {}, onReject: {})
+            }
+            .padding(18)
+        }
+    }
+}
+#endif
 
 // MARK: - Design system « nuit de jazz »
 

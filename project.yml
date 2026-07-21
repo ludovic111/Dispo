@@ -37,7 +37,10 @@ targets:
     type: application
     platform: iOS
     sources:
-      - Dispo
+      - path: Dispo
+        excludes:
+          # Config StoreKit locale (tests simulateur) — jamais dans le bundle.
+          - "Products.storekit"
     dependencies:
       - package: Supabase
       - package: RevenueCat

@@ -978,8 +978,58 @@ struct Song: Codable, Identifiable, Hashable {
     var artist: String
     /// Pochette (iTunes Search) — nil si introuvable, le morceau vit sans.
     var artworkURL: String?
+    /// Lien direct Apple Music (iTunes Search) — nil si introuvable.
+    var trackURL: String?
     var suggestedBy: String
     var isApproved: Bool
+}
+
+/// Plateformes d'écoute proposées sur les morceaux (répertoire, setlists).
+/// Apple Music profite du lien direct d'iTunes Search quand on l'a ; les
+/// autres ouvrent la recherche du morceau dans l'app ou le site.
+enum StreamingPlatform: String, CaseIterable, Identifiable {
+    case appleMusic
+    case spotify
+    case youtubeMusic
+    case deezer
+
+    var id: String { rawValue }
+
+    /// Nom propre de la plateforme — jamais traduit.
+    var label: String {
+        switch self {
+        case .appleMusic: return "Apple Music"
+        case .spotify: return "Spotify"
+        case .youtubeMusic: return "YouTube Music"
+        case .deezer: return "Deezer"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .appleMusic: return "applelogo"
+        case .spotify: return "waveform"
+        case .youtubeMusic: return "play.rectangle.fill"
+        case .deezer: return "music.note.list"
+        }
+    }
+
+    /// Lien d'écoute du morceau sur cette plateforme.
+    func url(for song: Song) -> URL? {
+        if self == .appleMusic, let track = song.trackURL, let url = URL(string: track) {
+            return url
+        }
+        let query = "\(song.title) \(song.artist)"
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return nil
+        }
+        switch self {
+        case .appleMusic: return URL(string: "https://music.apple.com/search?term=\(encoded)")
+        case .spotify: return URL(string: "https://open.spotify.com/search/\(encoded)")
+        case .youtubeMusic: return URL(string: "https://music.youtube.com/search?q=\(encoded)")
+        case .deezer: return URL(string: "https://www.deezer.com/search/\(encoded)")
+        }
+    }
 }
 
 /// Type d'événement d'un groupe.

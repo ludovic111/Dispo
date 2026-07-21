@@ -542,6 +542,12 @@ struct SongRow: View {
     }
 
     var body: some View {
+        songCard
+            // Appui long : les mêmes liens d'écoute, sans chercher le bouton.
+            .contextMenu { streamingLinks }
+    }
+
+    private var songCard: some View {
         JCCard(padding: 10) {
             HStack(spacing: 11) {
                 // Pochette — repli : vignette note de musique.
@@ -575,6 +581,7 @@ struct SongRow: View {
                     }
                 }
                 Spacer(minLength: 0)
+                listenMenu
                 if !song.isApproved && isLeader {
                     // Le bouton d'acceptation demandé — un tap et c'est validé.
                     Button {
@@ -605,6 +612,39 @@ struct SongRow: View {
                             .padding(6)
                     }
                     .buttonStyle(PressableStyle())
+                }
+            }
+        }
+    }
+
+    /// Menu d'écoute discret : un casque, et le morceau s'ouvre sur la
+    /// plateforme choisie (lien direct Apple Music quand on l'a, recherche
+    /// pré-remplie sinon). Aussi disponible par appui long sur la ligne.
+    private var listenMenu: some View {
+        Menu {
+            Section("Écouter sur…") {
+                streamingLinks
+            }
+        } label: {
+            Image(systemName: "headphones")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+                .padding(7)
+                .background(JC.inset, in: Circle())
+        }
+        .accessibilityLabel(Text("Écouter ce morceau"))
+    }
+
+    @ViewBuilder
+    private var streamingLinks: some View {
+        ForEach(StreamingPlatform.allCases) { platform in
+            if let url = platform.url(for: song) {
+                Link(destination: url) {
+                    Label {
+                        Text(verbatim: platform.label)
+                    } icon: {
+                        Image(systemName: platform.symbol)
+                    }
                 }
             }
         }

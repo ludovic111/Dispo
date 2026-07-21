@@ -997,12 +997,14 @@ final class SupabaseBackend: Sendable {
         var title: String
         var artist: String
         var artworkURL: String?
+        var trackURL: String?
         var suggestedBy: String
         var isApproved: Bool
 
         enum CodingKeys: String, CodingKey {
             case id, title, artist
             case artworkURL = "artwork_url"
+            case trackURL = "track_url"
             case suggestedBy = "suggested_by"
             case isApproved = "is_approved"
         }
@@ -1012,6 +1014,7 @@ final class SupabaseBackend: Sendable {
             title = song.title
             artist = song.artist
             artworkURL = song.artworkURL
+            trackURL = song.trackURL
             suggestedBy = song.suggestedBy
             isApproved = song.isApproved
         }
@@ -1022,6 +1025,7 @@ final class SupabaseBackend: Sendable {
                 title: title,
                 artist: artist,
                 artworkURL: artworkURL,
+                trackURL: trackURL,
                 suggestedBy: suggestedBy,
                 isApproved: isApproved
             )

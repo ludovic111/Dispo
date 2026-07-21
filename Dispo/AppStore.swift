@@ -1741,11 +1741,16 @@ final class AppStore: ObservableObject {
             isApproved: approved
         )
         insertSong(song, in: groupID, eventID: eventID)
-        // La pochette arrive en différé (iTunes Search) — le morceau vit sans.
+        // Pochette + lien d'écoute arrivent en différé (iTunes Search) — le
+        // morceau vit sans.
         Task { [weak self] in
             guard let self else { return }
-            if let artwork = await Self.fetchArtworkURL(title: title, artist: artist) {
-                self.updateSong(song.id, in: groupID, eventID: eventID) { $0.artworkURL = artwork }
+            let info = await Self.fetchTrackInfo(title: title, artist: artist)
+            if info.artworkURL != nil || info.trackURL != nil {
+                self.updateSong(song.id, in: groupID, eventID: eventID) {
+                    $0.artworkURL = info.artworkURL
+                    $0.trackURL = info.trackURL
+                }
             }
         }
     }
@@ -1807,22 +1812,33 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Cherche la pochette du morceau (iTunes Search — gratuit, sans clé).
-    nonisolated static func fetchArtworkURL(title: String, artist: String) async -> String? {
+    /// Cherche la pochette et le lien Apple Music du morceau (iTunes
+    /// Search — gratuit, sans clé). Le lien direct alimente le menu
+    /// « Écouter sur… » ; les autres plateformes passent par leur recherche.
+    nonisolated static func fetchTrackInfo(
+        title: String,
+        artist: String
+    ) async -> (artworkURL: String?, trackURL: String?) {
         struct SearchResponse: Decodable {
-            struct Item: Decodable { let artworkUrl100: String? }
+            struct Item: Decodable {
+                let artworkUrl100: String?
+                let trackViewUrl: String?
+            }
             let results: [Item]
         }
         let term = "\(title) \(artist)"
         guard let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&media=music&entity=song&limit=1")
-        else { return nil }
+        else { return (nil, nil) }
         guard let (data, _) = try? await URLSession.shared.data(from: url),
-              let response = try? JSONDecoder().decode(SearchResponse.self, from: data)
-        else { return nil }
+              let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
+              let item = response.results.first
+        else { return (nil, nil) }
         // 100 px → 300 px : même CDN, meilleure netteté dans les listes.
-        return response.results.first?.artworkUrl100?
-            .replacingOccurrences(of: "100x100", with: "300x300")
+        return (
+            item.artworkUrl100?.replacingOccurrences(of: "100x100", with: "300x300"),
+            item.trackViewUrl
+        )
     }
 
     // MARK: Événements (leader crée, membres suggèrent la setlist)
@@ -2028,7 +2044,9 @@ final class AppStore: ObservableObject {
                 suggestedBy: member,
                 isApproved: false
             )
-            song.artworkURL = await Self.fetchArtworkURL(title: pick.0, artist: pick.1)
+            let info = await Self.fetchTrackInfo(title: pick.0, artist: pick.1)
+            song.artworkURL = info.artworkURL
+            song.trackURL = info.trackURL
             self.insertSong(song, in: groupID, eventID: eventID)
             self.pushLocal(
                 title: "\(group.emoji) \(group.name)",
