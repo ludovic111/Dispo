@@ -81,6 +81,46 @@
         }
       }
     },
+    "%@ t'invite à rejoindre ce groupe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ lädt dich in diese Gruppe ein"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ invites you to join this group"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ te invita a unirte a este grupo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ti invita a unirti a questo gruppo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@があなたをこのグループに招待しています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 邀请你加入这个小组"
+          }
+        }
+      }
+    },
     "%@ · %@" : {
       "localizations" : {
         "de" : {
@@ -1321,6 +1361,86 @@
         }
       }
     },
+    "A joué avec" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hat gespielt mit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Has played with"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha tocado con"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha suonato con"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共演したメンバー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "合作过的乐手"
+          }
+        }
+      }
+    },
+    "A joué avec %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hat mit %@ gespielt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Has played with %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha tocado con %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha suonato con %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@と共演"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 %@ 合作过"
+          }
+        }
+      }
+    },
     "A joué avec %@ (ton ami)" : {
       "localizations" : {
         "de" : {
@@ -1357,6 +1477,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "和%@（你的朋友）一起演过"
+          }
+        }
+      }
+    },
+    "A joué avec %@ +%lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hat mit %@ +%lld gespielt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Has played with %@ +%lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha tocado con %@ +%lld"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha suonato con %@ +%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ +%lld人と共演"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 %@ +%lld 位合作过"
           }
         }
       }
@@ -1577,6 +1737,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Premium subscriptions secured by StoreKit and restorable"
+          }
+        }
+      }
+    },
+    "Accepter" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annehmen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accept"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aceptar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accetta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "承認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接受"
           }
         }
       }
@@ -2867,6 +3067,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取消"
+          }
+        }
+      }
+    },
+    "Annuler l'invitation" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einladung zurückziehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel invitation"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar la invitación"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulla l'invito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "招待を取り消す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消邀请"
           }
         }
       }
@@ -6217,6 +6457,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "勾选你可以救场的日期。"
+          }
+        }
+      }
+    },
+    "Coche tes instruments, puis choisis ton niveau pour chacun." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle deine Instrumente und dann dein Niveau für jedes einzelne."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check your instruments, then pick your level for each one."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marca tus instrumentos y elige tu nivel para cada uno."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spunta i tuoi strumenti, poi scegli il livello per ciascuno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "楽器にチェックを入れ、それぞれのレベルを選んでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "勾选你的乐器，然后为每件乐器选择水平。"
           }
         }
       }
@@ -12031,6 +12311,86 @@
         }
       }
     },
+    "Invitation" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einladung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invitation"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invitación"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "招待"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邀请"
+          }
+        }
+      }
+    },
+    "Invitation en attente" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einladung ausstehend"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invitation pending"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invitación pendiente"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invito in attesa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "招待の返事待ち"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邀请待回复"
+          }
+        }
+      }
+    },
     "Inviter" : {
       "localizations" : {
         "de" : {
@@ -12757,6 +13117,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法为远程提醒注册此设备。"
+          }
+        }
+      }
+    },
+    "L'invitation n'a pas pu être acceptée — réessaie." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Einladung konnte nicht angenommen werden — versuch es nochmal."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The invitation couldn't be accepted — try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo aceptar la invitación: inténtalo de nuevo."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è stato possibile accettare l'invito: riprova."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "招待を承認できませんでした — もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法接受邀请 — 请重试。"
           }
         }
       }
@@ -13751,6 +14151,46 @@
         }
       }
     },
+    "Le SOS s'affiche « Sans cachet » — parfait pour une jam ou un concert bénévole." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der SOS wird als „Ohne Gage“ angezeigt — perfekt für eine Jam oder ein Benefizkonzert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The SOS shows as “No fee” — perfect for a jam or a benefit gig."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El SOS se muestra como «Sin caché»: perfecto para una jam o un concierto benéfico."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il SOS appare come «Senza cachet» — perfetto per una jam o un concerto benefico."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOSは「ギャラなし」と表示されます — ジャムやチャリティ演奏にぴったり。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOS 将显示为「无酬劳」— 适合即兴演奏或公益演出。"
+          }
+        }
+      }
+    },
     "Le blocage n'a pas pu etre applique." : {
       "localizations" : {
         "en" : {
@@ -13797,6 +14237,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "「关联我的 Apple 账户」按钮现在也会出现在 TestFlight 和 App Store 版本中"
+          }
+        }
+      }
+    },
+    "Le cachet d'un SOS se découvre en ouvrant l'annonce — avec une option « Sans cachet »" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Gage eines SOS zeigt sich beim Öffnen der Anzeige — mit der Option „Ohne Gage“"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An SOS fee is revealed when opening the listing — with a “No fee” option"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El caché de un SOS se descubre al abrir el anuncio, con una opción «Sin caché»"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il cachet di un SOS si scopre aprendo l'annuncio — con l'opzione «Senza cachet»"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOSのギャラは告知を開くと表示 — 「ギャラなし」オプションも追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOS 酬劳在打开告示时才显示 — 并新增「无酬劳」选项"
+          }
+        }
+      }
+    },
+    "Le cachet reste discret : il ne s'affiche qu'en ouvrant le SOS." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Gage bleibt diskret: Sie erscheint erst beim Öffnen des SOS."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The fee stays discreet: it only shows when opening the SOS."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El caché es discreto: solo se muestra al abrir el SOS."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il cachet resta discreto: appare solo aprendo il SOS."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ギャラは控えめに — SOSを開いたときだけ表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "酬劳保持低调：只有打开 SOS 时才会显示。"
           }
         }
       }
@@ -13917,6 +14437,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文档导入失败。"
+          }
+        }
+      }
+    },
+    "Le feed SOS se met à jour en temps réel — plus besoin de relancer l'app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der SOS-Feed aktualisiert sich in Echtzeit — kein App-Neustart mehr nötig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The SOS feed updates in real time — no need to relaunch the app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El feed de SOS se actualiza en tiempo real: ya no hace falta reiniciar la app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il feed SOS si aggiorna in tempo reale — niente più riavvii dell'app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOSフィードがリアルタイム更新に — アプリの再起動は不要です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SOS 信息流实时更新 — 无需重启应用"
           }
         }
       }
@@ -14297,6 +14857,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新名称会显示给所有成员。"
+          }
+        }
+      }
+    },
+    "Le nouveau nom s'affiche chez tous les membres. Les invitations doivent être acceptées avant l'entrée dans le groupe." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der neue Name erscheint bei allen Mitgliedern. Einladungen müssen angenommen werden, bevor jemand der Gruppe beitritt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new name appears for every member. Invitations must be accepted before joining the group."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El nuevo nombre aparece para todos los miembros. Las invitaciones deben aceptarse antes de entrar al grupo."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il nuovo nome appare a tutti i membri. Gli inviti vanno accettati prima di entrare nel gruppo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい名前はすべてのメンバーに表示されます。招待は承認されるまでグループに入りません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新名称会显示给所有成员。受邀者接受邀请后才会加入小组。"
           }
         }
       }
@@ -14731,6 +15331,46 @@
         }
       }
     },
+    "Les invitations de groupe s'acceptent : personne n'entre dans un groupe sans dire oui" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gruppeneinladungen werden angenommen: Niemand tritt einer Gruppe bei, ohne Ja zu sagen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group invitations must be accepted: nobody joins a group without saying yes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las invitaciones de grupo se aceptan: nadie entra a un grupo sin decir que sí"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli inviti ai gruppi vanno accettati: nessuno entra in un gruppo senza dire di sì"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グループ招待は承認制に — 同意なしにグループへ入ることはありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小组邀请需经接受：没有人会在未同意的情况下加入小组"
+          }
+        }
+      }
+    },
     "Les meilleurs profils en haut, leur niveau affiché." : {
       "localizations" : {
         "de" : {
@@ -14767,6 +15407,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最佳档案置顶，水平一目了然。"
+          }
+        }
+      }
+    },
+    "Les musiciens qui ont joué avec %@ — un tap ouvre leur profil." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Musiker, die mit %@ gespielt haben — ein Tipp öffnet ihr Profil."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The musicians who have played with %@ — tap to open their profile."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los músicos que han tocado con %@: toca para abrir su perfil."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I musicisti che hanno suonato con %@ — un tocco apre il loro profilo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@と共演したミュージシャン — タップでプロフィールを開けます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 %@ 合作过的乐手 — 点按可打开对方主页。"
           }
         }
       }
@@ -16727,6 +17407,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我的资料"
+          }
+        }
+      }
+    },
+    "Montant" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Betrag"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amount"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importe"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金額"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金额"
           }
         }
       }
@@ -21471,6 +22191,46 @@
         }
       }
     },
+    "Refuser" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ablehnen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decline"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechazar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rifiuta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辞退"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拒绝"
+          }
+        }
+      }
+    },
     "Reggae / Ska" : {
       "localizations" : {
         "de" : {
@@ -23257,6 +24017,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "嗨！%3$@在%4$@的“%1$@”（%2$@）有一个位置。你有空——要加入我们吗？"
+          }
+        }
+      }
+    },
+    "Sans cachet" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Gage"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No fee"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin caché"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senza cachet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ギャラなし"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无酬劳"
           }
         }
       }
@@ -25801,6 +26601,46 @@
         }
       }
     },
+    "Ton niveau se règle maintenant instrument par instrument" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Niveau stellst du jetzt Instrument für Instrument ein"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your level is now set instrument by instrument"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu nivel ahora se ajusta instrumento por instrumento"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo livello ora si imposta strumento per strumento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レベルを楽器ごとに設定できるようになりました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在可以按乐器分别设置水平"
+          }
+        }
+      }
+    },
     "Ton nom" : {
       "localizations" : {
         "de" : {
@@ -27761,6 +28601,46 @@
         }
       }
     },
+    "Voir avec qui ce musicien a joué" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sehen, mit wem dieser Musiker gespielt hat"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See who this musician has played with"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ver con quién ha tocado este músico"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vedi con chi ha suonato questo musicista"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この人の共演相手を見る"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看这位乐手的合作对象"
+          }
+        }
+      }
+    },
     "Voir l'app comme…" : {
       "localizations" : {
         "de" : {
@@ -28547,6 +29427,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "you@example.com"
+          }
+        }
+      }
+    },
+    "« A joué avec » sur chaque profil : vois avec qui un musicien a déjà joué, et ouvre leurs profils" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Hat gespielt mit“ auf jedem Profil: Sieh, mit wem ein Musiker schon gespielt hat, und öffne ihre Profile"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Has played with” on every profile: see who a musician has played with, and open their profiles"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Ha tocado con» en cada perfil: mira con quién ha tocado un músico y abre sus perfiles"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Ha suonato con» su ogni profilo: vedi con chi ha suonato un musicista e apri i loro profili"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全プロフィールに「共演したメンバー」欄 — 共演相手を確認してプロフィールを開けます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个主页新增「合作过的乐手」：查看合作对象并打开他们的主页"
           }
         }
       }

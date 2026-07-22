@@ -173,6 +173,8 @@ final class SupabaseBackend: Sendable {
         var isDemo: Bool?
         /// Pseudos réseaux sociaux (jsonb côté serveur).
         var socials: [String: String]?
+        /// Niveau par instrument (jsonb côté serveur).
+        var instrumentLevels: [String: String]?
         /// Note moyenne étoilée (maintenue par trigger — anonyme).
         var ratingAvg: Double?
         var ratingCount: Int?
@@ -192,6 +194,7 @@ final class SupabaseBackend: Sendable {
             case ratingCount = "rating_count"
             case demoVideos = "demo_videos"
             case locationPrecision = "location_precision"
+            case instrumentLevels = "instrument_levels"
         }
 
         var parsedDates: [Date] {
@@ -228,6 +231,7 @@ final class SupabaseBackend: Sendable {
                 reviews: [],
                 photo: photoUrl,
                 socials: socials,
+                instrumentLevels: instrumentLevels,
                 isDemo: isDemo ?? false,
                 isPremium: isPremium,
                 hasLocation: latitude != nil && longitude != nil,
@@ -442,6 +446,7 @@ final class SupabaseBackend: Sendable {
             let available_dates: [String]
             let socials: [String: String]
             let neighborhood: String
+            let instrument_levels: [String: String]
         }
         let update = Update(
             name: profile.name,
@@ -453,7 +458,8 @@ final class SupabaseBackend: Sendable {
             socials: profile.socials ?? [:],
             // La ville choisie (« 1200 Genève ») — c'est ce que les autres
             // voient sur ma fiche et mes cartes.
-            neighborhood: profile.cityLabel
+            neighborhood: profile.cityLabel,
+            instrument_levels: profile.instrumentLevels ?? [:]
         )
         try await client.from("profiles").update(update).eq("id", value: userID).execute()
     }
@@ -1188,6 +1194,105 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    // MARK: - Invitations de groupe (l'invité doit accepter)
+
+    /// Ligne renvoyée par la RPC `my_group_invitations` (mes invitations,
+    /// avec les infos du groupe que la RLS ne me laisse pas encore lire).
+    struct MyInvitationRow: Codable {
+        var id: UUID
+        var groupId: UUID
+        var groupName: String
+        var groupEmoji: String
+        var groupPhotoUrl: String?
+        var invitedByName: String
+        var kind: String
+        var createdAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case id, kind
+            case groupId = "group_id"
+            case groupName = "group_name"
+            case groupEmoji = "group_emoji"
+            case groupPhotoUrl = "group_photo_url"
+            case invitedByName = "invited_by_name"
+            case createdAt = "created_at"
+        }
+
+        var asInvitation: GroupInvitation {
+            GroupInvitation(
+                id: id,
+                groupID: groupId,
+                groupName: groupName,
+                groupEmoji: groupEmoji,
+                groupPhotoURL: groupPhotoUrl,
+                invitedByName: invitedByName,
+                kind: GroupMemberKind(dbValue: kind) ?? .occasional,
+                date: createdAt
+            )
+        }
+    }
+
+    /// Ligne brute de `group_invitations` (invitations en attente de mes
+    /// groupes — visible des membres).
+    struct GroupInvitationRow: Codable {
+        var id: UUID
+        var groupId: UUID
+        var profileId: UUID
+        var kind: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, kind
+            case groupId = "group_id"
+            case profileId = "profile_id"
+        }
+    }
+
+    /// Mes invitations reçues, prêtes à afficher.
+    func fetchMyGroupInvitations() async throws -> [GroupInvitation] {
+        let rows: [MyInvitationRow] = try await client
+            .rpc("my_group_invitations")
+            .execute().value
+        return rows.map(\.asInvitation)
+    }
+
+    /// Invitations en attente des groupes donnés (côté membres/leader).
+    func fetchPendingInvites(groupIDs: [UUID]) async throws -> [GroupInvitationRow] {
+        guard !groupIDs.isEmpty else { return [] }
+        return try await client.from("group_invitations")
+            .select()
+            .in("group_id", values: groupIDs.map(\.uuidString))
+            .execute().value
+    }
+
+    /// Invite un musicien (RLS : leader uniquement) — il devra accepter.
+    func createGroupInvitation(groupID: UUID, profileID: UUID, invitedBy: UUID, kind: GroupMemberKind) async throws {
+        struct Insert: Encodable {
+            let group_id: UUID
+            let profile_id: UUID
+            let invited_by: UUID
+            let kind: String
+        }
+        try await client.from("group_invitations")
+            .insert(Insert(group_id: groupID, profile_id: profileID, invited_by: invitedBy, kind: kind.dbValue))
+            .execute()
+    }
+
+    /// Accepte une invitation : la RPC (SECURITY DEFINER) fait entrer
+    /// l'invité dans `group_members` puis supprime l'invitation.
+    func acceptGroupInvitation(_ invitationID: UUID) async throws {
+        try await client
+            .rpc("accept_group_invitation", params: ["invitation_id": invitationID.uuidString])
+            .execute()
+    }
+
+    /// Refuse (invité) ou annule (leader) une invitation.
+    func deleteGroupInvitation(_ invitationID: UUID) async throws {
+        try await client.from("group_invitations")
+            .delete()
+            .eq("id", value: invitationID)
+            .execute()
+    }
+
     func setMemberKind(_ profileID: UUID, _ kind: GroupMemberKind, in groupID: UUID) async throws {
         try await client.from("group_members")
             .update(["kind": kind.dbValue])
@@ -1488,6 +1593,7 @@ final class SupabaseBackend: Sendable {
         let memberChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_members")
         let groupChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "music_groups")
         let docChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_docs")
+        let invitationChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_invitations")
         try await channel.subscribeWithError()
         let stream = AsyncStream<GroupRealtimeEvent> { continuation in
             let messageTask = Task {
@@ -1497,7 +1603,7 @@ final class SupabaseBackend: Sendable {
                     }
                 }
             }
-            let changeTasks = [eventChanges, attendanceChanges, memberChanges, groupChanges, docChanges].map { changes in
+            let changeTasks = [eventChanges, attendanceChanges, memberChanges, groupChanges, docChanges, invitationChanges].map { changes in
                 Task {
                     for await _ in changes {
                         continuation.yield(.groupsChanged)
@@ -1507,6 +1613,31 @@ final class SupabaseBackend: Sendable {
             continuation.onTermination = { _ in
                 messageTask.cancel()
                 changeTasks.forEach { $0.cancel() }
+            }
+        }
+        return (channel, stream)
+    }
+
+    // MARK: - SOS : temps réel
+
+    /// Flux temps réel des annonces SOS et des candidatures : tout
+    /// changement déclenche un rechargement (coalescé côté AppStore) — un
+    /// SOS publié apparaît chez tout le monde sans relancer l'app.
+    func gigStream() async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<Void>) {
+        let channel = client.channel("gigs-live")
+        let gigChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "gig_requests")
+        let applicationChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "gig_applications")
+        try await channel.subscribeWithError()
+        let stream = AsyncStream<Void> { continuation in
+            let tasks = [gigChanges, applicationChanges].map { changes in
+                Task {
+                    for await _ in changes {
+                        continuation.yield(())
+                    }
+                }
+            }
+            continuation.onTermination = { _ in
+                tasks.forEach { $0.cancel() }
             }
         }
         return (channel, stream)

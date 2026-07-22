@@ -13,6 +13,7 @@ struct MusicianDetailView: View {
     @State private var showBlockConfirmation = false
     @State private var safetyMessage: String?
     @State private var playingVideo: PlayableVideo?
+    @State private var showPlayedWith = false
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
     /// Tuiles d'aperçu — uniquement pour la vitrine des profils de démo.
@@ -105,6 +106,17 @@ struct MusicianDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPlayedWith) {
+            PlayedWithSheet(ownerName: firstName, collaborators: playedWithMusicians)
+        }
+    }
+
+    /// Musiciens avec qui ce profil a déjà joué (fiche consultable).
+    private var playedWithMusicians: [Musician] {
+        let names = store.collaborators(of: musician)
+        return names
+            .compactMap { name in store.musicians.first(where: { $0.name == name }) }
+            .sorted { $0.name < $1.name }
     }
 
     // MARK: - En-tête (photo + stats, façon Instagram)
@@ -198,15 +210,72 @@ struct MusicianDetailView: View {
                     .foregroundStyle(.primary.opacity(0.9))
                     .padding(.top, 2)
             }
-            HStack(spacing: 6) {
+            playedWithRow
+            FlowLayout {
                 ForEach(musician.genres.prefix(3)) { genre in
                     TagView(text: genre.rawValue, color: genre.color)
                 }
             }
             .padding(.top, 2)
+            if !musician.instruments.isEmpty {
+                // Instruments joués, avec le niveau par instrument
+                // (visible pour les membres Premium, comme le niveau global).
+                FlowLayout {
+                    ForEach(musician.instruments) { instrument in
+                        TagView(text: instrumentChipLabel(instrument), color: .teal)
+                    }
+                }
+            }
             SocialLogosRow(socials: musician.socials)
                 .padding(.top, 4)
         }
+    }
+
+    /// « Piano · Avancé » (Premium) ou juste « Piano ».
+    private func instrumentChipLabel(_ instrument: Instrument) -> String {
+        guard store.isPremium, let level = musician.level(for: instrument) else {
+            return store.tr(instrument.rawValue)
+        }
+        return store.tr(instrument.rawValue) + " · " + store.tr(level.rawValue)
+    }
+
+    /// « A joué avec » — les avatars des musiciens avec qui il a déjà joué,
+    /// juste sous la bio. Un tap ouvre la liste complète, profils cliquables.
+    @ViewBuilder
+    private var playedWithRow: some View {
+        let collaborators = playedWithMusicians
+        if !collaborators.isEmpty {
+            Button { showPlayedWith = true } label: {
+                HStack(spacing: 9) {
+                    HStack(spacing: -10) {
+                        ForEach(collaborators.prefix(4)) { collaborator in
+                            AvatarView(name: collaborator.name, size: 30, photo: collaborator.photo)
+                                .overlay(Circle().stroke(JC.bg, lineWidth: 2))
+                        }
+                    }
+                    Text(playedWithLabel(collaborators))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(PressableStyle())
+            .padding(.top, 4)
+            .accessibilityLabel(Text("Voir avec qui ce musicien a joué"))
+        }
+    }
+
+    /// « A joué avec Marco » / « A joué avec Marco +3 ».
+    private func playedWithLabel(_ collaborators: [Musician]) -> String {
+        guard let first = collaborators.first else { return "" }
+        let firstName = first.name.split(separator: " ").first.map(String.init) ?? first.name
+        if collaborators.count == 1 {
+            return String(format: store.tr("A joué avec %@"), firstName)
+        }
+        return String(format: store.tr("A joué avec %@ +%lld"), firstName, Int64(collaborators.count - 1))
     }
 
     // MARK: - Actions
@@ -291,7 +360,7 @@ struct MusicianDetailView: View {
     @ViewBuilder
     private var availabilityRow: some View {
         if !upcomingDates.isEmpty {
-            HStack(spacing: 6) {
+            FlowLayout {
                 Image(systemName: "calendar")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.secondary)
@@ -538,6 +607,71 @@ struct MusicianDetailView: View {
         Label(title, systemImage: systemImage)
             .font(.subheadline.weight(.heavy))
             .foregroundStyle(JC.coral)
+    }
+}
+
+// MARK: - « A joué avec » : la liste complète
+
+/// Tous les musiciens avec qui ce profil a joué — chaque ligne ouvre la
+/// fiche du musicien (navigation dans la feuille).
+struct PlayedWithSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let ownerName: String
+    let collaborators: [Musician]
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                ScrollView {
+                    VStack(spacing: 10) {
+                        Text(String(format: store.tr("Les musiciens qui ont joué avec %@ — un tap ouvre leur profil."), ownerName))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        ForEach(collaborators) { collaborator in
+                            NavigationLink(value: collaborator) {
+                                JCCard(padding: 11) {
+                                    HStack(spacing: 11) {
+                                        AvatarView(name: collaborator.name, size: 44, photo: collaborator.photo)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HStack(spacing: 6) {
+                                                Text(collaborator.name)
+                                                    .font(.subheadline.weight(.bold))
+                                                    .foregroundStyle(.primary)
+                                                    .lineLimit(1)
+                                                if collaborator.isDemo { DemoAccountBadge() }
+                                            }
+                                            Text(verbatim: collaborator.handle)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: 0)
+                                        if let summary = store.ratingSummary(for: collaborator) {
+                                            RatingBadge(summary: summary)
+                                        }
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                    .padding(18)
+                }
+            }
+            .navigationTitle("A joué avec")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+        }
     }
 }
 

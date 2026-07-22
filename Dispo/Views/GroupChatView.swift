@@ -916,6 +916,11 @@ struct GroupMembersSheet: View {
                                 )
                             }
 
+                            // Invités en attente de réponse (le leader peut annuler).
+                            ForEach(store.pendingInvitesByGroup[group.id] ?? []) { invite in
+                                pendingInviteRow(invite, group: group)
+                            }
+
                             if isLeader {
                                 Text("Le leadership ne peut être transmis qu'à un membre Premium. Marque chaque membre Permanent (noyau) ou Occasionnel.")
                                     .font(.caption2)
@@ -955,6 +960,38 @@ struct GroupMembersSheet: View {
                     }
                 }
                 Button("Annuler", role: .cancel) { pendingLeader = nil }
+            }
+        }
+    }
+
+    /// Invité en attente : avatar grisé, pastille « Invitation en attente »,
+    /// et l'annulation pour le leader.
+    private func pendingInviteRow(_ invite: PendingGroupInvite, group: GroupChat) -> some View {
+        JCCard(padding: 11) {
+            HStack(spacing: 11) {
+                AvatarView(name: invite.name, size: 42, photo: store.photo(forName: invite.name))
+                    .opacity(0.55)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(invite.name)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Label("Invitation en attente", systemImage: "hourglass")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(JC.gold)
+                }
+                Spacer(minLength: 0)
+                if isLeader {
+                    Button {
+                        store.cancelGroupInvitation(invite, in: group)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(PressableStyle())
+                    .accessibilityLabel(Text("Annuler l'invitation"))
+                }
             }
         }
     }
@@ -1159,7 +1196,11 @@ struct InviteMemberSheet: View {
     @State private var query = ""
 
     private var candidates: [Musician] {
-        let base = store.musicians.filter { !group.memberNames.contains($0.name) }
+        // Ni les membres actuels, ni les invités en attente de réponse.
+        let pendingIDs = Set((store.pendingInvitesByGroup[group.id] ?? []).map(\.profileID))
+        let base = store.musicians.filter {
+            !group.memberNames.contains($0.name) && !pendingIDs.contains($0.id)
+        }
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return base.sorted { store.rank($0, $1) } }
         return base

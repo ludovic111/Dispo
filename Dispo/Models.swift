@@ -782,6 +782,9 @@ struct Musician: Codable, Identifiable, Hashable {
     var photo: String?
     /// Pseudos réseaux sociaux (clé = SocialNetwork.rawValue).
     var socials: [String: String]?
+    /// Niveau par instrument (clé = Instrument.rawValue) — nil pour les
+    /// profils d'avant la 1.0 (14) ou sans niveau renseigné.
+    var instrumentLevels: [String: String]? = nil
     /// Noms des musiciens avec qui cette personne a déjà joué (graphe « a joué avec »).
     var collaborators: [String] = []
     /// Compte échantillon clairement distingué des profils réels.
@@ -805,7 +808,7 @@ struct Musician: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
         case instruments, genres, level, bio, availability, repertoire, reviews, photo
-        case socials, collaborators, isDemo, isPremium
+        case socials, collaborators, isDemo, isPremium, instrumentLevels
     }
 
     init(
@@ -825,6 +828,7 @@ struct Musician: Codable, Identifiable, Hashable {
         reviews: [Review],
         photo: String? = nil,
         socials: [String: String]? = nil,
+        instrumentLevels: [String: String]? = nil,
         collaborators: [String] = [],
         isDemo: Bool = false,
         isPremium: Bool = false,
@@ -849,6 +853,7 @@ struct Musician: Codable, Identifiable, Hashable {
         self.reviews = reviews
         self.photo = photo
         self.socials = socials
+        self.instrumentLevels = instrumentLevels
         self.collaborators = collaborators
         self.isDemo = isDemo
         self.isPremium = isPremium
@@ -875,6 +880,7 @@ struct Musician: Codable, Identifiable, Hashable {
         reviews = try c.decode([Review].self, forKey: .reviews)
         photo = try c.decodeIfPresent(String.self, forKey: .photo)
         socials = try c.decodeIfPresent([String: String].self, forKey: .socials)
+        instrumentLevels = try c.decodeIfPresent([String: String].self, forKey: .instrumentLevels)
         // Absent du JSON (backend live, anciennes seeds) → liste vide.
         collaborators = try c.decodeIfPresent([String].self, forKey: .collaborators) ?? []
         isDemo = try c.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
@@ -886,6 +892,12 @@ struct Musician: Codable, Identifiable, Hashable {
         guard let handle = socials?[network.rawValue],
               !handle.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
         return handle
+    }
+
+    /// Niveau renseigné pour un instrument précis (nil = inconnu — le
+    /// niveau global `level` sert alors de repli).
+    func level(for instrument: Instrument) -> Level? {
+        instrumentLevels?[instrument.rawValue].flatMap(Level.init(rawValue:))
     }
 
     var isAvailable: Bool { availability.isAvailable }
@@ -1059,6 +1071,29 @@ enum GroupEventKind: String, Codable, CaseIterable, Identifiable {
         case .jam: return "🔥"
         }
     }
+}
+
+/// Invitation à un groupe reçue — l'invité doit accepter avant de devenir
+/// membre. Les infos du groupe sont dénormalisées (RLS : l'invité ne peut
+/// pas encore lire `music_groups`).
+struct GroupInvitation: Codable, Identifiable, Hashable {
+    var id: UUID
+    var groupID: UUID
+    var groupName: String
+    var groupEmoji: String
+    var groupPhotoURL: String?
+    var invitedByName: String
+    var kind: GroupMemberKind
+    var date: Date
+}
+
+/// Invité en attente de réponse, vu par les membres du groupe.
+struct PendingGroupInvite: Codable, Identifiable, Hashable {
+    /// id de l'invitation (pour l'annuler).
+    var id: UUID
+    var profileID: UUID
+    var name: String
+    var kind: GroupMemberKind
 }
 
 /// Statut d'un membre dans le noyau du groupe : permanent (base fixe) ou
@@ -1251,7 +1286,7 @@ struct GigRequest: Codable, Identifiable, Hashable {
     }
 
     var feeLabel: String {
-        if let fee { return "CHF \(fee)" }
+        if let fee { return fee == 0 ? "Sans cachet" : "CHF \(fee)" }
         return "À discuter"
     }
 
@@ -1339,6 +1374,10 @@ struct MyProfile: Codable {
     var demoVideos: [DemoVideo]?
     /// Pseudos réseaux sociaux (clé = SocialNetwork.rawValue).
     var socials: [String: String]?
+    /// Niveau par instrument (clé = Instrument.rawValue, valeur =
+    /// Level.rawValue). Le niveau global `level` reste le meilleur des
+    /// niveaux — filtres et anciens clients continuent de marcher.
+    var instrumentLevels: [String: String]?
 
     /// Statut affiché aux autres, dérivé des dates.
     var availability: Availability { .derived(from: availableDates) }
@@ -1370,6 +1409,32 @@ struct MyProfile: Codable {
             updated[network.rawValue] = clean
         }
         socials = updated
+    }
+
+    /// Niveau choisi pour un instrument (nil = pas encore renseigné).
+    func level(for instrument: Instrument) -> Level? {
+        instrumentLevels?[instrument.rawValue].flatMap(Level.init(rawValue:))
+    }
+
+    /// Pose le niveau d'un instrument et aligne le niveau global sur le
+    /// meilleur niveau renseigné.
+    mutating func setLevel(_ newLevel: Level, for instrument: Instrument) {
+        var updated = instrumentLevels ?? [:]
+        updated[instrument.rawValue] = newLevel.rawValue
+        instrumentLevels = updated
+        syncGlobalLevel()
+    }
+
+    /// Retire le niveau d'un instrument (quand l'instrument est décoché).
+    mutating func removeLevel(for instrument: Instrument) {
+        guard instrumentLevels?[instrument.rawValue] != nil else { return }
+        instrumentLevels?.removeValue(forKey: instrument.rawValue)
+        syncGlobalLevel()
+    }
+
+    private mutating func syncGlobalLevel() {
+        let levels = (instrumentLevels ?? [:]).values.compactMap(Level.init(rawValue:))
+        if let best = levels.max() { level = best }
     }
     /// Vidéos de démo — migre à la volée l'ancien format sans dates.
     var videos: [DemoVideo] {

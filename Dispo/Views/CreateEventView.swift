@@ -11,11 +11,21 @@ struct CreateEventView: View {
     @State private var date: Date
     @State private var genre: Genre = .latin
     @State private var wanted: Set<Instrument> = []
+    @State private var feeMode: FeeMode = .negotiable
     @State private var feeText = ""
     @State private var paymentMethod: PaymentMethod?
     @State private var customPayment = ""
     @State private var useCustomPayment = false
     @State private var descriptionText = ""
+
+    /// Comment le cachet est annoncé : un montant, « à discuter », ou pas
+    /// de cachet du tout (jam, bœuf, concert bénévole…).
+    enum FeeMode: String, CaseIterable, Identifiable {
+        case negotiable = "À discuter"
+        case amount = "Montant"
+        case none = "Sans cachet"
+        var id: String { rawValue }
+    }
     /// L'annonce venant d'être publiée — déclenche l'écran de matching.
     @State private var published: GigRequest?
 
@@ -106,17 +116,29 @@ struct CreateEventView: View {
                 }
 
                 Section {
-                    TextField("Ex. 150", text: $feeText)
-                        .keyboardType(.numberPad)
-                    PaymentMethodField(
-                        method: $paymentMethod,
-                        custom: $customPayment,
-                        useCustom: $useCustomPayment
-                    )
+                    Picker("Cachet", selection: $feeMode.animation()) {
+                        ForEach(FeeMode.allCases) { mode in
+                            Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if feeMode == .amount {
+                        TextField("Ex. 150", text: $feeText)
+                            .keyboardType(.numberPad)
+                    }
+                    if feeMode != .none {
+                        PaymentMethodField(
+                            method: $paymentMethod,
+                            custom: $customPayment,
+                            useCustom: $useCustomPayment
+                        )
+                    }
                 } header: {
                     Text("Cachet (CHF)")
                 } footer: {
-                    Text("Laisse vide pour « à discuter ». Un cachet affiché reçoit plus de candidatures.")
+                    Text(feeMode == .none
+                         ? "Le SOS s'affiche « Sans cachet » — parfait pour une jam ou un concert bénévole."
+                         : "Le cachet reste discret : il ne s'affiche qu'en ouvrant le SOS.")
                 }
 
                 Section {
@@ -148,8 +170,14 @@ struct CreateEventView: View {
                             neighborhood: neighborhood,
                             genre: genre,
                             wantedInstruments: Array(wanted).sorted { $0.rawValue < $1.rawValue },
-                            fee: Int(feeText.trimmingCharacters(in: .whitespaces)),
-                            paymentMethod: PaymentMethodField.storedValue(
+                            fee: {
+                                switch feeMode {
+                                case .amount: return Int(feeText.trimmingCharacters(in: .whitespaces))
+                                case .negotiable: return nil
+                                case .none: return 0
+                                }
+                            }(),
+                            paymentMethod: feeMode == .none ? nil : PaymentMethodField.storedValue(
                                 method: paymentMethod,
                                 custom: customPayment,
                                 useCustom: useCustomPayment

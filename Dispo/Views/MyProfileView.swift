@@ -237,14 +237,25 @@ struct MyProfileView: View {
             }
             .padding(.top, 2)
             if !store.profile.instruments.isEmpty {
-                Text(verbatim: store.profile.instruments.map { store.tr($0.rawValue) }.joined(separator: " · "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 1)
+                // Mes instruments avec leur niveau (« Piano · Avancé »).
+                FlowLayout {
+                    ForEach(store.profile.instruments) { instrument in
+                        TagView(text: myInstrumentLabel(instrument), color: .teal)
+                    }
+                }
+                .padding(.top, 1)
             }
             SocialLogosRow(socials: store.profile.socials)
                 .padding(.top, 4)
         }
+    }
+
+    /// « Piano · Avancé » ou juste « Piano » si le niveau n'est pas choisi.
+    private func myInstrumentLabel(_ instrument: Instrument) -> String {
+        guard let level = store.profile.level(for: instrument) else {
+            return store.tr(instrument.rawValue)
+        }
+        return store.tr(instrument.rawValue) + " · " + store.tr(level.rawValue)
     }
 
     /// Bouton principal — comme « Suivre / Contacter » sur les autres profils.
@@ -597,27 +608,22 @@ struct EditProfileSheet: View {
                     ))
                 }
 
-                // Mes instruments — une section par famille.
+                // Mes instruments — une section par famille, avec le niveau
+                // PAR instrument sur chaque ligne cochée.
                 ForEach(InstrumentCategory.allCases) { category in
                     Section {
                         ForEach(Instrument.instruments(in: category)) { instrument in
-                            toggleRow(
-                                label: LocalizedStringKey(instrument.rawValue),
-                                isOn: store.profile.instruments.contains(instrument)
-                            ) {
-                                if let index = store.profile.instruments.firstIndex(of: instrument) {
-                                    store.profile.instruments.remove(at: index)
-                                } else {
-                                    store.profile.instruments.append(instrument)
-                                }
-                                store.saveProfile()
-                            }
+                            instrumentRow(instrument)
                         }
                     } header: {
                         if category == InstrumentCategory.allCases.first {
                             Text("Mes instruments — ") + Text(LocalizedStringKey(category.rawValue))
                         } else {
                             Text(LocalizedStringKey(category.rawValue))
+                        }
+                    } footer: {
+                        if category == InstrumentCategory.allCases.first {
+                            Text("Coche tes instruments, puis choisis ton niveau pour chacun.")
                         }
                     }
                 }
@@ -645,16 +651,6 @@ struct EditProfileSheet: View {
                             Text(family.emoji + " ") + Text(LocalizedStringKey(family.rawValue))
                         }
                     }
-                }
-
-                Section("Mon niveau") {
-                    Picker("Niveau", selection: Binding(
-                        get: { store.profile.level },
-                        set: { store.profile.level = $0; store.saveProfile() }
-                    )) {
-                        ForEach(Level.allCases) { Text(LocalizedStringKey($0.rawValue)).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
                 }
 
                 Section("Bio") {
@@ -698,6 +694,63 @@ struct EditProfileSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") { dismiss() }
                         .font(.headline)
+                }
+            }
+        }
+    }
+
+    /// Ligne d'un instrument : cocher / décocher, et — une fois coché — le
+    /// menu du niveau pour CET instrument (le niveau global suit le meilleur).
+    private func instrumentRow(_ instrument: Instrument) -> some View {
+        let isOn = store.profile.instruments.contains(instrument)
+        let level = store.profile.level(for: instrument)
+        return HStack(spacing: 10) {
+            Button {
+                if let index = store.profile.instruments.firstIndex(of: instrument) {
+                    store.profile.instruments.remove(at: index)
+                    store.profile.removeLevel(for: instrument)
+                } else {
+                    store.profile.instruments.append(instrument)
+                }
+                store.saveProfile()
+            } label: {
+                HStack {
+                    Text(LocalizedStringKey(instrument.rawValue))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if isOn {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(JC.coral)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isOn {
+                Menu {
+                    ForEach(Level.allCases) { option in
+                        Button {
+                            store.profile.setLevel(option, for: instrument)
+                            store.saveProfile()
+                        } label: {
+                            if level == option {
+                                Label(LocalizedStringKey(option.rawValue), systemImage: "checkmark")
+                            } else {
+                                Text(LocalizedStringKey(option.rawValue))
+                            }
+                        }
+                    }
+                } label: {
+                    Text(LocalizedStringKey(level?.rawValue ?? "Niveau"))
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(
+                            (level == nil ? JC.gold : JC.violet).opacity(0.14),
+                            in: Capsule()
+                        )
+                        .foregroundStyle(level == nil ? JC.gold : JC.violet)
+                        .fixedSize()
                 }
             }
         }

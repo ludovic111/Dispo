@@ -14,6 +14,11 @@ struct PatchNote: Identifiable {
             version: "1.0",
             title: "Dispo 1.0 — c'est parti 🎉",
             points: [
+                "Les invitations de groupe s'acceptent : personne n'entre dans un groupe sans dire oui",
+                "Ton niveau se règle maintenant instrument par instrument",
+                "Le cachet d'un SOS se découvre en ouvrant l'annonce — avec une option « Sans cachet »",
+                "« A joué avec » sur chaque profil : vois avec qui un musicien a déjà joué, et ouvre leurs profils",
+                "Le feed SOS se met à jour en temps réel — plus besoin de relancer l'app",
                 "Les partitions du groupe sont maintenant partagées : chaque membre peut les ouvrir, les télécharger et en ajouter",
                 "Le leader peut renommer son groupe à tout moment",
                 "« Écouter sur… » : les liens ouvrent vraiment Apple Music, Spotify, YouTube Music et Deezer — avec leurs logos",

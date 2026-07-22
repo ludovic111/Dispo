@@ -135,7 +135,12 @@ struct ChatListView: View {
     /// Groupes : rejoindre est gratuit, créer et diriger est Premium.
     @ViewBuilder
     private var groupsSection: some View {
-        if store.groups.isEmpty {
+        // Invitations reçues — accepter ou refuser avant d'entrer.
+        ForEach(store.myGroupInvitations) { invitation in
+            GroupInvitationCard(invitation: invitation)
+        }
+
+        if store.groups.isEmpty && store.myGroupInvitations.isEmpty {
             if store.isPremium {
                 JCEmptyState(
                     icon: "person.3.fill",
@@ -217,6 +222,87 @@ struct GroupAvatarView: View {
                 .frame(width: size, height: size)
             Text(group.emoji)
                 .font(size >= 50 ? .title3 : .body)
+        }
+    }
+}
+
+// MARK: - Invitation à un groupe
+
+/// Carte d'invitation reçue : le groupe, qui invite, et deux boutons —
+/// accepter ou refuser. On n'entre jamais dans un groupe sans dire oui.
+struct GroupInvitationCard: View {
+    @EnvironmentObject private var store: AppStore
+    let invitation: GroupInvitation
+
+    var body: some View {
+        JCCard(padding: 13) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    if let photo = invitation.groupPhotoURL, let url = URL(string: photo) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            emojiCircle
+                        }
+                        .frame(width: 50, height: 50)
+                        .clipShape(Circle())
+                    } else {
+                        emojiCircle
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(invitation.groupName)
+                                .font(.subheadline.weight(.bold))
+                                .lineLimit(1)
+                            TagView(text: "Invitation", color: JC.gold)
+                        }
+                        Text(String(format: store.tr("%@ t'invite à rejoindre ce groupe"), invitation.invitedByName))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
+                }
+                HStack(spacing: 8) {
+                    Button {
+                        store.acceptGroupInvitation(invitation)
+                    } label: {
+                        Label("Accepter", systemImage: "checkmark")
+                            .font(.subheadline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(AnyShapeStyle(JC.hero), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .foregroundStyle(Color.white)
+                    }
+                    .buttonStyle(PressableStyle())
+
+                    Button {
+                        store.declineGroupInvitation(invitation)
+                    } label: {
+                        Text("Refuser")
+                            .font(.subheadline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(JC.card, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .stroke(JC.cardStroke, lineWidth: 1)
+                            )
+                            .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+        }
+    }
+
+    private var emojiCircle: some View {
+        ZStack {
+            Circle()
+                .fill(JC.gold.opacity(0.15))
+                .frame(width: 50, height: 50)
+            Text(invitation.groupEmoji)
+                .font(.title3)
         }
     }
 }

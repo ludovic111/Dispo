@@ -525,6 +525,62 @@ struct LogoView: View {
     }
 }
 
+/// Dispose ses enfants en lignes et passe à la ligne quand la largeur est
+/// épuisée — pour les rangées de pastilles de taille variable (instruments,
+/// dates…). Sans lui, un HStack trop plein écrase les textes à la verticale.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = computeRows(proposal: proposal, subviews: subviews)
+        let width = proposal.width ?? rows.map(\.width).max() ?? 0
+        let height = rows.map(\.height).reduce(0, +)
+            + spacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in computeRows(proposal: proposal, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(
+                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
+                    proposal: .unspecified
+                )
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func computeRows(proposal: ProposedViewSize, subviews: Subviews) -> [Row] {
+        let maxWidth = proposal.width ?? .infinity
+        var rows: [Row] = []
+        var current = Row()
+        for (index, subview) in subviews.enumerated() {
+            let size = subview.sizeThatFits(.unspecified)
+            let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+            if !current.indices.isEmpty && needed > maxWidth {
+                rows.append(current)
+                current = Row()
+            }
+            current.indices.append(index)
+            current.width = current.indices.count == 1 ? size.width : current.width + spacing + size.width
+            current.height = max(current.height, size.height)
+        }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
+    }
+}
+
 struct TagView: View {
     let text: LocalizedStringKey
     var color: Color = JC.coral
@@ -549,6 +605,10 @@ struct TagView: View {
             .background(color.opacity(0.16), in: Capsule())
             .overlay(Capsule().stroke(color.opacity(0.35), lineWidth: 1))
             .foregroundStyle(color)
+            // Une pastille ne se comprime jamais : quand la place manque,
+            // c'est au conteneur (FlowLayout, ScrollView…) de gérer —
+            // fini les textes écrasés à la verticale.
+            .fixedSize()
     }
 }
 

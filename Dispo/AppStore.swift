@@ -148,6 +148,14 @@ final class AppStore: ObservableObject {
     /// Rafraîchissement des groupes en attente (déclenché par le realtime) —
     /// coalesce les rafales d'événements en un seul rechargement.
     private var pendingGroupRefresh: Task<Void, Never>?
+    /// Temps réel des annonces SOS (publication, retrait, candidatures).
+    private var gigChannel: RealtimeChannelV2?
+    private var gigTask: Task<Void, Never>?
+    private var pendingGigRefresh: Task<Void, Never>?
+    /// Invitations de groupe reçues — à accepter ou refuser.
+    @Published private(set) var myGroupInvitations: [GroupInvitation] = []
+    /// Invités en attente de réponse, par groupe (visible des membres).
+    @Published private(set) var pendingInvitesByGroup: [UUID: [PendingGroupInvite]] = [:]
     private var transactionTask: Task<Void, Never>?
     /// Écoute des mises à jour d'abonnement RevenueCat (renouvellement,
     /// expiration, achat sur un autre appareil…).
@@ -454,6 +462,7 @@ final class AppStore: ObservableObject {
         await refreshLiveData()
         await startMessageStream()
         await startGroupStream()
+        await startGigStream()
         await refreshNotificationAuthorization(registerIfAllowed: true)
         backfillVideoThumbnails()
     }
@@ -533,6 +542,7 @@ final class AppStore: ObservableObject {
             // sont hébergées depuis la 1.0 — visibles par tout le groupe).
             groups = remoteGroups
             persistGroups()
+            await refreshGroupInvitations(nameByID: nameByID)
             rescheduleAllAttendanceNotifications()
             backendError = nil
         } catch {
@@ -617,6 +627,16 @@ final class AppStore: ObservableObject {
             await backend.client.removeChannel(channel)
             groupChannel = nil
         }
+        gigTask?.cancel()
+        gigTask = nil
+        pendingGigRefresh?.cancel()
+        pendingGigRefresh = nil
+        if let channel = gigChannel {
+            await backend.client.removeChannel(channel)
+            gigChannel = nil
+        }
+        myGroupInvitations = []
+        pendingInvitesByGroup = [:]
         stopTypingChannel()
         typingExpiries.values.forEach { $0.cancel() }
         typingExpiries = [:]
@@ -822,6 +842,47 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Démarre le temps réel des SOS : publication, retrait ou candidature
+    /// → rechargement coalescé du feed (le feed reste juste sans relance).
+    private func startGigStream() async {
+        guard let backend, gigTask == nil else { return }
+        let channel: RealtimeChannelV2
+        let stream: AsyncStream<Void>
+        do {
+            (channel, stream) = try await backend.gigStream()
+        } catch {
+            // Pas de bannière : le refresh au premier plan rattrape déjà.
+            return
+        }
+        gigChannel = channel
+        gigTask = Task { [weak self] in
+            for await _ in stream {
+                self?.scheduleGigRefresh()
+            }
+        }
+    }
+
+    /// Coalesce les rafales d'événements SOS en un seul rechargement.
+    private func scheduleGigRefresh() {
+        guard pendingGigRefresh == nil else { return }
+        pendingGigRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            await self?.refreshGigs()
+            self?.pendingGigRefresh = nil
+        }
+    }
+
+    /// Recharge uniquement le feed SOS (plus léger que refreshLiveData).
+    private func refreshGigs() async {
+        guard let backend, let userID = liveUserID else { return }
+        guard let fresh = try? await backend.fetchGigs(myID: userID) else { return }
+        withAnimation {
+            events = fresh.sorted { $0.date < $1.date }
+        }
+        persistEvents()
+    }
+
     private func handleIncomingGroupMessage(_ row: SupabaseBackend.GroupMessageRow) async {
         guard let userID = liveUserID else { return }
         guard let index = groups.firstIndex(where: { $0.id == row.groupId }) else {
@@ -875,20 +936,41 @@ final class AppStore: ObservableObject {
                 myName: profile.name,
                 nameByID: nameByID
             )
-            let localByID = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
+            // Messages ET partitions viennent du serveur — ne rien écraser
+            // avec la copie locale (sinon une partition reçue en realtime
+            // disparaîtrait aussitôt).
             withAnimation {
-                groups = remoteGroups.map { remote in
-                    var merged = remote
-                    if let local = localByID[remote.id] {
-                        merged.docs = local.docs
-                    }
-                    return merged
-                }
+                groups = remoteGroups
             }
             persistGroups()
             rescheduleAllAttendanceNotifications()
+            await refreshGroupInvitations(nameByID: nameByID)
         } catch {
             // Silencieux : le prochain événement ou refreshLiveData rattrapera.
+        }
+    }
+
+    /// Recharge mes invitations reçues + les invités en attente de mes
+    /// groupes (accepter / refuser / annuler).
+    private func refreshGroupInvitations(nameByID: [UUID: String]) async {
+        guard let backend, isLive else { return }
+        let mine = (try? await backend.fetchMyGroupInvitations()) ?? []
+        let pendingRows = (try? await backend.fetchPendingInvites(groupIDs: groups.map(\.id))) ?? []
+        withAnimation {
+            myGroupInvitations = mine
+            pendingInvitesByGroup = Dictionary(grouping: pendingRows, by: \.groupId)
+                .mapValues { rows in
+                    rows.compactMap { row in
+                        guard let name = nameByID[row.profileId] else { return nil }
+                        return PendingGroupInvite(
+                            id: row.id,
+                            profileID: row.profileId,
+                            name: name,
+                            kind: GroupMemberKind(dbValue: row.kind) ?? .occasional
+                        )
+                    }
+                    .sorted { $0.name < $1.name }
+                }
         }
     }
 
@@ -1602,7 +1684,42 @@ final class AppStore: ObservableObject {
     /// paywall sinon). Le créateur devient leader — représenté par
     /// leaderName == nil (« moi »), robuste à un futur renommage du profil.
     func createGroup(name: String, emoji: String, members: [String]) {
-        // Les membres initiaux forment le noyau permanent du groupe.
+        if let backend, let userID = liveUserID {
+            // En live, les musiciens choisis reçoivent une INVITATION (à
+            // accepter) — le groupe démarre avec le leader seul.
+            let group = GroupChat(
+                name: name,
+                emoji: emoji,
+                leaderName: nil,
+                memberNames: [],
+                memberKinds: [:]
+            )
+            groups.insert(group, at: 0)
+            persistGroups()
+            let memberIDs: [UUID] = members.compactMap { profileID(for: $0) }
+            let groupID = group.id
+            syncLive { [weak self] in
+                _ = try await backend.createGroup(
+                    id: groupID,
+                    name: name,
+                    emoji: emoji,
+                    leaderID: userID,
+                    memberIDs: []
+                )
+                for memberID in memberIDs {
+                    try await backend.createGroupInvitation(
+                        groupID: groupID,
+                        profileID: memberID,
+                        invitedBy: userID,
+                        kind: .permanent
+                    )
+                }
+                await backend.deliverPendingPushNotifications()
+                await self?.refreshGroups()
+            }
+            return
+        }
+        // Démo : les membres initiaux forment le noyau permanent du groupe.
         let kinds = Dictionary(uniqueKeysWithValues: members.map { ($0, GroupMemberKind.permanent) })
         let group = GroupChat(
             name: name,
@@ -1613,23 +1730,7 @@ final class AppStore: ObservableObject {
         )
         groups.insert(group, at: 0)
         persistGroups()
-        if let backend, let userID = liveUserID {
-            let memberIDs: [(UUID, GroupMemberKind)] = members.compactMap { name in
-                guard let id = profileID(for: name) else { return nil }
-                return (id, .permanent)
-            }
-            syncLive {
-                _ = try await backend.createGroup(
-                    id: group.id,
-                    name: name,
-                    emoji: emoji,
-                    leaderID: userID,
-                    memberIDs: memberIDs
-                )
-            }
-        } else {
-            scheduleDemoSuggestion(for: group.id)
-        }
+        scheduleDemoSuggestion(for: group.id)
     }
 
     /// Suis-je le leader de ce groupe ? leaderName == nil ⇒ moi (le titre ne
@@ -1669,7 +1770,35 @@ final class AppStore: ObservableObject {
             .filter { !$0.isEmpty }
     }
 
+    /// Invite un musicien. En live, une INVITATION part — il n'apparaît
+    /// dans le groupe qu'après avoir accepté. En démo, ajout direct pour
+    /// garder le bac à sable vivant.
     func inviteMember(_ name: String, to group: GroupChat, kind: GroupMemberKind = .occasional) {
+        if isLive {
+            guard let backend,
+                  let userID = liveUserID,
+                  let profileID = profileID(for: name),
+                  !group.memberNames.contains(name),
+                  pendingInvitesByGroup[group.id]?.contains(where: { $0.profileID == profileID }) != true
+            else { return }
+            // Optimiste : la ligne « en attente » apparaît tout de suite
+            // (l'id provisoire est remplacé au prochain rafraîchissement).
+            var pending = pendingInvitesByGroup[group.id] ?? []
+            pending.append(PendingGroupInvite(id: UUID(), profileID: profileID, name: name, kind: kind))
+            pendingInvitesByGroup[group.id] = pending.sorted { $0.name < $1.name }
+            let groupID = group.id
+            syncLive { [weak self] in
+                try await backend.createGroupInvitation(
+                    groupID: groupID,
+                    profileID: profileID,
+                    invitedBy: userID,
+                    kind: kind
+                )
+                await backend.deliverPendingPushNotifications()
+                await self?.refreshGroups()
+            }
+            return
+        }
         updateGroup(group.id) {
             guard !$0.memberNames.contains(name) else { return }
             $0.memberNames.append(name)
@@ -1678,9 +1807,38 @@ final class AppStore: ObservableObject {
             kinds[name] = kind
             $0.memberKinds = kinds
         }
-        if let backend, let profileID = profileID(for: name) {
-            syncLive { try await backend.inviteMember(profileID, to: group.id, kind: kind) }
+    }
+
+    // MARK: - Invitations de groupe (accepter / refuser / annuler)
+
+    /// Accepte une invitation : la RPC serveur me fait entrer dans le
+    /// groupe, qui apparaît aussitôt dans ma liste.
+    func acceptGroupInvitation(_ invitation: GroupInvitation) {
+        guard let backend, isLive else { return }
+        withAnimation { myGroupInvitations.removeAll { $0.id == invitation.id } }
+        Task { [weak self] in
+            do {
+                try await backend.acceptGroupInvitation(invitation.id)
+                await self?.refreshGroups()
+            } catch {
+                self?.backendError = self?.tr("L'invitation n'a pas pu être acceptée — réessaie.")
+                await self?.refreshGroups()
+            }
         }
+    }
+
+    /// Refuse une invitation — elle disparaît (le leader peut réinviter).
+    func declineGroupInvitation(_ invitation: GroupInvitation) {
+        guard let backend, isLive else { return }
+        withAnimation { myGroupInvitations.removeAll { $0.id == invitation.id } }
+        syncLive { try await backend.deleteGroupInvitation(invitation.id) }
+    }
+
+    /// Annule une invitation en attente (leader du groupe).
+    func cancelGroupInvitation(_ invite: PendingGroupInvite, in group: GroupChat) {
+        guard let backend, isLive else { return }
+        withAnimation { pendingInvitesByGroup[group.id]?.removeAll { $0.id == invite.id } }
+        syncLive { try await backend.deleteGroupInvitation(invite.id) }
     }
 
     /// Permanent ↔ occasionnel — le noyau fixe du groupe.

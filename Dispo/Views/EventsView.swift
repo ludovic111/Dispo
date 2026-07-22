@@ -122,16 +122,18 @@ struct EventCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                HStack(spacing: 5) {
+                // Le cachet ne s'affiche plus sur la carte — il se découvre
+                // en ouvrant le SOS. Les pastilles passent à la ligne au
+                // besoin (jamais de texte écrasé à la verticale).
+                FlowLayout(spacing: 5) {
                     Text("Cherche")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.tertiary)
-                    ForEach(event.wantedInstruments.prefix(2)) { instrument in
+                    ForEach(event.wantedInstruments.prefix(3)) { instrument in
                         TagView(text: instrument.rawValue, color: .teal)
                     }
-                    TagView(text: event.feeLabel, color: JC.gold)
-                    if let payment = event.paymentLabel {
-                        TagView(text: payment, color: JC.violet)
+                    if event.wantedInstruments.count > 3 {
+                        TagView(text: "+\(event.wantedInstruments.count - 3)", color: .teal)
                     }
                 }
             }
@@ -186,14 +188,16 @@ struct LockedEventCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
-                    HStack(spacing: 5) {
+                    FlowLayout(spacing: 5) {
                         Text("Cherche")
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(.tertiary)
-                        ForEach(event.wantedInstruments.prefix(2)) { instrument in
+                        ForEach(event.wantedInstruments.prefix(3)) { instrument in
                             TagView(text: instrument.rawValue, color: .teal)
                         }
-                        TagView(text: event.feeLabel, color: JC.gold)
+                        if event.wantedInstruments.count > 3 {
+                            TagView(text: "+\(event.wantedInstruments.count - 3)", color: .teal)
+                        }
                     }
                 }
                 .padding(13)
@@ -296,7 +300,7 @@ struct EventDetailView: View {
                                 Text("Musicien recherché")
                                     .font(.subheadline.weight(.heavy))
                                     .foregroundStyle(JC.coral)
-                                HStack {
+                                FlowLayout {
                                     ForEach(event.wantedInstruments) { instrument in
                                         TagView(text: instrument.rawValue, color: .teal)
                                     }
