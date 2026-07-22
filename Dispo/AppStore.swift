@@ -529,16 +529,9 @@ final class AppStore: ObservableObject {
                 myName: profile.name,
                 nameByID: nameByID
             )
-            // Les messages viennent du serveur ; seules les partitions
-            // (fichiers sur l'appareil) restent locales.
-            let localByID = Dictionary(uniqueKeysWithValues: groups.map { ($0.id, $0) })
-            groups = remoteGroups.map { remote in
-                var merged = remote
-                if let local = localByID[remote.id] {
-                    merged.docs = local.docs
-                }
-                return merged
-            }
+            // Messages ET partitions viennent du serveur (les partitions
+            // sont hébergées depuis la 1.0 — visibles par tout le groupe).
+            groups = remoteGroups
             persistGroups()
             rescheduleAllAttendanceNotifications()
             backendError = nil
@@ -563,6 +556,9 @@ final class AppStore: ObservableObject {
         // Les vidéos hébergées font foi en live (elles suivent le compte).
         updated.demoVideos = (mine.demoVideos ?? []).map(\.asDemoVideo)
         updated.videoFileNames = nil
+        // Ma photo hébergée : repli d'affichage si le fichier local manque
+        // (nouvel appareil, réinstallation).
+        updated.photoURL = mine.photoUrl
         profile = updated
         myRatingSummary = (mine.ratingCount ?? 0) > 0
             ? RatingSummary(average: mine.ratingAvg ?? 0, count: mine.ratingCount ?? 0)
@@ -2074,12 +2070,21 @@ final class AppStore: ObservableObject {
 
     func deleteGroup(_ group: GroupChat) {
         for doc in group.docs {
-            try? FileManager.default.removeItem(at: Self.mediaURL(for: doc.fileName))
+            if !doc.fileName.isEmpty {
+                try? FileManager.default.removeItem(at: Self.mediaURL(for: doc.fileName))
+            }
+            try? FileManager.default.removeItem(at: Self.docCacheURL(for: doc))
         }
         groups.removeAll { $0.id == group.id }
         persistGroups()
         if let backend, isLive {
-            syncLive { try await backend.deleteGroup(group.id) }
+            let docPaths = group.docs.compactMap(\.remotePath)
+            syncLive {
+                // Les lignes `group_docs` partent en cascade avec le groupe ;
+                // les fichiers du bucket sont nettoyés au mieux.
+                try? await backend.deleteGroupDocFiles(paths: docPaths)
+                try await backend.deleteGroup(group.id)
+            }
         }
     }
 
@@ -2138,29 +2143,108 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Ajoute une partition (fichier importé) au groupe.
+    /// true pendant l'envoi d'une partition au serveur.
+    @Published private(set) var docUploadInProgress = false
+
+    /// Taille maximale d'une partition envoyée (limite du bucket : 20 Mo).
+    nonisolated private static let maxDocBytes = 20 * 1024 * 1024
+
+    /// Ajoute une partition (fichier importé) au groupe. En live elle est
+    /// téléversée dans le bucket privé du groupe — tous les membres peuvent
+    /// alors l'ouvrir ; en démo, simple copie locale.
     func addDoc(from sourceURL: URL, title: String, to group: GroupChat) {
-        let ext = sourceURL.pathExtension.isEmpty ? "pdf" : sourceURL.pathExtension
-        let fileName = "group_doc_\(Int(Date().timeIntervalSince1970)).\(ext)"
+        let ext = sourceURL.pathExtension.isEmpty ? "pdf" : sourceURL.pathExtension.lowercased()
         // Fichier hors sandbox (Fichiers / iCloud) : accès sécurisé requis.
         let secured = sourceURL.startAccessingSecurityScopedResource()
-        defer { if secured { sourceURL.stopAccessingSecurityScopedResource() } }
+        let data: Data
         do {
-            try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
-            updateGroup(group.id) {
-                $0.docs.insert(
-                    GroupDoc(fileName: fileName, title: title, addedBy: profile.name, date: Date()),
-                    at: 0
-                )
-            }
+            data = try Data(contentsOf: sourceURL)
+            if secured { sourceURL.stopAccessingSecurityScopedResource() }
         } catch {
+            if secured { sourceURL.stopAccessingSecurityScopedResource() }
             backendError = tr("Le document n'a pas pu être importé.")
+            return
+        }
+
+        guard let backend, let userID = liveUserID else {
+            // Mode démo : copie locale, comme avant.
+            let fileName = "group_doc_\(Int(Date().timeIntervalSince1970)).\(ext)"
+            do {
+                try data.write(to: Self.mediaURL(for: fileName))
+                updateGroup(group.id) {
+                    $0.docs.insert(
+                        GroupDoc(fileName: fileName, title: title, addedBy: profile.name, date: Date()),
+                        at: 0
+                    )
+                }
+            } catch {
+                backendError = tr("Le document n'a pas pu être importé.")
+            }
+            return
+        }
+
+        guard data.count <= Self.maxDocBytes else {
+            backendError = tr("Document trop lourd — 20 Mo maximum.")
+            return
+        }
+        docUploadInProgress = true
+        let groupID = group.id
+        let myName = profile.name
+        Task { [weak self] in
+            defer { self?.docUploadInProgress = false }
+            do {
+                let doc = GroupDoc(fileName: "", title: title, addedBy: myName, date: Date(), ext: ext)
+                let path = try await backend.uploadGroupDoc(data, ext: ext, docID: doc.id, groupID: groupID)
+                var hosted = doc
+                hosted.remotePath = path
+                try await backend.insertGroupDoc(hosted, groupID: groupID, addedBy: userID)
+                // Copie en cache : l'aperçu s'ouvre sans re-télécharger.
+                try? data.write(to: Self.docCacheURL(for: hosted))
+                self?.updateGroup(groupID) { $0.docs.insert(hosted, at: 0) }
+            } catch {
+                self?.backendError = self?.tr("La partition n'a pas pu être envoyée — vérifie le réseau.")
+            }
         }
     }
 
     func removeDoc(_ doc: GroupDoc, from group: GroupChat) {
-        try? FileManager.default.removeItem(at: Self.mediaURL(for: doc.fileName))
+        if !doc.fileName.isEmpty {
+            try? FileManager.default.removeItem(at: Self.mediaURL(for: doc.fileName))
+        }
+        try? FileManager.default.removeItem(at: Self.docCacheURL(for: doc))
         updateGroup(group.id) { $0.docs.removeAll { $0.id == doc.id } }
+        if let backend, isLive, let path = doc.remotePath {
+            syncLive {
+                try await backend.deleteGroupDoc(doc.id)
+                try? await backend.deleteGroupDocFiles(paths: [path])
+            }
+        }
+    }
+
+    /// Emplacement de la copie locale (cache) d'une partition hébergée.
+    nonisolated static func docCacheURL(for doc: GroupDoc) -> URL {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        return caches.appendingPathComponent(doc.cacheFileName)
+    }
+
+    /// URL locale d'une partition, prête pour l'aperçu : cache si déjà
+    /// téléchargée, sinon téléchargement depuis le bucket privé (RLS :
+    /// réservé aux membres du groupe).
+    func localURL(for doc: GroupDoc) async -> URL? {
+        if doc.remotePath == nil {
+            return Self.mediaURL(for: doc.fileName)
+        }
+        let target = Self.docCacheURL(for: doc)
+        if FileManager.default.fileExists(atPath: target.path) { return target }
+        guard let backend, let path = doc.remotePath else { return nil }
+        do {
+            let data = try await backend.downloadGroupDoc(path: path)
+            try data.write(to: target)
+            return target
+        } catch {
+            backendError = tr("La partition n'a pas pu être ouverte — vérifie le réseau.")
+            return nil
+        }
     }
 
     private static let scriptedGroupReplies: [String] = [
@@ -2271,6 +2355,8 @@ final class AppStore: ObservableObject {
                 do {
                     let url = try await backend.uploadAvatar(data, userID: userID)
                     try await backend.updatePhotoURL(url.absoluteString, userID: userID)
+                    profile.photoURL = url.absoluteString
+                    Self.save(profile, key: Self.profileKey)
                 } catch {
                     backendError = tr("La photo n'a pas pu être publiée sur ton profil réseau.")
                 }
@@ -2283,6 +2369,7 @@ final class AppStore: ObservableObject {
             try? FileManager.default.removeItem(at: Self.mediaURL(for: old))
         }
         profile.photoFileName = nil
+        profile.photoURL = nil
         saveProfile()
         if let backend, let userID = liveUserID {
             Task { try? await backend.updatePhotoURL(nil, userID: userID) }
@@ -2345,13 +2432,21 @@ final class AppStore: ObservableObject {
     /// Taille maximale d'une vidéo envoyée (limite du bucket : 50 Mo).
     nonisolated private static let maxVideoBytes = 50 * 1024 * 1024
 
-    /// Compresse la vidéo en MP4 720p pour l'envoi. Sur iOS 17, l'export
-    /// moderne n'existe pas : la vidéo part telle quelle si elle tient sous
-    /// la limite de taille.
+    /// Compresse la vidéo pour l'envoi : 720p à débit maîtrisé (HEVC, repli
+    /// H.264) et piste audio copiée TELLE QUELLE — le son n'est jamais
+    /// recompressé. Une démo de 3 minutes pèse ainsi ~45 Mo au lieu du
+    /// fichier caméra brut. Repli ultime : préréglage 720p système.
     nonisolated private static func compressVideoForUpload(_ sourceURL: URL) async throws -> URL {
         let asset = AVURLAsset(url: sourceURL)
         let duration = try await asset.load(.duration)
         guard duration.seconds <= 181 else { throw VideoImportError.tooLong }
+        // HEVC d'abord (meilleure qualité au même poids), H.264 sinon.
+        if let output = try? await exportDownscaled(asset, codec: .hevc) {
+            return output
+        }
+        if let output = try? await exportDownscaled(asset, codec: .h264) {
+            return output
+        }
         if #available(iOS 18.0, *) {
             guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPreset1280x720) else {
                 throw VideoImportError.exportFailed
@@ -2361,11 +2456,180 @@ final class AppStore: ObservableObject {
             try await session.export(to: output, as: .mp4)
             return output
         }
-        // iOS 17 : pas de compression — copie telle quelle (la limite de
-        // taille est vérifiée par l'appelant).
-        let output = URL.temporaryDirectory.appendingPathComponent("upload_\(UUID().uuidString).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)")
-        try FileManager.default.copyItem(at: sourceURL, to: output)
-        return output
+        throw VideoImportError.exportFailed
+    }
+
+    /// Ré-encode la piste vidéo en ≤ 720p (~2 Mbit/s) et copie la piste
+    /// audio sans la toucher (passthrough AAC). AVAssetReader + Writer :
+    /// disponible sur toutes les versions d'iOS supportées.
+    nonisolated private static func exportDownscaled(
+        _ asset: AVURLAsset,
+        codec: AVVideoCodecType
+    ) async throws -> URL {
+        guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
+            throw VideoImportError.exportFailed
+        }
+        let audioTrack = try await asset.loadTracks(withMediaType: .audio).first
+        let (naturalSize, transform, frameRate) = try await videoTrack.load(
+            .naturalSize, .preferredTransform, .nominalFrameRate
+        )
+
+        // Dimensions affichées (orientation appliquée), plafonnées à 720p.
+        let displayed = naturalSize.applying(transform)
+        let displayWidth = abs(displayed.width)
+        let displayHeight = abs(displayed.height)
+        guard displayWidth > 0, displayHeight > 0 else { throw VideoImportError.exportFailed }
+        let scale = min(
+            1,
+            1280 / max(displayWidth, displayHeight),
+            720 / min(displayWidth, displayHeight)
+        )
+        let renderWidth = (displayWidth * scale / 2).rounded(.down) * 2
+        let renderHeight = (displayHeight * scale / 2).rounded(.down) * 2
+
+        // Composition : oriente puis met à l'échelle chaque frame, en
+        // plafonnant la cadence à 30 i/s (largement assez pour une démo).
+        let fps = frameRate > 0 ? min(30, frameRate) : 30
+        let composition = AVMutableVideoComposition()
+        composition.renderSize = CGSize(width: renderWidth, height: renderHeight)
+        composition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(fps.rounded()))
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(start: .zero, duration: try await asset.load(.duration))
+        let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+        layer.setTransform(transform.concatenating(CGAffineTransform(scaleX: scale, y: scale)), at: .zero)
+        instruction.layerInstructions = [layer]
+        composition.instructions = [instruction]
+
+        let reader = try AVAssetReader(asset: asset)
+        let videoOutput = AVAssetReaderVideoCompositionOutput(
+            videoTracks: [videoTrack],
+            videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]
+        )
+        videoOutput.videoComposition = composition
+        videoOutput.alwaysCopiesSampleData = false
+        guard reader.canAdd(videoOutput) else { throw VideoImportError.exportFailed }
+        reader.add(videoOutput)
+
+        var audioOutput: AVAssetReaderTrackOutput?
+        if let audioTrack {
+            // outputSettings nil = échantillons compressés d'origine (AAC),
+            // recopiés tels quels dans le fichier de sortie.
+            let output = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: nil)
+            output.alwaysCopiesSampleData = false
+            if reader.canAdd(output) {
+                reader.add(output)
+                audioOutput = output
+            }
+        }
+
+        let outputURL = URL.temporaryDirectory.appendingPathComponent("upload_\(UUID().uuidString).mp4")
+        try? FileManager.default.removeItem(at: outputURL)
+        let writer = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
+        writer.shouldOptimizeForNetworkUse = true
+
+        var compression: [String: Any] = [
+            AVVideoAverageBitRateKey: 2_000_000,
+            AVVideoMaxKeyFrameIntervalKey: 60,
+            AVVideoExpectedSourceFrameRateKey: Int(fps.rounded())
+        ]
+        if codec == .h264 {
+            compression[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel
+        }
+        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: codec,
+            AVVideoWidthKey: renderWidth,
+            AVVideoHeightKey: renderHeight,
+            AVVideoCompressionPropertiesKey: compression
+        ])
+        videoInput.expectsMediaDataInRealTime = false
+        guard writer.canAdd(videoInput) else { throw VideoImportError.exportFailed }
+        writer.add(videoInput)
+
+        var audioInput: AVAssetWriterInput?
+        if let audioOutput,
+           let format = try? await audioOutput.track.load(.formatDescriptions).first {
+            // outputSettings nil + format source = passthrough (zéro
+            // recompression du son).
+            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: nil, sourceFormatHint: format)
+            input.expectsMediaDataInRealTime = false
+            if writer.canAdd(input) {
+                writer.add(input)
+                audioInput = input
+            }
+        }
+
+        guard reader.startReading() else { throw VideoImportError.exportFailed }
+        guard writer.startWriting() else {
+            reader.cancelReading()
+            throw VideoImportError.exportFailed
+        }
+        writer.startSession(atSourceTime: .zero)
+
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await Self.pump(from: videoOutput, to: videoInput, label: "video-writer")
+            }
+            if let audioOutput, let audioInput {
+                group.addTask {
+                    await Self.pump(from: audioOutput, to: audioInput, label: "audio-writer")
+                }
+            }
+        }
+
+        guard reader.status != .failed else {
+            writer.cancelWriting()
+            throw VideoImportError.exportFailed
+        }
+        await writer.finishWriting()
+        guard writer.status == .completed else { throw VideoImportError.exportFailed }
+        return outputURL
+    }
+
+    /// Reader + writer d'une piste pendant l'export — tout l'accès se fait
+    /// sur la file série d'AVFoundation, d'où le @unchecked Sendable.
+    private final class PumpBox: @unchecked Sendable {
+        let output: AVAssetReaderOutput
+        let input: AVAssetWriterInput
+        /// Le callback peut être rappelé après la fin : le drapeau (protégé
+        /// par la file série) évite de terminer deux fois la continuation.
+        var finished = false
+
+        init(output: AVAssetReaderOutput, input: AVAssetWriterInput) {
+            self.output = output
+            self.input = input
+        }
+    }
+
+    /// Recopie tous les échantillons d'une sortie de lecture vers une entrée
+    /// d'écriture, au rythme accepté par l'encodeur.
+    nonisolated private static func pump(
+        from output: AVAssetReaderOutput,
+        to input: AVAssetWriterInput,
+        label: String
+    ) async {
+        let queue = DispatchQueue(label: "dispo.export.\(label)")
+        let box = PumpBox(output: output, input: input)
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            box.input.requestMediaDataWhenReady(on: queue) {
+                guard !box.finished else { return }
+                while box.input.isReadyForMoreMediaData {
+                    guard let sample = box.output.copyNextSampleBuffer() else {
+                        box.finished = true
+                        box.input.markAsFinished()
+                        continuation.resume()
+                        return
+                    }
+                    if !box.input.append(sample) {
+                        // L'écrivain a signalé une erreur : on s'arrête, le
+                        // statut du writer fera échouer l'export proprement.
+                        box.finished = true
+                        box.input.markAsFinished()
+                        continuation.resume()
+                        return
+                    }
+                }
+            }
+        }
     }
 
     /// Change la date d'une vidéo (date du concert / de l'enregistrement).
@@ -2552,6 +2816,17 @@ final class AppStore: ObservableObject {
         updateGroup(group.id) { $0.isPublic = isPublic }
         if let backend, isLive {
             syncLive { try await backend.setGroupVisibility(isPublic, groupID: group.id) }
+        }
+    }
+
+    /// Renomme le groupe (leader uniquement — l'UI verrouille, la RLS
+    /// serveur aussi). Le nouveau nom arrive chez les membres en realtime.
+    func renameGroup(_ newName: String, in group: GroupChat) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != group.name, acceptsUserContent(trimmed) else { return }
+        updateGroup(group.id) { $0.name = trimmed }
+        if let backend, isLive {
+            syncLive { try await backend.renameGroup(trimmed, groupID: group.id) }
         }
     }
 

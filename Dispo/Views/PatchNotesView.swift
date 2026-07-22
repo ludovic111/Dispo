@@ -11,6 +11,20 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.0",
+            title: "Dispo 1.0 — c'est parti 🎉",
+            points: [
+                "Les partitions du groupe sont maintenant partagées : chaque membre peut les ouvrir, les télécharger et en ajouter",
+                "Le leader peut renommer son groupe à tout moment",
+                "« Écouter sur… » : les liens ouvrent vraiment Apple Music, Spotify, YouTube Music et Deezer — avec leurs logos",
+                "Vidéos de démo plus légères à l'envoi, sans toucher au son ni sacrifier l'image",
+                "Ta ville s'affiche désormais correctement sur ta fiche chez les autres",
+                "Ta photo de profil te suit sur un nouvel appareil",
+                "Le bouton « Lier mon compte Apple » apparaît maintenant sur TestFlight et l'App Store",
+                "Corrections et finitions dans toute l'app"
+            ]
+        ),
+        PatchNote(
             version: "0.9.6",
             title: "Carte, position maîtrisée & groupes publics",
             points: [
@@ -192,7 +206,8 @@ extension Bundle {
     }
 }
 
-/// Historique des mises à jour, avec bandeau bêta. Ouvert depuis le profil.
+/// Historique des mises à jour, avec bandeau de contact. Ouvert depuis le
+/// profil.
 struct PatchNotesView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -203,7 +218,7 @@ struct PatchNotesView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        betaBanner
+                        feedbackBanner
                         ForEach(PatchNote.all) { note in
                             noteCard(note, isCurrent: note.version == Bundle.main.appVersion)
                         }
@@ -221,20 +236,19 @@ struct PatchNotesView: View {
         }
     }
 
-    private var betaBanner: some View {
+    private var feedbackBanner: some View {
         HStack(spacing: 12) {
-            Image(systemName: "hammer.fill")
+            Image(systemName: "heart.fill")
                 .font(.title3)
                 .foregroundStyle(JC.coral)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Dispo est en bêta")
+                Text("Merci d'utiliser Dispo !")
                     .font(.subheadline.weight(.heavy))
-                Text("Merci de tester ! Un pépin, une idée ? Écris-nous via l'assistance dispoapp.net.")
+                Text("Un pépin, une idée ? Écris-nous via l'assistance dispoapp.net.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            TagView(text: "BÊTA", color: JC.coral)
         }
         .padding(14)
         .background(JC.coral.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))

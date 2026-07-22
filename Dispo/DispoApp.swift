@@ -672,6 +672,111 @@ struct SocialLogosRow: View {
     }
 }
 
+/// Logo d'une plateforme de streaming, dessiné en SwiftUI (aucun asset de
+/// marque embarqué) — reconnaissable au premier coup d'œil dans la feuille
+/// « Écouter sur… ».
+struct StreamingLogoView: View {
+    let platform: StreamingPlatform
+    var size: CGFloat = 34
+
+    var body: some View {
+        switch platform {
+        case .appleMusic:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [
+                            Color(red: 0.99, green: 0.36, blue: 0.48),
+                            Color(red: 0.94, green: 0.15, blue: 0.31)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                Image(systemName: "music.note")
+                    .font(.system(size: size * 0.52, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: size, height: size)
+        case .spotify:
+            ZStack {
+                Circle().fill(Color(red: 0.12, green: 0.84, blue: 0.38))
+                SpotifyWaves()
+                    .stroke(.black, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+            }
+            .frame(width: size, height: size)
+        case .youtubeMusic:
+            ZStack {
+                Circle().fill(Color(red: 1.0, green: 0.02, blue: 0.05))
+                Circle()
+                    .stroke(.white, lineWidth: size * 0.06)
+                    .frame(width: size * 0.62, height: size * 0.62)
+                Image(systemName: "play.fill")
+                    .font(.system(size: size * 0.26, weight: .bold))
+                    .foregroundStyle(.white)
+                    .offset(x: size * 0.02)
+            }
+            .frame(width: size, height: size)
+        case .deezer:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+                    .fill(Color(red: 0.07, green: 0.07, blue: 0.10))
+                DeezerBars(size: size)
+            }
+            .frame(width: size, height: size)
+        }
+    }
+}
+
+/// Les trois ondes incurvées du logo Spotify (arcs concentriques).
+private struct SpotifyWaves: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.maxY * 1.18)
+        for (index, radius) in [0.52, 0.72, 0.92].enumerated() {
+            let r = rect.width * radius * 0.72
+            let spread: Double = 26 - Double(index) * 2
+            path.move(to: point(on: center, radius: r, angle: 270 - spread))
+            path.addArc(
+                center: center,
+                radius: r,
+                startAngle: .degrees(270 - spread),
+                endAngle: .degrees(270 + spread),
+                clockwise: false
+            )
+        }
+        return path
+    }
+
+    private func point(on center: CGPoint, radius: CGFloat, angle: Double) -> CGPoint {
+        CGPoint(
+            x: center.x + radius * cos(angle * .pi / 180),
+            y: center.y + radius * sin(angle * .pi / 180)
+        )
+    }
+}
+
+/// L'empilement de barres « égaliseur » du logo Deezer.
+private struct DeezerBars: View {
+    let size: CGFloat
+
+    /// Nombre de barres par colonne (de gauche à droite), de bas en haut.
+    private let columns = [1, 2, 3, 4]
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: size * 0.07) {
+            ForEach(Array(columns.enumerated()), id: \.offset) { _, count in
+                VStack(spacing: size * 0.055) {
+                    ForEach(0..<count, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: size * 0.02)
+                            .fill(.white)
+                            .frame(width: size * 0.13, height: size * 0.055)
+                    }
+                }
+            }
+        }
+        .frame(height: size * 0.42, alignment: .bottom)
+    }
+}
+
 /// Rangée de 5 étoiles remplies selon la moyenne (demi-étoiles comprises).
 struct StarsView: View {
     let rating: Double

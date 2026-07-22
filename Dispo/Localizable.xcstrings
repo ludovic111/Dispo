@@ -7501,6 +7501,46 @@
         }
       }
     },
+    "Corrections et finitions dans toute l'app" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Korrekturen und Feinschliff in der ganzen App"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fixes and polish throughout the app"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correcciones y retoques en toda la app"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correzioni e rifiniture in tutta l'app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ全体の修正と仕上げ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全应用范围的修复与打磨"
+          }
+        }
+      }
+    },
     "Corrigé : le remplacement de la photo de profil échouait" : {
       "localizations" : {
         "de" : {
@@ -8511,6 +8551,46 @@
         }
       }
     },
+    "Dispo 1.0 — c'est parti 🎉" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispo 1.0 — los geht's 🎉"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispo 1.0 — here we go 🎉"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispo 1.0: ¡empezamos! 🎉"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispo 1.0 — si parte 🎉"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispo 1.0 — スタート🎉"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispo 1.0 — 正式出发 🎉"
+          }
+        }
+      }
+    },
     "Dispo Premium" : {
       "localizations" : {
         "de" : {
@@ -8907,6 +8987,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "空闲时间"
+          }
+        }
+      }
+    },
+    "Document trop lourd — 20 Mo maximum." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dokument zu groß — maximal 20 MB."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Document too large — 20 MB max."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Documento demasiado pesado: máximo 20 MB."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Documento troppo pesante: massimo 20 MB."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルが大きすぎます — 最大20MBです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件太大 — 最大 20 MB。"
           }
         }
       }
@@ -12891,6 +13011,86 @@
         }
       }
     },
+    "La partition n'a pas pu être envoyée — vérifie le réseau." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Noten konnten nicht gesendet werden — prüfe deine Verbindung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The sheet music couldn't be uploaded — check your connection."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo enviar la partitura: revisa tu conexión."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo spartito non è stato inviato: controlla la connessione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "楽譜を送信できませんでした — 通信環境を確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "乐谱上传失败 — 请检查网络。"
+          }
+        }
+      }
+    },
+    "La partition n'a pas pu être ouverte — vérifie le réseau." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Noten konnten nicht geöffnet werden — prüfe deine Verbindung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The sheet music couldn't be opened — check your connection."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo abrir la partitura: revisa tu conexión."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo spartito non è stato aperto: controlla la connessione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "楽譜を開けませんでした — 通信環境を確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "乐谱无法打开 — 请检查网络。"
+          }
+        }
+      }
+    },
     "La photo du groupe n'a pas pu être envoyée." : {
       "localizations" : {
         "de" : {
@@ -13561,6 +13761,46 @@
         }
       }
     },
+    "Le bouton « Lier mon compte Apple » apparaît maintenant sur TestFlight et l'App Store" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Button „Apple-Konto verknüpfen“ erscheint jetzt auch in TestFlight- und App-Store-Builds"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The “Link my Apple account” button now appears on TestFlight and App Store builds"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El botón «Vincular mi cuenta de Apple» ahora aparece en TestFlight y App Store"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il pulsante «Collega il mio account Apple» ora appare su TestFlight e App Store"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「Appleアカウントをリンク」ボタンが TestFlight と App Store 版にも表示されるようになりました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「关联我的 Apple 账户」按钮现在也会出现在 TestFlight 和 App Store 版本中"
+          }
+        }
+      }
+    },
     "Le changement d'apparence (clair / sombre) s'applique instantanément" : {
       "localizations" : {
         "de" : {
@@ -13811,6 +14051,46 @@
         }
       }
     },
+    "Le leader peut renommer son groupe à tout moment" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Leader kann die Gruppe jederzeit umbenennen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The leader can rename the group at any time"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El líder puede renombrar el grupo en cualquier momento"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il leader può rinominare il gruppo in qualsiasi momento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リーダーはいつでもグループ名を変更できます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "组长可以随时重命名小组"
+          }
+        }
+      }
+    },
     "Le leader sera alerté 2 jours avant pour trouver un remplaçant." : {
       "localizations" : {
         "de" : {
@@ -13977,6 +14257,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Messages you are looking at are marked read instantly — no more stray notifications"
+          }
+        }
+      }
+    },
+    "Le nouveau nom s'affiche chez tous les membres." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der neue Name wird bei allen Mitgliedern angezeigt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The new name appears for every member."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El nuevo nombre aparece para todos los miembros."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il nuovo nome appare a tutti i membri."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい名前はすべてのメンバーに表示されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新名称会显示给所有成员。"
           }
         }
       }
@@ -14451,6 +14771,46 @@
         }
       }
     },
+    "Les partitions du groupe sont maintenant partagées : chaque membre peut les ouvrir, les télécharger et en ajouter" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Noten der Gruppe werden jetzt geteilt: Jedes Mitglied kann sie öffnen, herunterladen und neue hinzufügen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group sheet music is now shared: every member can open, download and add scores"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las partituras del grupo ahora se comparten: cada miembro puede abrirlas, descargarlas y añadir más"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli spartiti del gruppo ora sono condivisi: ogni membro può aprirli, scaricarli e aggiungerne"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グループの楽譜が共有されるようになりました。全メンバーが開く・ダウンロード・追加できます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小组乐谱现已共享：每位成员都可以打开、下载和添加"
+          }
+        }
+      }
+    },
     "Les vidéos n'ont pas pu être synchronisées." : {
       "localizations" : {
         "de" : {
@@ -14567,6 +14927,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登录链接无效或已过期。"
+          }
+        }
+      }
+    },
+    "Lien direct" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direktlink"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direct link"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enlace directo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link diretto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接リンク"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直达链接"
           }
         }
       }
@@ -15327,6 +15727,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "按月"
+          }
+        }
+      }
+    },
+    "Merci d'utiliser Dispo !" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danke, dass du Dispo nutzt!"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thanks for using Dispo!"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¡Gracias por usar Dispo!"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grazie per usare Dispo!"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispoをご利用いただきありがとうございます！"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "感谢使用 Dispo！"
           }
         }
       }
@@ -17171,6 +17611,46 @@
         }
       }
     },
+    "Nom du groupe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gruppenname"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group name"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre del grupo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome del gruppo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グループ名"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小组名称"
+          }
+        }
+      }
+    },
     "Nom du musicien…" : {
       "localizations" : {
         "de" : {
@@ -18537,6 +19017,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分享曲目PDF——全队都能在这里找到。"
+          }
+        }
+      }
+    },
+    "Partagées avec tout le groupe — chacun peut les ouvrir et les télécharger." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit der ganzen Gruppe geteilt — alle können sie öffnen und herunterladen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared with the whole group — everyone can open and download them."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartidas con todo el grupo: todos pueden abrirlas y descargarlas."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condivise con tutto il gruppo: tutti possono aprirle e scaricarle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グループ全体で共有 — 全員が開いてダウンロードできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与整个小组共享 — 每个人都可以打开和下载。"
           }
         }
       }
@@ -21601,6 +22121,46 @@
         }
       }
     },
+    "Réglages du groupe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gruppeneinstellungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group settings"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes del grupo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni del gruppo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "グループ設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小组设置"
+          }
+        }
+      }
+    },
     "Réinitialiser" : {
       "localizations" : {
         "de" : {
@@ -24081,6 +24641,46 @@
         }
       }
     },
+    "Ta photo de profil te suit sur un nouvel appareil" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Profilfoto begleitet dich auf ein neues Gerät"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your profile photo follows you to a new device"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu foto de perfil te sigue en un dispositivo nuevo"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La tua foto profilo ti segue su un nuovo dispositivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロフィール写真が新しいデバイスにも引き継がれます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "换新设备时头像也会跟着你"
+          }
+        }
+      }
+    },
     "Ta position est approximative (niveau ville) par défaut — partage exact possible, pour tes amis ou pour tous, dans les réglages" : {
       "localizations" : {
         "de" : {
@@ -24197,6 +24797,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的出席"
+          }
+        }
+      }
+    },
+    "Ta ville s'affiche désormais correctement sur ta fiche chez les autres" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stadt wird jetzt korrekt auf deinem Profil bei anderen angezeigt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your city now shows correctly on your profile for others"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu ciudad ahora se muestra correctamente en tu perfil para los demás"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La tua città ora appare correttamente sul tuo profilo per gli altri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたの街が他のユーザーに正しく表示されるようになりました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的城市现在能正确显示在他人看到的资料页上"
           }
         }
       }
@@ -26841,6 +27481,46 @@
         }
       }
     },
+    "Vidéos de démo plus légères à l'envoi, sans toucher au son ni sacrifier l'image" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demovideos werden kleiner hochgeladen — ohne den Ton anzutasten oder das Bild zu opfern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demo videos upload lighter, without touching the audio or sacrificing the picture"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los vídeos de demo pesan menos al subirlos, sin tocar el sonido ni sacrificar la imagen"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I video demo si caricano più leggeri, senza toccare l'audio né sacrificare l'immagine"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デモ動画のアップロードがより軽く — 音はそのまま、画質も犠牲にしません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "演示视频上传更轻量，不动声音也不牺牲画质"
+          }
+        }
+      }
+    },
     "Ville / région" : {
       "localizations" : {
         "de" : {
@@ -27957,6 +28637,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“Typing…”: see when your contact is replying"
+          }
+        }
+      }
+    },
+    "« Écouter sur… » : les liens ouvrent vraiment Apple Music, Spotify, YouTube Music et Deezer — avec leurs logos" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Anhören auf …“: Die Links öffnen jetzt wirklich Apple Music, Spotify, YouTube Music und Deezer — mit ihren Logos"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Listen on…”: links now truly open Apple Music, Spotify, YouTube Music and Deezer — with their logos"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Escuchar en…»: los enlaces abren de verdad Apple Music, Spotify, YouTube Music y Deezer, con sus logos"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«Ascolta su…»: i link aprono davvero Apple Music, Spotify, YouTube Music e Deezer — con i loro loghi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「で聴く…」のリンクが Apple Music・Spotify・YouTube Music・Deezer を正しく開くように — ロゴ付きで"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「在…收听」：链接现在真正打开 Apple Music、Spotify、YouTube Music 和 Deezer，并显示各自的标志"
           }
         }
       }

@@ -960,14 +960,26 @@ struct GroupMessage: Codable, Identifiable, Hashable {
     var date: Date
 }
 
-/// Une partition (ou tout document) partagée dans un groupe.
+/// Une partition (ou tout document) partagée dans un groupe. En mode live
+/// elle est hébergée sur le serveur (bucket privé `group-docs`) : tous les
+/// membres peuvent l'ouvrir et la télécharger.
 struct GroupDoc: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
-    /// Fichier copié dans Documents (PDF, image…).
+    /// Fichier copié dans Documents (mode démo / anciens documents locaux).
     var fileName: String
     var title: String
     var addedBy: String
     var date: Date
+    /// Chemin Storage (`<groupID>/<uuid>.<ext>`) — nil si document local.
+    var remotePath: String? = nil
+    /// Extension du fichier hébergé (pdf, jpg, png…), pour l'ouvrir avec le
+    /// bon type une fois téléchargé.
+    var ext: String? = nil
+
+    /// Nom de fichier utilisé dans le cache local pour la copie téléchargée.
+    var cacheFileName: String {
+        "groupdoc_\(id.uuidString.lowercased()).\(ext ?? "pdf")"
+    }
 }
 
 /// Un morceau du répertoire (du groupe ou d'un événement). Tant que le
@@ -1317,6 +1329,9 @@ struct MyProfile: Codable {
     var postalCode: String?
     /// Photo de profil choisie par l'utilisateur (fichier dans Documents).
     var photoFileName: String?
+    /// URL publique de ma photo hébergée — repli d'affichage quand le
+    /// fichier local manque (nouvel appareil, réinstallation).
+    var photoURL: String?
     /// Vidéos de démo (fichiers dans Documents) — ancien format v0.4, sans
     /// date. Conservé pour décoder les profils existants ; voir demoVideos.
     var videoFileNames: [String]?

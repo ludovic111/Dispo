@@ -37,8 +37,9 @@ struct PickedVideo: Transferable {
     }
 }
 
-/// Avatar de l'utilisateur : sa photo choisie si elle existe, sinon la
-/// pastille dégradée avec initiales.
+/// Avatar de l'utilisateur : sa photo choisie si elle existe, sinon sa
+/// photo hébergée (nouvel appareil, réinstallation), sinon la pastille
+/// dégradée avec initiales.
 struct MyAvatarView: View {
     let profile: MyProfile
     var size: CGFloat = 84
@@ -52,7 +53,8 @@ struct MyAvatarView: View {
                 .frame(width: size, height: size)
                 .clipShape(Circle())
         } else {
-            AvatarView(name: profile.name, size: size)
+            // AvatarView charge photoURL (https) ou retombe sur les initiales.
+            AvatarView(name: profile.name, size: size, photo: profile.photoURL)
         }
     }
 }
@@ -666,10 +668,7 @@ struct EditProfileSheet: View {
                 Section {
                     ForEach(SocialNetwork.allCases) { network in
                         HStack(spacing: 10) {
-                            Image(systemName: network.icon)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(JC.violet)
-                                .frame(width: 24)
+                            SocialLogoView(network: network, size: 24)
                             Text(verbatim: network.label)
                                 .font(.subheadline)
                             TextField("pseudo", text: Binding(

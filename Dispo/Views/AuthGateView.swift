@@ -257,19 +257,18 @@ struct AuthForm: View {
 
     // MARK: - Aides
 
-    /// true si le build embarque l'entitlement Sign in with Apple.
-    /// Les équipes personnelles gratuites ne peuvent pas le provisionner :
-    /// le bouton apparaît automatiquement dès la signature avec une équipe
-    /// du Developer Program (voir le bloc commenté dans project.yml).
+    /// true si le build peut proposer Sign in with Apple.
+    /// Les builds TestFlight / App Store n'embarquent PAS de profil de
+    /// provisioning : son absence signifie donc simulateur ou distribution
+    /// — deux cas où l'entitlement est garanti (capability active sur
+    /// l'App ID depuis la 0.9.6). Seuls les builds de développement sur
+    /// appareil vérifient réellement leur profil (les équipes personnelles
+    /// gratuites ne peuvent pas provisionner Sign in with Apple).
     static var isAppleSignInAvailable: Bool {
         guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
               let data = try? Data(contentsOf: url),
               let content = String(data: data, encoding: .isoLatin1) else {
-            #if targetEnvironment(simulator)
-            return true // pas de profil embarqué en simulateur
-            #else
-            return false
-            #endif
+            return true
         }
         return content.contains("com.apple.developer.applesignin")
     }

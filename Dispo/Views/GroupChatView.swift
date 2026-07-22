@@ -56,7 +56,10 @@ struct GroupChatView: View {
 
     @State private var tab: Tab = .messages
     @State private var draft = ""
-    @State private var previewingDoc: GroupDoc?
+    /// Document prêt à être affiché (fichier local ou copie téléchargée).
+    @State private var previewingDoc: PreviewableDoc?
+    /// Document en cours de téléchargement (spinner sur sa ligne).
+    @State private var downloadingDocID: GroupDoc.ID?
     @State private var importingDoc = false
     @State private var addingEvent = false
     @State private var addingSong = false
@@ -112,7 +115,7 @@ struct GroupChatView: View {
                         Button {
                             showGroupSettings = true
                         } label: {
-                            Label("Photo & visibilité", systemImage: "gearshape")
+                            Label("Réglages du groupe", systemImage: "gearshape")
                         }
                         Button(role: .destructive) {
                             showDeleteConfirm = true
@@ -146,7 +149,7 @@ struct GroupChatView: View {
         }
         .sheet(item: $previewingDoc) { doc in
             NavigationStack {
-                DocPreview(url: AppStore.mediaURL(for: doc.fileName))
+                DocPreview(url: doc.url)
                     .ignoresSafeArea(edges: .bottom)
                     .navigationTitle(doc.title)
                     .navigationBarTitleDisplayMode(.inline)
@@ -464,14 +467,25 @@ struct GroupChatView: View {
                 Button {
                     importingDoc = true
                 } label: {
-                    Label("Ajouter une partition", systemImage: "plus.circle.fill")
-                        .font(.subheadline.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .foregroundStyle(JC.violet)
+                    Label(
+                        store.docUploadInProgress ? "Envoi en cours…" : "Ajouter une partition",
+                        systemImage: store.docUploadInProgress ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
+                    )
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(JC.violet)
                 }
                 .buttonStyle(PressableStyle())
+                .disabled(store.docUploadInProgress)
+
+                if store.isLive {
+                    Text("Partagées avec tout le groupe — chacun peut les ouvrir et les télécharger.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
                 if group.docs.isEmpty {
                     JCEmptyState(
@@ -483,7 +497,7 @@ struct GroupChatView: View {
 
                 ForEach(group.docs) { doc in
                     Button {
-                        previewingDoc = doc
+                        openDoc(doc, in: group)
                     } label: {
                         JCCard(padding: 12) {
                             HStack(spacing: 12) {
@@ -491,9 +505,14 @@ struct GroupChatView: View {
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                                         .fill(JC.coral.opacity(0.14))
                                         .frame(width: 40, height: 40)
-                                    Image(systemName: "doc.richtext.fill")
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundStyle(JC.coral)
+                                    if downloadingDocID == doc.id {
+                                        ProgressView()
+                                            .controlSize(.small)
+                                    } else {
+                                        Image(systemName: "doc.richtext.fill")
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(JC.coral)
+                                    }
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(doc.title)
@@ -505,34 +524,70 @@ struct GroupChatView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer(minLength: 0)
-                                Button {
-                                    store.removeDoc(doc, from: group)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.secondary)
-                                        .padding(8)
+                                if canRemove(doc) {
+                                    Button {
+                                        store.removeDoc(doc, from: group)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.secondary)
+                                            .padding(8)
+                                    }
+                                    .buttonStyle(PressableStyle())
                                 }
-                                .buttonStyle(PressableStyle())
                             }
                         }
                     }
                     .buttonStyle(PressableStyle())
+                    .disabled(downloadingDocID == doc.id)
                 }
             }
             .padding(18)
         }
     }
+
+    /// Puis-je retirer cette partition ? Leader, ou celui qui l'a ajoutée
+    /// (la RLS serveur applique la même règle).
+    private func canRemove(_ doc: GroupDoc) -> Bool {
+        isLeader || doc.addedBy == store.profile.name || !store.isLive
+    }
+
+    /// Ouvre une partition : fichier local direct, ou téléchargement (avec
+    /// cache) pour un document hébergé — puis l'aperçu QuickLook, qui
+    /// permet aussi de la partager / l'enregistrer dans Fichiers.
+    private func openDoc(_ doc: GroupDoc, in group: GroupChat) {
+        if doc.remotePath == nil {
+            previewingDoc = PreviewableDoc(id: doc.id, title: doc.title, url: AppStore.mediaURL(for: doc.fileName))
+            return
+        }
+        guard downloadingDocID == nil else { return }
+        downloadingDocID = doc.id
+        Task {
+            defer { downloadingDocID = nil }
+            if let url = await store.localURL(for: doc) {
+                previewingDoc = PreviewableDoc(id: doc.id, title: doc.title, url: url)
+            }
+        }
+    }
+}
+
+/// Document prêt à être prévisualisé (local ou fraîchement téléchargé).
+struct PreviewableDoc: Identifiable {
+    let id: GroupDoc.ID
+    let title: String
+    let url: URL
 }
 
 // MARK: - Ligne d'un morceau (pochette iTunes si trouvée)
 
 struct SongRow: View {
+    @Environment(\.openURL) private var openURL
     let song: Song
     /// true = montrer les boutons valider / refuser (suggestion + leader).
     let isLeader: Bool
     let onApprove: (() -> Void)?
     let onReject: (() -> Void)?
+    @State private var showListen = false
 
     init(song: Song, isLeader: Bool, onApprove: (() -> Void)? = nil, onReject: (() -> Void)? = nil) {
         self.song = song
@@ -544,7 +599,11 @@ struct SongRow: View {
     var body: some View {
         songCard
             // Appui long : les mêmes liens d'écoute, sans chercher le bouton.
-            .contextMenu { streamingLinks }
+            .contextMenu { contextLinks }
+            .sheet(isPresented: $showListen) {
+                ListenSheet(song: song)
+                    .presentationDetents([.height(380)])
+            }
     }
 
     private var songCard: some View {
@@ -617,14 +676,13 @@ struct SongRow: View {
         }
     }
 
-    /// Menu d'écoute discret : un casque, et le morceau s'ouvre sur la
-    /// plateforme choisie (lien direct Apple Music quand on l'a, recherche
-    /// pré-remplie sinon). Aussi disponible par appui long sur la ligne.
+    /// Bouton d'écoute discret : un casque, et une feuille propose le
+    /// morceau sur chaque plateforme avec son vrai logo (lien direct Apple
+    /// Music quand on l'a, recherche pré-remplie sinon). Aussi disponible
+    /// par appui long sur la ligne.
     private var listenMenu: some View {
-        Menu {
-            Section("Écouter sur…") {
-                streamingLinks
-            }
+        Button {
+            showListen = true
         } label: {
             Image(systemName: "headphones")
                 .font(.caption.weight(.bold))
@@ -632,14 +690,19 @@ struct SongRow: View {
                 .padding(7)
                 .background(JC.inset, in: Circle())
         }
+        .buttonStyle(PressableStyle())
         .accessibilityLabel(Text("Écouter ce morceau"))
     }
 
+    /// Liens du menu contextuel — de vrais boutons (Link dans un menu ne
+    /// déclenche pas l'ouverture sur certaines versions d'iOS).
     @ViewBuilder
-    private var streamingLinks: some View {
+    private var contextLinks: some View {
         ForEach(StreamingPlatform.allCases) { platform in
             if let url = platform.url(for: song) {
-                Link(destination: url) {
+                Button {
+                    openURL(url)
+                } label: {
                     Label {
                         Text(verbatim: platform.label)
                     } icon: {
@@ -657,6 +720,98 @@ struct SongRow: View {
             Image(systemName: "music.note")
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(JC.violet)
+        }
+    }
+}
+
+// MARK: - Feuille « Écouter sur… »
+
+/// Le morceau sur chaque plateforme de streaming, avec son logo — un tap
+/// ouvre l'app (ou le site) directement sur le titre ou sa recherche.
+struct ListenSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    let song: Song
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 12) {
+                        if let artwork = song.artworkURL, let url = URL(string: artwork) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(JC.violet.opacity(0.14))
+                            }
+                            .frame(width: 54, height: 54)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(JC.violet.opacity(0.14))
+                                Image(systemName: "music.note")
+                                    .font(.headline.weight(.bold))
+                                    .foregroundStyle(JC.violet)
+                            }
+                            .frame(width: 54, height: 54)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(song.title)
+                                .font(.headline.weight(.heavy))
+                                .lineLimit(1)
+                            Text(song.artist)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    VStack(spacing: 8) {
+                        ForEach(StreamingPlatform.allCases) { platform in
+                            if let url = platform.url(for: song) {
+                                Button {
+                                    openURL(url)
+                                    dismiss()
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        StreamingLogoView(platform: platform, size: 34)
+                                        Text(verbatim: platform.label)
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(.primary)
+                                        if platform == .appleMusic, song.trackURL != nil {
+                                            TagView(text: store.tr("Lien direct"), color: .teal)
+                                        }
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding(12)
+                                    .background(JC.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(JC.cardStroke, lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(PressableStyle())
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(18)
+            }
+            .navigationTitle("Écouter sur…")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
         }
     }
 }
@@ -898,7 +1053,7 @@ struct GroupMembersSheet: View {
 
 // MARK: - Réglages du groupe (leader)
 
-/// Photo et visibilité du groupe — réservé au leader. Un groupe public
+/// Nom, photo et visibilité du groupe — réservé au leader. Un groupe public
 /// s'affiche sur les profils de ses membres ; un groupe privé reste
 /// invisible du reste du réseau.
 struct GroupSettingsSheet: View {
@@ -906,15 +1061,34 @@ struct GroupSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let groupID: GroupChat.ID
     @State private var photoItem: PhotosPickerItem?
+    @State private var name = ""
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
+    }
+
+    /// Nom prêt à être enregistré (saisi, nettoyé, différent de l'actuel).
+    private var cleanedNewName: String? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != group?.name else { return nil }
+        return trimmed
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 if let group {
+                    Section {
+                        TextField("Nom du groupe", text: $name)
+                            .font(.body.weight(.semibold))
+                            .submitLabel(.done)
+                            .onSubmit(commitRename)
+                    } header: {
+                        Text("Nom du groupe")
+                    } footer: {
+                        Text("Le nouveau nom s'affiche chez tous les membres.")
+                    }
+
                     Section("Photo du groupe") {
                         HStack(spacing: 14) {
                             GroupAvatarView(group: group, size: 64)
@@ -946,13 +1120,18 @@ struct GroupSettingsSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(JC.bg)
-            .navigationTitle("Photo & visibilité")
+            .navigationTitle("Réglages du groupe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { dismiss() }.font(.headline)
+                    Button("OK") {
+                        commitRename()
+                        dismiss()
+                    }
+                    .font(.headline)
                 }
             }
+            .onAppear { name = group?.name ?? "" }
             .onChange(of: photoItem) { _, item in
                 guard let item, let group else { return }
                 Task {
@@ -964,6 +1143,11 @@ struct GroupSettingsSheet: View {
                 }
             }
         }
+    }
+
+    private func commitRename() {
+        guard let group, let newName = cleanedNewName else { return }
+        store.renameGroup(newName, in: group)
     }
 }
 

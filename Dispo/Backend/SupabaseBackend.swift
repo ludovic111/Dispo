@@ -441,6 +441,7 @@ final class SupabaseBackend: Sendable {
             let bio: String
             let available_dates: [String]
             let socials: [String: String]
+            let neighborhood: String
         }
         let update = Update(
             name: profile.name,
@@ -449,7 +450,10 @@ final class SupabaseBackend: Sendable {
             level: profile.level.rawValue,
             bio: profile.bio,
             available_dates: profile.availableDates.map { Self.dayFormatter.string(from: $0) },
-            socials: profile.socials ?? [:]
+            socials: profile.socials ?? [:],
+            // La ville choisie (« 1200 Genève ») — c'est ce que les autres
+            // voient sur ma fiche et mes cartes.
+            neighborhood: profile.cityLabel
         )
         try await client.from("profiles").update(update).eq("id", value: userID).execute()
     }
@@ -1073,6 +1077,12 @@ final class SupabaseBackend: Sendable {
             .in("group_id", values: groupIDs)
             .order("created_at")
             .execute().value) ?? []
+        // Partitions hébergées — même tolérance le temps de la migration.
+        let groupDocs: [GroupDocRow] = (try? await client.from("group_docs")
+            .select()
+            .in("group_id", values: groupIDs)
+            .order("created_at", ascending: false)
+            .execute().value) ?? []
 
         let eventIDs = events.map(\.id.uuidString)
         let attendance: [EventAttendanceRow]
@@ -1089,6 +1099,7 @@ final class SupabaseBackend: Sendable {
         let eventsByGroup = Dictionary(grouping: events, by: \.groupId)
         let attendanceByEvent = Dictionary(grouping: attendance, by: \.eventId)
         let messagesByGroup = Dictionary(grouping: groupMessages, by: \.groupId)
+        let docsByGroup = Dictionary(grouping: groupDocs, by: \.groupId)
 
         return groupRows.map { row in
             let leaderName = row.leaderId == myID ? nil : nameByID[row.leaderId]
@@ -1133,7 +1144,9 @@ final class SupabaseBackend: Sendable {
                 messages: (messagesByGroup[row.id] ?? []).map {
                     $0.asGroupMessage(myID: myID, myName: myName, nameByID: nameByID)
                 },
-                docs: [],
+                docs: (docsByGroup[row.id] ?? []).map {
+                    $0.asGroupDoc(myID: myID, myName: myName, nameByID: nameByID)
+                },
                 repertoire: row.repertoire.map(\.asSong),
                 events: mappedEvents
             )
@@ -1227,6 +1240,14 @@ final class SupabaseBackend: Sendable {
         struct Update: Encodable { let photo_url: String? }
         try await client.from("music_groups")
             .update(Update(photo_url: url))
+            .eq("id", value: groupID)
+            .execute()
+    }
+
+    /// Renomme le groupe (RLS : leader uniquement).
+    func renameGroup(_ name: String, groupID: UUID) async throws {
+        try await client.from("music_groups")
+            .update(["name": name])
             .eq("id", value: groupID)
             .execute()
     }
@@ -1334,6 +1355,104 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    // MARK: - Groupes : partitions hébergées
+
+    /// Bucket privé des partitions de groupe — lecture et écriture
+    /// réservées aux membres du groupe (RLS Storage).
+    static let groupDocsBucket = "group-docs"
+
+    /// Ligne de la table `group_docs`.
+    struct GroupDocRow: Codable {
+        var id: UUID
+        var groupId: UUID
+        var title: String
+        var path: String
+        var ext: String
+        var addedBy: UUID?
+        var createdAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case id, title, path, ext
+            case groupId = "group_id"
+            case addedBy = "added_by"
+            case createdAt = "created_at"
+        }
+
+        func asGroupDoc(myID: UUID, myName: String, nameByID: [UUID: String]) -> GroupDoc {
+            let authorName = addedBy == myID ? myName : addedBy.flatMap { nameByID[$0] } ?? ""
+            return GroupDoc(
+                id: id,
+                fileName: "",
+                title: title,
+                addedBy: authorName,
+                date: createdAt,
+                remotePath: path,
+                ext: ext
+            )
+        }
+    }
+
+    /// Type MIME d'une partition selon son extension.
+    nonisolated private static func docContentType(for ext: String) -> String {
+        switch ext.lowercased() {
+        case "jpg", "jpeg": return "image/jpeg"
+        case "png": return "image/png"
+        case "heic": return "image/heic"
+        case "txt": return "text/plain"
+        default: return "application/pdf"
+        }
+    }
+
+    /// Téléverse une partition dans le dossier du groupe et retourne son
+    /// chemin Storage (`<groupID>/<docID>.<ext>`).
+    func uploadGroupDoc(_ data: Data, ext: String, docID: UUID, groupID: UUID) async throws -> String {
+        let path = "\(groupID.uuidString.lowercased())/\(docID.uuidString.lowercased()).\(ext.lowercased())"
+        try await client.storage.from(Self.groupDocsBucket).upload(
+            path,
+            data: data,
+            options: FileOptions(contentType: Self.docContentType(for: ext))
+        )
+        return path
+    }
+
+    /// Déclare la partition dans `group_docs` (visible par tout le groupe).
+    func insertGroupDoc(_ doc: GroupDoc, groupID: UUID, addedBy: UUID) async throws {
+        struct Insert: Encodable {
+            let id: UUID
+            let group_id: UUID
+            let title: String
+            let path: String
+            let ext: String
+            let added_by: UUID
+        }
+        try await client.from("group_docs")
+            .insert(Insert(
+                id: doc.id,
+                group_id: groupID,
+                title: doc.title,
+                path: doc.remotePath ?? "",
+                ext: doc.ext ?? "pdf",
+                added_by: addedBy
+            ))
+            .execute()
+    }
+
+    /// Retire la partition de la table (RLS : auteur ou leader).
+    func deleteGroupDoc(_ docID: UUID) async throws {
+        try await client.from("group_docs").delete().eq("id", value: docID).execute()
+    }
+
+    /// Supprime les fichiers de partitions du bucket (au mieux).
+    func deleteGroupDocFiles(paths: [String]) async throws {
+        guard !paths.isEmpty else { return }
+        _ = try await client.storage.from(Self.groupDocsBucket).remove(paths: paths)
+    }
+
+    /// Télécharge une partition du bucket privé (RLS : membres du groupe).
+    func downloadGroupDoc(path: String) async throws -> Data {
+        try await client.storage.from(Self.groupDocsBucket).download(path: path)
+    }
+
     // MARK: - Groupes : messages + temps réel
 
     /// Envoie un message de groupe. L'id est fourni par le client pour que
@@ -1368,6 +1487,7 @@ final class SupabaseBackend: Sendable {
         let attendanceChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "event_attendance")
         let memberChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_members")
         let groupChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "music_groups")
+        let docChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_docs")
         try await channel.subscribeWithError()
         let stream = AsyncStream<GroupRealtimeEvent> { continuation in
             let messageTask = Task {
@@ -1377,7 +1497,7 @@ final class SupabaseBackend: Sendable {
                     }
                 }
             }
-            let changeTasks = [eventChanges, attendanceChanges, memberChanges, groupChanges].map { changes in
+            let changeTasks = [eventChanges, attendanceChanges, memberChanges, groupChanges, docChanges].map { changes in
                 Task {
                     for await _ in changes {
                         continuation.yield(.groupsChanged)
