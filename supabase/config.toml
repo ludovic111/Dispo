@@ -418,3 +418,8 @@ enabled = true
 # fait par le secret partagé REVENUECAT_WEBHOOK_SECRET (en-tête Authorization).
 [functions.revenuecat-webhook]
 verify_jwt = false
+
+# Le cockpit interne s'ouvre dans un navigateur (pas de JWT) : l'accès est
+# protégé par Basic Auth via le secret COCKPIT_PASSWORD.
+[functions.cockpit]
+verify_jwt = false
