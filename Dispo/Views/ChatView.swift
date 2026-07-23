@@ -27,7 +27,7 @@ struct ChatView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(JC.violet.opacity(0.08))
+                    .background(JC.bronze.opacity(0.08))
                 }
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -152,7 +152,7 @@ struct MessageBubble: View {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
                     )
-                    .foregroundStyle(message.isFromMe ? Color.white : Color.primary)
+                    .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
                 HStack(spacing: 4) {
                     Text(message.date.formatted(date: .omitted, time: .shortened))
                         .font(.caption2)
@@ -179,7 +179,7 @@ struct ReceiptChecks: View {
             }
         }
         .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(receipt == .read ? AnyShapeStyle(Color.blue) : AnyShapeStyle(.tertiary))
+        .foregroundStyle(receipt == .read ? AnyShapeStyle(JC.laiton) : AnyShapeStyle(.tertiary))
         .padding(.trailing, receipt == .sent ? 0 : 4.5)
         .animation(.easeInOut(duration: 0.2), value: receipt)
         .accessibilityLabel(accessibilityText)

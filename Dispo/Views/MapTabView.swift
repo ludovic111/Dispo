@@ -65,7 +65,7 @@ struct MapTabView: View {
             HStack(spacing: 10) {
                 Image(systemName: "map.fill")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(JC.violet)
+                    .foregroundStyle(JC.bronze)
                 Text("\(locatedMusicians.count) musiciens sur la carte")
                     .font(.subheadline.weight(.bold))
                 Spacer(minLength: 0)

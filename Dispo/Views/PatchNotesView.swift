@@ -11,6 +11,19 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.1",
+            title: "Coulisses & Laiton — nouvelle identité",
+            points: [
+                "Dispo change de peau : lumière de scène ambrée, laiton et papier de partition — fini le violet",
+                "Les SOS sont maintenant de vrais billets de concert, perforation et talon-date compris",
+                "Nouvelles typographies : les grands titres respirent l'affiche de concert, les dates et cachets l'impression billetterie",
+                "Premium devient le pass backstage — même avantage, plus belle carte",
+                "Nouvelle icône d'app assortie",
+                "Le rouge est désormais réservé aux SOS : le reste de l'app se lit d'un coup d'œil",
+                "Mode clair repensé façon papier de partition"
+            ]
+        ),
+        PatchNote(
             version: "1.0",
             title: "Dispo 1.0 — c'est parti 🎉",
             points: [
@@ -245,7 +258,7 @@ struct PatchNotesView: View {
         HStack(spacing: 12) {
             Image(systemName: "heart.fill")
                 .font(.title3)
-                .foregroundStyle(JC.coral)
+                .foregroundStyle(JC.laiton)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Merci d'utiliser Dispo !")
                     .font(.subheadline.weight(.heavy))
@@ -256,10 +269,10 @@ struct PatchNotesView: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(JC.coral.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(JC.laiton.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(JC.coral.opacity(0.35), lineWidth: 1)
+                .stroke(JC.laiton.opacity(0.35), lineWidth: 1)
         )
     }
 
@@ -269,19 +282,19 @@ struct PatchNotesView: View {
                 HStack(spacing: 8) {
                     Text(verbatim: "v\(note.version)")
                         .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(isCurrent ? JC.coral : .secondary)
+                        .foregroundStyle(isCurrent ? JC.laiton : .secondary)
                     Text(note.title)
                         .font(.subheadline.weight(.bold))
                     Spacer(minLength: 0)
                     if isCurrent {
-                        TagView(text: "Version actuelle", color: JC.coral)
+                        TagView(text: "Version actuelle", color: JC.laiton)
                     }
                 }
                 ForEach(Array(note.points.enumerated()), id: \.offset) { _, point in
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "sparkle")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                             .padding(.top, 4)
                         Text(point)
                             .font(.caption)

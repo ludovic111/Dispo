@@ -41,7 +41,7 @@ struct NotificationsSettingsView: View {
             HStack(alignment: .top, spacing: 13) {
                 Image(systemName: "bell.and.waves.left.and.right.fill")
                     .font(.title2)
-                    .foregroundStyle(JC.coral)
+                    .foregroundStyle(JC.laiton)
                     .frame(width: 36)
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Ne rate plus une occasion de jouer")
@@ -69,7 +69,7 @@ struct NotificationsSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .tint(JC.coral)
+                .tint(JC.laiton)
 
                 if store.notificationsNeedSystemSettings {
                     Divider()
@@ -80,13 +80,13 @@ struct NotificationsSettingsView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(JC.coral)
+                    .tint(JC.laiton)
                 }
 
                 if let error = store.pushRegistrationError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
-                        .foregroundStyle(JC.coral)
+                        .foregroundStyle(JC.signal)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -103,7 +103,7 @@ struct NotificationsSettingsView: View {
                     title: "SOS compatibles",
                     detail: "Un concert cherche ton instrument",
                     icon: "bolt.fill",
-                    color: JC.coral
+                    color: JC.signal
                 )
                 Divider()
                 categoryToggle(
@@ -111,7 +111,7 @@ struct NotificationsSettingsView: View {
                     title: "Messages et candidatures",
                     detail: "Une réponse ou une nouvelle candidature",
                     icon: "bubble.left.and.bubble.right.fill",
-                    color: JC.violet
+                    color: JC.bronze
                 )
                 Divider()
                 categoryToggle(
@@ -119,7 +119,7 @@ struct NotificationsSettingsView: View {
                     title: "Événements de groupe",
                     detail: "Concerts, répétitions et jams ajoutés",
                     icon: "person.3.fill",
-                    color: JC.gold
+                    color: JC.laiton
                 )
             }
         }
@@ -170,7 +170,7 @@ struct NotificationsSettingsView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .tint(JC.coral)
+                .tint(JC.laiton)
             }
         }
     }

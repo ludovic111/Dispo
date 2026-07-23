@@ -163,7 +163,7 @@ struct MusicianDetailView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(musician.name)
-                    .font(.title3.weight(.heavy))
+                    .font(JCFont.display(21))
                 if musician.isDemo { DemoAccountBadge() }
                 SocialLinkBadge(link: store.socialLink(with: musician.name))
             }
@@ -173,11 +173,11 @@ struct MusicianDetailView: View {
             HStack(spacing: 8) {
                 Text(verbatim: musician.handle)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(JC.violet)
+                    .foregroundStyle(JC.bronze)
                 AvailabilityBadge(availability: musician.availability)
                 // Niveau : avantage Premium.
                 if store.isPremium {
-                    TagView(text: musician.level.rawValue, color: JC.gold)
+                    TagView(text: musician.level.rawValue, color: JC.laiton)
                 } else {
                     Button { store.showPaywall = true } label: {
                         HStack(spacing: 4) {
@@ -188,8 +188,8 @@ struct MusicianDetailView: View {
                         }
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)
-                        .background(JC.gold.opacity(0.14), in: Capsule())
-                        .foregroundStyle(JC.gold)
+                        .background(JC.laiton.opacity(0.14), in: Capsule())
+                        .foregroundStyle(JC.laiton)
                     }
                     .buttonStyle(PressableStyle())
                 }
@@ -222,7 +222,7 @@ struct MusicianDetailView: View {
                 // (visible pour les membres Premium, comme le niveau global).
                 FlowLayout {
                     ForEach(musician.instruments) { instrument in
-                        TagView(text: instrumentChipLabel(instrument), color: .teal)
+                        TagView(text: instrumentChipLabel(instrument), color: JC.bronze)
                     }
                 }
             }
@@ -298,7 +298,7 @@ struct MusicianDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(AnyShapeStyle(JC.hero), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(AnyShapeStyle(JC.signal), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .foregroundStyle(Color.white)
                 }
                 .buttonStyle(PressableStyle())
@@ -320,7 +320,7 @@ struct MusicianDetailView: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(store.isFollowing(musician) ? JC.cardStroke : .clear, lineWidth: 1)
                         )
-                        .foregroundStyle(store.isFollowing(musician) ? Color.primary : Color.white)
+                        .foregroundStyle(store.isFollowing(musician) ? Color.primary : JC.billetInk)
                 }
                 .buttonStyle(PressableStyle())
 
@@ -394,7 +394,7 @@ struct MusicianDetailView: View {
                                     if group.isLeader {
                                         Image(systemName: "crown.fill")
                                             .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(JC.gold)
+                                            .foregroundStyle(JC.laiton)
                                             .accessibilityLabel(Text("Leader"))
                                     }
                                 }
@@ -477,7 +477,7 @@ struct MusicianDetailView: View {
                         } label: {
                             Image(systemName: (mine ?? 0) >= stars ? "star.fill" : "star")
                                 .font(.system(size: 26, weight: .semibold))
-                                .foregroundStyle((mine ?? 0) >= stars ? JC.gold : Color.secondary.opacity(0.5))
+                                .foregroundStyle((mine ?? 0) >= stars ? JC.laiton : Color.secondary.opacity(0.5))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
                                 .contentShape(Rectangle())
@@ -606,7 +606,7 @@ struct MusicianDetailView: View {
     private func sectionTitle(_ title: LocalizedStringKey, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
             .font(.subheadline.weight(.heavy))
-            .foregroundStyle(JC.coral)
+            .foregroundStyle(JC.laiton)
     }
 }
 
@@ -742,7 +742,7 @@ struct PublicGroupAvatarView: View {
     private var emojiCircle: some View {
         ZStack {
             Circle()
-                .fill(JC.violet.opacity(0.15))
+                .fill(JC.bronze.opacity(0.15))
                 .frame(width: size, height: size)
             Text(group.emoji)
         }

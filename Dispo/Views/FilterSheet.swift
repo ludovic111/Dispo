@@ -58,7 +58,7 @@ struct FilterSheet: View {
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
-                        .tint(JC.coral)
+                        .tint(JC.laiton)
                     }
                 } header: {
                     Text("Disponibilité")
@@ -73,10 +73,10 @@ struct FilterSheet: View {
                             Spacer()
                             Text(verbatim: "\(Int(filters.radiusKm)) km")
                                 .font(.subheadline.weight(.bold))
-                                .foregroundStyle(JC.coral)
+                                .foregroundStyle(JC.laiton)
                         }
                         Slider(value: $filters.radiusKm, in: 5...100, step: 5)
-                            .tint(JC.coral)
+                            .tint(JC.laiton)
                         HStack {
                             Text(verbatim: "5 km")
                             Spacer()

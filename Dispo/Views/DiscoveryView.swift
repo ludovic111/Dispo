@@ -120,12 +120,11 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 LogoView(markSize: 20)
                 (Text(greeting) + Text(verbatim: ", \(store.profile.name.split(separator: " ").first.map(String.init) ?? store.profile.name)"))
-                    .font(.system(size: 25, weight: .bold))
-                    .tracking(-0.3)
+                    .font(JCFont.display(25))
                 HStack(spacing: 6) {
                     Image(systemName: "person.2.fill")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(JC.coral)
+                        .foregroundStyle(JC.laiton)
                     Text("\(store.musicians.count) musiciens sur le réseau")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -218,7 +217,7 @@ struct HomeView: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
-                                .background(Color.green, in: Capsule())
+                                .background(JC.feutrine, in: Capsule())
                         }
                         .buttonStyle(PressableStyle())
                         Button {
@@ -229,14 +228,14 @@ struct HomeView: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
-                                .background(JC.coral, in: Capsule())
+                                .background(JC.signal, in: Capsule())
                         }
                         .buttonStyle(PressableStyle())
                     }
                 } else {
                     HStack(spacing: 6) {
                         Image(systemName: myStatus == .available ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(myStatus == .available ? Color.green : JC.coral)
+                            .foregroundStyle(myStatus == .available ? JC.feutrine : JC.signal)
                         Text(myStatus == .available ? "Tu as confirmé ta présence" : "Tu as indiqué être indispo")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
@@ -245,10 +244,10 @@ struct HomeView: View {
                 }
             }
             .padding(12)
-            .background(JC.violet.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(JC.bronze.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(JC.violet.opacity(0.3), lineWidth: 1)
+                    .stroke(JC.bronze.opacity(0.3), lineWidth: 1)
             )
         }
     }
@@ -264,17 +263,17 @@ struct HomeView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "person.badge.plus")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                         Text("Dispos pour \(event.title)")
                             .font(.subheadline.weight(.bold))
                             .lineLimit(1)
                         Spacer()
                         Text("\(invitees.count)")
                             .font(.caption.weight(.heavy))
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(JC.violet.opacity(0.14), in: Capsule())
+                            .background(JC.bronze.opacity(0.14), in: Capsule())
                     }
                     Text("Un tap pour inviter — ils rejoignent l'événement directement.")
                         .font(.caption)
@@ -311,7 +310,7 @@ struct HomeView: View {
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
-                                        .background(JC.violet, in: Capsule())
+                                        .background(JC.bronze, in: Capsule())
                                     }
                                     .buttonStyle(PressableStyle())
                                     .disabled(invitingName != nil)
@@ -341,7 +340,7 @@ struct HomeView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "person.crop.circle.badge.plus")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(JC.magenta)
+                        .foregroundStyle(JC.feutrine)
                     Text("Suggestions pour toi")
                         .font(.subheadline.weight(.bold))
                     Spacer(minLength: 0)
@@ -407,7 +406,7 @@ struct HomeView: View {
             HStack(spacing: 11) {
                 Image(systemName: "medal.fill")
                     .font(.title3)
-                    .foregroundStyle(JC.gold)
+                    .foregroundStyle(JC.laiton)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Vois le niveau des musiciens")
                         .font(.caption.weight(.bold))
@@ -420,13 +419,13 @@ struct HomeView: View {
                 Spacer(minLength: 0)
                 Image(systemName: "lock.fill")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(JC.gold)
+                    .foregroundStyle(JC.laiton)
             }
             .padding(12)
-            .background(JC.gold.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(JC.laiton.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(JC.gold.opacity(0.35), lineWidth: 1)
+                    .stroke(JC.laiton.opacity(0.35), lineWidth: 1)
             )
         }
         .buttonStyle(PressableStyle())
@@ -439,9 +438,9 @@ struct SocialLinkBadge: View {
 
     var body: some View {
         switch link {
-        case .friend: TagView(text: "Ami", color: JC.magenta)
-        case .following: TagView(text: "Suivi", color: JC.violet)
-        case .follower: TagView(text: "Te suit", color: .teal)
+        case .friend: TagView(text: "Ami", color: JC.feutrine)
+        case .following: TagView(text: "Suivi", color: JC.bronze)
+        case .follower: TagView(text: "Te suit", color: JC.bronze)
         case .none: EmptyView()
         }
     }
@@ -489,7 +488,7 @@ struct SuggestionCard: View {
                         store.isFollowing(musician) ? AnyShapeStyle(JC.inset) : AnyShapeStyle(JC.hero),
                         in: Capsule()
                     )
-                    .foregroundStyle(store.isFollowing(musician) ? Color.primary : Color.white)
+                    .foregroundStyle(store.isFollowing(musician) ? Color.primary : JC.billetInk)
             }
             .buttonStyle(PressableStyle())
         }

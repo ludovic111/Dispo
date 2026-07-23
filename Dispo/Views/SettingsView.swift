@@ -73,7 +73,7 @@ struct SettingsSheet: View {
                 HStack(spacing: 12) {
                     settingsIcon(
                         store.isLive ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.plus",
-                        store.isLive ? .green : JC.violet
+                        store.isLive ? JC.feutrine : JC.bronze
                     )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.isLive ? "Mon compte" : "Se connecter")
@@ -98,7 +98,7 @@ struct SettingsSheet: View {
                         Spacer()
                         Label("Lié", systemImage: "checkmark.circle.fill")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(JC.feutrine)
                     }
                 } else {
                     Button { showLinkApple = true } label: {
@@ -126,7 +126,7 @@ struct SettingsSheet: View {
         Section("Notifications") {
             Button { showNotifications = true } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("bell.badge.fill", JC.coral)
+                    settingsIcon("bell.badge.fill", JC.laiton)
                     Text("Notifications")
                         .foregroundStyle(.primary)
                     Spacer()
@@ -144,7 +144,7 @@ struct SettingsSheet: View {
     private var preferencesSection: some View {
         Section("Préférences") {
             HStack(spacing: 12) {
-                settingsIcon(store.theme.symbol, JC.gold)
+                settingsIcon(store.theme.symbol, JC.laiton)
                 Picker("Apparence", selection: Binding(
                     get: { store.theme },
                     set: { store.setTheme($0) }
@@ -156,7 +156,7 @@ struct SettingsSheet: View {
             }
             Button { showLanguageRegion = true } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("globe", JC.violet)
+                    settingsIcon("globe", JC.bronze)
                     Text("Langue & région")
                         .foregroundStyle(.primary)
                     Spacer()
@@ -182,7 +182,7 @@ struct SettingsSheet: View {
                     store.setLocationPrecision(option)
                 } label: {
                     HStack(spacing: 12) {
-                        settingsIcon(option.symbol, option == .city ? .teal : JC.coral)
+                        settingsIcon(option.symbol, option == .city ? JC.bronze : JC.laiton)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(LocalizedStringKey(option.label))
                                 .foregroundStyle(.primary)
@@ -193,7 +193,7 @@ struct SettingsSheet: View {
                         Spacer()
                         if store.locationPrecision == option {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(JC.coral)
+                                .foregroundStyle(JC.laiton)
                         }
                     }
                 }
@@ -219,7 +219,7 @@ struct SettingsSheet: View {
         Section("Abonnement") {
             if store.isPremium {
                 HStack(spacing: 12) {
-                    settingsIcon("crown.fill", JC.gold)
+                    settingsIcon("crown.fill", JC.laiton)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Premium actif")
                             .foregroundStyle(.primary)
@@ -233,7 +233,7 @@ struct SettingsSheet: View {
                 if let manageURL = URL(string: "https://apps.apple.com/account/subscriptions") {
                     Link(destination: manageURL) {
                         HStack(spacing: 12) {
-                            settingsIcon("gearshape.2.fill", JC.violet)
+                            settingsIcon("gearshape.2.fill", JC.bronze)
                             Text("Gérer mon abonnement")
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -249,7 +249,7 @@ struct SettingsSheet: View {
                     store.showPaywall = true
                 } label: {
                     HStack(spacing: 12) {
-                        settingsIcon("crown.fill", JC.gold)
+                        settingsIcon("crown.fill", JC.laiton)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Découvrir Premium")
                                 .foregroundStyle(.primary)
@@ -266,7 +266,7 @@ struct SettingsSheet: View {
                 Task { await store.restorePurchases() }
             } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("arrow.clockwise", JC.violet)
+                    settingsIcon("arrow.clockwise", JC.bronze)
                     Text("Restaurer mes achats")
                         .foregroundStyle(.primary)
                     Spacer()
@@ -286,7 +286,7 @@ struct SettingsSheet: View {
             if let supportMail = URL(string: "mailto:ludovic@dispoapp.net") {
                 Link(destination: supportMail) {
                     HStack(spacing: 12) {
-                        settingsIcon("envelope.fill", JC.coral)
+                        settingsIcon("envelope.fill", JC.laiton)
                         Text("Contacter le support")
                             .foregroundStyle(.primary)
                         Spacer()
@@ -299,7 +299,7 @@ struct SettingsSheet: View {
             if let supportURL {
                 Link(destination: supportURL) {
                     HStack(spacing: 12) {
-                        settingsIcon("questionmark.circle.fill", JC.violet)
+                        settingsIcon("questionmark.circle.fill", JC.bronze)
                         Text("Centre d'aide")
                             .foregroundStyle(.primary)
                         Spacer()
@@ -312,7 +312,7 @@ struct SettingsSheet: View {
             if let privacyURL {
                 Link(destination: privacyURL) {
                     HStack(spacing: 12) {
-                        settingsIcon("hand.raised.fill", .teal)
+                        settingsIcon("hand.raised.fill", JC.bronze)
                         Text("Confidentialité")
                             .foregroundStyle(.primary)
                         Spacer()
@@ -324,7 +324,7 @@ struct SettingsSheet: View {
             }
             Button { showPatchNotes = true } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("sparkles", JC.violet)
+                    settingsIcon("sparkles", JC.bronze)
                     Text("Nouveautés")
                         .foregroundStyle(.primary)
                     Spacer()
@@ -345,7 +345,7 @@ struct SettingsSheet: View {
                 showResetConfirmation = true
             } label: {
                 HStack(spacing: 12) {
-                    settingsIcon("arrow.counterclockwise", .red)
+                    settingsIcon("arrow.counterclockwise", JC.signal)
                     Text("Réinitialiser la démo")
                 }
             }
@@ -417,7 +417,7 @@ struct LinkAppleSheet: View {
                     if let errorText {
                         Label(errorText, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(JC.coral)
+                            .foregroundStyle(JC.signal)
                     }
 
                     SignInWithAppleButton(.continue) { request in

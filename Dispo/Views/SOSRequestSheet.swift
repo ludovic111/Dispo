@@ -67,7 +67,7 @@ struct SOSRequestSheet: View {
                                             .padding(.vertical, 6)
                                             .background(
                                                 Calendar.current.isDate(dispo, inSameDayAs: date)
-                                                    ? JC.coral.opacity(0.2) : JC.inset,
+                                                    ? JC.signal.opacity(0.2) : JC.inset,
                                                 in: Capsule()
                                             )
                                     }

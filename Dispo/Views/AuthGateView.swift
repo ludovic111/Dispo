@@ -108,14 +108,14 @@ struct AuthForm: View {
                         submit()
                     } label: {
                         HStack {
-                            if isWorking { ProgressView().tint(.white) }
+                            if isWorking { ProgressView().tint(JC.billetInk) }
                             Text(LocalizedStringKey(mode.rawValue))
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(JC.hero, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(JC.billetInk)
                     }
                     .buttonStyle(PressableStyle())
                     .disabled(isWorking || !canSubmit)
@@ -132,7 +132,7 @@ struct AuthForm: View {
             if let errorText {
                 Label(errorText, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
-                    .foregroundStyle(JC.coral)
+                    .foregroundStyle(JC.signal)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let infoText {

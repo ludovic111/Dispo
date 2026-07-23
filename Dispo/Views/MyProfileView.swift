@@ -212,13 +212,13 @@ struct MyProfileView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(store.profile.name)
-                    .font(.title3.weight(.heavy))
+                    .font(JCFont.display(21))
                 if store.isPremium { PremiumBadge() }
             }
             HStack(spacing: 8) {
                 Text(verbatim: store.profile.handle)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(JC.violet)
+                    .foregroundStyle(JC.bronze)
                 AvailabilityBadge(availability: store.profile.availability)
             }
             Text(verbatim: "\(store.profile.resolvedCountry.flag) \(store.profile.cityLabel)")
@@ -240,7 +240,7 @@ struct MyProfileView: View {
                 // Mes instruments avec leur niveau (« Piano · Avancé »).
                 FlowLayout {
                     ForEach(store.profile.instruments) { instrument in
-                        TagView(text: myInstrumentLabel(instrument), color: .teal)
+                        TagView(text: myInstrumentLabel(instrument), color: JC.bronze)
                     }
                 }
                 .padding(.top, 1)
@@ -272,7 +272,7 @@ struct MyProfileView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 11)
             .background(AnyShapeStyle(JC.hero), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .foregroundStyle(Color.white)
+            .foregroundStyle(JC.billetInk)
         }
         .buttonStyle(PressableStyle())
     }
@@ -312,7 +312,7 @@ struct MyProfileView: View {
                 HStack {
                     Label("Mes dates de dispo", systemImage: "bolt.fill")
                         .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(JC.coral)
+                        .foregroundStyle(JC.feutrine)
                     Spacer()
                     AvailabilityBadge(availability: derived)
                 }
@@ -325,7 +325,7 @@ struct MyProfileView: View {
                     selection: dateSelection,
                     in: Calendar.current.startOfDay(for: Date())...
                 )
-                .tint(JC.coral)
+                .tint(JC.feutrine)
                 .frame(maxHeight: 330)
 
                 if derived == .unavailable {
@@ -351,7 +351,7 @@ struct MyProfileView: View {
                 HStack {
                     Label("Mes démos", systemImage: "play.square.stack")
                         .font(.subheadline.weight(.heavy))
-                        .foregroundStyle(JC.violet)
+                        .foregroundStyle(JC.bronze)
                     Spacer()
                     Text(verbatim: "\(store.profile.videos.count)/\(store.videoLimit)")
                         .font(.caption.weight(.bold))
@@ -405,9 +405,9 @@ struct MyProfileView: View {
                         } label: {
                             Image(systemName: "pencil")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(JC.violet)
+                                .foregroundStyle(JC.bronze)
                                 .padding(8)
-                                .background(JC.violet.opacity(0.12), in: Circle())
+                                .background(JC.bronze.opacity(0.12), in: Circle())
                         }
                         .buttonStyle(PressableStyle())
                         .accessibilityLabel(Text("Modifier le titre et la date"))
@@ -438,8 +438,8 @@ struct MyProfileView: View {
                         .font(.subheadline.weight(.bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
-                        .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .foregroundStyle(JC.violet)
+                        .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.bronze)
                     }
                     .disabled(isBusy)
                 } else if !store.isPremium {
@@ -454,8 +454,8 @@ struct MyProfileView: View {
                         }
                         .font(.caption.weight(.bold))
                         .padding(11)
-                        .background(JC.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .foregroundStyle(JC.gold)
+                        .background(JC.laiton.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.laiton)
                     }
                     .buttonStyle(PressableStyle())
                 }
@@ -477,14 +477,14 @@ struct MyProfileView: View {
                     HStack {
                         Label("Mes groupes", systemImage: "person.3.fill")
                             .font(.subheadline.weight(.heavy))
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                         Spacer()
                         Button {
                             store.selectedTab = .messages
                         } label: {
                             Text("Ouvrir")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(JC.violet)
+                                .foregroundStyle(JC.bronze)
                         }
                         .buttonStyle(PressableStyle())
                     }
@@ -499,7 +499,7 @@ struct MyProfileView: View {
                                     if store.isLeader(of: group) {
                                         Image(systemName: "crown.fill")
                                             .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(JC.gold)
+                                            .foregroundStyle(JC.laiton)
                                     }
                                 }
                                 Text("\(group.memberNames.count + 1) membres")
@@ -509,7 +509,7 @@ struct MyProfileView: View {
                             Spacer(minLength: 0)
                             TagView(
                                 text: group.isPublic == true ? "Public" : "Privé",
-                                color: group.isPublic == true ? .teal : .gray
+                                color: group.isPublic == true ? JC.feutrine : .gray
                             )
                         }
                     }
@@ -558,7 +558,7 @@ struct VideoDetailsSheet: View {
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
-                        .tint(JC.violet)
+                        .tint(JC.bronze)
                     }
                 } header: {
                     Text("Date")
@@ -720,7 +720,7 @@ struct EditProfileSheet: View {
                     Spacer()
                     if isOn {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(JC.coral)
+                            .foregroundStyle(JC.laiton)
                     }
                 }
             }
@@ -746,10 +746,10 @@ struct EditProfileSheet: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)
                         .background(
-                            (level == nil ? JC.gold : JC.violet).opacity(0.14),
+                            (level == nil ? JC.laiton : JC.bronze).opacity(0.14),
                             in: Capsule()
                         )
-                        .foregroundStyle(level == nil ? JC.gold : JC.violet)
+                        .foregroundStyle(level == nil ? JC.laiton : JC.bronze)
                         .fixedSize()
                 }
             }
@@ -763,7 +763,7 @@ struct EditProfileSheet: View {
                 Spacer()
                 if isOn {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(JC.coral)
+                        .foregroundStyle(JC.laiton)
                 }
             }
         }
@@ -792,7 +792,7 @@ struct LanguageRegionSheet: View {
                                 Spacer()
                                 if store.language == lang {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(JC.coral)
+                                        .foregroundStyle(JC.laiton)
                                 }
                             }
                         }
@@ -823,7 +823,7 @@ struct LanguageRegionSheet: View {
                                 .foregroundStyle(.primary)
                             Spacer()
                             Text(store.profile.cityLabel)
-                                .foregroundStyle(JC.violet)
+                                .foregroundStyle(JC.bronze)
                         }
                     }
                 }

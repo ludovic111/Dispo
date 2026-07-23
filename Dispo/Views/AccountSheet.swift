@@ -56,11 +56,11 @@ struct AccountSheet: View {
         VStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(JC.violet.opacity(0.14))
+                    .fill(JC.bronze.opacity(0.14))
                     .frame(width: 64, height: 64)
                 Image(systemName: store.isLive ? "checkmark.icloud.fill" : "icloud")
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(store.isLive ? .green : JC.violet)
+                    .foregroundStyle(store.isLive ? JC.feutrine : JC.bronze)
             }
             Text(store.isLive ? "Connecté au réseau Dispo" : "Rejoins le réseau Dispo")
                 .font(.headline)
@@ -78,7 +78,7 @@ struct AccountSheet: View {
         JCCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 12) {
-                    Circle().fill(.green).frame(width: 10, height: 10)
+                    Circle().fill(JC.feutrine).frame(width: 10, height: 10)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.liveEmail ?? store.tr("Connecté"))
                             .font(.subheadline.weight(.bold))
@@ -120,7 +120,7 @@ struct AccountSheet: View {
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(JC.coral.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(JC.signal.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
                 .disabled(deletingAccount)
                 .buttonStyle(PressableStyle())

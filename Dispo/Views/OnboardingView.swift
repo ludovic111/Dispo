@@ -18,12 +18,12 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            JC.hero.ignoresSafeArea()
+            JCBackground()
 
-            // Halos décoratifs
+            // Halo décoratif — lueur laiton de scène.
             GeometryReader { geo in
                 Circle()
-                    .fill(.white.opacity(0.08))
+                    .fill(JC.laiton.opacity(0.12))
                     .frame(width: geo.size.width * 0.7)
                     .blur(radius: 60)
                     .position(x: geo.size.width * 0.85, y: geo.size.height * 0.15)
@@ -60,13 +60,13 @@ struct OnboardingView: View {
 
     private var header: some View {
         HStack {
-            LogoView(markSize: 32, wordmarkColor: .white)
+            LogoView(markSize: 32, wordmarkColor: JC.laiton)
                 .padding(.leading)
             Spacer()
             if step > 0 {
                 Button("Passer") { finish() }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(.secondary)
                     .padding()
             }
         }
@@ -77,7 +77,7 @@ struct OnboardingView: View {
         HStack(spacing: 6) {
             ForEach(0..<stepCount, id: \.self) { index in
                 Capsule()
-                    .fill(index <= step ? .white : .white.opacity(0.25))
+                    .fill(index <= step ? JC.laiton : JC.laiton.opacity(0.22))
                     .frame(height: 4)
             }
         }
@@ -104,8 +104,8 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
-            .background(.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .foregroundStyle(.black)
+            .background(JC.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .foregroundStyle(JC.billetInk)
         }
         .buttonStyle(PressableStyle())
         .padding(.horizontal, 28)
@@ -151,16 +151,16 @@ struct OnboardingView: View {
                                     .font(.body.weight(.bold))
                             }
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(
-                            .white.opacity(store.language == lang ? 0.24 : 0.10),
+                            (store.language == lang ? JC.laiton.opacity(0.22) : JC.card),
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(.white.opacity(store.language == lang ? 0.6 : 0.15), lineWidth: 1)
+                                .stroke((store.language == lang ? JC.laiton.opacity(0.6) : JC.cardStroke), lineWidth: 1)
                         )
                     }
                     .buttonStyle(PressableStyle())
@@ -201,25 +201,25 @@ struct OnboardingView: View {
         HStack(alignment: .top, spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.white.opacity(0.15))
+                    .fill(JC.laiton.opacity(0.15))
                     .frame(width: 42, height: 42)
                 Image(systemName: icon)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             VStack(alignment: .leading, spacing: 3) {
                 title
                     .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 text
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.secondary)
                     .lineSpacing(2)
             }
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     // MARK: - Étape 3 : pays & ville
@@ -258,15 +258,15 @@ struct OnboardingView: View {
                                         .font(.caption.weight(.bold))
                                         .lineLimit(1)
                                 }
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .padding(.horizontal, 13)
                                 .padding(.vertical, 10)
                                 .background(
-                                    .white.opacity(country == option ? 0.24 : 0.10),
+                                    (country == option ? JC.laiton.opacity(0.22) : JC.card),
                                     in: Capsule()
                                 )
                                 .overlay(
-                                    Capsule().stroke(.white.opacity(country == option ? 0.6 : 0.15), lineWidth: 1)
+                                    Capsule().stroke((country == option ? JC.laiton.opacity(0.6) : JC.cardStroke), lineWidth: 1)
                                 )
                             }
                             .buttonStyle(PressableStyle())
@@ -278,18 +278,18 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.secondary)
                     TextField(
                         "",
                         text: $citySearch,
-                        prompt: Text("Ville ou code postal…").foregroundStyle(.white.opacity(0.5))
+                        prompt: Text("Ville ou code postal…").foregroundStyle(.secondary)
                     )
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 }
                 .padding(.horizontal, 13)
                 .padding(.vertical, 10)
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 // Villes du pays choisi, avec code postal
                 ScrollView {
@@ -301,23 +301,23 @@ struct OnboardingView: View {
                                 HStack(spacing: 10) {
                                     Text(option.postalCode)
                                         .font(.caption.weight(.bold))
-                                        .foregroundStyle(.white.opacity(0.6))
+                                        .foregroundStyle(.secondary)
                                         .frame(width: 52, alignment: .leading)
                                     Text(option.name)
                                         .font(.caption.weight(.bold))
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                         .lineLimit(1)
                                     Spacer(minLength: 0)
                                     if city == option {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.caption.weight(.bold))
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(.primary)
                                     }
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 9)
                                 .background(
-                                    .white.opacity(city == option ? 0.24 : 0.08),
+                                    (city == option ? JC.laiton.opacity(0.22) : JC.card),
                                     in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 )
                             }
@@ -339,14 +339,14 @@ struct OnboardingView: View {
             subtitle: Text("Nom, instruments, niveau — le reste se complète plus tard.")
         ) {
             VStack(spacing: 14) {
-                TextField("", text: $name, prompt: Text("Ton nom de scène").foregroundStyle(.white.opacity(0.5)))
+                TextField("", text: $name, prompt: Text("Ton nom de scène").foregroundStyle(.secondary))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(14)
-                    .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(JC.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                            .stroke(JC.cardStroke, lineWidth: 1)
                     )
 
                 ScrollView {
@@ -360,7 +360,7 @@ struct OnboardingView: View {
                                 Text(LocalizedStringKey(category.rawValue))
                                     .font(.caption2.weight(.heavy))
                             }
-                            .foregroundStyle(.white.opacity(0.65))
+                            .foregroundStyle(.secondary)
                             LazyVGrid(columns: columns, spacing: 8) {
                                 ForEach(Instrument.instruments(in: category)) { instrument in
                                     let isOn = instruments.contains(instrument)
@@ -371,11 +371,11 @@ struct OnboardingView: View {
                                             .font(.caption.weight(.bold))
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.7)
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(.primary)
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 10)
-                                            .background(.white.opacity(isOn ? 0.24 : 0.08), in: Capsule())
-                                            .overlay(Capsule().stroke(.white.opacity(isOn ? 0.6 : 0.12), lineWidth: 1))
+                                            .background((isOn ? JC.laiton.opacity(0.22) : JC.card), in: Capsule())
+                                            .overlay(Capsule().stroke((isOn ? JC.laiton.opacity(0.6) : JC.cardStroke), lineWidth: 1))
                                     }
                                     .buttonStyle(PressableStyle())
                                 }
@@ -394,11 +394,11 @@ struct OnboardingView: View {
                                 .font(.caption2.weight(.bold))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .background(.white.opacity(level == option ? 0.24 : 0.08), in: Capsule())
-                                .overlay(Capsule().stroke(.white.opacity(level == option ? 0.6 : 0.12), lineWidth: 1))
+                                .background((level == option ? JC.laiton.opacity(0.22) : JC.card), in: Capsule())
+                                .overlay(Capsule().stroke((level == option ? JC.laiton.opacity(0.6) : JC.cardStroke), lineWidth: 1))
                         }
                         .buttonStyle(PressableStyle())
                     }
@@ -419,20 +419,20 @@ struct OnboardingView: View {
             VStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(.white.opacity(0.12))
+                        .fill(JC.laiton.opacity(0.14))
                         .frame(width: 64, height: 64)
                     Image(systemName: icon)
                         .font(.title2.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 title
                     .font(.title2.weight(.heavy))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 subtitle
                     .font(.caption)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 24)
             }
             content()

@@ -104,7 +104,7 @@ struct SearchView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Cherche tout, librement", systemImage: "sparkle.magnifyingglass")
                     .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(JC.violet)
+                    .foregroundStyle(JC.bronze)
                 Text("Combine ce que tu veux : instrument, quartier, genre, nom ou @pseudo.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -128,7 +128,7 @@ struct SearchView: View {
                     .foregroundStyle(.tertiary)
                 Text(verbatim: "« \(example) »")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(JC.coral)
+                    .foregroundStyle(JC.laiton)
             }
         }
         .buttonStyle(PressableStyle())
@@ -158,7 +158,7 @@ struct SearchMusicianRow: View {
                     HStack(spacing: 7) {
                         Text(verbatim: musician.handle)
                             .font(.caption2.weight(.semibold))
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                         SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
                     Text(verbatim: "\(musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")) · \(musician.neighborhood)")
@@ -200,9 +200,9 @@ struct PlayedWithFriendCompactBadge: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(JC.coral.opacity(0.14), in: Capsule())
-        .overlay(Capsule().stroke(JC.coral.opacity(0.35), lineWidth: 1))
-        .foregroundStyle(JC.coral)
+        .background(JC.feutrine.opacity(0.14), in: Capsule())
+        .overlay(Capsule().stroke(JC.feutrine.opacity(0.35), lineWidth: 1))
+        .foregroundStyle(JC.feutrine)
         .contextMenu {
             ForEach(friends) { friend in
                 Label(friend.name, systemImage: "person.fill")
@@ -243,9 +243,9 @@ struct PlayedWithFriendDetailBadge: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(JC.coral.opacity(0.14), in: Capsule())
-        .overlay(Capsule().stroke(JC.coral.opacity(0.35), lineWidth: 1))
-        .foregroundStyle(JC.coral)
+        .background(JC.feutrine.opacity(0.14), in: Capsule())
+        .overlay(Capsule().stroke(JC.feutrine.opacity(0.35), lineWidth: 1))
+        .foregroundStyle(JC.feutrine)
         .contextMenu {
             ForEach(friends) { friend in
                 Label(friend.name, systemImage: "person.fill")

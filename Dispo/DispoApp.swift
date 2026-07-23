@@ -20,7 +20,7 @@ struct DispoApp: App {
                 // feuilles comprises.)
                 .environment(\.locale, store.language.locale)
                 .id(store.language)
-                .tint(JC.coral)
+                .tint(JC.laiton)
                 .onOpenURL { url in
                     // Lien magique de connexion (dispo://login-callback).
                     Task { await store.handleAuthCallback(url) }
@@ -102,7 +102,7 @@ struct RootView: View {
                     }
                     .foregroundStyle(.white)
                     .padding(12)
-                    .background(JC.coral, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(JC.signal, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .padding(.horizontal, 18)
                     Spacer()
                 }
@@ -220,7 +220,7 @@ struct DebugSongRowsPreview: View {
 }
 #endif
 
-// MARK: - Design system « nuit de jazz »
+// MARK: - Design system « Coulisses & Laiton »
 
 extension Color {
     /// Couleur adaptative selon le mode clair / sombre.
@@ -242,62 +242,90 @@ extension AppTheme {
     }
 }
 
-/// Palette « nuit de jazz », adaptative clair / sombre.
-/// Sombre : nuit indigo profond, halos néon. Clair : ivoire lavande, halos pastel.
+/// Palette « Coulisses & Laiton », adaptative clair / sombre.
+/// Sombre : scène éteinte, bois chaud, lueur laiton. Clair : papier partition.
+/// Discipline : un accent (laiton), un signal (rouge, réservé au SOS),
+/// un positif (feutrine), un secondaire discret (bronze) — c'est tout.
 enum JC {
     // Fonds
     static let bg = Color(
-        light: Color(red: 0.965, green: 0.955, blue: 0.98),
-        dark: Color(red: 0.055, green: 0.05, blue: 0.11)
+        light: Color(red: 0.949, green: 0.918, blue: 0.851),
+        dark: Color(red: 0.090, green: 0.075, blue: 0.063)
     )
     static let card = Color(
-        light: .white,
-        dark: Color(red: 0.115, green: 0.105, blue: 0.19)
+        light: Color(red: 0.984, green: 0.961, blue: 0.910),
+        dark: Color(red: 0.129, green: 0.102, blue: 0.078)
     )
     /// Surface interne (bulles, champs, encarts posés sur une carte).
     static let inset = Color(
-        light: Color(red: 0.945, green: 0.94, blue: 0.965),
-        dark: Color(red: 0.085, green: 0.08, blue: 0.15)
+        light: Color(red: 0.929, green: 0.890, blue: 0.804),
+        dark: Color(red: 0.106, green: 0.086, blue: 0.067)
     )
     static let cardStroke = Color(
-        light: .black.opacity(0.06),
-        dark: .white.opacity(0.08)
+        light: Color(red: 0.090, green: 0.075, blue: 0.063).opacity(0.08),
+        dark: Color(red: 0.965, green: 0.937, blue: 0.878).opacity(0.09)
     )
     /// Reflet interne des cartes — simule une légère épaisseur.
     static let cardHighlight = Color(
-        light: .white.opacity(0.65),
-        dark: .white.opacity(0.06)
+        light: .white.opacity(0.7),
+        dark: Color(red: 0.965, green: 0.937, blue: 0.878).opacity(0.05)
     )
     /// Ombre portée des cartes — douce en clair, inexistante en sombre.
     static let cardShadow = Color(
-        light: Color(red: 0.28, green: 0.22, blue: 0.5).opacity(0.14),
+        light: Color(red: 0.35, green: 0.26, blue: 0.10).opacity(0.13),
         dark: .clear
     )
 
-    // Accents de marque (légèrement plus profonds en clair pour la lisibilité)
-    static let coral = Color(
-        light: Color(red: 0.92, green: 0.35, blue: 0.25),
-        dark: Color(red: 1.0, green: 0.45, blue: 0.35)
+    // Accents (plus profonds en clair pour rester lisibles sur papier)
+    /// L'accent unique : boutons, états actifs, lueurs, étoiles.
+    static let laiton = Color(
+        light: Color(red: 0.663, green: 0.439, blue: 0.122),
+        dark: Color(red: 0.851, green: 0.643, blue: 0.255)
     )
-    static let magenta = Color(
-        light: Color(red: 0.86, green: 0.22, blue: 0.52),
-        dark: Color(red: 0.96, green: 0.32, blue: 0.62)
+    /// Réservé au SOS (urgence, erreurs) — à rien d'autre.
+    static let signal = Color(
+        light: Color(red: 0.720, green: 0.250, blue: 0.100),
+        dark: Color(red: 0.933, green: 0.416, blue: 0.235)
     )
-    static let violet = Color(
-        light: Color(red: 0.46, green: 0.30, blue: 0.88),
-        dark: Color(red: 0.58, green: 0.38, blue: 0.98)
+    /// Confirmations, présence, « dispo ».
+    static let feutrine = Color(
+        light: Color(red: 0.240, green: 0.400, blue: 0.280),
+        dark: Color(red: 0.561, green: 0.725, blue: 0.588)
     )
-    static let gold = Color(
-        light: Color(red: 0.80, green: 0.55, blue: 0.10),
-        dark: Color(red: 1.0, green: 0.78, blue: 0.35)
+    /// Secondaire discret (badges neutres, chips de genre, méta).
+    static let bronze = Color(
+        light: Color(red: 0.420, green: 0.360, blue: 0.280),
+        dark: Color(red: 0.655, green: 0.608, blue: 0.545)
     )
 
+    /// Papier et encre du billet — identiques dans les deux modes,
+    /// comme un vrai billet de concert.
+    static let billetPaper = Color(red: 0.965, green: 0.937, blue: 0.878)
+    static let billetInk = Color(red: 0.090, green: 0.075, blue: 0.063)
+    // Encres d'accent imprimées sur le billet (fixes, jamais adaptatives —
+    // les tokens adaptatifs s'éclairciraient en sombre sur le papier ivoire).
+    static let billetSignal = Color(red: 0.700, green: 0.240, blue: 0.090)
+    static let billetBronze = Color(red: 0.420, green: 0.360, blue: 0.280)
+    static let billetFeutrine = Color(red: 0.220, green: 0.400, blue: 0.280)
+    static let billetLaiton = Color(red: 0.663, green: 0.439, blue: 0.122)
+
+    /// CTA principal : rampe de laiton serrée — de la matière, pas un
+    /// arc-en-ciel. Texte sombre par-dessus.
     static let hero = LinearGradient(
-        colors: [violet, magenta, coral],
-        startPoint: .topLeading, endPoint: .bottomTrailing
+        colors: [
+            Color(red: 0.898, green: 0.714, blue: 0.337),
+            Color(red: 0.816, green: 0.596, blue: 0.216)
+        ],
+        startPoint: .top, endPoint: .bottom
     )
+    /// « Lumière de scène » — le seul vrai dégradé de l'identité,
+    /// réservé au Premium / pass backstage.
     static let premium = LinearGradient(
-        colors: [gold, coral],
+        colors: [
+            Color(red: 0.933, green: 0.780, blue: 0.431),
+            Color(red: 0.851, green: 0.643, blue: 0.255),
+            Color(red: 0.663, green: 0.439, blue: 0.122)
+        ],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 
@@ -317,9 +345,33 @@ enum JC {
     }
 }
 
-/// Fond signature « aurore de jazz » : halos dégradés diffus posés sur le fond de base.
-/// Néon sur nuit indigo en sombre, pastel doux sur ivoire en clair.
+/// Voix typographiques de la marque — Fraunces en display (l'affiche de
+/// concert), Spline Sans Mono pour les cachets, dates et petits labels
+/// (le billet imprimé). Le corps de texte reste en SF, natif iOS.
+enum JCFont {
+    static func display(_ size: CGFloat) -> Font {
+        .custom("Fraunces-144ptSemiBold", size: size)
+    }
+    static func displayItalic(_ size: CGFloat) -> Font {
+        .custom("Fraunces-144ptSemiBoldItalic", size: size)
+    }
+    static func mono(_ size: CGFloat) -> Font {
+        .custom("SplineSansMonoRoman-Medium", size: size)
+    }
+    static func monoBold(_ size: CGFloat) -> Font {
+        .custom("SplineSansMonoRoman-SemiBold", size: size)
+    }
+}
+
+/// Fond signature « lumière de scène » : une lueur laiton qui tombe d'en
+/// haut à droite, une braise chaude au sol — la scène juste avant le set.
 struct JCBackground: View {
+    /// Braise du bas de scène (sable chaud en clair, brun profond en sombre).
+    private static let braise = Color(
+        light: Color(red: 0.878, green: 0.804, blue: 0.635),
+        dark: Color(red: 0.310, green: 0.220, blue: 0.090)
+    )
+
     var body: some View {
         ZStack {
             JC.bg
@@ -327,23 +379,17 @@ struct JCBackground: View {
                 let w = geo.size.width
                 let h = geo.size.height
                 Circle()
-                    .fill(JC.violet)
-                    .frame(width: w * 0.95)
-                    .blur(radius: 95)
-                    .opacity(0.20)
-                    .position(x: w * 0.08, y: h * 0.06)
+                    .fill(JC.laiton)
+                    .frame(width: w * 1.05)
+                    .blur(radius: 110)
+                    .opacity(0.15)
+                    .position(x: w * 0.94, y: h * 0.02)
                 Circle()
-                    .fill(JC.magenta)
-                    .frame(width: w * 0.8)
-                    .blur(radius: 95)
-                    .opacity(0.16)
-                    .position(x: w * 0.98, y: h * 0.26)
-                Circle()
-                    .fill(JC.coral)
-                    .frame(width: w * 0.75)
-                    .blur(radius: 105)
-                    .opacity(0.14)
-                    .position(x: w * 0.2, y: h * 0.92)
+                    .fill(Self.braise)
+                    .frame(width: w * 0.9)
+                    .blur(radius: 115)
+                    .opacity(0.38)
+                    .position(x: w * 0.04, y: h * 0.96)
             }
             .drawingGroup()
 
@@ -363,29 +409,19 @@ struct JCBackground: View {
 extension Availability {
     var color: Color {
         switch self {
-        case .tonight: return JC.coral
-        case .thisWeek: return JC.gold
-        case .weekend: return .teal
-        case .onRequest: return JC.violet
+        case .tonight: return JC.feutrine
+        case .thisWeek: return JC.laiton
+        case .weekend: return JC.laiton
+        case .onRequest: return JC.bronze
         case .unavailable: return .gray
         }
     }
 }
 
 extension GenreFamily {
-    var color: Color {
-        switch self {
-        case .jazz: return JC.coral
-        case .latinWorld: return JC.magenta
-        case .classique: return Color(red: 0.45, green: 0.55, blue: 1.0)
-        case .rockPop: return Color(red: 1.0, green: 0.33, blue: 0.38)
-        case .bluesCountry: return Color(red: 0.85, green: 0.58, blue: 0.30)
-        case .soulFunk: return JC.gold
-        case .urbain: return Color(red: 0.55, green: 0.65, blue: 0.95)
-        case .electro: return Color(red: 0.25, green: 0.85, blue: 0.95)
-        case .folk: return Color(red: 0.45, green: 0.85, blue: 0.55)
-        }
-    }
+    /// Un seul ton pour tous les genres : les chips restent silencieuses,
+    /// le laiton est réservé à l'interactif.
+    var color: Color { JC.bronze }
 
     /// Photo de couverture bundlée (les nouvelles familles réutilisent les
     /// visuels existants les plus proches — visuels dédiés en phase 2).
@@ -407,7 +443,7 @@ extension Genre {
 
     var gradient: LinearGradient {
         LinearGradient(
-            colors: [color.opacity(0.95), color.opacity(0.55), JC.violet.opacity(0.8)],
+            colors: [color.opacity(0.95), color.opacity(0.55), JC.bronze.opacity(0.8)],
             startPoint: .topLeading, endPoint: .bottomTrailing
         )
     }
@@ -454,10 +490,14 @@ struct AvatarView: View {
     var photo: String? = nil
 
     private var colors: [Color] {
+        // Variations chaudes de la scène — laiton, bronze, feutrine, braise.
         let palette: [[Color]] = [
-            [JC.coral, JC.magenta], [JC.violet, JC.magenta], [.teal, JC.violet],
-            [JC.gold, JC.coral], [.pink, JC.violet], [.mint, .teal],
-            [.cyan, JC.violet], [.indigo, JC.magenta]
+            [Color(red: 0.898, green: 0.714, blue: 0.337), Color(red: 0.663, green: 0.439, blue: 0.122)],
+            [Color(red: 0.655, green: 0.608, blue: 0.545), Color(red: 0.360, green: 0.310, blue: 0.250)],
+            [Color(red: 0.561, green: 0.725, blue: 0.588), Color(red: 0.240, green: 0.400, blue: 0.280)],
+            [Color(red: 0.851, green: 0.643, blue: 0.255), Color(red: 0.420, green: 0.360, blue: 0.280)],
+            [Color(red: 0.780, green: 0.560, blue: 0.310), Color(red: 0.480, green: 0.300, blue: 0.130)],
+            [Color(red: 0.500, green: 0.560, blue: 0.470), Color(red: 0.260, green: 0.330, blue: 0.270)]
         ]
         return palette[abs(name.stableHash) % palette.count]
     }
@@ -516,9 +556,10 @@ struct LogoView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: markSize, height: markSize)
+                .clipShape(RoundedRectangle(cornerRadius: markSize * 0.235, style: .continuous))
             if showWordmark {
-                Text("Dispo")
-                    .font(.system(size: markSize * 0.62, weight: .heavy, design: .rounded))
+                Text(verbatim: "dispo")
+                    .font(JCFont.displayItalic(markSize * 0.72))
                     .foregroundStyle(wordmarkColor)
             }
         }
@@ -583,16 +624,16 @@ struct FlowLayout: Layout {
 
 struct TagView: View {
     let text: LocalizedStringKey
-    var color: Color = JC.coral
+    var color: Color = JC.bronze
 
     /// Beaucoup d'appels passent des valeurs dynamiques (instruments,
     /// genres…) : la chaîne devient une clé de traduction (repli : elle-même).
-    init(text: String, color: Color = JC.coral) {
+    init(text: String, color: Color = JC.bronze) {
         self.text = LocalizedStringKey(text)
         self.color = color
     }
 
-    init(text: LocalizedStringKey, color: Color = JC.coral) {
+    init(text: LocalizedStringKey, color: Color = JC.bronze) {
         self.text = text
         self.color = color
     }
@@ -841,7 +882,7 @@ private struct DeezerBars: View {
 struct StarsView: View {
     let rating: Double
     var size: CGFloat = 12
-    var color: Color = JC.gold
+    var color: Color = JC.laiton
 
     var body: some View {
         HStack(spacing: 2) {
@@ -875,7 +916,7 @@ struct RatingBadge: View {
                 .font(.caption2)
                 .opacity(0.8)
         }
-        .foregroundStyle(JC.gold)
+        .foregroundStyle(JC.laiton)
         .accessibilityLabel(Text(verbatim: "\(summary.averageLabel)/5 · \(summary.count)"))
     }
 }
@@ -887,7 +928,7 @@ struct PremiumBadge: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
             .background(JC.premium, in: Capsule())
-            .foregroundStyle(.black)
+            .foregroundStyle(JC.billetInk)
     }
 }
 
@@ -898,8 +939,8 @@ struct DemoAccountBadge: View {
             .font(.system(size: 9, weight: .bold))
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .foregroundStyle(JC.violet)
-            .background(JC.violet.opacity(0.13), in: Capsule())
+            .foregroundStyle(JC.bronze)
+            .background(JC.bronze.opacity(0.13), in: Capsule())
             .accessibilityLabel("Compte de démonstration")
     }
 }
@@ -944,12 +985,62 @@ struct JCCard<Content: View>: View {
     }
 }
 
+// MARK: - Billet de concert (signature SOS)
+
+/// Forme de billet : rectangle arrondi + deux encoches punchées sur la
+/// ligne de perforation, à `notchFromTrailing` points du bord droit.
+/// À utiliser avec `FillStyle(eoFill: true)` pour découper les encoches.
+struct TicketShape: Shape {
+    var cornerRadius: CGFloat = 18
+    var notchRadius: CGFloat = 7
+    var notchFromTrailing: CGFloat = 74
+
+    func path(in rect: CGRect) -> Path {
+        var path = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: rect)
+        let x = rect.maxX - notchFromTrailing
+        path.addEllipse(in: CGRect(x: x - notchRadius, y: rect.minY - notchRadius,
+                                   width: notchRadius * 2, height: notchRadius * 2))
+        path.addEllipse(in: CGRect(x: x - notchRadius, y: rect.maxY - notchRadius,
+                                   width: notchRadius * 2, height: notchRadius * 2))
+        return path
+    }
+}
+
+/// Ligne de perforation pointillée entre le billet et son talon.
+struct PerforationLine: View {
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                path.move(to: CGPoint(x: 0.75, y: 7))
+                path.addLine(to: CGPoint(x: 0.75, y: geo.size.height - 7))
+            }
+            .stroke(JC.billetInk.opacity(0.28), style: StrokeStyle(lineWidth: 1.5, dash: [4, 5]))
+        }
+        .frame(width: 1.5)
+    }
+}
+
+/// Code-barres décoratif du talon — largeurs stables par annonce.
+struct BarcodeStrip: View {
+    let seed: Int
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<11, id: \.self) { index in
+                Rectangle()
+                    .frame(width: (abs(seed) >> (index % 6)) & 1 == 1 ? 2.6 : 1.2, height: 9)
+            }
+        }
+        .foregroundStyle(JC.billetInk.opacity(0.42))
+        .accessibilityHidden(true)
+    }
+}
+
 /// En-tête d'écran unifié — titre éditorial + sous-titre discret.
 struct ScreenHeader: View {
     let title: LocalizedStringKey
     var subtitle: LocalizedStringKey? = nil
     var icon: String? = nil
-    var iconColor: Color = JC.coral
+    var iconColor: Color = JC.laiton
     var trailing: AnyView? = nil
 
     var body: some View {
@@ -966,8 +1057,7 @@ struct ScreenHeader: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 28, weight: .bold))
-                    .tracking(-0.5)
+                    .font(JCFont.display(27))
                 if let subtitle {
                     Text(subtitle)
                         .font(.subheadline)
@@ -986,7 +1076,7 @@ struct JCPillButton: View {
     let title: LocalizedStringKey
     let icon: String
     var isActive: Bool = false
-    var activeColor: Color = JC.coral
+    var activeColor: Color = JC.laiton
     let action: () -> Void
 
     var body: some View {
@@ -1016,7 +1106,7 @@ struct JCPromoBanner: View {
 
     enum PromoStyle {
         case premium, hero
-        var foreground: Color { self == .premium ? .black : .white }
+        var foreground: Color { JC.billetInk }
         var background: AnyShapeStyle {
             switch self {
             case .premium: return AnyShapeStyle(JC.premium)
@@ -1060,7 +1150,7 @@ struct JCEmptyState: View {
     let icon: String
     let title: LocalizedStringKey
     let message: LocalizedStringKey
-    var iconColor: Color = JC.violet
+    var iconColor: Color = JC.bronze
 
     var body: some View {
         JCCard {
@@ -1093,11 +1183,11 @@ struct SectionHeader: View {
     var body: some View {
         HStack(spacing: 11) {
             Capsule()
-                .fill(JC.hero)
-                .frame(width: 4, height: subtitle == nil ? 22 : 34)
+                .fill(JC.laiton)
+                .frame(width: 3, height: subtitle == nil ? 22 : 34)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.title3.weight(.heavy))
+                    .font(JCFont.display(19))
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)

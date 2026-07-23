@@ -205,7 +205,7 @@ struct GroupChatView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "crown.fill")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(JC.gold)
+                        .foregroundStyle(JC.laiton)
                     Text(verbatim: store.leaderDisplayName(of: group))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.primary)
@@ -213,7 +213,7 @@ struct GroupChatView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if group.isPublic == true {
-                        TagView(text: "Public", color: .teal)
+                        TagView(text: "Public", color: JC.feutrine)
                     }
                 }
                 Spacer(minLength: 0)
@@ -310,8 +310,8 @@ struct GroupChatView: View {
                     .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(JC.violet)
+                    .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(JC.bronze)
                 }
                 .buttonStyle(PressableStyle())
 
@@ -365,8 +365,8 @@ struct GroupChatView: View {
                             .font(.subheadline.weight(.bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .foregroundStyle(JC.violet)
+                            .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .foregroundStyle(JC.bronze)
                     }
                     .buttonStyle(PressableStyle())
                 } else {
@@ -398,7 +398,7 @@ struct GroupChatView: View {
                                         .font(.caption2.weight(.bold))
                                         .textCase(.uppercase)
                                 }
-                                .foregroundStyle(.white)
+                                .foregroundStyle(JC.billetInk)
                                 .frame(width: 62)
                                 .padding(.vertical, 10)
                                 .background(JC.hero)
@@ -409,7 +409,7 @@ struct GroupChatView: View {
                                             .font(.subheadline.weight(.bold))
                                             .foregroundStyle(.primary)
                                             .lineLimit(1)
-                                        TagView(text: event.kind.rawValue, color: JC.violet)
+                                        TagView(text: event.kind.rawValue, color: JC.bronze)
                                     }
                                     Label(
                                         "\(event.venue) · \(event.date.formatted(date: .omitted, time: .shortened))",
@@ -420,7 +420,7 @@ struct GroupChatView: View {
                                     .lineLimit(1)
                                     Text("Setlist : \(event.setlist.filter(\.isApproved).count) morceaux")
                                         .font(.caption2.weight(.bold))
-                                        .foregroundStyle(JC.violet)
+                                        .foregroundStyle(JC.bronze)
                                     let available = event.availableNames.count
                                     let total = store.roster(of: group).count
                                     let myStatus = event.status(for: store.profile.name)
@@ -431,15 +431,15 @@ struct GroupChatView: View {
                                         if myStatus == .pending {
                                             Text("À confirmer")
                                                 .font(.caption2.weight(.heavy))
-                                                .foregroundStyle(JC.coral)
+                                                .foregroundStyle(JC.laiton)
                                         } else if myStatus == .available {
                                             Text("Tu es dispo")
                                                 .font(.caption2.weight(.heavy))
-                                                .foregroundStyle(Color.green)
+                                                .foregroundStyle(JC.feutrine)
                                         } else {
                                             Text("Tu es indispo")
                                                 .font(.caption2.weight(.heavy))
-                                                .foregroundStyle(JC.coral)
+                                                .foregroundStyle(JC.signal)
                                         }
                                     }
                                 }
@@ -474,8 +474,8 @@ struct GroupChatView: View {
                     .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(JC.violet)
+                    .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(JC.bronze)
                 }
                 .buttonStyle(PressableStyle())
                 .disabled(store.docUploadInProgress)
@@ -503,7 +503,7 @@ struct GroupChatView: View {
                             HStack(spacing: 12) {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(JC.coral.opacity(0.14))
+                                        .fill(JC.laiton.opacity(0.14))
                                         .frame(width: 40, height: 40)
                                     if downloadingDocID == doc.id {
                                         ProgressView()
@@ -511,7 +511,7 @@ struct GroupChatView: View {
                                     } else {
                                         Image(systemName: "doc.richtext.fill")
                                             .font(.subheadline.weight(.bold))
-                                            .foregroundStyle(JC.coral)
+                                            .foregroundStyle(JC.laiton)
                                     }
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
@@ -635,7 +635,7 @@ struct SongRow: View {
                     if !song.isApproved {
                         Text("Suggéré par \(song.suggestedBy)")
                             .font(.caption2)
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                             .lineLimit(1)
                     }
                 }
@@ -648,7 +648,7 @@ struct SongRow: View {
                     } label: {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(JC.feutrine)
                     }
                     .buttonStyle(PressableStyle())
                     Button {
@@ -660,7 +660,7 @@ struct SongRow: View {
                     }
                     .buttonStyle(PressableStyle())
                 } else if !song.isApproved {
-                    TagView(text: "En attente", color: JC.gold)
+                    TagView(text: "En attente", color: JC.laiton)
                 } else if let onReject {
                     Button {
                         onReject()
@@ -716,10 +716,10 @@ struct SongRow: View {
     private var artworkPlaceholder: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(JC.violet.opacity(0.14))
+                .fill(JC.bronze.opacity(0.14))
             Image(systemName: "music.note")
                 .font(.subheadline.weight(.bold))
-                .foregroundStyle(JC.violet)
+                .foregroundStyle(JC.bronze)
         }
     }
 }
@@ -745,17 +745,17 @@ struct ListenSheet: View {
                                 image.resizable().scaledToFill()
                             } placeholder: {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(JC.violet.opacity(0.14))
+                                    .fill(JC.bronze.opacity(0.14))
                             }
                             .frame(width: 54, height: 54)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         } else {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(JC.violet.opacity(0.14))
+                                    .fill(JC.bronze.opacity(0.14))
                                 Image(systemName: "music.note")
                                     .font(.headline.weight(.bold))
-                                    .foregroundStyle(JC.violet)
+                                    .foregroundStyle(JC.bronze)
                             }
                             .frame(width: 54, height: 54)
                         }
@@ -783,7 +783,7 @@ struct ListenSheet: View {
                                             .font(.subheadline.weight(.bold))
                                             .foregroundStyle(.primary)
                                         if platform == .appleMusic, song.trackURL != nil {
-                                            TagView(text: store.tr("Lien direct"), color: .teal)
+                                            TagView(text: store.tr("Lien direct"), color: JC.feutrine)
                                         }
                                         Spacer(minLength: 0)
                                         Image(systemName: "arrow.up.right")
@@ -827,7 +827,7 @@ struct GroupMessageBubble: View {
                 if !message.isFromMe {
                     Text(message.sender)
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(JC.violet)
+                        .foregroundStyle(JC.bronze)
                         .padding(.leading, 6)
                 }
                 Text(message.text)
@@ -842,7 +842,7 @@ struct GroupMessageBubble: View {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
                     )
-                    .foregroundStyle(message.isFromMe ? Color.white : Color.primary)
+                    .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
                 Text(message.date.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -891,8 +891,8 @@ struct GroupMembersSheet: View {
                                         .font(.subheadline.weight(.bold))
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 12)
-                                        .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                        .foregroundStyle(JC.violet)
+                                        .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                        .foregroundStyle(JC.bronze)
                                 }
                                 .buttonStyle(PressableStyle())
                             }
@@ -978,7 +978,7 @@ struct GroupMembersSheet: View {
                         .lineLimit(1)
                     Label("Invitation en attente", systemImage: "hourglass")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(JC.gold)
+                        .foregroundStyle(JC.laiton)
                 }
                 Spacer(minLength: 0)
                 if isLeader {
@@ -1027,21 +1027,21 @@ struct GroupMembersSheet: View {
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(JC.gold.opacity(0.16), in: Capsule())
-                            .foregroundStyle(JC.gold)
+                            .background(JC.laiton.opacity(0.16), in: Capsule())
+                            .foregroundStyle(JC.laiton)
                         }
                     }
                     HStack(spacing: 6) {
                         if isPremiumMember {
                             Text("Premium")
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.gold)
+                                .foregroundStyle(JC.laiton)
                         }
                         // Le leader est toujours le noyau ; les autres ont un statut.
                         if !isLeaderRow {
                             Label(kind.label, systemImage: kind.symbol)
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(kind == .permanent ? JC.violet : .secondary)
+                                .foregroundStyle(kind == .permanent ? JC.bronze : .secondary)
                         }
                     }
                 }
@@ -1147,7 +1147,7 @@ struct GroupSettingsSheet: View {
                                 set: { store.setGroupVisibility($0, in: group) }
                             )
                         )
-                        .tint(.teal)
+                        .tint(JC.laiton)
                     } header: {
                         Text("Visibilité")
                     } footer: {
@@ -1232,7 +1232,7 @@ struct InviteMemberSheet: View {
                         if store.isPremiumMusician(musician.name) {
                             Text("Premium")
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.gold)
+                                .foregroundStyle(JC.laiton)
                         }
                     }
                 }
@@ -1287,7 +1287,7 @@ struct GroupEventSheet: View {
                                         Text(event.title)
                                             .font(.subheadline.weight(.heavy))
                                         Spacer()
-                                        TagView(text: event.kind.rawValue, color: JC.violet)
+                                        TagView(text: event.kind.rawValue, color: JC.bronze)
                                     }
                                     Label(event.date.formatted(date: .complete, time: .shortened), systemImage: "calendar")
                                         .font(.caption)
@@ -1307,7 +1307,7 @@ struct GroupEventSheet: View {
                                     .font(.subheadline.weight(.bold))
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
-                                    .background(JC.hero, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .background(JC.signal, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     .foregroundStyle(.white)
                             }
                             .buttonStyle(PressableStyle())
@@ -1322,8 +1322,8 @@ struct GroupEventSheet: View {
                                 .font(.subheadline.weight(.bold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(JC.violet.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .foregroundStyle(JC.violet)
+                                .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .foregroundStyle(JC.bronze)
                             }
                             .buttonStyle(PressableStyle())
 
@@ -1412,14 +1412,14 @@ struct GroupEventSheet: View {
                     Spacer()
                     Text("\(available.count)/\(store.roster(of: group).count)")
                         .font(.caption.weight(.heavy))
-                        .foregroundStyle(JC.violet)
+                        .foregroundStyle(JC.bronze)
                 }
 
                 HStack(spacing: 10) {
                     attendanceButton(
                         title: "Dispo",
                         symbol: "checkmark.circle.fill",
-                        color: Color.green,
+                        color: JC.feutrine,
                         selected: myStatus == .available
                     ) {
                         store.setAttendance(.available, eventID: eventID, in: groupID)
@@ -1427,7 +1427,7 @@ struct GroupEventSheet: View {
                     attendanceButton(
                         title: "Indispo",
                         symbol: "xmark.circle.fill",
-                        color: JC.coral,
+                        color: JC.signal,
                         selected: myStatus == .unavailable
                     ) {
                         store.setAttendance(.unavailable, eventID: eventID, in: groupID)
@@ -1441,13 +1441,13 @@ struct GroupEventSheet: View {
                 } else if myStatus == .unavailable {
                     Text("Le leader sera alerté 2 jours avant pour trouver un remplaçant.")
                         .font(.caption2)
-                        .foregroundStyle(JC.coral)
+                        .foregroundStyle(JC.signal)
                 }
 
                 Divider().opacity(0.4)
 
-                attendanceSummaryRow(title: "Dispo", names: available, color: Color.green)
-                attendanceSummaryRow(title: "Indispo", names: unavailable, color: JC.coral)
+                attendanceSummaryRow(title: "Dispo", names: available, color: JC.feutrine)
+                attendanceSummaryRow(title: "Indispo", names: unavailable, color: JC.signal)
                 attendanceSummaryRow(title: "En attente", names: pending, color: .secondary)
             }
         }
@@ -1652,7 +1652,7 @@ struct NewGroupSheet: View {
                                         .font(.title3)
                                         .padding(8)
                                         .background(
-                                            emoji == option ? JC.violet.opacity(0.2) : .clear,
+                                            emoji == option ? JC.bronze.opacity(0.2) : .clear,
                                             in: Circle()
                                         )
                                 }
@@ -1691,7 +1691,7 @@ struct NewGroupSheet: View {
                                 Spacer()
                                 if members.contains(musician.name) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(JC.coral)
+                                        .foregroundStyle(JC.laiton)
                                 }
                             }
                         }

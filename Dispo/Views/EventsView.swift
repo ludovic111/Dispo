@@ -16,7 +16,7 @@ struct EventsView: View {
                             title: "SOS dépannage",
                             subtitle: "\(store.events.count) concerts cherchent un musicien",
                             icon: "bolt.fill",
-                            iconColor: JC.coral,
+                            iconColor: JC.signal,
                             trailing: AnyView(createButton)
                         )
 
@@ -25,7 +25,7 @@ struct EventsView: View {
                                 icon: "bolt.slash",
                                 title: "Aucun SOS en cours",
                                 message: "Un musicien te lâche ? Publie ton SOS avec le bouton +.",
-                                iconColor: JC.coral
+                                iconColor: JC.signal
                             )
                         }
 
@@ -78,73 +78,89 @@ struct EventsView: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 13)
             .padding(.vertical, 9)
-            .background(JC.hero, in: Capsule())
+            .background(JC.signal, in: Capsule())
         }
         .buttonStyle(PressableStyle())
         .accessibilityLabel(Text("Publier un SOS"))
     }
 }
 
+/// Un SOS est un concert : la carte est un billet — papier ivoire, encre
+/// fixe, perforation punchée et talon-date. Le cachet ne s'affiche pas
+/// sur le billet, il se découvre en ouvrant le SOS.
 struct EventCard: View {
     let event: GigRequest
 
     var body: some View {
         HStack(spacing: 0) {
-            // Bloc date coloré par genre
-            VStack(spacing: 2) {
-                Text(event.date.formatted(.dateTime.day()))
-                    .font(.title2.weight(.heavy))
-                Text(event.date.formatted(.dateTime.month(.abbreviated)))
-                    .font(.caption2.weight(.bold))
-                    .textCase(.uppercase)
-                Text(event.date.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 10, weight: .semibold))
-                    .opacity(0.85)
-            }
-            .foregroundStyle(.white)
-            .frame(width: 68)
-            .frame(maxHeight: .infinity)
-            .background(event.genre.gradient)
-
             VStack(alignment: .leading, spacing: 7) {
-                HStack {
-                    Text(event.title)
-                        .font(.subheadline.weight(.bold))
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(JC.billetSignal)
+                        .frame(width: 7, height: 7)
+                    Text(LocalizedStringKey(event.genre.rawValue))
+                        .font(JCFont.monoBold(9))
+                        .textCase(.uppercase)
+                        .tracking(1.4)
+                        .foregroundStyle(JC.billetSignal)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                     if event.isMine {
-                        TagView(text: "Mon SOS", color: JC.violet)
+                        TagView(text: "Mon SOS", color: JC.billetBronze)
                     } else if event.applied {
-                        TagView(text: "Postulé", color: .green)
+                        TagView(text: "Postulé", color: JC.billetFeutrine)
                     }
                 }
+                Text(event.title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(JC.billetInk)
+                    .lineLimit(1)
                 Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(JC.billetInk.opacity(0.62))
                     .lineLimit(1)
-                // Le cachet ne s'affiche plus sur la carte — il se découvre
-                // en ouvrant le SOS. Les pastilles passent à la ligne au
-                // besoin (jamais de texte écrasé à la verticale).
+                // Les pastilles passent à la ligne au besoin (jamais de
+                // texte écrasé à la verticale).
                 FlowLayout(spacing: 5) {
                     Text("Cherche")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.tertiary)
+                        .font(JCFont.mono(9))
+                        .textCase(.uppercase)
+                        .tracking(1)
+                        .foregroundStyle(JC.billetInk.opacity(0.45))
                     ForEach(event.wantedInstruments.prefix(3)) { instrument in
-                        TagView(text: instrument.rawValue, color: .teal)
+                        TagView(text: instrument.rawValue, color: JC.billetBronze)
                     }
                     if event.wantedInstruments.count > 3 {
-                        TagView(text: "+\(event.wantedInstruments.count - 3)", color: .teal)
+                        TagView(text: "+\(event.wantedInstruments.count - 3)", color: JC.billetBronze)
                     }
                 }
             }
             .padding(13)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(JC.card)
+
+            // Talon-date, séparé par la perforation.
+            VStack(spacing: 2) {
+                Text(event.date.formatted(.dateTime.day()))
+                    .font(JCFont.display(24))
+                Text(event.date.formatted(.dateTime.month(.abbreviated)))
+                    .font(JCFont.monoBold(10))
+                    .textCase(.uppercase)
+                    .tracking(1.2)
+                Text(event.date.formatted(date: .omitted, time: .shortened))
+                    .font(JCFont.mono(10))
+                    .opacity(0.6)
+                BarcodeStrip(seed: event.title.stableHash)
+                    .padding(.top, 4)
+            }
+            .foregroundStyle(JC.billetInk)
+            .frame(width: 74)
+            .frame(maxHeight: .infinity)
+            .overlay(alignment: .leading) { PerforationLine().padding(.vertical, 4) }
         }
         .fixedSize(horizontal: false, vertical: true)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(JC.cardStroke, lineWidth: 1))
-        .shadow(color: JC.cardShadow, radius: 14, x: 0, y: 8)
+        .background(JC.billetPaper)
+        .clipShape(TicketShape(cornerRadius: 18, notchFromTrailing: 74), style: FillStyle(eoFill: true))
+        .shadow(color: .black.opacity(0.28), radius: 12, x: 0, y: 7)
     }
 }
 
@@ -164,45 +180,62 @@ struct LockedEventCard: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                VStack(spacing: 4) {
-                    Image(systemName: "lock.fill")
-                        .font(.title3.weight(.bold))
-                    Text(event.date.formatted(.dateTime.day().month(.abbreviated)))
-                        .font(.caption2.weight(.bold))
-                        .textCase(.uppercase)
-                }
-                .foregroundStyle(.black)
-                .frame(width: 68)
-                .frame(maxHeight: .infinity)
-                .background(JC.premium)
-
                 VStack(alignment: .leading, spacing: 7) {
-                    HStack {
-                        Text("Nouveau SOS \(store.tr(event.genre.rawValue))")
-                            .font(.subheadline.weight(.bold))
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(JC.billetSignal)
+                            .frame(width: 7, height: 7)
+                        Text(LocalizedStringKey(event.genre.rawValue))
+                            .font(JCFont.monoBold(9))
+                            .textCase(.uppercase)
+                            .tracking(1.4)
+                            .foregroundStyle(JC.billetSignal)
                             .lineLimit(1)
                         Spacer(minLength: 0)
-                        TagView(text: "Nouveau", color: JC.gold)
+                        TagView(text: "Nouveau", color: JC.billetLaiton)
                     }
+                    Text("Nouveau SOS \(store.tr(event.genre.rawValue))")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(JC.billetInk)
+                        .lineLimit(1)
                     Label("Lieu révélé aux membres Premium", systemImage: "mappin.slash")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(JC.billetInk.opacity(0.62))
                         .lineLimit(1)
                     FlowLayout(spacing: 5) {
                         Text("Cherche")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.tertiary)
+                            .font(JCFont.mono(9))
+                            .textCase(.uppercase)
+                            .tracking(1)
+                            .foregroundStyle(JC.billetInk.opacity(0.45))
                         ForEach(event.wantedInstruments.prefix(3)) { instrument in
-                            TagView(text: instrument.rawValue, color: .teal)
+                            TagView(text: instrument.rawValue, color: JC.billetBronze)
                         }
                         if event.wantedInstruments.count > 3 {
-                            TagView(text: "+\(event.wantedInstruments.count - 3)", color: .teal)
+                            TagView(text: "+\(event.wantedInstruments.count - 3)", color: JC.billetBronze)
                         }
                     }
                 }
                 .padding(13)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(JC.card)
+                .background(JC.billetPaper)
+
+                // Talon verrouillé — le pass backstage garde la date.
+                VStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                        .font(.subheadline.weight(.bold))
+                    Text(event.date.formatted(.dateTime.day()))
+                        .font(JCFont.display(22))
+                    Text(event.date.formatted(.dateTime.month(.abbreviated)))
+                        .font(JCFont.monoBold(10))
+                        .textCase(.uppercase)
+                        .tracking(1.2)
+                }
+                .foregroundStyle(JC.billetInk)
+                .frame(width: 74)
+                .frame(maxHeight: .infinity)
+                .background(JC.premium)
+                .overlay(alignment: .leading) { PerforationLine().padding(.vertical, 4) }
             }
             .fixedSize(horizontal: false, vertical: true)
 
@@ -216,17 +249,16 @@ struct LockedEventCard: View {
                     .font(.caption2.weight(.heavy))
                     .padding(.horizontal, 9)
                     .padding(.vertical, 4)
-                    .background(.black.opacity(0.85), in: Capsule())
-                    .foregroundStyle(JC.gold)
+                    .background(JC.billetInk.opacity(0.88), in: Capsule())
+                    .foregroundStyle(JC.laiton)
             }
-            .foregroundStyle(.black)
+            .foregroundStyle(JC.billetInk)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(JC.premium)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(JC.gold.opacity(0.5), lineWidth: 1))
-        .shadow(color: JC.cardShadow, radius: 14, x: 0, y: 8)
+        .clipShape(TicketShape(cornerRadius: 18, notchFromTrailing: 74), style: FillStyle(eoFill: true))
+        .shadow(color: .black.opacity(0.28), radius: 12, x: 0, y: 7)
     }
 }
 
@@ -287,7 +319,7 @@ struct EventDetailView: View {
                                 } icon: {
                                     Image(systemName: "banknote")
                                 }
-                                .foregroundStyle(JC.gold)
+                                .foregroundStyle(JC.laiton)
                             }
                             .font(.subheadline)
                         }
@@ -299,10 +331,10 @@ struct EventDetailView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Musicien recherché")
                                     .font(.subheadline.weight(.heavy))
-                                    .foregroundStyle(JC.coral)
+                                    .foregroundStyle(JC.signal)
                                 FlowLayout {
                                     ForEach(event.wantedInstruments) { instrument in
-                                        TagView(text: instrument.rawValue, color: .teal)
+                                        TagView(text: instrument.rawValue, color: JC.bronze)
                                     }
                                 }
                             }
@@ -313,7 +345,7 @@ struct EventDetailView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Description")
                                         .font(.subheadline.weight(.heavy))
-                                        .foregroundStyle(JC.coral)
+                                        .foregroundStyle(JC.signal)
                                     Text(event.descriptionText)
                                         .font(.subheadline)
                                         .foregroundStyle(.primary.opacity(0.9))
@@ -346,7 +378,7 @@ struct EventDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Musiciens compatibles")
                     .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(JC.coral)
+                    .foregroundStyle(JC.signal)
                 if matches.isEmpty {
                     Label {
                         Text("Personne ne matche pour l'instant. Dès qu'un musicien compatible coche le \(event.date.formatted(.dateTime.day().month(.wide))) dans son calendrier, il apparaîtra ici.")
@@ -386,7 +418,7 @@ struct EventDetailView: View {
                                 : AnyShapeStyle(JC.hero),
                             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                         )
-                        .foregroundStyle(event.applied ? Color.primary : Color.white)
+                        .foregroundStyle(event.applied ? Color.primary : JC.billetInk)
                     }
                     .buttonStyle(PressableStyle())
                     .padding(.horizontal, 18)
@@ -420,7 +452,7 @@ struct GigPlaceMapCard: View {
                             span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
                         ))) {
                             Marker(event.place, systemImage: "music.mic", coordinate: coordinate)
-                                .tint(JC.coral)
+                                .tint(JC.signal)
                         }
                         .frame(height: 150)
                         .allowsHitTesting(false)
@@ -440,7 +472,7 @@ struct GigPlaceMapCard: View {
                                     .foregroundStyle(.tertiary)
                             }
                             .padding(12)
-                            .foregroundStyle(JC.violet)
+                            .foregroundStyle(JC.bronze)
                         }
                         .buttonStyle(PressableStyle())
                     }

@@ -101,7 +101,7 @@ struct CreateEventView: View {
                                     Spacer()
                                     if wanted.contains(instrument) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(JC.coral)
+                                            .foregroundStyle(JC.signal)
                                     }
                                 }
                             }
@@ -254,9 +254,9 @@ struct PaymentMethodField: View {
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 7)
-            .background(isOn ? JC.gold.opacity(0.2) : JC.inset, in: Capsule())
-            .overlay(Capsule().stroke(isOn ? JC.gold.opacity(0.5) : .clear, lineWidth: 1))
-            .foregroundStyle(isOn ? JC.gold : .primary)
+            .background(isOn ? JC.laiton.opacity(0.2) : JC.inset, in: Capsule())
+            .overlay(Capsule().stroke(isOn ? JC.laiton.opacity(0.5) : .clear, lineWidth: 1))
+            .foregroundStyle(isOn ? JC.laiton : .primary)
         }
         .buttonStyle(.plain)
     }

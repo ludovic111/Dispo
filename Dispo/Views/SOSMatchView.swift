@@ -59,7 +59,7 @@ struct SOSMatchView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 15)
                     .background(JC.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(JC.billetInk)
             }
             .buttonStyle(PressableStyle())
             .padding(.horizontal, 18)
@@ -78,7 +78,7 @@ struct SOSMatchView: View {
                     .frame(width: 64, height: 64)
                 Image(systemName: "bolt.badge.checkmark.fill")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(JC.billetInk)
             }
             Text("Ton SOS est en ligne !")
                 .font(.title3.weight(.heavy))
@@ -97,7 +97,7 @@ struct SOSMatchView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("🎯 Dispo ce jour-là : \(confirmed.count)")
                     .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(JC.coral)
+                    .foregroundStyle(JC.feutrine)
                 Text("Ces musiciens jouent l'instrument que tu cherches et sont dispo le \(gigDayLabel). Contacte-les sans attendre.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -131,7 +131,7 @@ struct SOSMatchView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("🤙 À tenter au cas où")
                     .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(JC.violet)
+                    .foregroundStyle(JC.bronze)
                 Text("Bon instrument, mais la date du concert n'est pas dans leurs dispos — un message direct peut débloquer la situation.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -209,10 +209,10 @@ struct SOSMatchRow: View {
             }
             Spacer(minLength: 0)
             if match.dateConfirmed {
-                TagView(text: "Dispo ✓", color: .green)
+                TagView(text: "Dispo ✓", color: JC.feutrine)
                     .fixedSize()
             } else {
-                TagView(text: "Sur demande", color: JC.violet)
+                TagView(text: "Sur demande", color: JC.bronze)
                     .fixedSize()
             }
             inviteButton
@@ -234,15 +234,15 @@ struct SOSMatchRow: View {
                     .font(.caption2.weight(.heavy))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .background(Color.green.opacity(0.15), in: Capsule())
-                    .foregroundStyle(.green)
+                    .background(JC.feutrine.opacity(0.15), in: Capsule())
+                    .foregroundStyle(JC.feutrine)
             } else {
                 Label("Inviter", systemImage: "paperplane.fill")
                     .font(.caption2.weight(.heavy))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
                     .background(JC.hero, in: Capsule())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(JC.billetInk)
             }
         }
         .buttonStyle(PressableStyle())

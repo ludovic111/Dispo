@@ -31,7 +31,7 @@ struct ChatListView: View {
                             title: "Messages",
                             subtitle: "Cale tes prochains dépannages",
                             icon: "bubble.left.and.bubble.right.fill",
-                            iconColor: JC.violet,
+                            iconColor: JC.bronze,
                             trailing: segment == .groups ? AnyView(newGroupButton) : nil
                         )
 
@@ -76,8 +76,8 @@ struct ChatListView: View {
                 .font(.caption.weight(.bold))
                 .padding(.horizontal, 11)
                 .padding(.vertical, 7)
-                .background(JC.violet.opacity(0.14), in: Capsule())
-                .foregroundStyle(JC.violet)
+                .background(JC.bronze.opacity(0.14), in: Capsule())
+                .foregroundStyle(JC.bronze)
         }
         .buttonStyle(PressableStyle())
     }
@@ -115,7 +115,7 @@ struct ChatListView: View {
                             }
                             Text(LocalizedStringKey(conversation.contactInstrument.rawValue))
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.coral)
+                                .foregroundStyle(JC.laiton)
                             if let last = conversation.lastMessage {
                                 Text((last.isFromMe ? store.tr("Toi : ") : "") + last.text)
                                     .font(.caption)
@@ -146,7 +146,7 @@ struct ChatListView: View {
                     icon: "person.3.fill",
                     title: "Aucun groupe",
                     message: "Réunis ton groupe : messages, partitions et agenda des concerts au même endroit.",
-                    iconColor: JC.violet
+                    iconColor: JC.bronze
                 )
             } else {
                 JCPromoBanner(
@@ -168,7 +168,7 @@ struct ChatListView: View {
                                     .font(.subheadline.weight(.bold))
                                     .lineLimit(1)
                                 if group.isPublic == true {
-                                    TagView(text: "Public", color: .teal)
+                                    TagView(text: "Public", color: JC.feutrine)
                                 }
                                 Spacer()
                                 if let last = group.lastMessage {
@@ -179,7 +179,7 @@ struct ChatListView: View {
                             }
                             Text("\(group.memberNames.count + 1) membres · \(group.approvedSongs.count) morceaux · \(group.upcomingEvents.count) événements")
                                 .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.violet)
+                                .foregroundStyle(JC.bronze)
                                 .lineLimit(1)
                             if let last = group.lastMessage {
                                 Text((last.isFromMe ? store.tr("Toi : ") : "\(last.sender) : ") + last.text)
@@ -218,7 +218,7 @@ struct GroupAvatarView: View {
     private var emojiCircle: some View {
         ZStack {
             Circle()
-                .fill(JC.violet.opacity(0.15))
+                .fill(JC.bronze.opacity(0.15))
                 .frame(width: size, height: size)
             Text(group.emoji)
                 .font(size >= 50 ? .title3 : .body)
@@ -254,7 +254,7 @@ struct GroupInvitationCard: View {
                             Text(invitation.groupName)
                                 .font(.subheadline.weight(.bold))
                                 .lineLimit(1)
-                            TagView(text: "Invitation", color: JC.gold)
+                            TagView(text: "Invitation", color: JC.laiton)
                         }
                         Text(String(format: store.tr("%@ t'invite à rejoindre ce groupe"), invitation.invitedByName))
                             .font(.caption)
@@ -272,7 +272,7 @@ struct GroupInvitationCard: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)
                             .background(AnyShapeStyle(JC.hero), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-                            .foregroundStyle(Color.white)
+                            .foregroundStyle(JC.billetInk)
                     }
                     .buttonStyle(PressableStyle())
 
@@ -299,7 +299,7 @@ struct GroupInvitationCard: View {
     private var emojiCircle: some View {
         ZStack {
             Circle()
-                .fill(JC.gold.opacity(0.15))
+                .fill(JC.laiton.opacity(0.15))
                 .frame(width: 50, height: 50)
             Text(invitation.groupEmoji)
                 .font(.title3)

@@ -442,7 +442,7 @@ struct CityPickerSheet: View {
                         Spacer()
                         if selected == city {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(JC.coral)
+                                .foregroundStyle(JC.laiton)
                         }
                     }
                 }
