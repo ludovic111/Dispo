@@ -11,6 +11,22 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.2",
+            title: "Dépannages par poste & essai gratuit",
+            points: [
+                "SOS par poste : choisis l'instrument que tu peux tenir, l'organisateur confirme, et le poste pourvu disparaît de l'annonce",
+                "Quand tu postules, un message part tout seul à l'organisateur — plus de candidature dans le vide",
+                "Essai gratuit de 7 jours pour découvrir Premium",
+                "Les liens d'écoute ouvrent enfin le morceau EXACT sur Spotify, YouTube Music et Deezer (fini la simple recherche)",
+                "Vrais logos des plateformes de streaming et des réseaux sociaux",
+                "Premium prend sa couleur : un bleu-vert « velours de coulisses », et une palette un peu plus vivante",
+                "Rôles dans le groupe : donne un instrument à chaque membre — un SOS de groupe cible alors les postes non couverts",
+                "Vois les abonnés et les collaborations de chaque profil, d'un simple tap",
+                "Supprime un groupe quand tu veux (leader)",
+                "Vidéos de démo : donne-leur un titre dès l'ajout, et un envoi plus fiable"
+            ]
+        ),
+        PatchNote(
             version: "1.1",
             title: "Coulisses & Laiton — nouvelle identité",
             points: [

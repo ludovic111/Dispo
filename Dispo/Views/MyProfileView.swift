@@ -71,6 +71,8 @@ struct MyProfileView: View {
     @State private var importingVideo = false
     /// Vidéo dont on édite le titre et la date.
     @State private var editingVideo: DemoVideo?
+    @State private var showFollowers = false
+    @State private var showPlayedWith = false
 
     var body: some View {
         NavigationStack {
@@ -108,6 +110,12 @@ struct MyProfileView: View {
                 VideoDetailsSheet(video: video)
                     .presentationDetents([.medium, .large])
             }
+            .sheet(isPresented: $showFollowers) {
+                FollowersSheet(ownerName: store.profile.name, followers: store.myFollowerMusicians)
+            }
+            .sheet(isPresented: $showPlayedWith) {
+                PlayedWithSheet(ownerName: store.profile.name, collaborators: myCollaboratorMusicians)
+            }
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
                 Task {
@@ -122,9 +130,11 @@ struct MyProfileView: View {
                 guard let item else { return }
                 importingVideo = true
                 Task {
-                    if let video = try? await item.loadTransferable(type: PickedVideo.self) {
-                        await store.addDemoVideo(from: video.url)
-                        try? FileManager.default.removeItem(at: video.url)
+                    if let picked = try? await item.loadTransferable(type: PickedVideo.self) {
+                        let added = await store.addDemoVideo(from: picked.url)
+                        try? FileManager.default.removeItem(at: picked.url)
+                        // Propose de titrer la vidéo juste après l'ajout.
+                        if let added { editingVideo = added }
                     }
                     videoItem = nil
                     importingVideo = false
@@ -188,8 +198,14 @@ struct MyProfileView: View {
                     value: store.myRatingSummary.map { "★ \($0.averageLabel)" } ?? "—",
                     label: "note"
                 )
-                statBlock(value: "\(store.followersCount)", label: "abonnés")
-                statBlock(value: "\(store.playedWith.count)", label: "collabs")
+                Button { showFollowers = true } label: {
+                    statBlock(value: "\(store.followersCount)", label: "abonnés")
+                }
+                .buttonStyle(PressableStyle())
+                Button { showPlayedWith = true } label: {
+                    statBlock(value: "\(store.playedWith.count)", label: "collabs")
+                }
+                .buttonStyle(PressableStyle())
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -204,6 +220,13 @@ struct MyProfileView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// Mes collaborateurs en objets Musician (feuille « A joué avec »).
+    private var myCollaboratorMusicians: [Musician] {
+        store.musicians
+            .filter { store.playedWith.contains($0.name) }
+            .sorted { $0.name < $1.name }
     }
 
     // MARK: - Identité

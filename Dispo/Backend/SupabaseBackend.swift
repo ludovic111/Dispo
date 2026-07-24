@@ -335,6 +335,7 @@ final class SupabaseBackend: Sendable {
         var neighborhood: String?
         var genre: String
         var wantedInstruments: [String]
+        var filledInstruments: [String]?
         var fee: Int?
         var description: String?
         var postedAt: Date
@@ -345,25 +346,34 @@ final class SupabaseBackend: Sendable {
             case id, date, genre, fee, description, title, place, neighborhood
             case hostId = "host_id"
             case wantedInstruments = "wanted_instruments"
+            case filledInstruments = "filled_instruments"
             case postedAt = "posted_at"
             case isLocked = "is_locked"
             case paymentMethod = "payment_method"
         }
 
-        func asGigRequest(hostName: String, isMine: Bool, applied: Bool) -> GigRequest {
+        func asGigRequest(
+            hostName: String,
+            isMine: Bool,
+            application: (instrument: Instrument?, status: GigApplicationStatus)?
+        ) -> GigRequest {
             GigRequest(
                 id: id,
                 title: title ?? "Nouveau SOS",
                 hostName: hostName,
+                hostId: hostId,
                 date: date,
                 place: place ?? "",
                 neighborhood: neighborhood ?? "",
                 genre: Genre(rawValue: genre) ?? .jazz,
                 wantedInstruments: wantedInstruments.compactMap(Instrument.init(rawValue:)),
+                filledInstruments: (filledInstruments ?? []).compactMap(Instrument.init(rawValue:)),
                 fee: fee,
                 paymentMethod: paymentMethod,
                 descriptionText: description ?? "",
-                applied: applied,
+                applied: application != nil,
+                myApplicationInstrument: application?.instrument,
+                myApplicationStatus: application?.status,
                 isMine: isMine,
                 postedAt: postedAt
             )
@@ -700,20 +710,41 @@ final class SupabaseBackend: Sendable {
 
         let (feed, profiles, applications) = try await (feedTask, profilesTask, applicationsTask)
         let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
-        let appliedGigs = Set(applications.map(\.gigId))
+        let myApplications = Dictionary(applications.map { ($0.gigId, $0) }, uniquingKeysWith: { a, _ in a })
 
         return feed.map { row in
-            row.asGigRequest(
+            let mine = myApplications[row.id]
+            let application: (instrument: Instrument?, status: GigApplicationStatus)? = mine.map {
+                (Instrument(rawValue: $0.instrument ?? ""),
+                 GigApplicationStatus(rawValue: $0.status ?? "pending") ?? .pending)
+            }
+            return row.asGigRequest(
                 hostName: row.isLocked ? "Membre Premium requis" : (nameByID[row.hostId] ?? "Organisateur"),
                 isMine: row.hostId == myID,
-                applied: appliedGigs.contains(row.id)
+                application: application
             )
         }
     }
 
     struct ApplicationRow: Codable {
+        var id: UUID
         var gigId: UUID
-        enum CodingKeys: String, CodingKey { case gigId = "gig_id" }
+        var musicianId: UUID
+        var instrument: String?
+        var status: String?
+        enum CodingKeys: String, CodingKey {
+            case id, instrument, status
+            case gigId = "gig_id"
+            case musicianId = "musician_id"
+        }
+    }
+
+    /// Toutes les candidatures d'une annonce (RLS : réservé à l'organisateur).
+    func fetchApplicants(gigID: UUID) async throws -> [ApplicationRow] {
+        try await client.from("gig_applications")
+            .select()
+            .eq("gig_id", value: gigID)
+            .execute().value
     }
 
     func createGig(_ gig: GigRequest, hostID: UUID) async throws {
@@ -746,9 +777,14 @@ final class SupabaseBackend: Sendable {
         try await client.from("gig_requests").insert(insert).execute()
     }
 
-    func apply(to gigID: UUID, musicianID: UUID) async throws {
+    func apply(to gigID: UUID, musicianID: UUID, instrument: Instrument?) async throws {
+        struct Insert: Encodable {
+            let gig_id: UUID
+            let musician_id: UUID
+            let instrument: String?
+        }
         try await client.from("gig_applications")
-            .insert(["gig_id": gigID.uuidString, "musician_id": musicianID.uuidString])
+            .insert(Insert(gig_id: gigID, musician_id: musicianID, instrument: instrument?.rawValue))
             .execute()
     }
 
@@ -757,6 +793,14 @@ final class SupabaseBackend: Sendable {
             .delete()
             .eq("gig_id", value: gigID)
             .eq("musician_id", value: musicianID)
+            .execute()
+    }
+
+    /// L'organisateur accepte une candidature (RPC host-only) : l'instrument
+    /// passe « pourvu » et les concurrents sur ce poste sont refusés.
+    func acceptApplication(_ applicationID: UUID) async throws {
+        try await client
+            .rpc("accept_gig_application", params: ["application_id": applicationID.uuidString])
             .execute()
     }
 
@@ -955,9 +999,10 @@ final class SupabaseBackend: Sendable {
         var groupId: UUID
         var profileId: UUID
         var kind: String
+        var role: String?
 
         enum CodingKeys: String, CodingKey {
-            case kind
+            case kind, role
             case groupId = "group_id"
             case profileId = "profile_id"
         }
@@ -1022,6 +1067,7 @@ final class SupabaseBackend: Sendable {
         var artist: String
         var artworkURL: String?
         var trackURL: String?
+        var platformLinks: [String: String]?
         var suggestedBy: String
         var isApproved: Bool
 
@@ -1029,6 +1075,7 @@ final class SupabaseBackend: Sendable {
             case id, title, artist
             case artworkURL = "artwork_url"
             case trackURL = "track_url"
+            case platformLinks = "platform_links"
             case suggestedBy = "suggested_by"
             case isApproved = "is_approved"
         }
@@ -1039,6 +1086,7 @@ final class SupabaseBackend: Sendable {
             artist = song.artist
             artworkURL = song.artworkURL
             trackURL = song.trackURL
+            platformLinks = song.platformLinks
             suggestedBy = song.suggestedBy
             isApproved = song.isApproved
         }
@@ -1050,6 +1098,7 @@ final class SupabaseBackend: Sendable {
                 artist: artist,
                 artworkURL: artworkURL,
                 trackURL: trackURL,
+                platformLinks: platformLinks,
                 suggestedBy: suggestedBy,
                 isApproved: isApproved
             )
@@ -1113,10 +1162,11 @@ final class SupabaseBackend: Sendable {
                 .filter { $0.profileId != row.leaderId }
             let memberNames = memberRows.compactMap { nameByID[$0.profileId] }.sorted()
             var kinds: [String: GroupMemberKind] = [:]
+            var roles: [String: String] = [:]
             for member in memberRows {
-                if let name = nameByID[member.profileId],
-                   let kind = GroupMemberKind(dbValue: member.kind) {
-                    kinds[name] = kind
+                if let name = nameByID[member.profileId] {
+                    if let kind = GroupMemberKind(dbValue: member.kind) { kinds[name] = kind }
+                    if let role = member.role, !role.isEmpty { roles[name] = role }
                 }
             }
 
@@ -1147,6 +1197,7 @@ final class SupabaseBackend: Sendable {
                 leaderName: leaderName,
                 memberNames: memberNames,
                 memberKinds: kinds,
+                memberRoles: roles,
                 messages: (messagesByGroup[row.id] ?? []).map {
                     $0.asGroupMessage(myID: myID, myName: myName, nameByID: nameByID)
                 },
@@ -1301,6 +1352,17 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    /// Assigne (ou retire, role = nil) le rôle/instrument d'un membre dans le
+    /// groupe. RLS : réservé au leader (policy group_members_update_leader).
+    func setMemberRole(_ role: String?, for profileID: UUID, in groupID: UUID) async throws {
+        struct Update: Encodable { let role: String? }
+        try await client.from("group_members")
+            .update(Update(role: role))
+            .eq("group_id", value: groupID)
+            .eq("profile_id", value: profileID)
+            .execute()
+    }
+
     func kickMember(_ profileID: UUID, from groupID: UUID) async throws {
         try await client.from("group_members")
             .delete()
@@ -1320,6 +1382,14 @@ final class SupabaseBackend: Sendable {
 
     func deleteGroup(_ groupID: UUID) async throws {
         try await client.from("music_groups").delete().eq("id", value: groupID).execute()
+    }
+
+    /// Supprime la photo du groupe du bucket avatars (best-effort — la ligne
+    /// `music_groups` part en cascade, mais pas le fichier Storage). RLS :
+    /// on ne peut effacer que dans son propre dossier (le leader).
+    func deleteGroupPhoto(leaderID: UUID, groupID: UUID) async throws {
+        let path = "\(leaderID.uuidString.lowercased())/group_\(groupID.uuidString.lowercased()).jpg"
+        _ = try await client.storage.from(Self.avatarsBucket).remove(paths: [path])
     }
 
     // MARK: - Groupes : photo, visibilité, profils publics

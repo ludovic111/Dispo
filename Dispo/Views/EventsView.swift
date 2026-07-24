@@ -122,16 +122,20 @@ struct EventCard: View {
                 // Les pastilles passent à la ligne au besoin (jamais de
                 // texte écrasé à la verticale).
                 FlowLayout(spacing: 5) {
-                    Text("Cherche")
-                        .font(JCFont.mono(9))
-                        .textCase(.uppercase)
-                        .tracking(1)
-                        .foregroundStyle(JC.billetInk.opacity(0.45))
-                    ForEach(event.wantedInstruments.prefix(3)) { instrument in
-                        TagView(text: instrument.rawValue, color: JC.billetBronze)
-                    }
-                    if event.wantedInstruments.count > 3 {
-                        TagView(text: "+\(event.wantedInstruments.count - 3)", color: JC.billetBronze)
+                    if event.openInstruments.isEmpty {
+                        TagView(text: "Complet", color: JC.billetFeutrine)
+                    } else {
+                        Text("Cherche")
+                            .font(JCFont.mono(9))
+                            .textCase(.uppercase)
+                            .tracking(1)
+                            .foregroundStyle(JC.billetInk.opacity(0.45))
+                        ForEach(event.openInstruments.prefix(3)) { instrument in
+                            TagView(text: instrument.rawValue, color: JC.billetBronze)
+                        }
+                        if event.openInstruments.count > 3 {
+                            TagView(text: "+\(event.openInstruments.count - 3)", color: JC.billetBronze)
+                        }
                     }
                 }
             }
@@ -231,7 +235,7 @@ struct LockedEventCard: View {
                         .textCase(.uppercase)
                         .tracking(1.2)
                 }
-                .foregroundStyle(JC.billetInk)
+                .foregroundStyle(JC.billetPaper)
                 .frame(width: 74)
                 .frame(maxHeight: .infinity)
                 .background(JC.premium)
@@ -252,7 +256,7 @@ struct LockedEventCard: View {
                     .background(JC.billetInk.opacity(0.88), in: Capsule())
                     .foregroundStyle(JC.laiton)
             }
-            .foregroundStyle(JC.billetInk)
+            .foregroundStyle(JC.billetPaper)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(JC.premium)
@@ -265,6 +269,7 @@ struct LockedEventCard: View {
 struct EventDetailView: View {
     @EnvironmentObject private var store: AppStore
     let eventID: GigRequest.ID
+    @State private var showInstrumentPicker = false
 
     private var event: GigRequest? {
         store.events.first(where: { $0.id == eventID })
@@ -332,9 +337,25 @@ struct EventDetailView: View {
                                 Text("Musicien recherché")
                                     .font(.subheadline.weight(.heavy))
                                     .foregroundStyle(JC.signal)
-                                FlowLayout {
-                                    ForEach(event.wantedInstruments) { instrument in
-                                        TagView(text: instrument.rawValue, color: JC.bronze)
+                                if event.openInstruments.isEmpty {
+                                    Label("Tous les postes sont pourvus.", systemImage: "checkmark.circle")
+                                        .font(.caption)
+                                        .foregroundStyle(JC.feutrine)
+                                } else {
+                                    FlowLayout {
+                                        ForEach(event.openInstruments) { instrument in
+                                            TagView(text: instrument.rawValue, color: JC.bronze)
+                                        }
+                                    }
+                                }
+                                if let filled = event.filledInstruments, !filled.isEmpty {
+                                    FlowLayout(spacing: 5) {
+                                        Text("Pourvu")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(JC.feutrine)
+                                        ForEach(filled) { instrument in
+                                            TagView(text: instrument.rawValue, color: JC.feutrine)
+                                        }
                                     }
                                 }
                             }
@@ -354,7 +375,7 @@ struct EventDetailView: View {
                         }
 
                         if event.isMine {
-                            matchesCard(for: event)
+                            applicantsCard(for: event)
                         }
                     }
                     .padding(.horizontal, 18)
@@ -364,6 +385,7 @@ struct EventDetailView: View {
             .navigationTitle("SOS dépannage")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(JC.bg, for: .navigationBar)
+            .onAppear { store.loadApplicants(for: event) }
             .safeAreaInset(edge: .bottom) {
                 bottomBar(for: event)
             }
@@ -372,27 +394,38 @@ struct EventDetailView: View {
     /// Musiciens compatibles avec mon annonce — le matching reste consultable
     /// après la publication. Vide : on assume l'attente et on explique quand
     /// des matchs apparaîtront.
-    private func matchesCard(for event: GigRequest) -> some View {
-        let matches = store.matches(for: event)
+    /// Candidatures reçues, groupées par instrument — l'organisateur accepte
+    /// qui il veut pour chaque poste ; le poste pourvu disparaît des annonces.
+    private func applicantsCard(for event: GigRequest) -> some View {
+        let applicants = store.applicantsByGig[event.id] ?? []
         return JCCard {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Musiciens compatibles")
+                Text("Candidatures")
                     .font(.subheadline.weight(.heavy))
                     .foregroundStyle(JC.signal)
-                if matches.isEmpty {
+                if applicants.isEmpty {
                     Label {
-                        Text("Personne ne matche pour l'instant. Dès qu'un musicien compatible coche le \(event.date.formatted(.dateTime.day().month(.wide))) dans son calendrier, il apparaîtra ici.")
+                        Text("Personne n'a encore postulé. Dès qu'un musicien se propose, tu choisiras ici qui prend chaque poste.")
                     } icon: {
                         Image(systemName: "hourglass")
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 } else {
-                    ForEach(matches.prefix(5)) { match in
-                        NavigationLink(value: match.musician) {
-                            SOSMatchRow(match: match, gig: event)
+                    ForEach(event.wantedInstruments) { instrument in
+                        let group = applicants.filter { $0.instrument == instrument }
+                        if !group.isEmpty {
+                            applicantsGroup(
+                                title: store.tr(instrument.rawValue),
+                                filled: (event.filledInstruments ?? []).contains(instrument),
+                                applicants: group,
+                                event: event
+                            )
                         }
-                        .buttonStyle(PressableStyle())
+                    }
+                    let unspecified = applicants.filter { $0.instrument == nil }
+                    if !unspecified.isEmpty {
+                        applicantsGroup(title: store.tr("Autre"), filled: false, applicants: unspecified, event: event)
                     }
                 }
             }
@@ -400,30 +433,133 @@ struct EventDetailView: View {
     }
 
     @ViewBuilder
-    fileprivate func bottomBar(for event: GigRequest) -> some View {
-                if !event.isMine {
-                    Button {
-                        store.toggleApply(event)
-                    } label: {
-                        Label(
-                            event.applied ? "Retirer ma candidature" : "Je peux dépanner !",
-                            systemImage: event.applied ? "xmark.circle" : "bolt.fill"
-                        )
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(
-                            event.applied
-                                ? AnyShapeStyle(JC.card)
-                                : AnyShapeStyle(JC.hero),
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
-                        .foregroundStyle(event.applied ? Color.primary : JC.billetInk)
+    private func applicantsGroup(title: String, filled: Bool, applicants: [GigApplicant], event: GigRequest) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text(verbatim: title)
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(JC.bronze)
+                if filled { TagView(text: "Pourvu", color: JC.feutrine) }
+            }
+            ForEach(applicants) { applicant in
+                HStack(spacing: 10) {
+                    NavigationLink(value: applicant.musician) {
+                        HStack(spacing: 10) {
+                            AvatarView(name: applicant.musician.name, size: 36, photo: applicant.musician.photo)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(applicant.musician.name)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                if let summary = store.ratingSummary(for: applicant.musician) {
+                                    RatingBadge(summary: summary)
+                                }
+                            }
+                        }
                     }
                     .buttonStyle(PressableStyle())
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .background(.ultraThinMaterial)
+                    Spacer(minLength: 0)
+                    applicantAction(applicant, in: event)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func applicantAction(_ applicant: GigApplicant, in event: GigRequest) -> some View {
+        switch applicant.status {
+        case .accepted:
+            Label("Pris·e", systemImage: "checkmark.seal.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(JC.feutrine)
+        case .declined:
+            Text("Non retenu·e")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .pending:
+            Button {
+                store.acceptApplicant(applicant, in: event)
+            } label: {
+                Text("Accepter")
+                    .font(.caption.weight(.bold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(JC.hero, in: Capsule())
+                    .foregroundStyle(JC.billetInk)
+            }
+            .buttonStyle(PressableStyle())
+        }
+    }
+
+    @ViewBuilder
+    fileprivate func bottomBar(for event: GigRequest) -> some View {
+        if !event.isMine {
+            applyControl(for: event)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial)
+        }
+    }
+
+    @ViewBuilder
+    private func applyControl(for event: GigRequest) -> some View {
+        if event.myApplicationStatus == .accepted {
+            Label(
+                event.myApplicationInstrument.map {
+                    String(format: store.tr("Tu es pris·e ! (%@)"), store.tr($0.rawValue))
+                } ?? store.tr("Tu es pris·e !"),
+                systemImage: "checkmark.seal.fill"
+            )
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(JC.feutrine.opacity(0.18), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .foregroundStyle(JC.feutrine)
+        } else if event.applied {
+            Button {
+                store.withdrawApplication(event)
+            } label: {
+                Label("Retirer ma candidature", systemImage: "xmark.circle")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .foregroundStyle(Color.primary)
+            }
+            .buttonStyle(PressableStyle())
+        } else if event.openInstruments.isEmpty {
+            Label("Tous les postes sont pourvus", systemImage: "checkmark.circle")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .foregroundStyle(.secondary)
+        } else {
+            Button {
+                if event.openInstruments.count == 1 {
+                    store.applyToGig(event, instrument: event.openInstruments.first)
+                } else {
+                    showInstrumentPicker = true
+                }
+            } label: {
+                Label("Je peux dépanner !", systemImage: "bolt.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(JC.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .foregroundStyle(JC.billetInk)
+            }
+            .buttonStyle(PressableStyle())
+            .confirmationDialog(
+                "Quel poste peux-tu tenir ?",
+                isPresented: $showInstrumentPicker,
+                titleVisibility: .visible
+            ) {
+                ForEach(event.openInstruments) { instrument in
+                    Button(store.tr(instrument.rawValue)) {
+                        store.applyToGig(event, instrument: instrument)
+                    }
+                }
+            }
         }
     }
 }

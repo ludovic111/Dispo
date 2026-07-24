@@ -30,12 +30,13 @@ struct CreateEventView: View {
     @State private var published: GigRequest?
 
     /// Pré-remplissage (ex. SOS lancé depuis un concert de groupe).
-    init(prefillTitle: String = "", prefillPlace: String = "", prefillDate: Date? = nil) {
+    init(prefillTitle: String = "", prefillPlace: String = "", prefillDate: Date? = nil, prefillInstruments: [Instrument] = []) {
         _title = State(initialValue: prefillTitle)
         _place = State(initialValue: prefillPlace)
         _date = State(initialValue: prefillDate
             ?? Calendar.current.date(byAdding: .day, value: 2, to: Date())
             ?? Date())
+        _wanted = State(initialValue: Set(prefillInstruments))
     }
 
     private let neighborhoods = [

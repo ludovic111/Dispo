@@ -14,6 +14,7 @@ struct MusicianDetailView: View {
     @State private var safetyMessage: String?
     @State private var playingVideo: PlayableVideo?
     @State private var showPlayedWith = false
+    @State private var showFollowers = false
 
     private var mainGenre: Genre { musician.genres.first ?? .jazz }
     /// Tuiles d'aperçu — uniquement pour la vitrine des profils de démo.
@@ -109,6 +110,9 @@ struct MusicianDetailView: View {
         .sheet(isPresented: $showPlayedWith) {
             PlayedWithSheet(ownerName: firstName, collaborators: playedWithMusicians)
         }
+        .sheet(isPresented: $showFollowers) {
+            FollowersSheet(ownerName: firstName, followers: store.followers(of: musician))
+        }
     }
 
     /// Musiciens avec qui ce profil a déjà joué (fiche consultable).
@@ -139,8 +143,14 @@ struct MusicianDetailView: View {
                     value: store.ratingSummary(for: musician).map { "★ \($0.averageLabel)" } ?? "—",
                     label: "note"
                 )
-                statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
-                statBlock(value: "\(store.collaborators(of: musician).count)", label: "collabs")
+                Button { showFollowers = true } label: {
+                    statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
+                }
+                .buttonStyle(PressableStyle())
+                Button { showPlayedWith = true } label: {
+                    statBlock(value: "\(store.collaborators(of: musician).count)", label: "collabs")
+                }
+                .buttonStyle(PressableStyle())
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -664,6 +674,72 @@ struct PlayedWithSheet: View {
                 }
             }
             .navigationTitle("A joué avec")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+        }
+    }
+}
+
+/// Feuille listant les abonnés d'un profil — un tap ouvre chaque fiche.
+struct FollowersSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let ownerName: String
+    let followers: [Musician]
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                ScrollView {
+                    VStack(spacing: 10) {
+                        Text(
+                            followers.isEmpty
+                                ? String(format: store.tr("%@ n'a pas encore d'abonnés."), ownerName)
+                                : String(format: store.tr("Les abonnés de %@ — un tap ouvre leur profil."), ownerName)
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        ForEach(followers) { follower in
+                            NavigationLink(value: follower) {
+                                JCCard(padding: 11) {
+                                    HStack(spacing: 11) {
+                                        AvatarView(name: follower.name, size: 44, photo: follower.photo)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HStack(spacing: 6) {
+                                                Text(follower.name)
+                                                    .font(.subheadline.weight(.bold))
+                                                    .foregroundStyle(.primary)
+                                                    .lineLimit(1)
+                                                if follower.isDemo { DemoAccountBadge() }
+                                            }
+                                            Text(verbatim: follower.handle)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: 0)
+                                        if let summary = store.ratingSummary(for: follower) {
+                                            RatingBadge(summary: summary)
+                                        }
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                    .padding(18)
+                }
+            }
+            .navigationTitle("Abonnés")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .toolbar {

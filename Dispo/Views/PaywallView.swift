@@ -76,7 +76,7 @@ struct PaywallView: View {
                     .font(.subheadline.weight(.semibold))
                     .opacity(0.8)
             }
-            .foregroundStyle(JC.billetInk)
+            .foregroundStyle(JC.billetPaper)
             .frame(maxWidth: .infinity)
             .padding(.top, 38)
         }
@@ -110,7 +110,7 @@ struct PaywallView: View {
                 HStack(spacing: 14) {
                     Image(systemName: perk.icon)
                         .font(.title3)
-                        .foregroundStyle(perk.highlight ? JC.laiton : JC.bronze)
+                        .foregroundStyle(perk.highlight ? JC.laiton : JC.premiumTint)
                         .frame(width: 34)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(perk.title).font(.subheadline.weight(.bold))
@@ -150,7 +150,7 @@ struct PaywallView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(JC.premium, in: Capsule())
-                        .foregroundStyle(JC.billetInk)
+                        .foregroundStyle(JC.billetPaper)
                 } else {
                     Spacer().frame(height: 18)
                 }
@@ -163,6 +163,12 @@ struct PaywallView: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                if let trial = store.trialLabel(for: plan) {
+                    Text(verbatim: trial)
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(JC.feutrine)
+                        .multilineTextAlignment(.center)
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -202,17 +208,29 @@ struct PaywallView: View {
                     }
                 } label: {
                     HStack {
-                        if store.purchaseInProgress { ProgressView().tint(JC.billetInk) }
-                        Text("S'abonner · \(store.displayPrice(for: selectedPlan))")
-                            .font(.headline)
+                        if store.purchaseInProgress { ProgressView().tint(JC.billetPaper) }
+                        if store.trialLabel(for: selectedPlan) != nil {
+                            Text("Commencer l'essai gratuit")
+                                .font(.headline)
+                        } else {
+                            Text("S'abonner · \(store.displayPrice(for: selectedPlan))")
+                                .font(.headline)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(JC.premium, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(JC.billetInk)
+                    .foregroundStyle(JC.billetPaper)
                 }
                 .buttonStyle(PressableStyle())
                 .disabled(store.purchaseInProgress || !store.planAvailable(selectedPlan))
+
+                if let trial = store.trialLabel(for: selectedPlan) {
+                    Text(verbatim: String(format: store.tr("%@, puis %@ — résiliable à tout moment."), trial, store.displayPrice(for: selectedPlan)))
+                        .font(.caption)
+                        .foregroundStyle(JC.feutrine)
+                        .multilineTextAlignment(.center)
+                }
 
                 Text("Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.")
                     .font(.caption)

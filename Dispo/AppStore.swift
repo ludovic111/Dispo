@@ -81,6 +81,9 @@ final class AppStore: ObservableObject {
     @Published private(set) var storeProducts: [PremiumPlan: Product] = [:]
     /// Offre RevenueCat courante (clé API présente dans Secrets.plist).
     @Published private(set) var rcPackages: [PremiumPlan: Package] = [:]
+    /// Étiquette d'essai gratuit par plan quand une offre d'intro « free trial »
+    /// existe (ex. « 7 jours offerts »). Vide sinon.
+    @Published private(set) var trialByPlan: [PremiumPlan: String] = [:]
     @Published private(set) var purchaseInProgress = false
     /// true si le SDK RevenueCat est configuré — sinon repli StoreKit direct.
     let revenueCatEnabled: Bool
@@ -100,6 +103,9 @@ final class AppStore: ObservableObject {
     private var liveFollowingIDs: Set<UUID> = []
     private var liveFollowerIDs: Set<UUID> = []
     private var liveFollowerCounts: [UUID: Int] = [:]
+    /// Abonnés par profil (following_id → [follower_id]) — pour lister les
+    /// abonnés de n'importe quel profil, pas seulement les miens.
+    private var liveFollowersByProfile: [UUID: [UUID]] = [:]
     private var liveCollaborations: Set<SupabaseBackend.CollaborationRow> = []
     @Published private(set) var blockedUserIDs: Set<UUID> = []
     /// Préférence interne. L'autorisation iOS reste la source de vérité.
@@ -114,6 +120,8 @@ final class AppStore: ObservableObject {
     /// Groupes (messagerie d'équipe Premium) — synchronisés serveur en live
     /// (messages, événements, présence, membres) ; partitions locales.
     @Published var groups: [GroupChat] = []
+    /// Candidatures reçues par annonce (côté organisateur d'un SOS).
+    @Published var applicantsByGig: [UUID: [GigApplicant]] = [:]
 
     // MARK: - Backend (mode live)
 
@@ -513,6 +521,7 @@ final class AppStore: ObservableObject {
             liveFollowingIDs = Set(follows.filter { $0.followerId == userID }.map(\.followingId))
             liveFollowerIDs = Set(follows.filter { $0.followingId == userID }.map(\.followerId))
             liveFollowerCounts = Dictionary(grouping: follows, by: \.followingId).mapValues(\.count)
+            liveFollowersByProfile = Dictionary(grouping: follows, by: \.followingId).mapValues { $0.map(\.followerId) }
             liveCollaborations = Set(collaborations)
             let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
             following = Set(profiles.filter { liveFollowingIDs.contains($0.id) }.map(\.name))
@@ -610,6 +619,7 @@ final class AppStore: ObservableObject {
         backendError = nil
         liveFollowingIDs = []
         liveFollowerIDs = []
+        liveFollowersByProfile = [:]
         liveFollowerCounts = [:]
         liveCollaborations = []
         blockedUserIDs = []
@@ -944,9 +954,40 @@ final class AppStore: ObservableObject {
             }
             persistGroups()
             rescheduleAllAttendanceNotifications()
+            backfillStreamingLinks()
             await refreshGroupInvitations(nameByID: nameByID)
         } catch {
             // Silencieux : le prochain événement ou refreshLiveData rattrapera.
+        }
+    }
+
+    /// Flag anti-chevauchement du backfill Odesli.
+    private var streamingBackfillActive = false
+
+    /// Complète en tâche de fond les liens d'écoute directs (Odesli) des
+    /// morceaux de répertoire déjà enregistrés sans eux. Quelques-uns par
+    /// passage (quota Odesli ~10/min) ; idempotent, se relance aux refresh.
+    private func backfillStreamingLinks() {
+        guard isLive, !streamingBackfillActive else { return }
+        var targets: [(groupID: GroupChat.ID, songID: UUID, appleURL: String)] = []
+        for group in groups {
+            for song in group.songs where song.platformLinks == nil {
+                if let track = song.trackURL, !track.isEmpty {
+                    targets.append((group.id, song.id, track))
+                }
+            }
+        }
+        let batch = Array(targets.prefix(8))
+        guard !batch.isEmpty else { return }
+        streamingBackfillActive = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.streamingBackfillActive = false }
+            for t in batch {
+                if let links = await Self.fetchStreamingLinks(appleMusicURL: t.appleURL) {
+                    self.updateSong(t.songID, in: t.groupID, eventID: nil) { $0.platformLinks = links }
+                }
+            }
         }
     }
 
@@ -1315,6 +1356,7 @@ final class AppStore: ObservableObject {
                     }
                 }
                 rcPackages = packages
+                updateTrialLabels()
             } catch {
                 backendError = tr("Les abonnements App Store sont momentanement indisponibles.")
             }
@@ -1326,8 +1368,60 @@ final class AppStore: ObservableObject {
                 guard let plan = Self.productIDs.first(where: { $0.value == product.id })?.key else { return nil }
                 return (plan, product)
             })
+            updateTrialLabels()
         } catch {
             backendError = tr("Les abonnements App Store sont momentanement indisponibles.")
+        }
+    }
+
+    /// Recalcule les étiquettes d'essai gratuit depuis les offres d'intro.
+    /// L'éligibilité réelle (un essai par groupe / Apple ID) est appliquée par
+    /// StoreKit à l'achat ; ici on la propose dès qu'une offre « free trial »
+    /// existe sur le produit.
+    private func updateTrialLabels() {
+        var result: [PremiumPlan: String] = [:]
+        if revenueCatEnabled {
+            for (plan, package) in rcPackages {
+                if let discount = package.storeProduct.introductoryDiscount, discount.paymentMode == .freeTrial {
+                    result[plan] = trialLabel(days: Self.periodDays(discount.subscriptionPeriod))
+                }
+            }
+        } else {
+            for (plan, product) in storeProducts {
+                if let offer = product.subscription?.introductoryOffer, offer.paymentMode == .freeTrial {
+                    result[plan] = trialLabel(days: Self.periodDays(offer.period))
+                }
+            }
+        }
+        trialByPlan = result
+    }
+
+    private func trialLabel(days: Int) -> String {
+        String(format: tr("%d jours offerts"), days)
+    }
+
+    /// Étiquette d'essai gratuit à afficher pour un plan (nil si aucun essai).
+    func trialLabel(for plan: PremiumPlan) -> String? { trialByPlan[plan] }
+
+    /// Jours (approx.) d'une période d'abonnement RevenueCat.
+    nonisolated private static func periodDays(_ p: RevenueCat.SubscriptionPeriod) -> Int {
+        switch p.unit {
+        case .day: return p.value
+        case .week: return p.value * 7
+        case .month: return p.value * 30
+        case .year: return p.value * 365
+        @unknown default: return p.value
+        }
+    }
+
+    /// Jours (approx.) d'une période d'abonnement StoreKit.
+    nonisolated private static func periodDays(_ p: Product.SubscriptionPeriod) -> Int {
+        switch p.unit {
+        case .day: return p.value
+        case .week: return p.value * 7
+        case .month: return p.value * 30
+        case .year: return p.value * 365
+        @unknown default: return p.value
         }
     }
 
@@ -1853,6 +1947,18 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Assigne (ou retire) le rôle/instrument d'un membre dans le groupe.
+    func setMemberRole(_ name: String, _ instrument: Instrument?, in group: GroupChat) {
+        updateGroup(group.id) {
+            var roles = $0.memberRoles ?? [:]
+            roles[name] = instrument?.rawValue
+            $0.memberRoles = roles
+        }
+        if let backend, let profileID = profileID(for: name) {
+            syncLive { try await backend.setMemberRole(instrument?.rawValue, for: profileID, in: group.id) }
+        }
+    }
+
     func kickMember(_ name: String, from group: GroupChat) {
         updateGroup(group.id) {
             $0.memberNames.removeAll { $0 == name }
@@ -1905,10 +2011,11 @@ final class AppStore: ObservableObject {
         Task { [weak self] in
             guard let self else { return }
             let info = await Self.fetchTrackInfo(title: title, artist: artist)
-            if info.artworkURL != nil || info.trackURL != nil {
+            if info.artworkURL != nil || info.trackURL != nil || info.platformLinks != nil {
                 self.updateSong(song.id, in: groupID, eventID: eventID) {
                     $0.artworkURL = info.artworkURL
                     $0.trackURL = info.trackURL
+                    $0.platformLinks = info.platformLinks
                 }
             }
         }
@@ -1977,7 +2084,7 @@ final class AppStore: ObservableObject {
     nonisolated static func fetchTrackInfo(
         title: String,
         artist: String
-    ) async -> (artworkURL: String?, trackURL: String?) {
+    ) async -> (artworkURL: String?, trackURL: String?, platformLinks: [String: String]?) {
         struct SearchResponse: Decodable {
             struct Item: Decodable {
                 let artworkUrl100: String?
@@ -1988,16 +2095,42 @@ final class AppStore: ObservableObject {
         let term = "\(title) \(artist)"
         guard let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&media=music&entity=song&limit=1")
-        else { return (nil, nil) }
+        else { return (nil, nil, nil) }
         guard let (data, _) = try? await URLSession.shared.data(from: url),
               let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
               let item = response.results.first
-        else { return (nil, nil) }
+        else { return (nil, nil, nil) }
         // 100 px → 300 px : même CDN, meilleure netteté dans les listes.
-        return (
-            item.artworkUrl100?.replacingOccurrences(of: "100x100", with: "300x300"),
-            item.trackViewUrl
-        )
+        let artwork = item.artworkUrl100?.replacingOccurrences(of: "100x100", with: "300x300")
+        let trackURL = item.trackViewUrl
+        // Liens directs multi-plateformes (Odesli), à partir du lien Apple Music.
+        let links = await fetchStreamingLinks(appleMusicURL: trackURL)
+        return (artwork, trackURL, links)
+    }
+
+    /// Résout les liens directs par plateforme (Spotify, YouTube Music,
+    /// Deezer, Apple Music) via l'API publique song.link / Odesli — gratuite,
+    /// sans clé. S'appuie sur un lien Apple Music déjà connu. nil si
+    /// indisponible (introuvable, hors-ligne, quota) → repli sur la recherche.
+    nonisolated static func fetchStreamingLinks(appleMusicURL: String?) async -> [String: String]? {
+        guard let appleMusicURL, !appleMusicURL.isEmpty,
+              let encoded = appleMusicURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://api.song.link/v1-alpha.1/links?url=\(encoded)&userCountry=CH&songIfSingle=true")
+        else { return nil }
+        struct Response: Decodable {
+            struct Link: Decodable { let url: String }
+            let linksByPlatform: [String: Link]
+        }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let response = try? JSONDecoder().decode(Response.self, from: data)
+        else { return nil }
+        let by = response.linksByPlatform
+        var out: [String: String] = [:]
+        if let s = by["spotify"]?.url { out[StreamingPlatform.spotify.rawValue] = s }
+        if let y = by["youtubeMusic"]?.url ?? by["youtube"]?.url { out[StreamingPlatform.youtubeMusic.rawValue] = y }
+        if let d = by["deezer"]?.url { out[StreamingPlatform.deezer.rawValue] = d }
+        if let a = by["appleMusic"]?.url { out[StreamingPlatform.appleMusic.rawValue] = a }
+        return out.isEmpty ? nil : out
     }
 
     // MARK: Événements (leader crée, membres suggèrent la setlist)
@@ -2206,6 +2339,7 @@ final class AppStore: ObservableObject {
             let info = await Self.fetchTrackInfo(title: pick.0, artist: pick.1)
             song.artworkURL = info.artworkURL
             song.trackURL = info.trackURL
+            song.platformLinks = info.platformLinks
             self.insertSong(song, in: groupID, eventID: eventID)
             self.pushLocal(
                 title: "\(group.emoji) \(group.name)",
@@ -2237,10 +2371,14 @@ final class AppStore: ObservableObject {
         persistGroups()
         if let backend, isLive {
             let docPaths = group.docs.compactMap(\.remotePath)
+            let leaderID = liveUserID
             syncLive {
                 // Les lignes `group_docs` partent en cascade avec le groupe ;
-                // les fichiers du bucket sont nettoyés au mieux.
+                // les fichiers du bucket (partitions + photo) sont nettoyés au mieux.
                 try? await backend.deleteGroupDocFiles(paths: docPaths)
+                if let leaderID {
+                    try? await backend.deleteGroupPhoto(leaderID: leaderID, groupID: group.id)
+                }
                 try await backend.deleteGroup(group.id)
             }
         }
@@ -2544,17 +2682,20 @@ final class AppStore: ObservableObject {
     /// Ajoute une vidéo de démo. En live : compression 720p puis envoi sur le
     /// serveur (visible par tous) ; en démo : simple copie locale.
     /// Vérifier `canAddVideo` avant.
-    func addDemoVideo(from sourceURL: URL) async {
-        guard canAddVideo else { return }
+    @discardableResult
+    func addDemoVideo(from sourceURL: URL) async -> DemoVideo? {
+        guard canAddVideo else { return nil }
         guard let backend, let userID = liveUserID else {
             let fileName = "demo_video_\(Int(Date().timeIntervalSince1970)).\(sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension)"
             do {
                 try FileManager.default.copyItem(at: sourceURL, to: Self.mediaURL(for: fileName))
-                saveVideos(profile.videos + [DemoVideo(fileName: fileName, date: Date())])
+                let video = DemoVideo(fileName: fileName, date: Date())
+                saveVideos(profile.videos + [video])
+                return video
             } catch {
                 backendError = tr("La vidéo n'a pas pu être enregistrée.")
+                return nil
             }
-            return
         }
         videoUploadInProgress = true
         defer { videoUploadInProgress = false }
@@ -2577,14 +2718,31 @@ final class AppStore: ObservableObject {
                 remoteURL: url.absoluteString,
                 thumbURL: thumbURL
             )
-            saveVideos(profile.videos + [video])
+            let updated = profile.videos + [video]
+            // Sync serveur AVANT de valider en local : si le serveur refuse
+            // (RLS, quota, taille jsonb), on nettoie les fichiers tout juste
+            // envoyés et on N'affiche PAS une vidéo fantôme qui disparaîtrait
+            // au prochain rafraîchissement.
+            do {
+                try await backend.updateDemoVideos(updated.filter { $0.storagePath?.isEmpty == false }, userID: userID)
+            } catch {
+                var paths = [path]
+                if let thumbPath = Self.storagePath(fromPublicURL: thumbURL) { paths.append(thumbPath) }
+                try? await backend.deleteDemoVideoFiles(paths: paths)
+                throw error
+            }
+            profile.demoVideos = updated
+            profile.videoFileNames = nil
+            saveProfile()
+            return video
         } catch VideoImportError.tooLong {
             backendError = tr("Vidéo trop longue — 3 minutes maximum.")
         } catch VideoImportError.tooLarge {
             backendError = tr("Vidéo trop lourde — raccourcis-la et réessaie.")
         } catch {
-            backendError = tr("La vidéo n'a pas pu être envoyée — vérifie le réseau.")
+            backendError = tr("La vidéo n'a pas pu être enregistrée.") + " (\(error.localizedDescription))"
         }
+        return nil
     }
 
     /// Taille maximale d'une vidéo envoyée (limite du bucket : 50 Mo).
@@ -2902,6 +3060,36 @@ final class AppStore: ObservableObject {
         return 40 + abs(musician.name.stableHash) % 320 + (isFollowing(musician) ? 1 : 0)
     }
 
+    /// Abonnés d'un profil, en objets Musician (feuille cliquable).
+    /// Live : graphe serveur (bloqués retirés). Démo : échantillon stable
+    /// dimensionné sur `followerCount(of:)`.
+    func followers(of musician: Musician) -> [Musician] {
+        if isLive {
+            let ids = Set(liveFollowersByProfile[musician.id] ?? [])
+            return musicians
+                .filter { ids.contains($0.id) && !blockedUserIDs.contains($0.id) }
+                .sorted { $0.name < $1.name }
+        }
+        let pool = musicians.filter { $0.id != musician.id }
+        let count = min(followerCount(of: musician), pool.count)
+        let seed = musician.name
+        return Array(
+            pool.sorted { abs(($0.name + seed).stableHash) < abs(($1.name + seed).stableHash) }
+                .prefix(count)
+        )
+    }
+
+    /// Mes abonnés en objets Musician (feuille de mon profil).
+    var myFollowerMusicians: [Musician] {
+        if isLive, let myID = liveUserID {
+            let ids = Set(liveFollowersByProfile[myID] ?? [])
+            return musicians
+                .filter { ids.contains($0.id) && !blockedUserIDs.contains($0.id) }
+                .sorted { $0.name < $1.name }
+        }
+        return musicians.filter { myFollowers.contains($0.name) }.sorted { $0.name < $1.name }
+    }
+
     // MARK: - Suggestions de musiciens à suivre
 
     /// Profils recommandés : pas encore suivis, classés par affinité —
@@ -3181,23 +3369,97 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func toggleApply(_ event: GigRequest) {
-        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
-        events[index].applied.toggle()
+    /// Postuler à un SOS sur un instrument précis (le poste choisi). Optimiste
+    /// mais SÛR : si l'envoi échoue on annule proprement (fini le bouton qui
+    /// « revient » tout seul) et on affiche l'erreur réelle. Un message auto
+    /// balisé part à l'organisateur.
+    func applyToGig(_ event: GigRequest, instrument: Instrument?) {
+        guard let index = events.firstIndex(where: { $0.id == event.id }), !events[index].applied else { return }
+        events[index].applied = true
+        events[index].myApplicationInstrument = instrument
+        events[index].myApplicationStatus = .pending
         persistEvents()
-        if let backend, let userID = liveUserID {
-            let applied = events[index].applied
-            Task {
-                do {
-                    if applied {
-                        try await backend.apply(to: event.id, musicianID: userID)
-                        await backend.deliverPendingPushNotifications()
-                    } else {
-                        try await backend.unapply(from: event.id, musicianID: userID)
-                    }
-                } catch {
-                    backendError = tr("La candidature n'a pas pu être envoyée.")
+        guard let backend, let userID = liveUserID else { return }
+        let gigID = event.id
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await backend.apply(to: gigID, musicianID: userID, instrument: instrument)
+                await backend.deliverPendingPushNotifications()
+                await self.sendApplicationMessage(for: event, instrument: instrument)
+            } catch {
+                if let i = self.events.firstIndex(where: { $0.id == gigID }) {
+                    self.events[i].applied = false
+                    self.events[i].myApplicationInstrument = nil
+                    self.events[i].myApplicationStatus = nil
+                    self.persistEvents()
                 }
+                self.backendError = self.tr("La candidature n'a pas pu être envoyée.") + " (\(error.localizedDescription))"
+            }
+        }
+    }
+
+    /// Retire ma candidature à un SOS.
+    func withdrawApplication(_ event: GigRequest) {
+        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
+        events[index].applied = false
+        events[index].myApplicationInstrument = nil
+        events[index].myApplicationStatus = nil
+        persistEvents()
+        guard let backend, let userID = liveUserID else { return }
+        let gigID = event.id
+        Task {
+            do { try await backend.unapply(from: gigID, musicianID: userID) }
+            catch { backendError = tr("La candidature n'a pas pu être retirée.") }
+        }
+    }
+
+    /// Message auto envoyé à l'organisateur au moment où je postule.
+    private func sendApplicationMessage(for gig: GigRequest, instrument: Instrument?) async {
+        guard let hostId = gig.hostId,
+              let host = musicians.first(where: { $0.id == hostId }) else { return }
+        let conversation = await conversation(with: host)
+        let dateLabel = gig.date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
+        var lines = [tr("🚨 Je peux te dépanner !")]
+        if let instrument {
+            lines.append(String(format: tr("🎸 Instrument : %@"), tr(instrument.rawValue)))
+        }
+        lines.append(String(format: tr("Pour « %@ » le %@."), gig.title, dateLabel))
+        sendMessage(lines.joined(separator: "\n"), in: conversation)
+    }
+
+    /// Charge les candidatures d'une de MES annonces (organisateur).
+    func loadApplicants(for gig: GigRequest) {
+        guard let backend, isLive, gig.isMine else { return }
+        let gigID = gig.id
+        Task { [weak self] in
+            guard let self, let rows = try? await backend.fetchApplicants(gigID: gigID) else { return }
+            let applicants: [GigApplicant] = rows.compactMap { row in
+                guard let musician = self.musicians.first(where: { $0.id == row.musicianId }) else { return nil }
+                return GigApplicant(
+                    id: row.id,
+                    musician: musician,
+                    instrument: Instrument(rawValue: row.instrument ?? ""),
+                    status: GigApplicationStatus(rawValue: row.status ?? "pending") ?? .pending
+                )
+            }
+            self.applicantsByGig[gigID] = applicants
+        }
+    }
+
+    /// L'organisateur accepte un candidat : le poste devient pourvu, les
+    /// concurrents sur cet instrument sont refusés (côté serveur).
+    func acceptApplicant(_ applicant: GigApplicant, in gig: GigRequest) {
+        guard let backend, isLive else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await backend.acceptApplication(applicant.id)
+                await backend.deliverPendingPushNotifications()
+                self.loadApplicants(for: gig)
+                await self.refreshGigs()
+            } catch {
+                self.backendError = self.tr("Le candidat n'a pas pu être accepté.") + " (\(error.localizedDescription))"
             }
         }
     }

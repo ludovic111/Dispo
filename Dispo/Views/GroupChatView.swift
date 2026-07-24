@@ -184,7 +184,10 @@ struct GroupChatView: View {
             CreateEventView(
                 prefillTitle: event.title,
                 prefillPlace: event.venue,
-                prefillDate: event.date
+                prefillDate: event.date,
+                // « Dispo en fonction des rôles » : le SOS cible les rôles du
+                // groupe non couverts par un membre disponible ce jour-là.
+                prefillInstruments: (group?.uncoveredRoles(for: event)) ?? []
             )
         }
         .fileImporter(
@@ -782,7 +785,7 @@ struct ListenSheet: View {
                                         Text(verbatim: platform.label)
                                             .font(.subheadline.weight(.bold))
                                             .foregroundStyle(.primary)
-                                        if platform == .appleMusic, song.trackURL != nil {
+                                        if platform.hasDirectLink(for: song) {
                                             TagView(text: store.tr("Lien direct"), color: JC.feutrine)
                                         }
                                         Spacer(minLength: 0)
@@ -1043,6 +1046,11 @@ struct GroupMembersSheet: View {
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(kind == .permanent ? JC.bronze : .secondary)
                         }
+                        if let role = group.role(for: name) {
+                            Label(store.tr(role.rawValue), systemImage: "guitars")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(JC.laiton)
+                        }
                     }
                 }
                 Spacer(minLength: 0)
@@ -1062,6 +1070,29 @@ struct GroupMembersSheet: View {
                                         ? GroupMemberKind.occasional.symbol
                                         : GroupMemberKind.permanent.symbol
                                 )
+                            }
+                            Menu {
+                                let options = store.musicians.first(where: { $0.name == name })?.instruments ?? Instrument.allCases
+                                ForEach(options) { instrument in
+                                    Button {
+                                        store.setMemberRole(name, instrument, in: group)
+                                    } label: {
+                                        if group.role(for: name) == instrument {
+                                            Label(store.tr(instrument.rawValue), systemImage: "checkmark")
+                                        } else {
+                                            Text(store.tr(instrument.rawValue))
+                                        }
+                                    }
+                                }
+                                if group.role(for: name) != nil {
+                                    Button(role: .destructive) {
+                                        store.setMemberRole(name, nil, in: group)
+                                    } label: {
+                                        Label("Retirer le rôle", systemImage: "xmark")
+                                    }
+                                }
+                            } label: {
+                                Label("Rôle dans le groupe", systemImage: "guitars")
                             }
                         }
                         if isPremiumMember {

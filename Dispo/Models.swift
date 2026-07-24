@@ -1004,6 +1004,9 @@ struct Song: Codable, Identifiable, Hashable {
     var artworkURL: String?
     /// Lien direct Apple Music (iTunes Search) — nil si introuvable.
     var trackURL: String?
+    /// Liens directs par plateforme (StreamingPlatform.rawValue → URL),
+    /// résolus via Odesli (song.link). nil → repli sur la recherche.
+    var platformLinks: [String: String]?
     var suggestedBy: String
     var isApproved: Bool
 }
@@ -1040,6 +1043,10 @@ enum StreamingPlatform: String, CaseIterable, Identifiable {
 
     /// Lien d'écoute du morceau sur cette plateforme.
     func url(for song: Song) -> URL? {
+        // Lien direct résolu (Odesli) prioritaire — pour toutes les plateformes.
+        if let direct = song.platformLinks?[rawValue], let url = URL(string: direct) {
+            return url
+        }
         if self == .appleMusic, let track = song.trackURL, let url = URL(string: track) {
             return url
         }
@@ -1053,6 +1060,13 @@ enum StreamingPlatform: String, CaseIterable, Identifiable {
         case .youtubeMusic: return URL(string: "https://music.youtube.com/search?q=\(encoded)")
         case .deezer: return URL(string: "https://www.deezer.com/search/\(encoded)")
         }
+    }
+
+    /// Vrai si on a un lien direct vers le morceau (pas juste une recherche).
+    func hasDirectLink(for song: Song) -> Bool {
+        if song.platformLinks?[rawValue] != nil { return true }
+        if self == .appleMusic, song.trackURL != nil { return true }
+        return false
     }
 }
 
@@ -1213,6 +1227,8 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var memberNames: [String]
     /// Permanent vs occasionnel, par nom. Absent = permanent (noyau par défaut).
     var memberKinds: [String: GroupMemberKind]?
+    /// Rôle (instrument) de chaque membre dans le groupe, par nom.
+    var memberRoles: [String: String]?
     var messages: [GroupMessage] = []
     var docs: [GroupDoc] = []
     /// Répertoire du groupe (morceaux validés + suggestions en attente).
@@ -1234,6 +1250,30 @@ struct GroupChat: Codable, Identifiable, Hashable {
 
     func memberKind(for name: String) -> GroupMemberKind {
         memberKinds?[name] ?? .permanent
+    }
+
+    /// Rôle (instrument) d'un membre dans le groupe, si défini.
+    func role(for name: String) -> Instrument? {
+        memberRoles?[name].flatMap(Instrument.init(rawValue:))
+    }
+
+    /// Rôles présents dans le groupe (l'instrumentation).
+    var roleInstruments: [Instrument] {
+        let set = Set((memberRoles ?? [:]).values.compactMap(Instrument.init(rawValue:)))
+        return set.sorted { $0.rawValue < $1.rawValue }
+    }
+
+    /// Rôles NON couverts par un membre disponible pour l'événement — le cœur
+    /// de « dispo en fonction des rôles » : ce qu'un SOS de groupe doit chercher.
+    func uncoveredRoles(for event: GroupEvent) -> [Instrument] {
+        let roles = memberRoles ?? [:]
+        let all = Set(roles.values.compactMap(Instrument.init(rawValue:)))
+        var covered = Set<Instrument>()
+        for (name, raw) in roles {
+            guard let role = Instrument(rawValue: raw) else { continue }
+            if event.attendance?[name] == .available { covered.insert(role) }
+        }
+        return all.subtracting(covered).sorted { $0.rawValue < $1.rawValue }
     }
 
     var permanentMembers: [String] {
@@ -1263,11 +1303,17 @@ struct GigRequest: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var title: String
     var hostName: String
+    /// Identifiant serveur de l'organisateur (pour ouvrir la conversation).
+    var hostId: UUID?
     var date: Date
     var place: String
     var neighborhood: String
     var genre: Genre
     var wantedInstruments: [Instrument]
+    /// Instruments déjà pourvus (candidat accepté) — retirés des postes
+    /// ouverts. Optionnel : absent de SeedData.json et des caches d'avant 1.2
+    /// (le décodeur synthétisé ignore les valeurs par défaut).
+    var filledInstruments: [Instrument]?
     /// Cachet proposé en CHF (nil = à discuter).
     var fee: Int?
     /// Moyen de versement du cachet (token PaymentMethod ou texte libre).
@@ -1275,14 +1321,24 @@ struct GigRequest: Codable, Identifiable, Hashable {
     var descriptionText: String
     /// L'utilisateur a postulé à cette annonce.
     var applied: Bool = false
+    /// Si j'ai postulé : l'instrument proposé et l'état de ma candidature.
+    var myApplicationInstrument: Instrument?
+    var myApplicationStatus: GigApplicationStatus?
     var isMine: Bool = false
     /// Date de publication — les 30 premières minutes sont réservées aux
     /// membres Premium (la killer feature « alerte en avance »).
     var postedAt: Date?
 
+    /// Postes encore à pourvoir (recherchés moins déjà pourvus).
+    var openInstruments: [Instrument] {
+        let filled = filledInstruments ?? []
+        return wantedInstruments.filter { !filled.contains($0) }
+    }
+
     enum CodingKeys: String, CodingKey {
-        case id, title, hostName, date, place, neighborhood, genre
-        case wantedInstruments, fee, paymentMethod, descriptionText, applied, isMine, postedAt
+        case id, title, hostName, hostId, date, place, neighborhood, genre
+        case wantedInstruments, filledInstruments, fee, paymentMethod, descriptionText
+        case applied, myApplicationInstrument, myApplicationStatus, isMine, postedAt
     }
 
     var feeLabel: String {
@@ -1309,6 +1365,20 @@ struct GigRequest: Codable, Identifiable, Hashable {
         guard let earlyAccessEnd, !isMine else { return false }
         return now < earlyAccessEnd
     }
+}
+
+/// État d'une candidature à un SOS.
+enum GigApplicationStatus: String, Codable, Hashable {
+    case pending, accepted, declined
+}
+
+/// Un candidat à un SOS, vu par l'organisateur (liste groupée par instrument).
+struct GigApplicant: Identifiable, Hashable {
+    /// Identifiant de la candidature (gig_applications.id).
+    let id: UUID
+    var musician: Musician
+    var instrument: Instrument?
+    var status: GigApplicationStatus
 }
 
 // MARK: - Messagerie

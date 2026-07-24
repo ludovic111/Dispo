@@ -318,15 +318,22 @@ enum JC {
         ],
         startPoint: .top, endPoint: .bottom
     )
-    /// « Lumière de scène » — le seul vrai dégradé de l'identité,
-    /// réservé au Premium / pass backstage.
+    /// « Velours des coulisses » — le dégradé signature réservé au Premium /
+    /// pass backstage. Un bleu-vert paon, volontairement distinct du laiton :
+    /// l'or reste le CTA (hero), le teal dit « backstage ».
     static let premium = LinearGradient(
         colors: [
-            Color(red: 0.933, green: 0.780, blue: 0.431),
-            Color(red: 0.851, green: 0.643, blue: 0.255),
-            Color(red: 0.663, green: 0.439, blue: 0.122)
+            Color(red: 0.173, green: 0.431, blue: 0.416),  // #2C6E6A teal éclairé
+            Color(red: 0.122, green: 0.329, blue: 0.314),  // #1F5450 paon
+            Color(red: 0.078, green: 0.235, blue: 0.227)   // #143C3A teal profond
         ],
         startPoint: .topLeading, endPoint: .bottomTrailing
+    )
+    /// Teinte pleine du Premium (icônes, halos, petites touches teal) —
+    /// le contrepoint froid qui « colore » la palette sans casser la discipline.
+    static let premiumTint = Color(
+        light: Color(red: 0.106, green: 0.286, blue: 0.271),  // #1B4945
+        dark: Color(red: 0.239, green: 0.518, blue: 0.498)    // #3D847F
     )
 
     /// Apparence globale (tab bar, navigation bar).
@@ -709,26 +716,22 @@ struct SocialLogoView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                     .fill(.black)
-                // La note « chromatique » signature : cyan + rose décalés.
-                Image(systemName: "music.note")
-                    .font(.system(size: size * 0.5, weight: .bold))
-                    .foregroundStyle(Color(red: 0.15, green: 0.96, blue: 0.93))
-                    .offset(x: -size * 0.04, y: -size * 0.04)
-                Image(systemName: "music.note")
-                    .font(.system(size: size * 0.5, weight: .bold))
-                    .foregroundStyle(Color(red: 0.98, green: 0.17, blue: 0.33))
-                    .offset(x: size * 0.04, y: size * 0.04)
-                Image(systemName: "music.note")
-                    .font(.system(size: size * 0.5, weight: .bold))
-                    .foregroundStyle(.white)
+                // La note signature, dédoublée en cyan / rose (effet chromatique).
+                TikTokGlyph(size: size * 0.72, color: Color(red: 0.145, green: 0.957, blue: 0.933))
+                    .offset(x: -size * 0.035, y: -size * 0.02)
+                TikTokGlyph(size: size * 0.72, color: Color(red: 0.996, green: 0.173, blue: 0.333))
+                    .offset(x: size * 0.035, y: size * 0.02)
+                TikTokGlyph(size: size * 0.72, color: .white)
             }
             .frame(width: size, height: size)
         case .youtube:
+            // Badge horizontal rouge + triangle blanc (proportions réelles).
             ZStack {
-                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
                     .fill(Color(red: 1.0, green: 0.0, blue: 0.0))
+                    .frame(width: size, height: size * 0.72)
                 Image(systemName: "play.fill")
-                    .font(.system(size: size * 0.42, weight: .bold))
+                    .font(.system(size: size * 0.3, weight: .bold))
                     .foregroundStyle(.white)
             }
             .frame(width: size, height: size)
@@ -736,9 +739,8 @@ struct SocialLogoView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                     .fill(.black)
-                Text(verbatim: "𝕏")
-                    .font(.system(size: size * 0.58, weight: .bold))
-                    .foregroundStyle(.white)
+                XMark()
+                    .stroke(.white, style: StrokeStyle(lineWidth: size * 0.1, lineCap: .butt))
             }
             .frame(width: size, height: size)
         }
@@ -831,16 +833,22 @@ struct StreamingLogoView: View {
 private struct SpotifyWaves: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let center = CGPoint(x: rect.midX, y: rect.maxY * 1.18)
-        for (index, radius) in [0.52, 0.72, 0.92].enumerated() {
-            let r = rect.width * radius * 0.72
-            let spread: Double = 26 - Double(index) * 2
-            path.move(to: point(on: center, radius: r, angle: 270 - spread))
+        let w = rect.width
+        // Centre des arcs bien sous le logo → trois ondes bombées vers le haut,
+        // la plus haute la plus large — comme le vrai logo Spotify.
+        let center = CGPoint(x: rect.midX, y: rect.maxY + w * 0.16)
+        let waves: [(r: CGFloat, spread: Double)] = [
+            (w * 0.82, 35),
+            (w * 0.63, 34),
+            (w * 0.46, 32)
+        ]
+        for wave in waves {
+            path.move(to: point(on: center, radius: wave.r, angle: 270 - wave.spread))
             path.addArc(
                 center: center,
-                radius: r,
-                startAngle: .degrees(270 - spread),
-                endAngle: .degrees(270 + spread),
+                radius: wave.r,
+                startAngle: .degrees(270 - wave.spread),
+                endAngle: .degrees(270 + wave.spread),
                 clockwise: false
             )
         }
@@ -875,6 +883,52 @@ private struct DeezerBars: View {
             }
         }
         .frame(height: size * 0.42, alignment: .bottom)
+    }
+}
+
+/// La note « quaver » stylisée du logo TikTok — tête ronde en bas à gauche,
+/// hampe qui se recourbe vers la droite en haut.
+private struct TikTokGlyph: View {
+    let size: CGFloat
+    let color: Color
+    var body: some View {
+        ZStack {
+            TikTokStem()
+                .stroke(color, style: StrokeStyle(lineWidth: size * 0.12, lineCap: .round, lineJoin: .round))
+            Circle()
+                .fill(color)
+                .frame(width: size * 0.26, height: size * 0.26)
+                .offset(x: -size * 0.15, y: size * 0.24)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+private struct TikTokStem: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var p = Path()
+        p.move(to: CGPoint(x: w * 0.50, y: h * 0.76))
+        p.addLine(to: CGPoint(x: w * 0.50, y: h * 0.30))
+        p.addQuadCurve(
+            to: CGPoint(x: w * 0.73, y: h * 0.36),
+            control: CGPoint(x: w * 0.53, y: h * 0.22)
+        )
+        return p
+    }
+}
+
+/// La croix du logo X (ex-Twitter) — deux traits droits à bouts francs.
+private struct XMark: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        let i: CGFloat = 0.31
+        var p = Path()
+        p.move(to: CGPoint(x: w * i, y: h * i))
+        p.addLine(to: CGPoint(x: w * (1 - i), y: h * (1 - i)))
+        p.move(to: CGPoint(x: w * (1 - i), y: h * i))
+        p.addLine(to: CGPoint(x: w * i, y: h * (1 - i)))
+        return p
     }
 }
 
@@ -928,7 +982,7 @@ struct PremiumBadge: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
             .background(JC.premium, in: Capsule())
-            .foregroundStyle(JC.billetInk)
+            .foregroundStyle(JC.billetPaper)
     }
 }
 
@@ -1106,7 +1160,12 @@ struct JCPromoBanner: View {
 
     enum PromoStyle {
         case premium, hero
-        var foreground: Color { JC.billetInk }
+        var foreground: Color {
+            switch self {
+            case .premium: return JC.billetPaper  // ivoire sur le teal profond
+            case .hero: return JC.billetInk        // encre sur le laiton clair
+            }
+        }
         var background: AnyShapeStyle {
             switch self {
             case .premium: return AnyShapeStyle(JC.premium)
