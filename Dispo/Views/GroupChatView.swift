@@ -325,11 +325,11 @@ struct GroupChatView: View {
                         subtitle: isLeader ? "À valider — c'est toi qui décides" : "En attente du leader"
                     )
                     ForEach(group.pendingSongs) { song in
-                        SongRow(song: song, isLeader: isLeader) {
+                        SongRow(song: song, isLeader: isLeader, onApprove: {
                             store.approveSong(song, in: group.id)
-                        } onReject: {
+                        }, onReject: {
                             store.rejectSong(song, in: group.id)
-                        }
+                        }, groupID: group.id)
                     }
                 }
 
@@ -347,7 +347,8 @@ struct GroupChatView: View {
                         song: song,
                         isLeader: false,
                         onApprove: nil,
-                        onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil
+                        onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil,
+                        groupID: group.id
                     )
                 }
             }
@@ -503,7 +504,21 @@ struct GroupChatView: View {
                     )
                 }
 
-                ForEach(group.docs) { doc in
+                // Les partitions rattachées à un morceau vivent sous ce
+                // morceau (onglet Répertoire) : on ne les répète pas ici,
+                // on dit juste où elles sont.
+                let attached = group.docs.count - group.looseDocs.count
+                if attached > 0 {
+                    Label(
+                        String(format: store.tr("%lld partitions sont rangées sous leurs morceaux — ouvre le morceau dans « Répertoire »."), attached),
+                        systemImage: "music.note.list"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                ForEach(group.looseDocs) { doc in
                     Button {
                         openDoc(doc, in: group)
                     } label: {
@@ -595,13 +610,24 @@ struct SongRow: View {
     let isLeader: Bool
     let onApprove: (() -> Void)?
     let onReject: (() -> Void)?
+    /// Groupe du morceau : ouvre la fiche (partitions, tonalité, commentaires).
+    /// nil = ligne d'affichage seule (aperçus, captures).
+    let groupID: GroupChat.ID?
     @State private var showListen = false
+    @State private var showDetail = false
 
-    init(song: Song, isLeader: Bool, onApprove: (() -> Void)? = nil, onReject: (() -> Void)? = nil) {
+    init(
+        song: Song,
+        isLeader: Bool,
+        onApprove: (() -> Void)? = nil,
+        onReject: (() -> Void)? = nil,
+        groupID: GroupChat.ID? = nil
+    ) {
         self.song = song
         self.isLeader = isLeader
         self.onApprove = onApprove
         self.onReject = onReject
+        self.groupID = groupID
     }
 
     var body: some View {
@@ -612,42 +638,59 @@ struct SongRow: View {
                 ListenSheet(song: song)
                     .presentationDetents([.height(380)])
             }
+            .sheet(isPresented: $showDetail) {
+                if let groupID {
+                    SongDetailSheet(groupID: groupID, songID: song.id)
+                }
+            }
     }
 
     private var songCard: some View {
         JCCard(padding: 10) {
             HStack(spacing: 11) {
-                // Pochette — repli : vignette note de musique.
-                if let artwork = song.artworkURL, let url = URL(string: artwork) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        artworkPlaceholder
+                // Seule la partie « identité » ouvre la fiche du morceau :
+                // les boutons de droite (écouter, valider, refuser) doivent
+                // rester cliquables — deux boutons imbriqués se volent le tap.
+                Button {
+                    if groupID != nil { showDetail = true }
+                } label: {
+                    HStack(spacing: 11) {
+                        // Pochette — repli : vignette note de musique.
+                        if let artwork = song.artworkURL, let url = URL(string: artwork) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                artworkPlaceholder
+                            }
+                            .frame(width: 46, height: 46)
+                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        } else {
+                            artworkPlaceholder
+                                .frame(width: 46, height: 46)
+                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(song.title)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(song.artist)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            if !song.isApproved {
+                                Text("Suggéré par \(song.suggestedBy)")
+                                    .font(.caption2)
+                                    .foregroundStyle(JC.bronze)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .frame(width: 46, height: 46)
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                } else {
-                    artworkPlaceholder
-                        .frame(width: 46, height: 46)
-                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .contentShape(Rectangle())
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(song.title)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Text(song.artist)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    if !song.isApproved {
-                        Text("Suggéré par \(song.suggestedBy)")
-                            .font(.caption2)
-                            .foregroundStyle(JC.bronze)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 0)
+                .buttonStyle(PressableStyle())
+                .disabled(groupID == nil)
                 listenMenu
                 if !song.isApproved && isLeader {
                     // Le bouton d'acceptation demandé — un tap et c'est validé.
@@ -1450,11 +1493,11 @@ struct GroupEventSheet: View {
                                     subtitle: isLeader ? "À valider — c'est toi qui décides" : "En attente du leader"
                                 )
                                 ForEach(pending) { song in
-                                    SongRow(song: song, isLeader: isLeader) {
+                                    SongRow(song: song, isLeader: isLeader, onApprove: {
                                         store.approveSong(song, in: groupID, eventID: eventID)
-                                    } onReject: {
+                                    }, onReject: {
                                         store.rejectSong(song, in: groupID, eventID: eventID)
-                                    }
+                                    }, groupID: groupID)
                                 }
                             }
 
@@ -1475,7 +1518,8 @@ struct GroupEventSheet: View {
                                         song: song,
                                         isLeader: false,
                                         onApprove: nil,
-                                        onReject: isLeader ? { store.rejectSong(song, in: groupID, eventID: eventID) } : nil
+                                        onReject: isLeader ? { store.rejectSong(song, in: groupID, eventID: eventID) } : nil,
+                                        groupID: groupID
                                     )
                                 }
                             }

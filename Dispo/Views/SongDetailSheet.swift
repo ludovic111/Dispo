@@ -1,0 +1,560 @@
+import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
+
+/// La fiche d'un morceau du répertoire : sa tonalité — transposée pour TON
+/// instrument —, sa grille d'accords, ses partitions (PDF ou photos) et le
+/// fil de commentaires du groupe.
+struct SongDetailSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    let groupID: GroupChat.ID
+    let songID: Song.ID
+
+    /// Onglets de la fiche.
+    private enum Tab: String, CaseIterable, Identifiable {
+        case chart = "Grille"
+        case scores = "Partitions"
+        case comments = "Commentaires"
+        var id: String { rawValue }
+    }
+
+    @State private var tab: Tab = .chart
+    /// Accord de lecture choisi (par défaut celui de mon instrument).
+    @State private var transposition: Transposition?
+    @State private var showEdit = false
+    @State private var showListen = false
+    @State private var newComment = ""
+    @State private var photoItem: PhotosPickerItem?
+    @State private var importingFile = false
+    @State private var previewURL: PreviewDoc?
+    /// Instrument visé par la partition qu'on ajoute (nil = tout le monde).
+    @State private var uploadInstrument: Instrument?
+
+    private var group: GroupChat? { store.groups.first { $0.id == groupID } }
+    private var song: Song? {
+        guard let group else { return nil }
+        return group.songs.first { $0.id == songID }
+            ?? group.allEvents.flatMap(\.setlist).first { $0.id == songID }
+    }
+    private var isLeader: Bool { group.map { store.canLead($0) } ?? false }
+
+    /// Mon instrument dans ce groupe (rôle assigné, sinon mon premier).
+    private var myInstrument: Instrument? {
+        group?.role(for: store.profile.name) ?? store.profile.instruments.first
+    }
+
+    /// L'accord de lecture effectif : celui choisi, sinon celui de mon
+    /// instrument, sinon l'ut (hauteur réelle).
+    private var activeTransposition: Transposition {
+        transposition ?? myInstrument?.defaultTransposition ?? .c
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                if let group, let song {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            header(song)
+                            Picker("", selection: $tab.animation()) {
+                                ForEach(Tab.allCases) { option in
+                                    Text(LocalizedStringKey(option.rawValue)).tag(option)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            switch tab {
+                            case .chart: chartTab(song)
+                            case .scores: scoresTab(song, group: group)
+                            case .comments: commentsTab(song, group: group)
+                            }
+                        }
+                        .padding(18)
+                    }
+                }
+            }
+            .navigationTitle(song?.title ?? "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if isLeader {
+                        Button("Modifier") { showEdit = true }
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+            .sheet(isPresented: $showEdit) {
+                if let song { SongEditSheet(groupID: groupID, song: song) }
+            }
+            .sheet(isPresented: $showListen) {
+                if let song {
+                    ListenSheet(song: song).presentationDetents([.height(380)])
+                }
+            }
+            .sheet(item: $previewURL) { doc in
+                DocPreview(url: doc.url)
+                    .ignoresSafeArea()
+            }
+            .fileImporter(
+                isPresented: $importingFile,
+                allowedContentTypes: [.pdf, .image, .plainText]
+            ) { result in
+                guard case .success(let url) = result, let group, let song else { return }
+                store.addDoc(
+                    from: url,
+                    title: partTitle(for: song),
+                    to: group,
+                    songID: song.id,
+                    instrument: uploadInstrument
+                )
+            }
+            .onChange(of: photoItem) { _, item in
+                guard let item, let group, let song else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let jpeg = UIImage(data: data)?.resizedJPEG(maxSide: 2200, quality: 0.8) {
+                        store.addPhotoDoc(
+                            jpeg,
+                            title: partTitle(for: song),
+                            to: group,
+                            songID: song.id,
+                            instrument: uploadInstrument
+                        )
+                    }
+                    photoItem = nil
+                }
+            }
+        }
+    }
+
+    /// « Autumn Leaves — Saxophone » ou juste le titre si c'est pour tous.
+    private func partTitle(for song: Song) -> String {
+        guard let uploadInstrument else { return song.title }
+        return "\(song.title) — \(store.tr(uploadInstrument.rawValue))"
+    }
+
+    // MARK: - En-tête
+
+    private func header(_ song: Song) -> some View {
+        JCCard {
+            HStack(spacing: 12) {
+                if let artwork = song.artworkURL, let url = URL(string: artwork) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.clear
+                    }
+                    .frame(width: 54, height: 54)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(song.title)
+                        .font(JCFont.display(19))
+                        .lineLimit(2)
+                    Text(song.artist)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Button { showListen = true } label: {
+                    Image(systemName: "headphones")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(JC.laiton)
+                        .padding(9)
+                        .background(JC.inset, in: Circle())
+                }
+                .buttonStyle(PressableStyle())
+                .accessibilityLabel(Text("Écouter sur…"))
+            }
+        }
+    }
+
+    // MARK: - Grille et tonalité
+
+    @ViewBuilder
+    private func chartTab(_ song: Song) -> some View {
+        let concert = song.musicalKey
+        let shift = activeTransposition.semitones
+
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Tonalité", systemImage: "tuningfork")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(JC.bronze)
+                    Spacer()
+                    if let myInstrument {
+                        Text(store.tr(myInstrument.rawValue))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let concert {
+                    HStack(spacing: 18) {
+                        keyBlock(
+                            title: "Réel (concert)",
+                            key: concert.label,
+                            highlighted: shift == 0
+                        )
+                        Image(systemName: "arrow.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.tertiary)
+                        keyBlock(
+                            title: "Ta partition",
+                            key: concert.transposed(by: shift).label,
+                            highlighted: shift != 0
+                        )
+                    }
+                } else {
+                    Text(isLeader
+                         ? "Tonalité non renseignée — ajoute-la avec « Modifier », chacun verra la sienne."
+                         : "Tonalité non renseignée par le leader.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Picker("Je lis en", selection: Binding(
+                    get: { activeTransposition },
+                    set: { transposition = $0 }
+                )) {
+                    ForEach(Transposition.allCases) { option in
+                        Text(LocalizedStringKey(option.rawValue)).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(JC.laiton)
+            }
+        }
+
+        // La grille d'accords, transposée dans la foulée.
+        if let chords = song.chords, !chords.isEmpty {
+            JCCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label("Grille", systemImage: "square.grid.2x2")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(JC.bronze)
+                        Spacer()
+                        if shift != 0 {
+                            TagView(text: activeTransposition.rawValue, color: JC.laiton)
+                        }
+                    }
+                    Text(verbatim: MusicTheory.transposeGrid(
+                        chords,
+                        by: shift,
+                        // La grille s'écrit dans l'alphabet de la tonalité
+                        // d'arrivée : dièses en mi majeur, bémols en si♭.
+                        preferSharps: concert?.transposed(by: shift).prefersSharps ?? false
+                    ))
+                        .font(JCFont.mono(15))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        } else if isLeader {
+            JCEmptyState(
+                icon: "square.grid.2x2",
+                title: "Pas encore de grille",
+                message: "Colle la grille d'accords dans « Modifier » : elle sera transposée automatiquement pour chaque instrument."
+            )
+        }
+
+        // iReal Pro : le lien exporté depuis l'app, ouvert d'un tap.
+        if let ireal = song.irealURL, let url = URL(string: ireal) {
+            Button { openURL(url) } label: {
+                Label("Ouvrir dans iReal Pro", systemImage: "arrow.up.forward.app.fill")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(JC.premiumTint.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(JC.premiumTint)
+            }
+            .buttonStyle(PressableStyle())
+        }
+    }
+
+    private func keyBlock(title: LocalizedStringKey, key: String, highlighted: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(verbatim: key)
+                .font(JCFont.display(28))
+                .foregroundStyle(highlighted ? JC.laiton : .primary)
+        }
+    }
+
+    // MARK: - Partitions du morceau
+
+    @ViewBuilder
+    private func scoresTab(_ song: Song, group: GroupChat) -> some View {
+        let docs = group.docs(for: song.id)
+
+        JCCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Ajouter une partition")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(JC.bronze)
+                Picker("Pour", selection: $uploadInstrument) {
+                    Text("Tout le monde").tag(Instrument?.none)
+                    ForEach(Instrument.allCases) { instrument in
+                        Text(LocalizedStringKey(instrument.rawValue)).tag(Instrument?.some(instrument))
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(JC.laiton)
+                HStack(spacing: 10) {
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        Label("Photo", systemImage: "camera.fill")
+                            .font(.caption.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .foregroundStyle(JC.laiton)
+                    }
+                    Button {
+                        importingFile = true
+                    } label: {
+                        Label("Fichier", systemImage: "doc.fill")
+                            .font(.caption.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .foregroundStyle(JC.laiton)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                if store.docUploadInProgress {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Envoi en cours…").font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+
+        if docs.isEmpty {
+            JCEmptyState(
+                icon: "doc.text",
+                title: "Aucune partition",
+                message: "Prends la feuille en photo ou importe le PDF — tout le groupe y aura accès."
+            )
+        }
+
+        ForEach(docs) { doc in
+            Button {
+                Task {
+                    if let url = await store.localURL(for: doc) {
+                        previewURL = PreviewDoc(url: url)
+                    }
+                }
+            } label: {
+                JCCard(padding: 11) {
+                    HStack(spacing: 11) {
+                        Image(systemName: doc.isPhoto ? "photo.fill" : "doc.richtext.fill")
+                            .font(.title3)
+                            .foregroundStyle(JC.laiton)
+                            .frame(width: 30)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(doc.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                if let instrument = doc.instrument {
+                                    TagView(text: instrument, color: JC.bronze)
+                                }
+                                Text(verbatim: doc.addedBy)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        if doc.addedBy == store.profile.name || isLeader {
+                            Button(role: .destructive) {
+                                store.removeDoc(doc, from: group)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                }
+            }
+            .buttonStyle(PressableStyle())
+        }
+    }
+
+    // MARK: - Commentaires
+
+    @ViewBuilder
+    private func commentsTab(_ song: Song, group: GroupChat) -> some View {
+        let comments = group.comments(for: song.id)
+
+        if comments.isEmpty {
+            JCEmptyState(
+                icon: "bubble.left.and.bubble.right",
+                title: "Personne n'a encore parlé de ce morceau",
+                message: "Doigtés, intro, tempo, « on la finit comment ? » — tout le monde peut écrire ici."
+            )
+        }
+
+        ForEach(comments) { comment in
+            JCCard(padding: 11) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        AvatarView(
+                            name: comment.author,
+                            size: 22,
+                            photo: store.photo(forName: comment.author)
+                        )
+                        Text(comment.isMine ? store.tr("Toi") : comment.author)
+                            .font(.caption.weight(.bold))
+                        Spacer(minLength: 0)
+                        Text(comment.date.formatted(.dateTime.day().month(.abbreviated).hour().minute()))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        if comment.isMine || isLeader {
+                            Button(role: .destructive) {
+                                store.removeSongComment(comment, in: group)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                    Text(verbatim: comment.text)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+
+        HStack(spacing: 8) {
+            TextField("Ajouter un commentaire…", text: $newComment, axis: .vertical)
+                .lineLimit(1...4)
+                .padding(11)
+                .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Button {
+                store.addSongComment(newComment, songID: song.id, in: group)
+                newComment = ""
+            } label: {
+                Image(systemName: "paperplane.fill")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(JC.billetInk)
+                    .padding(11)
+                    .background(JC.hero, in: Circle())
+            }
+            .buttonStyle(PressableStyle())
+            .disabled(newComment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+}
+
+/// Fichier prêt à être prévisualisé (wrapper Identifiable).
+struct PreviewDoc: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+// MARK: - Édition d'un morceau (leader)
+
+/// Tonalité, grille d'accords et lien iReal Pro — ce que le leader renseigne
+/// une fois pour tout le groupe.
+struct SongEditSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let groupID: GroupChat.ID
+    let song: Song
+
+    @State private var key = ""
+    @State private var chords = ""
+    @State private var ireal = ""
+
+    private var group: GroupChat? { store.groups.first { $0.id == groupID } }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Tonalité (réelle)", selection: $key) {
+                        Text("Non renseignée").tag("")
+                        ForEach(MusicalKey.allKeys, id: \.self) { musicalKey in
+                            Text(verbatim: musicalKey.label).tag(musicalKey.label)
+                        }
+                    }
+                } header: {
+                    Text("Tonalité")
+                } footer: {
+                    Text("Indique la tonalité réelle (celle du piano). Chaque membre verra la sienne : un saxophone alto lit une sixte majeure au-dessus, une trompette un ton.")
+                }
+
+                Section {
+                    TextField(
+                        "Ex.  | Cmaj7 | Am7 | Dm7 | G7 |",
+                        text: $chords,
+                        axis: .vertical
+                    )
+                    .font(JCFont.mono(15))
+                    .lineLimit(4...14)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                } header: {
+                    Text("Grille d'accords")
+                } footer: {
+                    Text("Écris les accords en lettres (C, Bb, F#m7…). Dispo les transpose tout seul pour chaque instrument — la mise en page et les barres de mesure sont conservées.")
+                }
+
+                Section {
+                    TextField("irealb://…", text: $ireal)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } header: {
+                    Text("iReal Pro")
+                } footer: {
+                    Text("Dans iReal Pro : appui long sur le morceau → Partager → Copier le lien, puis colle-le ici. Les membres qui ont l'app l'ouvrent d'un tap.")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Modifier le morceau")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        if let group {
+                            store.updateSongDetails(
+                                song,
+                                key: key,
+                                chords: chords.trimmingCharacters(in: .whitespacesAndNewlines),
+                                irealURL: ireal.trimmingCharacters(in: .whitespaces),
+                                in: group
+                            )
+                        }
+                        dismiss()
+                    }
+                    .font(.headline)
+                }
+            }
+            .onAppear {
+                key = song.key ?? ""
+                chords = song.chords ?? ""
+                ireal = song.irealURL ?? ""
+            }
+        }
+    }
+}

@@ -1125,14 +1125,19 @@ final class SupabaseBackend: Sendable {
         var platformLinks: [String: String]?
         var suggestedBy: String
         var isApproved: Bool
+        /// Tonalité réelle, grille d'accords et lien iReal Pro du morceau.
+        var key: String?
+        var chords: String?
+        var irealURL: String?
 
         enum CodingKeys: String, CodingKey {
-            case id, title, artist
+            case id, title, artist, key, chords
             case artworkURL = "artwork_url"
             case trackURL = "track_url"
             case platformLinks = "platform_links"
             case suggestedBy = "suggested_by"
             case isApproved = "is_approved"
+            case irealURL = "ireal_url"
         }
 
         init(from song: Song) {
@@ -1144,6 +1149,9 @@ final class SupabaseBackend: Sendable {
             platformLinks = song.platformLinks
             suggestedBy = song.suggestedBy
             isApproved = song.isApproved
+            key = song.key
+            chords = song.chords
+            irealURL = song.irealURL
         }
 
         var asSong: Song {
@@ -1155,7 +1163,10 @@ final class SupabaseBackend: Sendable {
                 trackURL: trackURL,
                 platformLinks: platformLinks,
                 suggestedBy: suggestedBy,
-                isApproved: isApproved
+                isApproved: isApproved,
+                key: key,
+                chords: chords,
+                irealURL: irealURL
             )
         }
     }
@@ -1193,6 +1204,12 @@ final class SupabaseBackend: Sendable {
             .in("group_id", values: groupIDs)
             .order("created_at", ascending: false)
             .execute().value) ?? []
+        // Commentaires de morceaux — idem, tolérant si la table manque.
+        let comments: [SongCommentRow] = (try? await client.from("song_comments")
+            .select()
+            .in("group_id", values: groupIDs)
+            .order("created_at")
+            .execute().value) ?? []
 
         let eventIDs = events.map(\.id.uuidString)
         let attendance: [EventAttendanceRow]
@@ -1210,6 +1227,7 @@ final class SupabaseBackend: Sendable {
         let attendanceByEvent = Dictionary(grouping: attendance, by: \.eventId)
         let messagesByGroup = Dictionary(grouping: groupMessages, by: \.groupId)
         let docsByGroup = Dictionary(grouping: groupDocs, by: \.groupId)
+        let commentsByGroup = Dictionary(grouping: comments, by: \.groupId)
 
         return groupRows.map { row in
             let leaderName = row.leaderId == myID ? nil : nameByID[row.leaderId]
@@ -1263,6 +1281,9 @@ final class SupabaseBackend: Sendable {
                 },
                 docs: (docsByGroup[row.id] ?? []).map {
                     $0.asGroupDoc(myID: myID, myName: myName, nameByID: nameByID)
+                },
+                songComments: (commentsByGroup[row.id] ?? []).map {
+                    $0.asSongComment(myID: myID, myName: myName, nameByID: nameByID)
                 },
                 repertoire: row.repertoire.map(\.asSong),
                 events: mappedEvents
@@ -1650,12 +1671,16 @@ final class SupabaseBackend: Sendable {
         var ext: String
         var addedBy: UUID?
         var createdAt: Date
+        /// Morceau auquel la partition est rattachée (nil = partition libre).
+        var songId: UUID?
+        var instrument: String?
 
         enum CodingKeys: String, CodingKey {
-            case id, title, path, ext
+            case id, title, path, ext, instrument
             case groupId = "group_id"
             case addedBy = "added_by"
             case createdAt = "created_at"
+            case songId = "song_id"
         }
 
         func asGroupDoc(myID: UUID, myName: String, nameByID: [UUID: String]) -> GroupDoc {
@@ -1667,7 +1692,9 @@ final class SupabaseBackend: Sendable {
                 addedBy: authorName,
                 date: createdAt,
                 remotePath: path,
-                ext: ext
+                ext: ext,
+                songID: songId,
+                instrument: instrument
             )
         }
     }
@@ -1704,6 +1731,8 @@ final class SupabaseBackend: Sendable {
             let path: String
             let ext: String
             let added_by: UUID
+            let song_id: UUID?
+            let instrument: String?
         }
         try await client.from("group_docs")
             .insert(Insert(
@@ -1712,9 +1741,77 @@ final class SupabaseBackend: Sendable {
                 title: doc.title,
                 path: doc.remotePath ?? "",
                 ext: doc.ext ?? "pdf",
-                added_by: addedBy
+                added_by: addedBy,
+                song_id: doc.songID,
+                instrument: doc.instrument
             ))
             .execute()
+    }
+
+    // MARK: - Commentaires de morceau
+
+    struct SongCommentRow: Codable {
+        var id: UUID
+        var groupId: UUID
+        var songId: UUID
+        var authorId: UUID?
+        var text: String
+        var createdAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case id, text
+            case groupId = "group_id"
+            case songId = "song_id"
+            case authorId = "author_id"
+            case createdAt = "created_at"
+        }
+
+        func asSongComment(myID: UUID, myName: String, nameByID: [UUID: String]) -> SongComment {
+            SongComment(
+                id: id,
+                songID: songId,
+                author: authorId == myID ? myName : authorId.flatMap { nameByID[$0] } ?? "",
+                isMine: authorId == myID,
+                text: text,
+                date: createdAt
+            )
+        }
+    }
+
+    /// Commentaires de tous les morceaux des groupes dont je fais partie.
+    func fetchSongComments(groupIDs: [UUID]) async throws -> [SongCommentRow] {
+        guard !groupIDs.isEmpty else { return [] }
+        return try await client.from("song_comments")
+            .select()
+            .in("group_id", values: groupIDs.map(\.uuidString))
+            .order("created_at")
+            .execute().value
+    }
+
+    func insertSongComment(
+        id: UUID,
+        groupID: UUID,
+        songID: UUID,
+        authorID: UUID,
+        text: String
+    ) async throws {
+        struct Insert: Encodable {
+            let id: UUID
+            let group_id: UUID
+            let song_id: UUID
+            let author_id: UUID
+            let text: String
+        }
+        try await client.from("song_comments")
+            .insert(Insert(
+                id: id, group_id: groupID, song_id: songID,
+                author_id: authorID, text: text
+            ))
+            .execute()
+    }
+
+    func deleteSongComment(_ commentID: UUID) async throws {
+        try await client.from("song_comments").delete().eq("id", value: commentID).execute()
     }
 
     /// Retire la partition de la table (RLS : auteur ou leader).

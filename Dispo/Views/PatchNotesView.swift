@@ -22,7 +22,14 @@ struct PatchNote: Identifiable {
                 "Les étoiles sont réservées aux professionnels. Entre amateurs, on déclare simplement « on a joué ensemble »",
                 "Les cachets ne s'affichent qu'entre professionnels",
                 "« Je suis ailleurs » : annonce où tu es dispo (tournée, vacances) — et cherche des musiciens par ville ou par pays",
-                "Les comptes d'exemple n'apparaissent plus dans le réseau des vrais utilisateurs"
+                "Les comptes d'exemple n'apparaissent plus dans le réseau des vrais utilisateurs",
+                "Chaque morceau a sa fiche : tonalité, grille d'accords, partitions et commentaires",
+                "La tonalité s'affiche dans la tienne — sax alto, trompette, cor : la grille est transposée toute seule",
+                "Partitions rangées sous leur morceau, en PDF ou en photo, et visables par instrument",
+                "Commentaires par morceau, ouverts à tout le groupe",
+                "Lien iReal Pro sur un morceau : un tap et la grille s'ouvre dans l'app",
+                "Vrais logos Spotify, Apple Music, YouTube Music, Instagram, TikTok, YouTube et X",
+                "Toute l'app traduite dans les 7 langues, sans mélange"
             ]
         ),
         PatchNote(

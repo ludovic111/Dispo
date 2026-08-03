@@ -210,9 +210,32 @@ struct DebugSongRowsPreview: View {
     var body: some View {
         ZStack {
             JCBackground()
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 SongRow(song: songs[0], isLeader: false, onReject: {})
                 SongRow(song: songs[1], isLeader: true, onApprove: {}, onReject: {})
+
+                // Contrôle visuel des logos officiels (tracés SVG).
+                JCCard {
+                    VStack(spacing: 14) {
+                        Text(verbatim: "Streaming")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 16) {
+                            ForEach(StreamingPlatform.allCases) { platform in
+                                StreamingLogoView(platform: platform, size: 40)
+                            }
+                        }
+                        Text(verbatim: "Réseaux sociaux")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                        HStack(spacing: 16) {
+                            ForEach(SocialNetwork.allCases) { network in
+                                SocialLogoView(network: network, size: 40)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
             }
             .padding(18)
         }
@@ -693,9 +716,29 @@ struct AvailabilityBadge: View {
     }
 }
 
-/// Logo d'un réseau social, dessiné en SwiftUI (aucun asset de marque
-/// embarqué). Reconnaissable au premier coup d'œil, cliquable via Link.
+/// Logo d'un réseau social — le vrai tracé officiel (voir `Brand`), rendu
+/// en vectoriel. Les logos monochromes (X, TikTok) suivent la couleur du
+/// texte pour rester lisibles en clair comme en sombre.
 struct SocialLogoView: View {
+    let network: SocialNetwork
+    var size: CGFloat = 28
+
+    private var brand: Brand {
+        switch network {
+        case .instagram: return .instagram
+        case .tiktok: return .tiktok
+        case .youtube: return .youtube
+        case .x: return .x
+        }
+    }
+
+    var body: some View {
+        BrandLogo(brand: brand, size: size)
+    }
+}
+
+/// Ancien rendu maison, conservé le temps de comparer si besoin.
+private struct LegacySocialLogoView: View {
     let network: SocialNetwork
     var size: CGFloat = 28
 
@@ -787,10 +830,34 @@ struct SocialLogosRow: View {
     }
 }
 
-/// Logo d'une plateforme de streaming, dessiné en SwiftUI (aucun asset de
-/// marque embarqué) — reconnaissable au premier coup d'œil dans la feuille
-/// « Écouter sur… ».
+/// Logo d'une plateforme de streaming — le vrai tracé officiel (voir
+/// `Brand`). Deezer fait exception : son logo a été retiré du jeu
+/// simple-icons à la demande de la marque, son symbole reste dessiné ici.
 struct StreamingLogoView: View {
+    let platform: StreamingPlatform
+    var size: CGFloat = 34
+
+    var body: some View {
+        switch platform {
+        case .appleMusic:
+            BrandLogo(brand: .appleMusic, size: size)
+        case .spotify:
+            BrandLogo(brand: .spotify, size: size)
+        case .youtubeMusic:
+            BrandLogo(brand: .youtubeMusic, size: size)
+        case .deezer:
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+                    .fill(Color(red: 0.07, green: 0.07, blue: 0.10))
+                DeezerBars(size: size)
+            }
+            .frame(width: size, height: size)
+        }
+    }
+}
+
+/// Ancien rendu maison, conservé le temps de comparer si besoin.
+private struct LegacyStreamingLogoView: View {
     let platform: StreamingPlatform
     var size: CGFloat = 34
 

@@ -201,6 +201,86 @@
         }
       }
     },
+    "%@, puis %@ — résiliable à tout moment.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, dann %2$@ — jederzeit kündbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, then %2$@ — cancel anytime."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, luego %2$@ — cancela cuando quieras."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, poi %2$@ — disdici quando vuoi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@、その後 %2$@。いつでも解約できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@，之后 %2$@ — 随时可取消。"
+          }
+        }
+      }
+    },
+    "%d jours offerts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d Tage gratis"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d days free"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d días gratis"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d giorni gratis"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 日間無料"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费 %d 天"
+          }
+        }
+      }
+    },
     "%lld abonnés": {
       "localizations": {
         "de": {
@@ -837,6 +917,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld个音符"
+          }
+        }
+      }
+    },
+    "%lld partitions sont rangées sous leurs morceaux — ouvre le morceau dans « Répertoire ».": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Noten liegen bei ihren Stücken — öffne das Stück unter „Repertoire“."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld scores are filed under their songs — open the song in “Repertoire”."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld partituras están guardadas en sus temas: abre el tema en «Repertorio»."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld spartiti sono sotto i loro brani: apri il brano in «Repertorio»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の楽譜は曲ごとに整理されています。「レパートリー」から曲を開いてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %lld 份乐谱归在各自的曲目下——在「曲目库」中打开该曲。"
           }
         }
       }
@@ -2501,6 +2621,46 @@
         }
       }
     },
+    "Ajouter": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加"
+          }
+        }
+      }
+    },
     "Ajouter un morceau": {
       "localizations": {
         "de": {
@@ -3751,6 +3911,46 @@
         }
       }
     },
+    "Aucun abonnement pendant les tests. Groupes, alertes en avance et 6 vidéos : c'est offert.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Abo während des Tests. Bands, frühe Alarme und 6 Videos — geschenkt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No subscription during testing. Bands, early alerts and 6 videos — all yours."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin suscripción durante las pruebas. Grupos, avisos anticipados y 6 vídeos: gratis."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun abbonamento durante i test. Gruppi, avvisi in anticipo e 6 video: offerti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト中は課金なし。グループ、先行通知、動画 6 本すべて無料です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试期间不收费。乐队、提前提醒和 6 段视频，全部开放。"
+          }
+        }
+      }
+    },
     "Aucun favori": {
       "localizations": {
         "de": {
@@ -4147,6 +4347,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "允许通知"
+          }
+        }
+      }
+    },
+    "Autre": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
           }
         }
       }
@@ -5731,6 +5971,46 @@
         }
       }
     },
+    "Candidatures": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewerbungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applications"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidaturas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidature"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応募"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报名"
+          }
+        }
+      }
+    },
     "Carte": {
       "localizations": {
         "de": {
@@ -7111,6 +7391,46 @@
         }
       }
     },
+    "Colle la grille d'accords dans « Modifier » : elle sera transposée automatiquement pour chaque instrument.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge das Akkordraster unter „Bearbeiten“ ein — es wird für jedes Instrument automatisch transponiert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste the chord chart under “Edit” — it gets transposed automatically for every instrument."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pega el cifrado en «Editar»: se transpone solo para cada instrumento."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla la griglia in «Modifica»: viene trasposta da sola per ogni strumento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「編集」でコード進行を貼り付ければ、楽器ごとに自動で移調されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在「编辑」中粘贴和弦谱，会自动为每件乐器移调。"
+          }
+        }
+      }
+    },
     "Combine ce que tu veux : instrument, quartier, genre, nom ou @pseudo.": {
       "localizations": {
         "de": {
@@ -7147,6 +7467,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "随意组合：乐器、街区、风格、名字或@用户名。"
+          }
+        }
+      }
+    },
+    "Commencer l'essai gratuit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kostenlos testen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the free trial"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empezar la prueba gratuita"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia la prova gratuita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無料トライアルを始める"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始免费试用"
+          }
+        }
+      }
+    },
+    "Complet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voll"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "満員"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已满"
           }
         }
       }
@@ -8901,6 +9301,46 @@
         }
       }
     },
+    "Dans iReal Pro : appui long sur le morceau → Partager → Copier le lien, puis colle-le ici. Les membres qui ont l'app l'ouvrent d'un tap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In iReal Pro: Stück gedrückt halten → Teilen → Link kopieren, dann hier einfügen. Wer die App hat, öffnet es mit einem Tipp."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In iReal Pro: long-press the song → Share → Copy link, then paste it here. Members who have the app open it in one tap."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En iReal Pro: mantén pulsado el tema → Compartir → Copiar enlace y pégalo aquí. Quien tenga la app lo abre con un toque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In iReal Pro: tieni premuto il brano → Condividi → Copia link, poi incollalo qui. Chi ha l'app lo apre con un tap."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro で曲を長押し →「共有」→「リンクをコピー」して、ここに貼り付けます。アプリを持つメンバーはワンタップで開けます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iReal Pro 中长按曲目 →「共享」→「拷贝链接」，粘贴到这里。装了该应用的成员一点即开。"
+          }
+        }
+      }
+    },
     "Date": {
       "localizations": {
         "de": {
@@ -9947,6 +10387,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "文件太大 — 最大 20 MB。"
+          }
+        }
+      }
+    },
+    "Doigtés, intro, tempo, « on la finit comment ? » — tout le monde peut écrire ici.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fingersätze, Intro, Tempo, „wie enden wir noch mal?“ — hier schreibt jede und jeder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fingerings, intro, tempo, “how do we end it again?” — anyone can post here."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digitaciones, intro, tempo, «¿cómo la terminábamos?»: aquí escribe todo el mundo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diteggiature, intro, tempo, «come la chiudiamo?»: qui scrivono tutti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "運指、イントロ、テンポ、「終わり方どうする？」— 誰でも書き込めます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指法、前奏、速度、「结尾怎么收来着？」——所有人都能在这里留言。"
           }
         }
       }
@@ -11481,6 +11961,46 @@
         }
       }
     },
+    "Fichier": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件"
+          }
+        }
+      }
+    },
     "Filtrer par niveau": {
       "localizations": {
         "de": {
@@ -12011,6 +12531,46 @@
         }
       }
     },
+    "Grille": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raster"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chart"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cifrado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Griglia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コード譜"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和弦谱"
+          }
+        }
+      }
+    },
     "Grille + impro": {
       "localizations": {
         "de": {
@@ -12047,6 +12607,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "和声进行＋即兴"
+          }
+        }
+      }
+    },
+    "Grille d'accords": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akkordraster"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chord chart"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cifrado de acordes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Griglia degli accordi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コード進行"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和弦谱"
           }
         }
       }
@@ -12861,6 +13461,46 @@
         }
       }
     },
+    "Indique la tonalité réelle (celle du piano). Chaque membre verra la sienne : un saxophone alto lit une sixte majeure au-dessus, une trompette un ton.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die klingende Tonart an (die des Klaviers). Alle sehen ihre eigene: Altsaxofon liest eine große Sexte höher, Trompete einen Ganzton."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the concert key (the piano's). Everyone sees their own: an alto sax reads a major sixth higher, a trumpet a whole tone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indica la tonalidad real (la del piano). Cada uno verá la suya: un saxo alto lee una sexta mayor por encima; una trompeta, un tono."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indica la tonalità reale (quella del piano). Ognuno vedrà la sua: un sax contralto legge una sesta maggiore sopra, una tromba un tono."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実音（ピアノ）の調を入力します。各自の調が表示されます — アルトサックスは長 6 度上、トランペットは長 2 度上。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填写实际调性（钢琴的调）。每人会看到自己的调：中音萨克斯高大六度，小号高大二度。"
+          }
+        }
+      }
+    },
     "Indispo": {
       "localizations": {
         "de": {
@@ -12947,6 +13587,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "乐器"
+          }
+        }
+      }
+    },
+    "Instrument recherché": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesuchtes Instrument"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instrument wanted"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instrumento buscado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strumento cercato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "募集楽器"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "招募乐器"
           }
         }
       }
@@ -13671,6 +14351,46 @@
         }
       }
     },
+    "Je suis ailleurs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich bin unterwegs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm away"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estoy fuera"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono altrove"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別の場所にいます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我在外地"
+          }
+        }
+      }
+    },
     "Jusqu'au %@": {
       "localizations": {
         "de": {
@@ -13957,6 +14677,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "报名未能发送。"
+          }
+        }
+      }
+    },
+    "La candidature n'a pas pu être retirée.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Bewerbung konnte nicht zurückgezogen werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The application couldn't be withdrawn."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo retirar la candidatura."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile ritirare la candidatura."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応募を取り消せませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能撤回报名。"
+          }
+        }
+      }
+    },
+    "La collaboration n'a pas pu être enregistrée.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zusammenarbeit konnte nicht gespeichert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That collaboration couldn't be saved."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar la colaboración."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile salvare la collaborazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共演の記録を保存できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能保存合作记录。"
           }
         }
       }
@@ -15081,6 +15881,46 @@
         }
       }
     },
+    "Le candidat n'a pas pu être accepté.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zusage konnte nicht gespeichert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That applicant couldn't be accepted."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo aceptar al candidato."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile accettare il candidato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応募者を承認できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能确认该应募者。"
+          }
+        }
+      }
+    },
     "Le changement d'apparence (clair / sombre) s'applique instantanément": {
       "localizations": {
         "de": {
@@ -15117,6 +15957,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "外观切换（浅色/深色）即时生效"
+          }
+        }
+      }
+    },
+    "Le commentaire n'a pas pu être envoyé.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kommentar konnte nicht gesendet werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The comment couldn't be posted."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo enviar el comentario."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile inviare il commento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コメントを送信できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能发送评论。"
           }
         }
       }
@@ -16127,6 +17007,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "App Store subscriptions are temporarily unavailable."
+          }
+        }
+      }
+    },
+    "Les abonnés de %@ — un tap ouvre leur profil.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follower von %@ — tippen, um ein Profil zu öffnen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@'s followers — tap to open a profile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguidores de %@: toca para abrir un perfil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I follower di %@ — tocca per aprire un profilo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のフォロワー — タップでプロフィールを開きます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的关注者——点按可打开资料。"
           }
         }
       }
@@ -17811,6 +18731,46 @@
         }
       }
     },
+    "Message (optionnel)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht (optional)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message (optional)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensaje (opcional)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaggio (facoltativo)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージ（任意）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留言（可选）"
+          }
+        }
+      }
+    },
     "Message au groupe…": {
       "localizations": {
         "de": {
@@ -19291,6 +20251,46 @@
         }
       }
     },
+    "Niveau recherché : %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesuchtes Niveau: %@."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level wanted: %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nivel buscado: %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello cercato: %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "募集レベル：%@。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "招募水平：%@。"
+          }
+        }
+      }
+    },
     "Nom": {
       "localizations": {
         "de": {
@@ -19647,6 +20647,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "任命为队长"
+          }
+        }
+      }
+    },
+    "Non précisé": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht angegeben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not specified"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin especificar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non specificato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未指定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未指定"
+          }
+        }
+      }
+    },
+    "Non renseignée": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht angegeben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not set"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin indicar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non indicata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未填写"
+          }
+        }
+      }
+    },
+    "Non retenu·e": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht ausgewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not selected"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No seleccionado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non selezionato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不採用"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未入选"
           }
         }
       }
@@ -20571,6 +21691,46 @@
         }
       }
     },
+    "Ouvrir dans iReal Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In iReal Pro öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in iReal Pro"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir en iReal Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri in iReal Pro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro で開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iReal Pro 中打开"
+          }
+        }
+      }
+    },
     "Ouvrir les réglages iOS": {
       "localizations": {
         "de": {
@@ -20901,6 +22061,46 @@
         }
       }
     },
+    "Pas encore de grille": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Raster"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No chart yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún sin cifrado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessuna griglia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コード譜はまだありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有和弦谱"
+          }
+        }
+      }
+    },
     "Pas encore de note — sois le premier à jouer avec %@ !": {
       "localizations": {
         "de": {
@@ -21141,6 +22341,46 @@
         }
       }
     },
+    "Pendant cette période, les musiciens et les groupes de cette ville te trouvent dans leurs recherches — pas ceux de chez toi.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diesem Zeitraum finden dich Musikerinnen und Bands dieser Stadt — nicht die von zu Hause."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "During that period, musicians and bands in that city find you in their searches — not the ones back home."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante ese periodo te encuentran los músicos y grupos de esa ciudad, no los de tu zona."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In quel periodo ti trovano i musicisti e i gruppi di quella città, non quelli di casa."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その期間は、その街のミュージシャンやバンドの検索に表示されます（地元の人には表示されません）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这段时间里，你会出现在该城市音乐人和乐队的搜索里，而不是家乡的。"
+          }
+        }
+      }
+    },
     "Pensé avec la scène jazz & latin de Genève": {
       "localizations": {
         "de": {
@@ -21301,6 +22541,86 @@
         }
       }
     },
+    "Personne n'a encore parlé de ce morceau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu diesem Stück hat noch niemand etwas gesagt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody has said anything about this song yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nadie ha comentado aún este tema"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno ha ancora parlato di questo brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この曲についてはまだ誰も書いていません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有人聊过这首曲子"
+          }
+        }
+      }
+    },
+    "Personne n'a encore postulé. Dès qu'un musicien se propose, tu choisiras ici qui prend chaque poste.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Bewerbung. Sobald sich jemand meldet, wählst du hier, wer welche Position übernimmt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nobody has applied yet. As soon as someone offers, you'll pick who takes each slot here."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nadie se ha postulado todavía. En cuanto alguien se ofrezca, elegirás aquí quién ocupa cada puesto."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna candidatura per ora. Appena qualcuno si propone, sceglierai qui chi prende ogni posto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ応募はありません。誰かが手を挙げたら、ここで各パートの担当を選べます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有人报名。一旦有人应征，你可以在这里挑选每个位置的人选。"
+          }
+        }
+      }
+    },
     "Personne ne matche pour l'instant. Dès qu'un musicien compatible coche le %@ dans son calendrier, il apparaîtra ici.": {
       "localizations": {
         "de": {
@@ -21381,6 +22701,46 @@
         }
       }
     },
+    "Peu importe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Egal"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Any"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquiera"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indifferente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定なし"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不限"
+          }
+        }
+      }
+    },
     "Peu importe quand": {
       "localizations": {
         "de": {
@@ -21417,6 +22777,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "任何时间"
+          }
+        }
+      }
+    },
+    "Photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写真"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片"
           }
         }
       }
@@ -21901,6 +23301,86 @@
         }
       }
     },
+    "Pour « %@ » le %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für „%1$@“ am %2$@."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For “%1$@” on %2$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para «%1$@» el %2$@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per «%1$@» il %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ の「%1$@」に。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用于 %2$@ 的「%1$@」。"
+          }
+        }
+      }
+    },
+    "Pourvu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besetzt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filled"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cubierto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coperto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "決定済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已定"
+          }
+        }
+      }
+    },
     "Premier message au groupe — répé, setlist, horaires…": {
       "localizations": {
         "de": {
@@ -22137,6 +23617,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "首批SOS信息"
+          }
+        }
+      }
+    },
+    "Prends la feuille en photo ou importe le PDF — tout le groupe y aura accès.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografiere das Blatt oder importiere das PDF — die ganze Band hat es dann."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snap the sheet or import the PDF — the whole band gets it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz una foto de la partitura o importa el PDF: lo tendrá todo el grupo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografa il foglio o importa il PDF: lo avrà tutto il gruppo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "譜面を撮影するか PDF を読み込めば、バンド全員が見られます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍下谱子或导入 PDF——整个乐队都能看到。"
+          }
+        }
+      }
+    },
+    "Pris·e": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergeben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taken"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocupado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "決定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已定"
           }
         }
       }
@@ -22827,6 +24387,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "朋克/车库"
+          }
+        }
+      }
+    },
+    "Quand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuándo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いつ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间"
           }
         }
       }
@@ -23791,6 +25391,86 @@
         }
       }
     },
+    "Remplacement automatique": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatischer Ersatz"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic replacement"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sustitución automática"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituzione automatica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動で代役を探す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动找替补"
+          }
+        }
+      }
+    },
+    "Remplacement — %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersatz — %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacement — %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sustitución — %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituzione — %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代役募集 — %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "招替补 — %@"
+          }
+        }
+      }
+    },
     "Restaurer mes achats": {
       "localizations": {
         "en": {
@@ -23837,6 +25517,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除日期"
+          }
+        }
+      }
+    },
+    "Retirer le rôle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolle entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove role"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar el rol"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Togli il ruolo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パートを外す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除分工"
           }
         }
       }
@@ -24197,6 +25917,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "周期"
+          }
+        }
+      }
+    },
+    "Réel (concert)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klingend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concert pitch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Real (concert)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reale (concert)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実音"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实际音高"
           }
         }
       }
@@ -24891,6 +26651,46 @@
         }
       }
     },
+    "Rôle dans le groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolle in der Band"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Role in the band"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rol en el grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ruolo nel gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バンドでのパート"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在乐队中的分工"
+          }
+        }
+      }
+    },
     "S'abonner · %@": {
       "localizations": {
         "en": {
@@ -25137,6 +26937,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "SOS已发布"
+          }
+        }
+      }
+    },
+    "SOS publié automatiquement pour remplacer %@ (%@).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS automatisch veröffentlicht, um %1$@ zu ersetzen (%2$@)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS posted automatically to replace %1$@ (%2$@)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS publicado automáticamente para sustituir a %1$@ (%2$@)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS pubblicato in automatico per sostituire %1$@ (%2$@)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（%2$@）の代役を探す SOS を自動で公開しました。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已自动发布 SOS 招募 %1$@（%2$@）的替补。"
           }
         }
       }
@@ -26761,6 +28601,46 @@
         }
       }
     },
+    "Ta partition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Stimme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your part"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu partitura"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua parte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの譜面"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的谱"
+          }
+        }
+      }
+    },
     "Ta photo de profil est visible par les autres musiciens": {
       "localizations": {
         "de": {
@@ -28281,6 +30161,46 @@
         }
       }
     },
+    "Tonalité": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tonart"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tonalidad"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tonalità"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调性"
+          }
+        }
+      }
+    },
     "Tous": {
       "localizations": {
         "de": {
@@ -28317,6 +30237,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
+          }
+        }
+      }
+    },
+    "Tous les postes sont pourvus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Positionen besetzt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every slot is filled"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los puestos están cubiertos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i posti sono coperti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのパートが埋まりました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有位置都已定"
+          }
+        }
+      }
+    },
+    "Tous les postes sont pourvus.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Positionen sind besetzt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every slot is filled."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los puestos están cubiertos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i posti sono coperti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのパートが埋まりました。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有位置都已定。"
+          }
+        }
+      }
+    },
+    "Tout est ouvert pendant les tests : aucun abonnement n'est vendu et rien ne sera débité. Ces fonctions sont déjà actives sur ton compte.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während des Tests ist alles offen: Es wird nichts verkauft und nichts abgebucht. Diese Funktionen sind auf deinem Konto bereits aktiv."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything is open during testing: nothing is sold and nothing will be charged. These features are already live on your account."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo está abierto durante las pruebas: no se vende nada ni se cobrará nada. Estas funciones ya están activas en tu cuenta."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durante i test è tutto aperto: non si vende nulla e non ti verrà addebitato niente. Queste funzioni sono già attive sul tuo account."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テスト中はすべて開放しています。販売も請求も一切ありません。これらの機能はすでに有効です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试期间全部开放：不出售任何内容，也不会扣款。这些功能已在你的账号上生效。"
+          }
+        }
+      }
+    },
+    "Tout le monde": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everyone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo el mundo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全員"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有人"
           }
         }
       }
@@ -28677,6 +30757,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "你没空"
+          }
+        }
+      }
+    },
+    "Tu es pris·e !": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bist dabei!"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're in!"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Estás dentro!"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei dentro!"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出演決定！"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你被选上了！"
+          }
+        }
+      }
+    },
+    "Tu es pris·e ! (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bist dabei! (%@)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're in! (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Estás dentro! (%@)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sei dentro! (%@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出演決定！（%@）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你被选上了！（%@）"
           }
         }
       }
@@ -29121,6 +31281,46 @@
         }
       }
     },
+    "Un musicien en tournée ou en vacances déclare où il se trouve : avec une date, on cherche ceux qui seront sur place ce jour-là.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wer auf Tour oder im Urlaub ist, gibt den Ort an: mit einem Datum findest du, wer an dem Tag dort ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musicians on tour or on holiday say where they are: add a date and you'll find whoever is there that day."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quien está de gira o de vacaciones indica dónde está: con una fecha, buscas a quien esté allí ese día."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chi è in tour o in vacanza indica dove si trova: con una data trovi chi sarà lì quel giorno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツアー中や休暇中のミュージシャンは滞在先を登録できます。日付を指定すれば、その日そこにいる人を探せます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "巡演或度假中的音乐人会标明所在地：加上日期，就能找到那天在当地的人。"
+          }
+        }
+      }
+    },
     "Un musicien te lâche ?": {
       "localizations": {
         "de": {
@@ -29557,6 +31757,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前版本"
+          }
+        }
+      }
+    },
+    "Version bêta": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta-Version"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta version"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versión beta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione beta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベータ版"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试版"
+          }
+        }
+      }
+    },
+    "Version bêta — tout est ouvert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta — alles offen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta — everything is open"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versión beta: todo abierto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta — tutto aperto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベータ版 — すべて開放中"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试版 — 全部开放"
           }
         }
       }
@@ -30567,6 +32847,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "作品"
+          }
+        }
+      }
+    },
+    "iReal Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro"
           }
         }
       }
@@ -31601,6 +33921,46 @@
         }
       }
     },
+    "Écris les accords en lettres (C, Bb, F#m7…). Dispo les transpose tout seul pour chaque instrument — la mise en page et les barres de mesure sont conservées.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreib die Akkorde in Buchstaben (C, Bb, F#m7…). Dispo transponiert sie für jedes Instrument — Layout und Taktstriche bleiben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write chords in letters (C, Bb, F#m7…). Dispo transposes them for every instrument — layout and bar lines are kept."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe los acordes en letras (C, Bb, F#m7…). Dispo los transpone para cada instrumento y respeta el formato y los compases."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrivi gli accordi in lettere (C, Bb, F#m7…). Dispo li traspone per ogni strumento e conserva impaginazione e battute."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コードは英字で入力します（C、Bb、F#m7 など）。Dispo が楽器ごとに移調し、レイアウトと小節線はそのまま保ちます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用字母写和弦（C、Bb、F#m7…）。Dispo 会为每件乐器移调，并保留排版和小节线。"
+          }
+        }
+      }
+    },
     "Élargis le rayon ou retire un filtre pour voir plus de profils.": {
       "localizations": {
         "de": {
@@ -32117,6 +34477,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "🚨 救场请求"
+          }
+        }
+      }
+    },
+    "🚨 Je peux te dépanner !": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🚨 Ich kann einspringen!"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🚨 I can fill in!"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🚨 ¡Puedo echarte un cable!"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🚨 Posso darti una mano!"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🚨 代わりに入れます！"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🚨 我可以来救场！"
           }
         }
       }

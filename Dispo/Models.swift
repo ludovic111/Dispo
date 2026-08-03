@@ -1003,11 +1003,33 @@ struct GroupDoc: Codable, Identifiable, Hashable {
     /// Extension du fichier hébergé (pdf, jpg, png…), pour l'ouvrir avec le
     /// bon type une fois téléchargé.
     var ext: String? = nil
+    /// Morceau auquel la partition est rattachée — nil = partition libre du
+    /// groupe (contrat, plan de scène…), rangée hors des morceaux.
+    var songID: UUID? = nil
+    /// Instrument visé (« la partie d'alto ») — nil = pour tout le monde.
+    var instrument: String? = nil
+
+    /// La partition est-elle une photo (feuille prise en photo) ?
+    var isPhoto: Bool {
+        ["jpg", "jpeg", "png", "heic"].contains((ext ?? "").lowercased())
+    }
 
     /// Nom de fichier utilisé dans le cache local pour la copie téléchargée.
     var cacheFileName: String {
         "groupdoc_\(id.uuidString.lowercased()).\(ext ?? "pdf")"
     }
+}
+
+/// Un commentaire laissé sur un morceau. Tout le monde peut en écrire —
+/// c'est là que se règlent les doigtés, les intros et les « on la finit
+/// comment déjà ? ».
+struct SongComment: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var songID: UUID
+    var author: String
+    var isMine: Bool
+    var text: String
+    var date: Date
 }
 
 /// Un morceau du répertoire (du groupe ou d'un événement). Tant que le
@@ -1025,6 +1047,18 @@ struct Song: Codable, Identifiable, Hashable {
     var platformLinks: [String: String]?
     var suggestedBy: String
     var isApproved: Bool
+    /// Tonalité réelle (« concert ») du morceau, en lettres : « Bb », « F#m ».
+    /// Sert à afficher à chacun la tonalité de SON instrument.
+    var key: String?
+    /// Grille d'accords en toutes lettres — transposée automatiquement pour
+    /// chaque instrument transpositeur.
+    var chords: String?
+    /// Lien iReal Pro partagé par le groupe (`irealbook://` ou `irealb://`),
+    /// exporté depuis iReal Pro.
+    var irealURL: String?
+
+    /// Tonalité relue, nil si non renseignée ou illisible.
+    var musicalKey: MusicalKey? { key.flatMap(MusicalKey.init) }
 }
 
 /// Plateformes d'écoute proposées sur les morceaux (répertoire, setlists).
@@ -1386,6 +1420,21 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var autoSOSMinLevel: String?
     var messages: [GroupMessage] = []
     var docs: [GroupDoc] = []
+    /// Commentaires de morceaux, tous morceaux confondus.
+    var songComments: [SongComment]?
+
+    /// Les partitions rattachées à un morceau.
+    func docs(for songID: UUID) -> [GroupDoc] {
+        docs.filter { $0.songID == songID }
+    }
+
+    /// Les partitions libres (non rattachées à un morceau).
+    var looseDocs: [GroupDoc] { docs.filter { $0.songID == nil } }
+
+    /// Les commentaires d'un morceau, du plus ancien au plus récent.
+    func comments(for songID: UUID) -> [SongComment] {
+        (songComments ?? []).filter { $0.songID == songID }.sorted { $0.date < $1.date }
+    }
     /// Répertoire du groupe (morceaux validés + suggestions en attente).
     var repertoire: [Song]?
     /// Événements (concerts, répés, jams) avec leur setlist.

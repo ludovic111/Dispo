@@ -1320,7 +1320,17 @@ final class AppStore: ObservableObject {
             }
         }
         if published {
-            UserDefaults.standard.set(Array(handled), forKey: Self.handledDropoutsKey)
+            // On ne garde que les désistements des événements encore à venir :
+            // sans ça, la liste grossirait indéfiniment sur l'appareil.
+            let liveKeys = Set(groups.flatMap { group in
+                group.upcomingEvents.flatMap { event in
+                    event.unavailableNames.map { "\(event.id.uuidString).\($0)" }
+                }
+            })
+            UserDefaults.standard.set(
+                Array(handled.intersection(liveKeys)),
+                forKey: Self.handledDropoutsKey
+            )
         }
     }
 
@@ -2679,7 +2689,13 @@ final class AppStore: ObservableObject {
     /// Ajoute une partition (fichier importé) au groupe. En live elle est
     /// téléversée dans le bucket privé du groupe — tous les membres peuvent
     /// alors l'ouvrir ; en démo, simple copie locale.
-    func addDoc(from sourceURL: URL, title: String, to group: GroupChat) {
+    func addDoc(
+        from sourceURL: URL,
+        title: String,
+        to group: GroupChat,
+        songID: UUID? = nil,
+        instrument: Instrument? = nil
+    ) {
         let ext = sourceURL.pathExtension.isEmpty ? "pdf" : sourceURL.pathExtension.lowercased()
         // Fichier hors sandbox (Fichiers / iCloud) : accès sécurisé requis.
         let secured = sourceURL.startAccessingSecurityScopedResource()
@@ -2700,7 +2716,15 @@ final class AppStore: ObservableObject {
                 try data.write(to: Self.mediaURL(for: fileName))
                 updateGroup(group.id) {
                     $0.docs.insert(
-                        GroupDoc(fileName: fileName, title: title, addedBy: profile.name, date: Date()),
+                        GroupDoc(
+                            fileName: fileName,
+                            title: title,
+                            addedBy: profile.name,
+                            date: Date(),
+                            ext: ext,
+                            songID: songID,
+                            instrument: instrument?.rawValue
+                        ),
                         at: 0
                     )
                 }
@@ -2720,7 +2744,10 @@ final class AppStore: ObservableObject {
         Task { [weak self] in
             defer { self?.docUploadInProgress = false }
             do {
-                let doc = GroupDoc(fileName: "", title: title, addedBy: myName, date: Date(), ext: ext)
+                let doc = GroupDoc(
+                    fileName: "", title: title, addedBy: myName, date: Date(), ext: ext,
+                    songID: songID, instrument: instrument?.rawValue
+                )
                 let path = try await backend.uploadGroupDoc(data, ext: ext, docID: doc.id, groupID: groupID)
                 var hosted = doc
                 hosted.remotePath = path
@@ -2730,6 +2757,138 @@ final class AppStore: ObservableObject {
                 self?.updateGroup(groupID) { $0.docs.insert(hosted, at: 0) }
             } catch {
                 self?.backendError = self?.tr("La partition n'a pas pu être envoyée — vérifie le réseau.")
+            }
+        }
+    }
+
+    /// Ajoute une partition prise en photo. Même chemin que l'import de
+    /// fichier, mais les données sont déjà en mémoire (photothèque, appareil).
+    func addPhotoDoc(
+        _ data: Data,
+        title: String,
+        to group: GroupChat,
+        songID: UUID? = nil,
+        instrument: Instrument? = nil
+    ) {
+        guard data.count <= Self.maxDocBytes else {
+            backendError = tr("Document trop lourd — 20 Mo maximum.")
+            return
+        }
+        guard let backend, let userID = liveUserID else {
+            let fileName = "group_doc_\(Int(Date().timeIntervalSince1970)).jpg"
+            do {
+                try data.write(to: Self.mediaURL(for: fileName))
+                updateGroup(group.id) {
+                    $0.docs.insert(
+                        GroupDoc(
+                            fileName: fileName, title: title, addedBy: profile.name,
+                            date: Date(), ext: "jpg",
+                            songID: songID, instrument: instrument?.rawValue
+                        ),
+                        at: 0
+                    )
+                }
+            } catch {
+                backendError = tr("Le document n'a pas pu être importé.")
+            }
+            return
+        }
+        docUploadInProgress = true
+        let groupID = group.id
+        let myName = profile.name
+        Task { [weak self] in
+            defer { self?.docUploadInProgress = false }
+            do {
+                let doc = GroupDoc(
+                    fileName: "", title: title, addedBy: myName, date: Date(), ext: "jpg",
+                    songID: songID, instrument: instrument?.rawValue
+                )
+                let path = try await backend.uploadGroupDoc(data, ext: "jpg", docID: doc.id, groupID: groupID)
+                var hosted = doc
+                hosted.remotePath = path
+                try await backend.insertGroupDoc(hosted, groupID: groupID, addedBy: userID)
+                try? data.write(to: Self.docCacheURL(for: hosted))
+                self?.updateGroup(groupID) { $0.docs.insert(hosted, at: 0) }
+            } catch {
+                self?.backendError = self?.tr("La partition n'a pas pu être envoyée — vérifie le réseau.")
+            }
+        }
+    }
+
+    // MARK: Commentaires de morceau
+
+    /// Poste un commentaire sur un morceau — ouvert à tous les membres.
+    func addSongComment(_ text: String, songID: UUID, in group: GroupChat) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, acceptsUserContent(clean) else { return }
+        let comment = SongComment(
+            songID: songID, author: profile.name, isMine: true, text: clean, date: Date()
+        )
+        updateGroup(group.id) { $0.songComments = ($0.songComments ?? []) + [comment] }
+        guard let backend, let userID = liveUserID else { return }
+        let groupID = group.id
+        Task { [weak self] in
+            do {
+                try await backend.insertSongComment(
+                    id: comment.id, groupID: groupID, songID: songID,
+                    authorID: userID, text: clean
+                )
+            } catch {
+                // L'envoi a échoué : on retire la bulle plutôt que de laisser
+                // croire que le groupe l'a reçue.
+                self?.updateGroup(groupID) {
+                    $0.songComments?.removeAll { $0.id == comment.id }
+                }
+                self?.backendError = self?.tr("Le commentaire n'a pas pu être envoyé.")
+            }
+        }
+    }
+
+    /// Retire un commentaire (le sien, ou n'importe lequel si on est leader).
+    func removeSongComment(_ comment: SongComment, in group: GroupChat) {
+        guard comment.isMine || canLead(group) else { return }
+        updateGroup(group.id) { $0.songComments?.removeAll { $0.id == comment.id } }
+        if let backend, isLive {
+            syncLive { try await backend.deleteSongComment(comment.id) }
+        }
+    }
+
+    /// Enregistre tonalité, grille d'accords et lien iReal Pro d'un morceau
+    /// (leader). Le reste du morceau est inchangé.
+    func updateSongDetails(
+        _ song: Song,
+        key: String?,
+        chords: String?,
+        irealURL: String?,
+        in group: GroupChat
+    ) {
+        guard canLead(group) else { return }
+        var updated = song
+        updated.key = key?.isEmpty == true ? nil : key
+        updated.chords = chords?.isEmpty == true ? nil : chords
+        updated.irealURL = irealURL?.isEmpty == true ? nil : irealURL
+        updateGroup(group.id) { chat in
+            if let index = chat.repertoire?.firstIndex(where: { $0.id == song.id }) {
+                chat.repertoire?[index] = updated
+            }
+            // Le morceau peut aussi figurer dans des setlists d'événements.
+            for eventIndex in (chat.events ?? []).indices {
+                if let songIndex = chat.events?[eventIndex].setlist.firstIndex(where: { $0.id == song.id }) {
+                    chat.events?[eventIndex].setlist[songIndex] = updated
+                }
+            }
+        }
+        guard let backend, isLive, let fresh = groups.first(where: { $0.id == group.id }) else { return }
+        let repertoire = fresh.songs
+        // Le morceau vit aussi dans les setlists : on republie celles qui
+        // le contiennent, sinon la version transposée n'y arriverait jamais.
+        let touchedEvents = fresh.allEvents.filter { event in
+            event.setlist.contains { $0.id == song.id }
+        }
+        syncLive {
+            try await backend.updateGroupRepertoire(repertoire, groupID: group.id)
+            for event in touchedEvents {
+                try await backend.updateEventSetlist(event.setlist, eventID: event.id)
             }
         }
     }
