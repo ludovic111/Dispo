@@ -67,6 +67,16 @@ struct FilterSheet: View {
                 }
 
                 Section {
+                    TextField("Ville ou pays — ex. Lisbonne", text: $filters.place)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Où")
+                } footer: {
+                    Text("Un musicien en tournée ou en vacances déclare où il se trouve : avec une date, on cherche ceux qui seront sur place ce jour-là.")
+                }
+
+                Section {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text("Rayon")

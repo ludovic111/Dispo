@@ -404,7 +404,9 @@ struct GroupChatView: View {
                                 .foregroundStyle(JC.billetInk)
                                 .frame(width: 62)
                                 .padding(.vertical, 10)
-                                .background(JC.hero)
+                                // Talon vert feutrine pour ce qui revient,
+                                // laiton pour les dates exceptionnelles.
+                                .background(event.isRecurring ? JC.serie : JC.hero)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 6) {
@@ -413,6 +415,9 @@ struct GroupChatView: View {
                                             .foregroundStyle(.primary)
                                             .lineLimit(1)
                                         TagView(text: event.kind.rawValue, color: JC.bronze)
+                                        if let recurrence = event.recurrence, event.isRecurring {
+                                            TagView(text: recurrence.shortLabel, color: JC.feutrine)
+                                        }
                                     }
                                     Label(
                                         "\(event.venue) · \(event.date.formatted(date: .omitted, time: .shortened))",
@@ -999,60 +1004,84 @@ struct GroupMembersSheet: View {
         }
     }
 
+    /// Instruments joués par un membre — les miens viennent de mon profil,
+    /// ceux des autres de leur fiche serveur.
+    private func instruments(of name: String, isMe: Bool) -> [Instrument] {
+        isMe
+            ? store.profile.instruments
+            : (store.musicians.first(where: { $0.name == name })?.instruments ?? [])
+    }
+
     private func memberRow(name: String, isMe: Bool, isLeaderRow: Bool, isPremiumMember: Bool, group: GroupChat) -> some View {
         let kind = group.memberKind(for: name)
+        let role = group.role(for: name)
+        let played = instruments(of: name, isMe: isMe)
+        // Le rôle tenu dans le groupe passe devant, ses autres instruments
+        // suivent. Un rôle assigné hors de sa panoplie reste affiché.
+        let orderedInstruments: [Instrument] = role.map { [$0] + played.filter { $0 != role } } ?? played
+        let profileToOpen = isMe ? nil : store.musicians.first(where: { $0.name == name })
         return JCCard(padding: 11) {
             HStack(spacing: 11) {
-                // Un tap sur un membre ouvre sa fiche profil.
+                // Toute la ligne ouvre la fiche du membre.
                 Button {
-                    guard !isMe,
-                          let musician = store.musicians.first(where: { $0.name == name })
-                    else { return }
-                    viewingMusician = musician
+                    guard let profileToOpen else { return }
+                    viewingMusician = profileToOpen
                 } label: {
-                    AvatarView(name: name, size: 42, photo: store.photo(forName: name))
+                    HStack(spacing: 11) {
+                        AvatarView(name: name, size: 42, photo: store.photo(forName: name))
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 6) {
+                                Text(isMe ? store.tr("Toi") : name)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                if !isMe && store.isDemoContact(name) { DemoAccountBadge() }
+                                if isLeaderRow {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "crown.fill")
+                                            .font(.system(size: 8, weight: .bold))
+                                        Text("Leader")
+                                            .font(.caption2.weight(.heavy))
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(JC.laiton.opacity(0.16), in: Capsule())
+                                    .foregroundStyle(JC.laiton)
+                                }
+                            }
+                            HStack(spacing: 6) {
+                                if isPremiumMember {
+                                    Text("Premium")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(JC.laiton)
+                                }
+                                // Le leader est toujours le noyau ; les autres ont un statut.
+                                if !isLeaderRow {
+                                    Label(kind.label, systemImage: kind.symbol)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(kind == .permanent ? JC.bronze : .secondary)
+                                }
+                            }
+                            // Ce que joue chaque membre — le rôle tenu dans le
+                            // groupe est en laiton, ses autres instruments en
+                            // bronze : on lit la formation d'un coup d'œil.
+                            if !orderedInstruments.isEmpty {
+                                FlowLayout(spacing: 5) {
+                                    ForEach(orderedInstruments) { instrument in
+                                        TagView(
+                                            text: instrument.rawValue,
+                                            color: instrument == role ? JC.laiton : JC.bronze
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableStyle())
+                .disabled(profileToOpen == nil)
                 .accessibilityLabel(Text("Voir le profil"))
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(isMe ? store.tr("Toi") : name)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        if !isMe && store.isDemoContact(name) { DemoAccountBadge() }
-                        if isLeaderRow {
-                            HStack(spacing: 3) {
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 8, weight: .bold))
-                                Text("Leader")
-                                    .font(.caption2.weight(.heavy))
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(JC.laiton.opacity(0.16), in: Capsule())
-                            .foregroundStyle(JC.laiton)
-                        }
-                    }
-                    HStack(spacing: 6) {
-                        if isPremiumMember {
-                            Text("Premium")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.laiton)
-                        }
-                        // Le leader est toujours le noyau ; les autres ont un statut.
-                        if !isLeaderRow {
-                            Label(kind.label, systemImage: kind.symbol)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(kind == .permanent ? JC.bronze : .secondary)
-                        }
-                        if let role = group.role(for: name) {
-                            Label(store.tr(role.rawValue), systemImage: "guitars")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(JC.laiton)
-                        }
-                    }
-                }
                 Spacer(minLength: 0)
                 if isLeader && !isMe {
                     Menu {
@@ -1184,6 +1213,36 @@ struct GroupSettingsSheet: View {
                     } footer: {
                         Text("Public : le groupe apparaît sur les profils de ses membres (nom, photo, effectif). Privé : il reste entre vous.")
                     }
+
+                    // Un membre lâche à J-2 : soit tu publies le SOS toi-même,
+                    // soit l'app s'en charge dans la seconde.
+                    Section {
+                        Toggle(
+                            "Chercher un remplaçant tout seul",
+                            isOn: Binding(
+                                get: { group.autoSOSEnabled ?? false },
+                                set: { store.setAutoSOS(enabled: $0, minLevel: autoLevel, in: group) }
+                            )
+                        )
+                        .tint(JC.signal)
+                        if group.autoSOSEnabled == true {
+                            Picker("Niveau demandé", selection: Binding(
+                                get: { autoLevel },
+                                set: { store.setAutoSOS(enabled: true, minLevel: $0, in: group) }
+                            )) {
+                                Text("Peu importe").tag(Level?.none)
+                                ForEach(Level.allCases) { level in
+                                    Text(LocalizedStringKey(level.rawValue)).tag(Level?.some(level))
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Remplacement automatique")
+                    } footer: {
+                        Text(group.autoSOSEnabled == true
+                             ? "Dès qu'un membre se déclare indisponible, un SOS part pour son poste — tu es prévenu·e à chaque fois."
+                             : "Désactivé : tu es prévenu·e du désistement, et c'est toi qui publies le SOS quand tu veux.")
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -1211,6 +1270,11 @@ struct GroupSettingsSheet: View {
                 }
             }
         }
+    }
+
+    /// Niveau minimum retenu pour les SOS automatiques du groupe.
+    private var autoLevel: Level? {
+        group?.autoSOSMinLevel.flatMap(Level.init(rawValue:))
     }
 
     private func commitRename() {
@@ -1291,6 +1355,8 @@ struct GroupEventSheet: View {
     let eventID: GroupEvent.ID
     let onPublishSOS: (GroupEvent) -> Void
     @State private var addingSong = false
+    /// Série : on demande si on annule cette date ou toutes les suivantes.
+    @State private var confirmingDelete = false
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
@@ -1324,12 +1390,30 @@ struct GroupEventSheet: View {
                                         .font(.caption)
                                     Label(event.venue, systemImage: "mappin.and.ellipse")
                                         .font(.caption)
+                                    if let recurrence = event.recurrence, event.isRecurring {
+                                        let remaining = store.remainingOccurrences(of: event, in: group)
+                                        Label(
+                                            String(
+                                                format: store.tr("%@ · %lld dates à venir"),
+                                                store.tr(recurrence.rawValue), remaining
+                                            ),
+                                            systemImage: "repeat"
+                                        )
+                                        .font(.caption)
+                                        .foregroundStyle(JC.feutrine)
+                                    }
+                                    reminderRow(event: event, isLeader: isLeader)
                                 }
                             }
 
                             attendanceCard(event: event, group: group)
 
-                            // Un membre lâche ? SOS pré-rempli — le réflexe Dispo.
+                            // Un membre lâche ? SOS pré-rempli — le réflexe
+                            // Dispo. Publier au nom du groupe engage le
+                            // groupe : c'est au leader de le faire. (Un SOS
+                            // personnel, lui, reste ouvert à tout le monde
+                            // depuis l'onglet SOS.)
+                            if isLeader {
                             Button {
                                 dismiss()
                                 onPublishSOS(event)
@@ -1342,6 +1426,7 @@ struct GroupEventSheet: View {
                                     .foregroundStyle(.white)
                             }
                             .buttonStyle(PressableStyle())
+                            }
 
                             Button {
                                 addingSong = true
@@ -1397,12 +1482,16 @@ struct GroupEventSheet: View {
 
                             if isLeader {
                                 Button(role: .destructive) {
-                                    if let event = self.event {
+                                    // Une date isolée part sans confirmation ;
+                                    // une série demande laquelle on annule.
+                                    if event.isRecurring {
+                                        confirmingDelete = true
+                                    } else {
                                         store.removeEvent(event, from: group)
+                                        dismiss()
                                     }
-                                    dismiss()
                                 } label: {
-                                    Text("Supprimer l'événement")
+                                    Text(event.isRecurring ? "Annuler cette répétition" : "Supprimer l'événement")
                                         .font(.caption.weight(.bold))
                                         .frame(maxWidth: .infinity)
                                 }
@@ -1424,6 +1513,58 @@ struct GroupEventSheet: View {
                 AddSongSheet(groupID: groupID, eventID: eventID)
                     .presentationDetents([.medium])
             }
+            .confirmationDialog(
+                "Cette date ou toute la série ?",
+                isPresented: $confirmingDelete,
+                titleVisibility: .visible
+            ) {
+                if let group, let event {
+                    Button("Annuler cette date seulement", role: .destructive) {
+                        store.removeEvent(event, from: group)
+                        dismiss()
+                    }
+                    Button("Annuler toutes les dates à venir", role: .destructive) {
+                        store.removeSeries(of: event, from: group)
+                        dismiss()
+                    }
+                }
+                Button("Ne rien annuler", role: .cancel) {}
+            }
+        }
+    }
+
+    /// Quand le rappel part — et, pour le leader, de quoi le changer. Le
+    /// délai vaut pour tout le groupe : chaque appareil planifie le sien.
+    @ViewBuilder
+    private func reminderRow(event: GroupEvent, isLeader: Bool) -> some View {
+        if isLeader {
+            Menu {
+                ForEach(GroupEvent.reminderLeadOptions, id: \.self) { days in
+                    Button {
+                        store.setReminderLead(days, forEventID: event.id, in: groupID)
+                    } label: {
+                        if event.reminderLead == days {
+                            Label(store.reminderLeadLabel(days), systemImage: "checkmark")
+                        } else {
+                            Text(store.reminderLeadLabel(days))
+                        }
+                    }
+                }
+            } label: {
+                Label(
+                    String(format: store.tr("Rappel : %@"), store.reminderLeadLabel(event.reminderLead)),
+                    systemImage: "bell.badge"
+                )
+                .font(.caption)
+                .foregroundStyle(JC.laiton)
+            }
+        } else {
+            Label(
+                String(format: store.tr("Rappel : %@"), store.reminderLeadLabel(event.reminderLead)),
+                systemImage: "bell"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -1601,10 +1742,22 @@ struct AddGroupEventSheet: View {
     @State private var title = ""
     @State private var venue = ""
     @State private var date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+    /// Rythme : ponctuel, ou une série (répétition hebdomadaire…).
+    @State private var recurrence: EventRecurrence = .once
+    /// Nombre de dates générées quand l'événement se répète.
+    @State private var occurrences = 8
+    /// Combien de jours avant l'événement chacun est prévenu.
+    @State private var reminderLeadDays = GroupEvent.defaultReminderLeadDays
 
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
         !venue.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Les dates réellement créées — affichées avant validation, pour qu'on
+    /// voie ce qu'on ajoute au calendrier du groupe.
+    private var plannedDates: [Date] {
+        GroupEvent.occurrenceDates(from: date, recurrence: recurrence, count: occurrences)
     }
 
     var body: some View {
@@ -1621,6 +1774,63 @@ struct AddGroupEventSheet: View {
                     TextField("Salle ou bar — ex. Le Chat Noir", text: $venue)
                     DatePicker("Date et heure", selection: $date, in: Date()...)
                 }
+
+                Section {
+                    Picker("Ça se répète", selection: $recurrence) {
+                        ForEach(EventRecurrence.allCases) { option in
+                            Text(LocalizedStringKey(option.rawValue)).tag(option)
+                        }
+                    }
+                    if recurrence != .once {
+                        Stepper(value: $occurrences, in: 2...GroupEvent.maxOccurrences) {
+                            Text(String(format: store.tr("%lld dates"), occurrences))
+                        }
+                        if let last = plannedDates.last {
+                            Label(
+                                String(
+                                    format: store.tr("Jusqu'au %@"),
+                                    last.formatted(.dateTime.weekday(.wide).day().month(.wide).year())
+                                ),
+                                systemImage: "calendar.badge.clock"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Rythme")
+                } footer: {
+                    Text(recurrence == .once
+                         ? "Une date unique. Les événements qui reviennent sont affichés dans une autre couleur."
+                         : "Chaque date a sa propre setlist et sa propre feuille de présence — tu pourras en annuler une sans toucher aux autres.")
+                }
+
+                Section {
+                    Picker("Prévenir le groupe", selection: $reminderLeadDays) {
+                        ForEach(GroupEvent.reminderLeadOptions, id: \.self) { days in
+                            Text(store.reminderLeadLabel(days)).tag(days)
+                        }
+                    }
+                } header: {
+                    Text("Rappel")
+                } footer: {
+                    Text("Chaque membre reçoit un rappel à ce moment-là — pour confirmer sa présence, ou juste ne pas oublier.")
+                }
+
+                if recurrence != .once {
+                    Section("Les dates") {
+                        ForEach(plannedDates.prefix(12), id: \.self) { planned in
+                            Text(planned.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute()))
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                        if plannedDates.count > 12 {
+                            Text(String(format: store.tr("+ %lld autres"), plannedDates.count - 12))
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
             }
             .scrollContentBackground(.hidden)
             .background(JC.bg)
@@ -1632,13 +1842,15 @@ struct AddGroupEventSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") {
-                        store.addEvent(
-                            GroupEvent(
-                                kind: kind,
-                                title: title.trimmingCharacters(in: .whitespaces),
-                                venue: venue.trimmingCharacters(in: .whitespaces),
-                                date: date
-                            ),
+                        let template = GroupEvent(
+                            kind: kind,
+                            title: title.trimmingCharacters(in: .whitespaces),
+                            venue: venue.trimmingCharacters(in: .whitespaces),
+                            date: date,
+                            reminderLeadDays: reminderLeadDays
+                        )
+                        store.addEvents(
+                            template.occurrences(recurrence: recurrence, count: occurrences),
                             to: group
                         )
                         dismiss()
@@ -1647,6 +1859,20 @@ struct AddGroupEventSheet: View {
                     .disabled(!isValid)
                 }
             }
+        }
+    }
+
+}
+
+extension AppStore {
+    /// Libellé lisible d'un délai de rappel — « La veille », « 2 jours avant ».
+    func reminderLeadLabel(_ days: Int) -> String {
+        switch days {
+        case 0: return tr("Le jour même")
+        case 1: return tr("La veille")
+        case 7: return tr("Une semaine avant")
+        case 14: return tr("Deux semaines avant")
+        default: return String(format: tr("%lld jours avant"), days)
         }
     }
 }

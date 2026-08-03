@@ -73,6 +73,8 @@ struct MyProfileView: View {
     @State private var editingVideo: DemoVideo?
     @State private var showFollowers = false
     @State private var showPlayedWith = false
+    /// Séjour en cours d'ajout ou de modification.
+    @State private var editingPlace: AvailabilityPlace?
 
     var body: some View {
         NavigationStack {
@@ -360,7 +362,66 @@ struct MyProfileView: View {
                         .font(.caption2)
                         .foregroundStyle(derived.color)
                 }
+
+                Divider()
+
+                // « Dispo, mais pas ici » : en tournée ou en vacances, on
+                // reste trouvable — pour des concerts sur place.
+                HStack {
+                    Label("Je suis ailleurs", systemImage: "airplane.departure")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(JC.bronze)
+                    Spacer()
+                    Button {
+                        editingPlace = AvailabilityPlace(
+                            from: Date(),
+                            to: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
+                            country: store.profile.country,
+                            city: ""
+                        )
+                    } label: {
+                        Label("Ajouter", systemImage: "plus.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(JC.laiton)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                if store.profile.trips.isEmpty {
+                    Text("Rien pour l'instant — tu es cherché·e autour de \(store.profile.cityLabel).")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(store.profile.trips.sorted { $0.from < $1.from }) { trip in
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.caption)
+                                .foregroundStyle(JC.laiton)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(trip.label)
+                                    .font(.caption.weight(.bold))
+                                Text(verbatim: "\(trip.from.formatted(.dateTime.day().month(.abbreviated))) → \(trip.to.formatted(.dateTime.day().month(.abbreviated).year()))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button {
+                                store.removeAvailabilityPlace(trip)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(PressableStyle())
+                            .accessibilityLabel(Text("Supprimer"))
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
             }
+        }
+        .sheet(item: $editingPlace) { trip in
+            AvailabilityPlaceSheet(place: trip)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -871,6 +932,79 @@ struct LanguageRegionSheet: View {
                     store.profile.postalCode = city.postalCode
                     store.saveProfile()
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Séjour ailleurs
+
+/// « Je suis dispo, mais à Lisbonne du 12 au 20 » — une période et un lieu.
+/// Le pays vient de la liste connue ; la ville est libre, parce qu'on peut
+/// être n'importe où.
+struct AvailabilityPlaceSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let place: AvailabilityPlace
+
+    @State private var from = Date()
+    @State private var to = Date()
+    @State private var country: Country?
+    @State private var city = ""
+
+    private var isValid: Bool {
+        !city.trimmingCharacters(in: .whitespaces).isEmpty || country != nil
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Quand") {
+                    DatePicker("Du", selection: $from, displayedComponents: .date)
+                    DatePicker("Au", selection: $to, in: from..., displayedComponents: .date)
+                }
+                Section {
+                    Picker("Pays", selection: $country) {
+                        Text("Non précisé").tag(Country?.none)
+                        ForEach(Country.allCases) { option in
+                            Text(verbatim: "\(option.flag) \(store.tr(option.nameKey))")
+                                .tag(Country?.some(option))
+                        }
+                    }
+                    TextField("Ville — ex. Lisbonne", text: $city)
+                } header: {
+                    Text("Où")
+                } footer: {
+                    Text("Pendant cette période, les musiciens et les groupes de cette ville te trouvent dans leurs recherches — pas ceux de chez toi.")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Je suis ailleurs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        var saved = place
+                        saved.from = from
+                        saved.to = max(to, from)
+                        saved.country = country
+                        saved.city = city.trimmingCharacters(in: .whitespaces)
+                        store.saveAvailabilityPlace(saved)
+                        dismiss()
+                    }
+                    .font(.headline)
+                    .disabled(!isValid)
+                }
+            }
+            .onAppear {
+                from = place.from
+                to = place.to
+                country = place.country
+                city = place.city
             }
         }
     }

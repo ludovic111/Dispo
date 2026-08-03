@@ -11,6 +11,21 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.3",
+            title: "Bêta — répétitions, remplacements et pros",
+            points: [
+                "Version bêta : tout est ouvert, aucun abonnement n'est vendu et rien ne sera débité",
+                "Événements récurrents : crée une répétition hebdomadaire d'un coup — les dates qui reviennent ont leur propre couleur",
+                "Choisis quand le groupe est prévenu : 2 jours avant par défaut, ou le délai que tu veux",
+                "Un membre se déclare indisponible ? Tu es prévenu·e tout de suite — et si tu l'actives, un SOS part tout seul pour son poste, au niveau que tu as choisi",
+                "Membres du groupe : tape sur un membre pour ouvrir sa fiche, et vois ce que joue chacun",
+                "Les étoiles sont réservées aux professionnels. Entre amateurs, on déclare simplement « on a joué ensemble »",
+                "Les cachets ne s'affichent qu'entre professionnels",
+                "« Je suis ailleurs » : annonce où tu es dispo (tournée, vacances) — et cherche des musiciens par ville ou par pays",
+                "Les comptes d'exemple n'apparaissent plus dans le réseau des vrais utilisateurs"
+            ]
+        ),
+        PatchNote(
             version: "1.2",
             title: "Dépannages par poste & essai gratuit",
             points: [

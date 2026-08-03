@@ -182,6 +182,8 @@ final class SupabaseBackend: Sendable {
         var demoVideos: [DemoVideoPayload]?
         /// Préférence de partage de position (city / exact_friends / exact_everyone).
         var locationPrecision: String?
+        /// Séjours ailleurs (jsonb côté serveur).
+        var availabilityPlaces: [AvailabilityPlacePayload]?
 
         enum CodingKeys: String, CodingKey {
             case id, name, age, neighborhood, latitude, longitude
@@ -194,6 +196,7 @@ final class SupabaseBackend: Sendable {
             case ratingCount = "rating_count"
             case demoVideos = "demo_videos"
             case locationPrecision = "location_precision"
+            case availabilityPlaces = "availability_places"
             case instrumentLevels = "instrument_levels"
         }
 
@@ -237,7 +240,39 @@ final class SupabaseBackend: Sendable {
                 hasLocation: latitude != nil && longitude != nil,
                 ratingAvg: ratingAvg,
                 ratingCount: ratingCount ?? 0,
-                demoVideos: (demoVideos ?? []).map(\.asDemoVideo)
+                demoVideos: (demoVideos ?? []).map(\.asDemoVideo),
+                availabilityPlaces: (availabilityPlaces ?? []).compactMap(\.asAvailabilityPlace)
+            )
+        }
+    }
+
+    /// Forme JSON d'un séjour dans `profiles.availability_places`.
+    struct AvailabilityPlacePayload: Codable, Hashable {
+        var id: UUID
+        /// « yyyy-MM-dd »
+        var from: String
+        var to: String
+        var country: String?
+        var city: String
+
+        init(from place: AvailabilityPlace) {
+            id = place.id
+            from = SupabaseBackend.dayFormatter.string(from: place.from)
+            to = SupabaseBackend.dayFormatter.string(from: place.to)
+            country = place.country?.rawValue
+            city = place.city
+        }
+
+        var asAvailabilityPlace: AvailabilityPlace? {
+            guard let start = SupabaseBackend.dayFormatter.date(from: from),
+                  let end = SupabaseBackend.dayFormatter.date(from: to)
+            else { return nil }
+            return AvailabilityPlace(
+                id: id,
+                from: start,
+                to: end,
+                country: country.flatMap(Country.init(rawValue:)),
+                city: city
             )
         }
     }
@@ -428,10 +463,16 @@ final class SupabaseBackend: Sendable {
 
     /// Musiciens du feed (profils complets, sauf moi). La note étoilée
     /// arrive agrégée sur le profil (moyenne + nombre, jamais le détail).
+    /// Les musiciens du réseau. Les comptes d'exemple (`is_demo`) sont écartés
+    /// dès qu'un vrai compte regarde : un utilisateur ne doit jamais tomber
+    /// sur un profil fabriqué. Ils restent visibles entre comptes de démo
+    /// (App Review), et le mode découverte hors connexion garde son jeu local.
     func fetchMusicians(excluding myID: UUID) async throws -> [Musician] {
         let profiles = try await fetchProfiles()
+        let iAmDemo = profiles.first { $0.id == myID }?.isDemo == true
         return profiles
             .filter { $0.id != myID }
+            .filter { iAmDemo || $0.isDemo != true }
             .compactMap { $0.asMusician() }
     }
 
@@ -457,6 +498,7 @@ final class SupabaseBackend: Sendable {
             let socials: [String: String]
             let neighborhood: String
             let instrument_levels: [String: String]
+            let availability_places: [AvailabilityPlacePayload]
         }
         let update = Update(
             name: profile.name,
@@ -469,7 +511,8 @@ final class SupabaseBackend: Sendable {
             // La ville choisie (« 1200 Genève ») — c'est ce que les autres
             // voient sur ma fiche et mes cartes.
             neighborhood: profile.cityLabel,
-            instrument_levels: profile.instrumentLevels ?? [:]
+            instrument_levels: profile.instrumentLevels ?? [:],
+            availability_places: profile.trips.map(AvailabilityPlacePayload.init(from:))
         )
         try await client.from("profiles").update(update).eq("id", value: userID).execute()
     }
@@ -986,12 +1029,17 @@ final class SupabaseBackend: Sendable {
         var repertoire: [SongPayload]
         var photoUrl: String?
         var isPublic: Bool?
+        /// Remplacement automatique en cas de désistement.
+        var autoSosEnabled: Bool?
+        var autoSosMinLevel: String?
 
         enum CodingKeys: String, CodingKey {
             case id, name, emoji, repertoire
             case leaderId = "leader_id"
             case photoUrl = "photo_url"
             case isPublic = "is_public"
+            case autoSosEnabled = "auto_sos_enabled"
+            case autoSosMinLevel = "auto_sos_min_level"
         }
     }
 
@@ -1016,10 +1064,17 @@ final class SupabaseBackend: Sendable {
         var venue: String
         var date: Date
         var setlist: [SongPayload]
+        /// Série (répétition hebdomadaire…) — nil pour un événement ponctuel.
+        /// Optionnels : la 1.2 et antérieures ne connaissent pas ces colonnes.
+        var seriesId: UUID?
+        var recurrence: String?
+        var reminderLeadDays: Int?
 
         enum CodingKeys: String, CodingKey {
-            case id, kind, title, venue, date, setlist
+            case id, kind, title, venue, date, setlist, recurrence
             case groupId = "group_id"
+            case seriesId = "series_id"
+            case reminderLeadDays = "reminder_lead_days"
         }
     }
 
@@ -1184,7 +1239,10 @@ final class SupabaseBackend: Sendable {
                     venue: event.venue,
                     date: event.date,
                     setlist: event.setlist.map(\.asSong),
-                    attendance: attendanceMap
+                    attendance: attendanceMap,
+                    seriesID: event.seriesId,
+                    recurrence: event.recurrence.flatMap(EventRecurrence.init(rawValue:)),
+                    reminderLeadDays: event.reminderLeadDays
                 )
             }
 
@@ -1198,6 +1256,8 @@ final class SupabaseBackend: Sendable {
                 memberNames: memberNames,
                 memberKinds: kinds,
                 memberRoles: roles,
+                autoSOSEnabled: row.autoSosEnabled,
+                autoSOSMinLevel: row.autoSosMinLevel,
                 messages: (messagesByGroup[row.id] ?? []).map {
                     $0.asGroupMessage(myID: myID, myName: myName, nameByID: nameByID)
                 },
@@ -1469,6 +1529,13 @@ final class SupabaseBackend: Sendable {
     }
 
     func createEvent(_ event: GroupEvent, groupID: UUID) async throws {
+        try await createEvents([event], groupID: groupID)
+    }
+
+    /// Insère une ou plusieurs dates d'un coup (série récurrente) — un seul
+    /// aller-retour, et le trigger marque le leader présent sur chacune.
+    func createEvents(_ events: [GroupEvent], groupID: UUID) async throws {
+        guard !events.isEmpty else { return }
         struct Insert: Encodable {
             let id: UUID
             let group_id: UUID
@@ -1477,22 +1544,60 @@ final class SupabaseBackend: Sendable {
             let venue: String
             let date: Date
             let setlist: [SongPayload]
+            let series_id: UUID?
+            let recurrence: String?
+            let reminder_lead_days: Int?
         }
-        try await client.from("group_events")
-            .insert(Insert(
+        let rows = events.map { event in
+            Insert(
                 id: event.id,
                 group_id: groupID,
                 kind: event.kind.rawValue,
                 title: event.title,
                 venue: event.venue,
                 date: event.date,
-                setlist: event.setlist.map(SongPayload.init(from:))
-            ))
+                setlist: event.setlist.map(SongPayload.init(from:)),
+                series_id: event.seriesID,
+                recurrence: event.recurrence?.rawValue,
+                reminder_lead_days: event.reminderLeadDays
+            )
+        }
+        try await client.from("group_events").insert(rows).execute()
+    }
+
+    /// Active ou coupe le remplacement automatique du groupe (leader).
+    func updateAutoSOS(enabled: Bool, minLevel: String?, groupID: UUID) async throws {
+        struct Patch: Encodable {
+            let auto_sos_enabled: Bool
+            let auto_sos_min_level: String?
+        }
+        try await client.from("music_groups")
+            .update(Patch(auto_sos_enabled: enabled, auto_sos_min_level: minLevel))
+            .eq("id", value: groupID)
+            .execute()
+    }
+
+    /// Nouveau délai de rappel décidé par le leader — la RLS `update` du
+    /// groupe s'applique (membres du groupe uniquement).
+    func updateEventReminderLead(_ days: Int, eventID: UUID) async throws {
+        struct Patch: Encodable { let reminder_lead_days: Int }
+        try await client.from("group_events")
+            .update(Patch(reminder_lead_days: days))
+            .eq("id", value: eventID)
             .execute()
     }
 
     func deleteEvent(_ eventID: UUID) async throws {
         try await client.from("group_events").delete().eq("id", value: eventID).execute()
+    }
+
+    /// Supprime plusieurs dates (toute une série) en un appel.
+    func deleteEvents(_ eventIDs: [UUID]) async throws {
+        guard !eventIDs.isEmpty else { return }
+        try await client.from("group_events")
+            .delete()
+            .in("id", values: eventIDs.map(\.uuidString))
+            .execute()
     }
 
     func setAttendance(

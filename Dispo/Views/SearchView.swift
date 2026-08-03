@@ -139,6 +139,8 @@ struct SearchView: View {
 struct SearchMusicianRow: View {
     @EnvironmentObject private var store: AppStore
     let musician: Musician
+    /// Jour recherché : sert à afficher où le musicien sera ce jour-là.
+    var on: Date? = nil
 
     var body: some View {
         JCCard(padding: 12) {
@@ -165,6 +167,14 @@ struct SearchMusicianRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                    // En tournée ou en vacances : on annonce l'endroit
+                    // plutôt que de laisser croire qu'il est au coin de la rue.
+                    if let trip = on.flatMap({ musician.place(on: $0) })
+                        ?? musician.availabilityPlaces.first(where: { $0.covers(Date()) }) {
+                        Label(trip.label, systemImage: "airplane")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(JC.laiton)
+                    }
                     HStack(spacing: 7) {
                         if let summary = store.ratingSummary(for: musician) {
                             RatingBadge(summary: summary)

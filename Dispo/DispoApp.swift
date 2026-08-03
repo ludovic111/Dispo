@@ -318,6 +318,18 @@ enum JC {
         ],
         startPoint: .top, endPoint: .bottom
     )
+    /// Rampe « série » — feutrine claire, pour les événements qui reviennent
+    /// (répétition hebdomadaire). Le laiton du `hero` reste réservé aux dates
+    /// exceptionnelles : d'un coup d'œil, on distingue la routine du concert.
+    /// Assez claire pour porter l'encre sombre du billet.
+    static let serie = LinearGradient(
+        colors: [
+            Color(red: 0.729, green: 0.792, blue: 0.690),
+            Color(red: 0.612, green: 0.694, blue: 0.588)
+        ],
+        startPoint: .top, endPoint: .bottom
+    )
+
     /// « Velours des coulisses » — le dégradé signature réservé au Premium /
     /// pass backstage. Un bleu-vert paon, volontairement distinct du laiton :
     /// l'or reste le CTA (hero), le teal dit « backstage ».

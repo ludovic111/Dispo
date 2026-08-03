@@ -13,8 +13,12 @@ struct DiscoveryFilters {
     var friendsOnly: Bool = false
     /// A déjà joué avec au moins un de mes amis.
     var playedWithAFriend: Bool = false
-    /// Bien notés : moyenne ≥ 4 étoiles avec au moins 3 avis.
+    /// Bien notés : moyenne ≥ 4 étoiles avec au moins 3 avis (pros seulement).
     var wellRated: Bool = false
+    /// Où : ville ou pays. Vide = peu importe. Combiné à `neededDate`, cherche
+    /// les musiciens présents là-bas ce jour-là (séjour déclaré), sinon ceux
+    /// qui y habitent.
+    var place: String = ""
 
     var activeCount: Int {
         var count = 0
@@ -26,6 +30,7 @@ struct DiscoveryFilters {
         if friendsOnly { count += 1 }
         if playedWithAFriend { count += 1 }
         if wellRated { count += 1 }
+        if !place.trimmingCharacters(in: .whitespaces).isEmpty { count += 1 }
         return count
     }
 
@@ -35,6 +40,7 @@ struct DiscoveryFilters {
         if let genre, !musician.genres.contains(genre) { return false }
         if let minLevel, musician.level < minLevel { return false }
         if let neededDate, !musician.isAvailable(on: neededDate) { return false }
+        if !matchesPlace(musician) { return false }
         // Rayon appliqué uniquement quand la distance est fiable (ma position
         // et la sienne connues) — on ne cache jamais un profil sans géoloc.
         if let distance = store.distance(to: musician), distance > radiusKm { return false }
@@ -46,6 +52,22 @@ struct DiscoveryFilters {
             else { return false }
         }
         return true
+    }
+
+    /// Le musicien est-il au bon endroit ? Si une date est demandée, on
+    /// regarde où il sera ce jour-là (séjour déclaré) ; sinon on accepte
+    /// aussi bien son domicile qu'un de ses séjours à venir.
+    private func matchesPlace(_ musician: Musician) -> Bool {
+        let needle = place.trimmingCharacters(in: .whitespaces)
+        guard !needle.isEmpty else { return true }
+        let home = musician.neighborhood
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .contains(needle.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current))
+        if let neededDate {
+            if let trip = musician.place(on: neededDate) { return trip.matches(needle) }
+            return home
+        }
+        return home || musician.availabilityPlaces.contains { $0.matches(needle) }
     }
 }
 
@@ -389,7 +411,7 @@ struct HomeView: View {
             }
             ForEach(Array(filtered.enumerated()), id: \.element.id) { index, musician in
                 NavigationLink(value: musician) {
-                    SearchMusicianRow(musician: musician)
+                    SearchMusicianRow(musician: musician, on: filters.neededDate)
                 }
                 .buttonStyle(PressableStyle())
                 if index == min(2, filtered.count - 1), !store.isPremium {

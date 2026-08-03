@@ -318,13 +318,19 @@ struct EventDetailView: View {
                                 Label(event.date.formatted(date: .complete, time: .shortened), systemImage: "calendar")
                                 Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
                                 Label("\(store.tr(event.genre.rawValue)) — \(event.genre.codes.map { store.tr($0) }.joined(separator: ", "))", systemImage: "music.quarternote.3")
-                                Label {
-                                    Text("Cachet : \(store.tr(event.feeLabel))")
-                                    + Text(verbatim: event.paymentLabel.map { " · \(store.tr($0))" } ?? "")
-                                } icon: {
-                                    Image(systemName: "banknote")
+                                // Le serveur ne renvoie le cachet qu'aux
+                                // professionnels : pour les autres, la ligne
+                                // n'existe pas plutôt que d'afficher un
+                                // « à discuter » trompeur.
+                                if store.profile.level == .pro {
+                                    Label {
+                                        Text("Cachet : \(store.tr(event.feeLabel))")
+                                        + Text(verbatim: event.paymentLabel.map { " · \(store.tr($0))" } ?? "")
+                                    } icon: {
+                                        Image(systemName: "banknote")
+                                    }
+                                    .foregroundStyle(JC.laiton)
                                 }
-                                .foregroundStyle(JC.laiton)
                             }
                             .font(.subheadline)
                         }

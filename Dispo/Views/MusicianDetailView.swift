@@ -136,13 +136,14 @@ struct MusicianDetailView: View {
                             .overlay(Circle().stroke(JC.bg, lineWidth: 2.5))
                     }
                 }
-            // Trois compteurs réels : note moyenne, abonnés, collaborations
-            // « a joué avec » — jamais de chiffres inventés.
+            // Trois compteurs réels : note moyenne (pros seulement), abonnés,
+            // collaborations « a joué avec » — jamais de chiffres inventés.
             HStack(spacing: 0) {
-                statBlock(
-                    value: store.ratingSummary(for: musician).map { "★ \($0.averageLabel)" } ?? "—",
-                    label: "note"
-                )
+                if let summary = store.ratingSummary(for: musician) {
+                    statBlock(value: "★ \(summary.averageLabel)", label: "note")
+                } else {
+                    statBlock(value: store.tr(musician.level.rawValue), label: "niveau")
+                }
                 Button { showFollowers = true } label: {
                     statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
                 }
@@ -451,60 +452,86 @@ struct MusicianDetailView: View {
     /// de 1 à 5 étoiles. Les notes sont anonymes ; seule la moyenne et le
     /// nombre d'avis sont visibles.
     private var rateCard: some View {
+        let isPro = store.canBeRated(musician)
         let summary = store.ratingSummary(for: musician)
         let mine = store.myRating(for: musician)
+        let played = store.hasPlayedWith(musician)
         return JCCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    sectionTitle("Tu as joué avec \(firstName) ?", systemImage: "star.fill")
+                    sectionTitle(
+                        "Tu as joué avec \(firstName) ?",
+                        systemImage: isPro ? "star.fill" : "person.2.fill"
+                    )
                     Spacer()
                     if let summary {
                         RatingBadge(summary: summary)
                     }
                 }
-                if let summary {
-                    HStack(spacing: 8) {
-                        StarsView(rating: summary.average, size: 13)
-                        Text("\(summary.count) avis")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+
+                // Le geste ouvert à tout le monde : déclarer qu'on a joué
+                // ensemble. C'est ce qui construit le graphe « a joué avec ».
+                Button {
+                    withAnimation(.snappy) { store.togglePlayedWith(musician) }
+                } label: {
+                    Label(
+                        played ? "On a joué ensemble" : "Déclarer qu'on a joué ensemble",
+                        systemImage: played ? "checkmark.circle.fill" : "plus.circle"
+                    )
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        played ? JC.feutrine.opacity(0.16) : JC.bronze.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+                    .foregroundStyle(played ? JC.feutrine : JC.bronze)
+                }
+                .buttonStyle(PressableStyle())
+
+                if isPro {
+                    // Les étoiles sont réservées aux professionnels : c'est
+                    // leur métier qu'on évalue, pas une soirée entre amis.
+                    Divider()
+                    if let summary {
+                        HStack(spacing: 8) {
+                            StarsView(rating: summary.average, size: 13)
+                            Text("\(summary.count) avis")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                } else {
-                    Text("Pas encore de note — sois le premier à jouer avec \(firstName) !")
+                    Text(mine == nil
+                         ? "\(firstName) est musicien·ne professionnel·le : tu peux aussi noter la prestation. Ta note est anonyme."
+                         : "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-                Divider()
-                Text(mine == nil
-                     ? "Note ton expérience de jeu avec \(firstName) — ta note est anonyme et compte comme « on a joué ensemble »."
-                     : "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 6) {
-                    ForEach(1...5, id: \.self) { stars in
-                        Button {
-                            withAnimation(.snappy) { store.rate(musician, stars: stars) }
-                        } label: {
-                            Image(systemName: (mine ?? 0) >= stars ? "star.fill" : "star")
-                                .font(.system(size: 26, weight: .semibold))
-                                .foregroundStyle((mine ?? 0) >= stars ? JC.laiton : Color.secondary.opacity(0.5))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 6)
-                                .contentShape(Rectangle())
+                    HStack(spacing: 6) {
+                        ForEach(1...5, id: \.self) { stars in
+                            Button {
+                                withAnimation(.snappy) { store.rate(musician, stars: stars) }
+                            } label: {
+                                Image(systemName: (mine ?? 0) >= stars ? "star.fill" : "star")
+                                    .font(.system(size: 26, weight: .semibold))
+                                    .foregroundStyle((mine ?? 0) >= stars ? JC.laiton : Color.secondary.opacity(0.5))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 6)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PressableStyle(scale: 0.85))
+                            .accessibilityLabel(Text(verbatim: "\(stars)/5"))
                         }
-                        .buttonStyle(PressableStyle(scale: 0.85))
-                        .accessibilityLabel(Text(verbatim: "\(stars)/5"))
                     }
-                }
-                if mine != nil {
-                    Button {
-                        withAnimation(.snappy) { store.removeRating(for: musician) }
-                    } label: {
-                        Label("Retirer ma note", systemImage: "star.slash")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.secondary)
+                    if mine != nil {
+                        Button {
+                            withAnimation(.snappy) { store.removeRating(for: musician) }
+                        } label: {
+                            Label("Retirer ma note", systemImage: "star.slash")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(PressableStyle())
                     }
-                    .buttonStyle(PressableStyle())
                 }
             }
         }

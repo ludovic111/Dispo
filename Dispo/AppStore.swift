@@ -71,10 +71,18 @@ final class AppStore: ObservableObject {
     private var liveMyRatings: [UUID: Int] = [:]
     /// Ma propre note agrégée (moyenne + nb d'avis), lue du serveur.
     @Published private(set) var myRatingSummary: RatingSummary?
+    /// **Bêta fermée.** Pendant la phase de test avec un cercle d'invités,
+    /// aucun abonnement n'est vendu : tout est ouvert. Rien n'est simulé —
+    /// il n'y a simplement pas de paywall, et le serveur ne fait dépendre
+    /// aucune permission de `is_premium` (voir la migration
+    /// `v13_beta_pro_rules`). Repasser à `false` le jour de la mise en vente,
+    /// en restaurant la même migration côté base.
+    static let isBeta = true
+
     /// Abonnement Premium — RevenueCat en production (StoreKit pur en repli),
     /// état local en démo. Le serveur (webhook RevenueCat) reste seul juge de
-    /// `is_premium` côté base.
-    @Published var isPremium: Bool = false
+    /// `is_premium` côté base. En bêta, toujours vrai.
+    @Published var isPremium: Bool = AppStore.isBeta
     /// Plan choisi (mensuel / annuel), nil si non abonné.
     @Published var premiumPlan: PremiumPlan?
     @Published var showPaywall: Bool = false
@@ -258,7 +266,7 @@ final class AppStore: ObservableObject {
         if let saved: [String: Int] = Self.load(key: Self.starRatingsKey) {
             myStarRatings = saved
         }
-        isPremium = UserDefaults.standard.bool(forKey: Self.premiumKey)
+        isPremium = Self.isBeta || UserDefaults.standard.bool(forKey: Self.premiumKey)
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
         theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .system
@@ -460,7 +468,7 @@ final class AppStore: ObservableObject {
             } else {
                 applyServerProfile(mine)
             }
-            isPremium = mine.isPremium
+            isPremium = Self.isBeta || mine.isPremium
             // La préférence de partage de position suit le compte.
             if let precision = mine.locationPrecision.flatMap(LocationPrecision.init(rawValue:)) {
                 locationPrecision = precision
@@ -553,6 +561,7 @@ final class AppStore: ObservableObject {
             persistGroups()
             await refreshGroupInvitations(nameByID: nameByID)
             rescheduleAllAttendanceNotifications()
+            runAutoSOSIfNeeded()
             backendError = nil
         } catch {
             backendError = tr("Connexion au serveur impossible — vérifie le réseau.")
@@ -569,6 +578,8 @@ final class AppStore: ObservableObject {
         updated.level = Level(rawValue: mine.level) ?? .intermediaire
         updated.bio = mine.bio
         updated.availableDates = mine.parsedDates
+        updated.availabilityPlaces = (mine.availabilityPlaces ?? [])
+            .compactMap(\.asAvailabilityPlace)
         if let socials = mine.socials, !socials.isEmpty {
             updated.socials = socials
         }
@@ -674,7 +685,7 @@ final class AppStore: ObservableObject {
         if let saved: MyProfile = Self.load(key: Self.profileKey) {
             profile = saved
         }
-        isPremium = UserDefaults.standard.bool(forKey: Self.premiumKey)
+        isPremium = Self.isBeta || UserDefaults.standard.bool(forKey: Self.premiumKey)
         armEarlyAccessTeaser()
     }
 
@@ -954,6 +965,7 @@ final class AppStore: ObservableObject {
             }
             persistGroups()
             rescheduleAllAttendanceNotifications()
+            runAutoSOSIfNeeded()
             backfillStreamingLinks()
             await refreshGroupInvitations(nameByID: nameByID)
         } catch {
@@ -1251,6 +1263,8 @@ final class AppStore: ObservableObject {
     /// Live : agrégat serveur. Démo : avis seed convertis en étoiles
     /// (note = 4, note dorée = 5), fusionnés avec ma note locale.
     func ratingSummary(for musician: Musician) -> RatingSummary? {
+        // Un amateur n'a pas de note : il n'affiche que ses collaborations.
+        guard canBeRated(musician) else { return nil }
         if isLive {
             guard musician.ratingCount > 0, let avg = musician.ratingAvg else { return nil }
             return RatingSummary(average: avg, count: musician.ratingCount)
@@ -1262,9 +1276,152 @@ final class AppStore: ObservableObject {
         return RatingSummary(average: Double(total) / Double(count), count: count)
     }
 
+    // MARK: Remplacement automatique
+
+    /// Désistements déjà traités (clé « eventID.membre ») — un SOS
+    /// automatique ne part qu'une fois par poste libéré.
+    private static let handledDropoutsKey = "dispo.autoSOS.handled"
+
+    /// Active ou coupe le remplacement automatique du groupe (leader).
+    func setAutoSOS(enabled: Bool, minLevel: Level?, in group: GroupChat) {
+        guard canLead(group) else { return }
+        updateGroup(group.id) {
+            $0.autoSOSEnabled = enabled
+            $0.autoSOSMinLevel = minLevel?.rawValue
+        }
+        if let backend, isLive {
+            syncLive {
+                try await backend.updateAutoSOS(
+                    enabled: enabled,
+                    minLevel: minLevel?.rawValue,
+                    groupID: group.id
+                )
+            }
+        }
+    }
+
+    /// Passe en revue mes groupes : pour chaque désistement encore non traité
+    /// sur un groupe où j'ai activé le remplacement automatique, publie le SOS
+    /// correspondant. Appelé après chaque synchro des groupes — c'est
+    /// l'appareil du leader qui décide, lui seul a le droit de publier.
+    func runAutoSOSIfNeeded() {
+        var handled = Set(UserDefaults.standard.stringArray(forKey: Self.handledDropoutsKey) ?? [])
+        var published = false
+        for group in groups where group.autoSOSEnabled == true && isLeader(of: group) {
+            let minLevel = group.autoSOSMinLevel.flatMap(Level.init(rawValue:))
+            for event in group.upcomingEvents {
+                for member in event.unavailableNames where member != profile.name {
+                    let key = "\(event.id.uuidString).\(member)"
+                    guard !handled.contains(key) else { continue }
+                    handled.insert(key)
+                    publishAutoSOS(for: event, in: group, replacing: member, minLevel: minLevel)
+                    published = true
+                }
+            }
+        }
+        if published {
+            UserDefaults.standard.set(Array(handled), forKey: Self.handledDropoutsKey)
+        }
+    }
+
+    /// Publie le SOS qui remplace un membre défaillant : même date, même lieu,
+    /// son instrument dans le groupe, et le niveau demandé par le leader.
+    private func publishAutoSOS(
+        for event: GroupEvent,
+        in group: GroupChat,
+        replacing member: String,
+        minLevel: Level?
+    ) {
+        // Le poste à pourvoir : son rôle dans le groupe, sinon son premier
+        // instrument. Sans instrument connu, on ne devine pas.
+        let instrument = group.role(for: member)
+            ?? musicians.first(where: { $0.name == member })?.instruments.first
+        guard let instrument else { return }
+        let levelNote = minLevel.map { String(format: tr("Niveau recherché : %@."), tr($0.rawValue)) } ?? ""
+        let sos = GigRequest(
+            title: String(format: tr("Remplacement — %@"), event.title),
+            hostName: profile.name,
+            hostId: liveUserID,
+            date: event.date,
+            place: event.venue,
+            neighborhood: profile.cityLabel,
+            genre: group.songs.isEmpty ? .jazz : (profile.genres.first ?? .jazz),
+            wantedInstruments: [instrument],
+            fee: nil,
+            descriptionText: String(
+                format: tr("%@ s'est désisté·e pour « %@ » (%@). %@"),
+                member, event.title, group.name, levelNote
+            ).trimmingCharacters(in: .whitespaces),
+            isMine: true,
+            postedAt: Date()
+        )
+        addEvent(sos)
+        pushLocal(
+            title: "\(group.emoji) \(group.name)",
+            body: String(
+                format: tr("SOS publié automatiquement pour remplacer %@ (%@)."),
+                member, tr(instrument.rawValue)
+            )
+        )
+    }
+
+    // MARK: Séjours ailleurs
+
+    /// Ajoute ou remplace un séjour (« dispo, mais à Lisbonne du 12 au 20 »).
+    func saveAvailabilityPlace(_ place: AvailabilityPlace) {
+        var places = profile.trips.filter { $0.id != place.id }
+        places.append(place)
+        profile.availabilityPlaces = places.sorted { $0.from < $1.from }
+        saveProfile()
+    }
+
+    func removeAvailabilityPlace(_ place: AvailabilityPlace) {
+        profile.availabilityPlaces = profile.trips.filter { $0.id != place.id }
+        saveProfile()
+    }
+
+    /// Les étoiles ne concernent que les professionnels : entre amateurs, il
+    /// n'y a que « on a joué ensemble ». Le serveur applique la même règle
+    /// (policy `ratings_insert_own`) — ceci n'est que la version affichable.
+    func canBeRated(_ musician: Musician) -> Bool { musician.level == .pro }
+
+    /// Déclare (ou retire) « on a joué ensemble » — sans note. C'est le geste
+    /// ouvert à tout le monde ; noter reste réservé aux pros.
+    func togglePlayedWith(_ musician: Musician) {
+        let wasPlayed = playedWith.contains(musician.name)
+        if let backend, let userID = liveUserID {
+            if wasPlayed {
+                playedWith.remove(musician.name)
+                liveCollaborations = liveCollaborations.filter {
+                    !(($0.aId == userID && $0.bId == musician.id)
+                      || ($0.bId == userID && $0.aId == musician.id))
+                }
+            } else {
+                playedWith.insert(musician.name)
+            }
+            Task {
+                do {
+                    if wasPlayed {
+                        try await backend.removeCollaboration(with: musician.id, me: userID)
+                    } else {
+                        try await backend.addCollaboration(with: musician.id, me: userID)
+                    }
+                    await refreshLiveData()
+                } catch {
+                    backendError = tr("La collaboration n'a pas pu être enregistrée.")
+                    await refreshLiveData()
+                }
+            }
+            return
+        }
+        if wasPlayed { playedWith.remove(musician.name) } else { playedWith.insert(musician.name) }
+        Self.save(playedWith, key: Self.playedWithKey)
+    }
+
     /// Note un musicien (1–5). Noter vaut déclaration « on a joué
     /// ensemble » : la collaboration est enregistrée en même temps.
     func rate(_ musician: Musician, stars: Int) {
+        guard canBeRated(musician) else { return }
         let clamped = min(5, max(1, stars))
         if let backend, let userID = liveUserID {
             let previous = liveMyRatings[musician.id]
@@ -1341,6 +1498,9 @@ final class AppStore: ObservableObject {
     }
 
     func loadStoreProducts() async {
+        // Bêta : rien n'est en vente. On n'interroge pas l'App Store, donc
+        // pas de bandeau d'erreur pour un magasin qu'on n'utilise pas.
+        if Self.isBeta { return }
         if revenueCatEnabled {
             do {
                 let offerings = try await Purchases.shared.offerings()
@@ -1501,7 +1661,7 @@ final class AppStore: ObservableObject {
             Self.productIDs.first { ent.productIdentifier.hasPrefix($0.value) }?.key
         }
         let changed = active != isPremium
-        isPremium = active
+        isPremium = Self.isBeta || active
         premiumPlan = active ? plan : nil
         persistPremiumState()
         if changed, isLive {
@@ -1525,7 +1685,7 @@ final class AppStore: ObservableObject {
             activePlan = plan
             if plan == .annual { break }
         }
-        isPremium = activePlan != nil
+        isPremium = Self.isBeta || activePlan != nil
         premiumPlan = activePlan
         persistPremiumState()
     }
@@ -2136,21 +2296,35 @@ final class AppStore: ObservableObject {
     // MARK: Événements (leader crée, membres suggèrent la setlist)
 
     func addEvent(_ event: GroupEvent, to group: GroupChat) {
-        var event = event
+        addEvents([event], to: group)
+    }
+
+    /// Ajoute un événement ou toute une série (répétition hebdomadaire…).
+    /// Les occurrences partagent titre, lieu et rythme mais gardent chacune
+    /// leur setlist et leur feuille de présence.
+    func addEvents(_ events: [GroupEvent], to group: GroupChat) {
+        guard !events.isEmpty else { return }
+        let leader = leaderDisplayName(of: group)
         // Le leader confirme sa présence d'office ; les autres restent en attente.
-        event.attendance = [leaderDisplayName(of: group): .available]
+        let prepared = events.map { event -> GroupEvent in
+            var copy = event
+            copy.attendance = [leader: .available]
+            return copy
+        }
         updateGroup(group.id) {
-            $0.events = ($0.events ?? []) + [event]
+            $0.events = ($0.events ?? []) + prepared
             $0.events?.sort { $0.date < $1.date }
         }
-        scheduleAttendanceReminders(for: event, in: group)
+        for event in prepared {
+            scheduleMyEventReminder(for: event, in: group)
+        }
         if let backend, isLive {
             syncLive {
-                try await backend.createEvent(event, groupID: group.id)
+                try await backend.createEvents(prepared, groupID: group.id)
                 await backend.deliverPendingPushNotifications()
             }
-        } else {
-            scheduleDemoSuggestion(for: group.id, eventID: event.id)
+        } else if let first = prepared.first {
+            scheduleDemoSuggestion(for: group.id, eventID: first.id)
         }
     }
 
@@ -2159,6 +2333,51 @@ final class AppStore: ObservableObject {
         updateGroup(group.id) { $0.events?.removeAll { $0.id == event.id } }
         if let backend, isLive {
             syncLive { try await backend.deleteEvent(event.id) }
+        }
+    }
+
+    /// Combien de dates de cette série restent à venir (celle-ci comprise).
+    func remainingOccurrences(of event: GroupEvent, in group: GroupChat) -> Int {
+        guard let seriesID = event.seriesID else { return 1 }
+        let now = Date()
+        return group.allEvents.filter { $0.seriesID == seriesID && $0.date > now }.count
+    }
+
+    /// Change le délai de rappel d'un événement (leader). Le nouveau délai
+    /// est synchronisé : chaque appareil replanifiera son rappel local.
+    func setReminderLead(_ days: Int, forEventID eventID: GroupEvent.ID, in groupID: GroupChat.ID) {
+        guard let group = groups.first(where: { $0.id == groupID }), canLead(group) else { return }
+        updateGroup(groupID) { group in
+            guard let index = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
+            group.events?[index].reminderLeadDays = days
+        }
+        if let group = groups.first(where: { $0.id == groupID }),
+           let event = group.allEvents.first(where: { $0.id == eventID }) {
+            scheduleMyEventReminder(for: event, in: group)
+            for name in event.unavailableNames {
+                scheduleUnavailableAlert(for: event, member: name, in: group)
+            }
+        }
+        if let backend, isLive {
+            syncLive { try await backend.updateEventReminderLead(days, eventID: eventID) }
+        }
+    }
+
+    /// Supprime toutes les dates encore à venir d'une série (les occurrences
+    /// déjà passées restent : elles font partie de l'histoire du groupe).
+    func removeSeries(of event: GroupEvent, from group: GroupChat) {
+        guard let seriesID = event.seriesID else {
+            removeEvent(event, from: group)
+            return
+        }
+        let now = Date()
+        let doomed = group.allEvents.filter { $0.seriesID == seriesID && $0.date > now }
+        guard !doomed.isEmpty else { return }
+        for event in doomed { cancelAttendanceNotifications(for: event) }
+        let ids = Set(doomed.map(\.id))
+        updateGroup(group.id) { $0.events?.removeAll { ids.contains($0.id) } }
+        if let backend, isLive {
+            syncLive { try await backend.deleteEvents(Array(ids)) }
         }
     }
 
@@ -2179,13 +2398,14 @@ final class AppStore: ObservableObject {
             attendance[member] = status
             group.events?[index].attendance = attendance
         }
-        // Plus besoin du rappel de confirmation pour ce membre.
-        cancelNotification(id: Self.confirmReminderID(eventID: eventID, member: member))
-
         guard let group = groups.first(where: { $0.id == groupID }),
               let event = group.allEvents.first(where: { $0.id == eventID })
         else { return }
 
+        // Mon rappel change de ton (confirmation → simple rappel) ou disparaît.
+        if member == profile.name {
+            scheduleMyEventReminder(for: event, in: group)
+        }
         if status == .unavailable {
             scheduleUnavailableAlert(for: event, member: member, in: group)
         } else {
@@ -2233,84 +2453,95 @@ final class AppStore: ObservableObject {
         )
     }
 
-    // MARK: Rappels de présence (notifications locales planifiées)
+    // MARK: Rappels d'événement (notifications locales planifiées)
+    //
+    // Chaque appareil planifie SES propres rappels à partir des événements
+    // synchronisés : c'est le seul moyen fiable d'atteindre un membre (une
+    // notification locale ne part que sur l'appareil qui la programme).
+    // Le délai choisi par le leader voyage avec l'événement, donc tout le
+    // monde est prévenu au même moment.
 
-    private static func confirmReminderID(eventID: UUID, member: String) -> String {
-        "confirm.\(eventID.uuidString).\(member)"
+    private static func eventReminderID(eventID: UUID) -> String {
+        "event.\(eventID.uuidString)"
     }
 
     private static func unavailableAlertID(eventID: UUID, member: String) -> String {
         "unavailable.\(eventID.uuidString).\(member)"
     }
 
-    /// Rappel à chaque membre pour confirmer — 3 jours avant, ou immédiatement
-    /// si l'événement est plus proche.
-    private func scheduleAttendanceReminders(for event: GroupEvent, in group: GroupChat) {
-        let leader = leaderDisplayName(of: group)
-        for member in roster(of: group) where member != leader {
-            guard event.status(for: member) == .pending else { continue }
-            let remindAt = event.date.addingTimeInterval(-3 * 24 * 3600)
-            let when = max(remindAt, Date().addingTimeInterval(10))
-            pushLocal(
-                title: "\(group.emoji) \(group.name)",
-                body: String(
-                    format: tr("Confirmes-tu ta présence pour « %@ » le %@ ?"),
-                    event.title,
-                    event.date.formatted(.dateTime.weekday(.wide).day().month())
-                ),
-                identifier: Self.confirmReminderID(eventID: event.id, member: member),
-                at: when
+    /// Mon rappel pour un événement : « confirme ta présence » tant que je
+    /// n'ai pas répondu, sinon un simple rappel avant le jour J. Programmé
+    /// au délai voulu par le leader (2 jours par défaut).
+    private func scheduleMyEventReminder(for event: GroupEvent, in group: GroupChat) {
+        let id = Self.eventReminderID(eventID: event.id)
+        cancelNotification(id: id)
+        guard event.date > Date() else { return }
+        let when = event.date.addingTimeInterval(-Double(event.reminderLead) * 24 * 3600)
+        let dateLabel = event.date.formatted(.dateTime.weekday(.wide).day().month().hour().minute())
+        let body: String
+        switch event.status(for: profile.name) {
+        case .pending:
+            body = String(
+                format: tr("Confirmes-tu ta présence pour « %@ » le %@ ?"),
+                event.title, dateLabel
             )
+        case .available:
+            body = String(format: tr("« %@ » — %@ à %@."), event.title, dateLabel, event.venue)
+        case .unavailable:
+            return  // Je ne viens pas : pas de rappel.
         }
+        pushLocal(
+            title: "\(group.emoji) \(group.name)",
+            body: body,
+            identifier: id,
+            at: when
+        )
     }
 
-    /// Alerte leader 2 jours avant si un membre s'est déclaré indispo.
+    /// Alerte le leader, au même délai, si un membre s'est déclaré indispo —
+    /// le temps de trouver un remplaçant. Ne se programme que sur l'appareil
+    /// du leader, qui voit les réponses arriver en temps réel.
     private func scheduleUnavailableAlert(
         for event: GroupEvent,
         member: String,
         in group: GroupChat
     ) {
-        // Notification locale sur cet appareil — le leader (compte courant
-        // en démo) reçoit l'alerte pour trouver un remplaçant à temps.
-        let alertAt = event.date.addingTimeInterval(-2 * 24 * 3600)
-        let when = max(alertAt, Date().addingTimeInterval(15))
+        let id = Self.unavailableAlertID(eventID: event.id, member: member)
+        cancelNotification(id: id)
+        guard isLeader(of: group), member != profile.name, event.date > Date() else { return }
+        let when = event.date.addingTimeInterval(-Double(event.reminderLead) * 24 * 3600)
         pushLocal(
             title: String(format: tr("⚠️ Remplaçant pour %@"), group.name),
             body: String(
                 format: tr("%@ est indispo pour « %@ » — trouve un remplaçant."),
                 member, event.title
             ),
-            identifier: Self.unavailableAlertID(eventID: event.id, member: member),
+            identifier: id,
             at: when
         )
     }
 
     private func cancelAttendanceNotifications(for event: GroupEvent) {
         let center = UNUserNotificationCenter.current()
-        let ids = (event.attendance ?? [:]).keys.flatMap { member in
-            [
-                Self.confirmReminderID(eventID: event.id, member: member),
-                Self.unavailableAlertID(eventID: event.id, member: member)
-            ]
-        }
-        // Aussi les rappels pour les membres pas encore dans attendance.
-        center.removePendingNotificationRequests(withIdentifiers: ids)
-        // Filet : tout préfixe de cet événement.
+        center.removePendingNotificationRequests(
+            withIdentifiers: [Self.eventReminderID(eventID: event.id)]
+        )
+        // Filet : tout ce qui porte l'identifiant de cet événement.
         center.getPendingNotificationRequests { requests in
             let prefix = event.id.uuidString
-            let stale = requests
-                .map(\.identifier)
-                .filter { $0.contains(prefix) }
+            let stale = requests.map(\.identifier).filter { $0.contains(prefix) }
             center.removePendingNotificationRequests(withIdentifiers: stale)
         }
     }
 
-    /// Reprogramme tous les rappels après un lancement / reset.
+    /// Reprogramme tous les rappels après un lancement, une synchro ou un
+    /// changement de présence. Idempotent : chaque rappel a un identifiant
+    /// stable, une nouvelle planification remplace l'ancienne.
     private func rescheduleAllAttendanceNotifications() {
         guard notificationsEnabled else { return }
         for group in groups {
             for event in group.upcomingEvents {
-                scheduleAttendanceReminders(for: event, in: group)
+                scheduleMyEventReminder(for: event, in: group)
                 for name in event.unavailableNames {
                     scheduleUnavailableAlert(for: event, member: name, in: group)
                 }
@@ -3583,7 +3814,7 @@ final class AppStore: ObservableObject {
         playedWith = []
         groups = []
         myStarRatings = [:]
-        isPremium = false
+        isPremium = Self.isBeta
         premiumPlan = nil
         let seed = Self.loadSeed()
         musicians = seed.musicians

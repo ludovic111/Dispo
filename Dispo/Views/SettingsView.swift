@@ -217,7 +217,20 @@ struct SettingsSheet: View {
 
     private var premiumSection: some View {
         Section("Abonnement") {
-            if store.isPremium {
+            if AppStore.isBeta {
+                // Bêta fermée : rien n'est vendu, rien n'est simulé —
+                // tout est simplement ouvert aux testeurs.
+                HStack(spacing: 12) {
+                    settingsIcon("wrench.and.screwdriver.fill", JC.premiumTint)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Version bêta — tout est ouvert")
+                            .foregroundStyle(.primary)
+                        Text("Aucun abonnement pendant les tests. Groupes, alertes en avance et 6 vidéos : c'est offert.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else if store.isPremium {
                 HStack(spacing: 12) {
                     settingsIcon("crown.fill", JC.laiton)
                     VStack(alignment: .leading, spacing: 2) {
@@ -262,20 +275,23 @@ struct SettingsSheet: View {
                     }
                 }
             }
-            Button {
-                Task { await store.restorePurchases() }
-            } label: {
-                HStack(spacing: 12) {
-                    settingsIcon("arrow.clockwise", JC.bronze)
-                    Text("Restaurer mes achats")
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    if store.purchaseInProgress {
-                        ProgressView().controlSize(.small)
+            // Rien à restaurer tant qu'on ne vend rien.
+            if !AppStore.isBeta {
+                Button {
+                    Task { await store.restorePurchases() }
+                } label: {
+                    HStack(spacing: 12) {
+                        settingsIcon("arrow.clockwise", JC.bronze)
+                        Text("Restaurer mes achats")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if store.purchaseInProgress {
+                            ProgressView().controlSize(.small)
+                        }
                     }
                 }
+                .disabled(store.purchaseInProgress)
             }
-            .disabled(store.purchaseInProgress)
         }
     }
 

@@ -804,6 +804,20 @@ struct Musician: Codable, Identifiable, Hashable {
     var ratingCount: Int = 0
     /// Vidéos de démo hébergées (mode live) — lisibles par tous.
     var demoVideos: [DemoVideo] = []
+    /// Séjours ailleurs : « dispo, mais à Lisbonne du 12 au 20 ».
+    var availabilityPlaces: [AvailabilityPlace] = []
+
+    /// Où ce musicien se trouve ce jour-là : le séjour qui couvre la date,
+    /// sinon nil (= il est chez lui, dans son quartier habituel).
+    func place(on date: Date) -> AvailabilityPlace? {
+        availabilityPlaces.first { $0.covers(date) }
+    }
+
+    /// Libellé du lieu pour une date donnée — séjour si voyage, quartier sinon.
+    func placeLabel(on date: Date?) -> String {
+        guard let date, let trip = place(on: date) else { return neighborhood }
+        return trip.label
+    }
 
     enum CodingKeys: String, CodingKey {
         case name, age, neighborhood, latitude, longitude
@@ -835,7 +849,8 @@ struct Musician: Codable, Identifiable, Hashable {
         hasLocation: Bool = true,
         ratingAvg: Double? = nil,
         ratingCount: Int = 0,
-        demoVideos: [DemoVideo] = []
+        demoVideos: [DemoVideo] = [],
+        availabilityPlaces: [AvailabilityPlace] = []
     ) {
         self.id = id
         self.name = name
@@ -861,6 +876,7 @@ struct Musician: Codable, Identifiable, Hashable {
         self.ratingAvg = ratingAvg
         self.ratingCount = ratingCount
         self.demoVideos = demoVideos
+        self.availabilityPlaces = availabilityPlaces
     }
 
     init(from decoder: Decoder) throws {
@@ -1087,6 +1103,73 @@ enum GroupEventKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// « Je suis dispo, mais ailleurs » — un séjour daté avec son lieu. Un
+/// musicien en vacances à Lisbonne du 12 au 20 reste trouvable, mais pour
+/// des concerts à Lisbonne : le fil sait où il est, pas seulement quand.
+struct AvailabilityPlace: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var from: Date
+    var to: Date
+    var country: Country?
+    var city: String
+
+    enum CodingKeys: String, CodingKey { case id, from, to, country, city }
+
+    /// « Lisbonne (PT) » — ce qu'on lit sur la carte du musicien.
+    var label: String {
+        guard let country else { return city }
+        return city.isEmpty ? country.rawValue : "\(city) (\(country.rawValue))"
+    }
+
+    /// Ce séjour couvre-t-il ce jour-là ? (bornes incluses, à la journée)
+    func covers(_ date: Date, calendar: Calendar = .current) -> Bool {
+        let day = calendar.startOfDay(for: date)
+        return calendar.startOfDay(for: from) <= day && day <= calendar.startOfDay(for: to)
+    }
+
+    /// Le libellé contient-il ce que l'on cherche ? (ville ou code pays)
+    func matches(_ query: String) -> Bool {
+        let needle = query.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        guard !needle.isEmpty else { return true }
+        return label
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .contains(needle)
+    }
+}
+
+/// Rythme d'un événement de groupe. `ponctuel` = une seule date ; les autres
+/// génèrent une série de dates (une répétition hebdomadaire, par exemple).
+/// Chaque occurrence reste un événement à part entière — sa propre setlist,
+/// sa propre feuille de présence — reliée aux autres par `seriesID`.
+enum EventRecurrence: String, Codable, CaseIterable, Identifiable {
+    case once = "Ponctuel"
+    case weekly = "Chaque semaine"
+    case biweekly = "Toutes les 2 semaines"
+    case monthly = "Chaque mois"
+
+    var id: String { rawValue }
+
+    /// Pas entre deux occurrences, appliqué au calendrier (nil = pas de suite).
+    var step: (component: Calendar.Component, value: Int)? {
+        switch self {
+        case .once: return nil
+        case .weekly: return (.weekOfYear, 1)
+        case .biweekly: return (.weekOfYear, 2)
+        case .monthly: return (.month, 1)
+        }
+    }
+
+    /// Libellé court pour la pastille des cartes (« Hebdo », « 2 sem. »…).
+    var shortLabel: String {
+        switch self {
+        case .once: return "Ponctuel"
+        case .weekly: return "Hebdo"
+        case .biweekly: return "2 sem."
+        case .monthly: return "Mensuel"
+        }
+    }
+}
+
 /// Invitation à un groupe reçue — l'invité doit accepter avant de devenir
 /// membre. Les infos du groupe sont dénormalisées (RLS : l'invité ne peut
 /// pas encore lire `music_groups`).
@@ -1191,6 +1274,30 @@ struct GroupEvent: Codable, Identifiable, Hashable {
     var setlist: [Song] = []
     /// Présence par nom de membre (et le leader). Absent = pas encore répondu.
     var attendance: [String: AttendanceStatus]?
+    /// Série à laquelle appartient l'événement — nil pour un événement
+    /// ponctuel. Toutes les occurrences d'une répétition hebdomadaire
+    /// partagent le même identifiant, ce qui permet de les colorer ensemble
+    /// et de supprimer toute la série d'un coup.
+    var seriesID: UUID?
+    /// Rythme de la série (nil / `.once` = ponctuel). Conservé sur chaque
+    /// occurrence pour l'afficher sans avoir à relire les autres dates.
+    var recurrence: EventRecurrence?
+    /// Combien de jours avant l'événement le rappel part — choisi par le
+    /// leader. nil = valeur par défaut (`GroupEvent.defaultReminderLeadDays`).
+    var reminderLeadDays: Int?
+
+    /// 2 jours avant, sauf choix contraire du leader.
+    static let defaultReminderLeadDays = 2
+    /// Délais proposés au leader (en jours).
+    static let reminderLeadOptions = [0, 1, 2, 3, 7, 14]
+
+    /// Fait partie d'une série récurrente (couleur et pastille distinctes).
+    var isRecurring: Bool { seriesID != nil && (recurrence ?? .once) != .once }
+
+    /// Délai de rappel effectif, borné pour ne jamais planifier n'importe quoi.
+    var reminderLead: Int {
+        min(max(reminderLeadDays ?? Self.defaultReminderLeadDays, 0), 60)
+    }
 
     var responses: [String: AttendanceStatus] { attendance ?? [:] }
 
@@ -1204,6 +1311,49 @@ struct GroupEvent: Codable, Identifiable, Hashable {
 
     var unavailableNames: [String] {
         responses.filter { $0.value == .unavailable }.map(\.key).sorted()
+    }
+
+    /// Nombre maximum d'occurrences générées d'un coup — un garde-fou : une
+    /// répétition hebdomadaire sur un an, ça reste raisonnable côté serveur.
+    static let maxOccurrences = 52
+
+    /// Dates d'une série : la première date, puis un pas régulier. L'heure de
+    /// la première date est conservée (le calendrier gère l'heure d'été et
+    /// les mois courts — un 31 devient le dernier jour du mois suivant).
+    static func occurrenceDates(
+        from start: Date,
+        recurrence: EventRecurrence,
+        count: Int,
+        calendar: Calendar = .current
+    ) -> [Date] {
+        guard let step = recurrence.step, count > 1 else { return [start] }
+        let total = min(max(count, 1), maxOccurrences)
+        return (0..<total).compactMap { index in
+            index == 0
+                ? start
+                : calendar.date(byAdding: step.component, value: step.value * index, to: start)
+        }
+    }
+
+    /// Décline cet événement en une série complète : même titre, même lieu,
+    /// même setlist de départ, un identifiant de série partagé.
+    func occurrences(recurrence: EventRecurrence, count: Int) -> [GroupEvent] {
+        let dates = Self.occurrenceDates(from: date, recurrence: recurrence, count: count)
+        guard dates.count > 1 else {
+            var single = self
+            single.seriesID = nil
+            single.recurrence = .once
+            return [single]
+        }
+        let series = seriesID ?? UUID()
+        return dates.map { occurrenceDate in
+            var copy = self
+            copy.id = occurrenceDate == date ? id : UUID()
+            copy.date = occurrenceDate
+            copy.seriesID = series
+            copy.recurrence = recurrence
+            return copy
+        }
     }
 }
 
@@ -1229,6 +1379,11 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var memberKinds: [String: GroupMemberKind]?
     /// Rôle (instrument) de chaque membre dans le groupe, par nom.
     var memberRoles: [String: String]?
+    /// Remplacement automatique : quand un membre se déclare indisponible,
+    /// un SOS part tout seul pour son poste. nil = désactivé.
+    var autoSOSEnabled: Bool?
+    /// Niveau minimum demandé dans les SOS automatiques (nil = peu importe).
+    var autoSOSMinLevel: String?
     var messages: [GroupMessage] = []
     var docs: [GroupDoc] = []
     /// Répertoire du groupe (morceaux validés + suggestions en attente).
@@ -1426,6 +1581,19 @@ struct MyProfile: Codable {
     var bio: String
     /// Dates concrètes où je peux dépanner un concert (cochées au calendrier).
     var availableDates: [Date] = []
+    /// Mes séjours ailleurs : « dispo, mais à Lisbonne du 12 au 20 ».
+    /// Optionnel à dessein : le décodeur synthétisé n'applique PAS les
+    /// valeurs par défaut, un champ non-optionnel rendrait indécodables les
+    /// profils enregistrés avant la 1.3 (cf. le crash de la 1.2).
+    var availabilityPlaces: [AvailabilityPlace]?
+
+    /// Mes séjours, prêts à l'emploi.
+    var trips: [AvailabilityPlace] { availabilityPlaces ?? [] }
+
+    /// Le séjour qui couvre ce jour-là, s'il y en a un.
+    func place(on date: Date) -> AvailabilityPlace? {
+        trips.first { $0.covers(date) }
+    }
     // Champs ajoutés après la v0.3 — optionnels pour décoder les anciens
     // profils sauvegardés sans les perdre.
     var country: Country?

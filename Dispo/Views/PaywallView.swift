@@ -33,10 +33,17 @@ struct PaywallView: View {
             ScrollView {
                 VStack(spacing: 22) {
                     hero
-                    roiHook
-                    perksList
-                    planPicker
-                    ctaSection
+                    if AppStore.isBeta {
+                        // Bêta fermée : pas de plans, pas de faux prix —
+                        // on dit simplement ce qui est ouvert.
+                        betaNotice
+                        perksList
+                    } else {
+                        roiHook
+                        perksList
+                        planPicker
+                        ctaSection
+                    }
                 }
                 .padding(20)
             }
@@ -84,6 +91,20 @@ struct PaywallView: View {
     }
 
     /// L'argument massue : un cachet de dépannage vaut CHF 100–300 à Genève.
+    /// Pendant la bêta, tout ce qui suit est déjà à toi — rien à acheter.
+    private var betaNotice: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Version bêta", systemImage: "wrench.and.screwdriver.fill")
+                    .font(.subheadline.weight(.heavy))
+                    .foregroundStyle(JC.premiumTint)
+                Text("Tout est ouvert pendant les tests : aucun abonnement n'est vendu et rien ne sera débité. Ces fonctions sont déjà actives sur ton compte.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     private var roiHook: some View {
         HStack(spacing: 12) {
             ZStack {

@@ -116,30 +116,34 @@ struct CreateEventView: View {
                     }
                 }
 
-                Section {
-                    Picker("Cachet", selection: $feeMode.animation()) {
-                        ForEach(FeeMode.allCases) { mode in
-                            Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+                // Les cachets se règlent entre professionnels : un amateur ne
+                // les annonce pas et ne les voit pas.
+                if store.profile.level == .pro {
+                    Section {
+                        Picker("Cachet", selection: $feeMode.animation()) {
+                            ForEach(FeeMode.allCases) { mode in
+                                Text(LocalizedStringKey(mode.rawValue)).tag(mode)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        if feeMode == .amount {
+                            TextField("Ex. 150", text: $feeText)
+                                .keyboardType(.numberPad)
+                        }
+                        if feeMode != .none {
+                            PaymentMethodField(
+                                method: $paymentMethod,
+                                custom: $customPayment,
+                                useCustom: $useCustomPayment
+                            )
+                        }
+                    } header: {
+                        Text("Cachet (CHF)")
+                    } footer: {
+                        Text(feeMode == .none
+                             ? "Le SOS s'affiche « Sans cachet » — parfait pour une jam ou un concert bénévole."
+                             : "Le cachet reste discret : il ne s'affiche qu'en ouvrant le SOS, et seulement pour les professionnels.")
                     }
-                    .pickerStyle(.segmented)
-                    if feeMode == .amount {
-                        TextField("Ex. 150", text: $feeText)
-                            .keyboardType(.numberPad)
-                    }
-                    if feeMode != .none {
-                        PaymentMethodField(
-                            method: $paymentMethod,
-                            custom: $customPayment,
-                            useCustom: $useCustomPayment
-                        )
-                    }
-                } header: {
-                    Text("Cachet (CHF)")
-                } footer: {
-                    Text(feeMode == .none
-                         ? "Le SOS s'affiche « Sans cachet » — parfait pour une jam ou un concert bénévole."
-                         : "Le cachet reste discret : il ne s'affiche qu'en ouvrant le SOS.")
                 }
 
                 Section {

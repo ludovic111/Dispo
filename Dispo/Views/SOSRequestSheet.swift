@@ -88,16 +88,19 @@ struct SOSRequestSheet: View {
                     TextField("Salle, bar, adresse…", text: $place)
                 }
 
-                Section {
-                    TextField("Montant en CHF (vide = à discuter)", text: $feeText)
-                        .keyboardType(.numberPad)
-                    PaymentMethodField(
-                        method: $paymentMethod,
-                        custom: $customPayment,
-                        useCustom: $useCustomPayment
-                    )
-                } header: {
-                    Text("Cachet proposé")
+                // Cachet entre professionnels uniquement.
+                if store.profile.level == .pro {
+                    Section {
+                        TextField("Montant en CHF (vide = à discuter)", text: $feeText)
+                            .keyboardType(.numberPad)
+                        PaymentMethodField(
+                            method: $paymentMethod,
+                            custom: $customPayment,
+                            useCustom: $useCustomPayment
+                        )
+                    } header: {
+                        Text("Cachet proposé")
+                    }
                 }
 
                 Section("Message (optionnel)") {
