@@ -93,6 +93,11 @@ struct MusicianDetailView: View {
             NavigationStack {
                 ChatView(conversationID: conversation.id)
                     .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Fermer") { openedConversation = nil }
+                        }
+                    }
             }
         }
         .sheet(item: $playingVideo) { video in
@@ -233,21 +238,18 @@ struct MusicianDetailView: View {
                 // (visible pour les membres Premium, comme le niveau global).
                 FlowLayout {
                     ForEach(musician.instruments) { instrument in
-                        TagView(text: instrumentChipLabel(instrument), color: JC.bronze)
+                        InstrumentChip(
+                            instrument: instrument,
+                            level: store.isPremium
+                                ? (musician.level(for: instrument) ?? musician.level)
+                                : nil
+                        )
                     }
                 }
             }
             SocialLogosRow(socials: musician.socials)
                 .padding(.top, 4)
         }
-    }
-
-    /// « Piano · Avancé » (Premium) ou juste « Piano ».
-    private func instrumentChipLabel(_ instrument: Instrument) -> String {
-        guard store.isPremium, let level = musician.level(for: instrument) else {
-            return store.tr(instrument.rawValue)
-        }
-        return store.tr(instrument.rawValue) + " · " + store.tr(level.rawValue)
     }
 
     /// « A joué avec » — les avatars des musiciens avec qui il a déjà joué,
@@ -501,11 +503,16 @@ struct MusicianDetailView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Text(mine == nil
-                         ? "\(firstName) est musicien·ne professionnel·le : tu peux aussi noter la prestation. Ta note est anonyme."
-                         : "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.")
+                    // On ne note que quelqu'un avec qui on a joué : sans ça,
+                    // les étoiles ne valent rien. Le serveur applique la
+                    // même règle — ici, on l'explique.
+                    Text(played
+                         ? (mine == nil
+                            ? "\(firstName) est musicien·ne professionnel·le : tu peux aussi noter la prestation. Ta note est anonyme."
+                            : "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.")
+                         : "Déclare d'abord que vous avez joué ensemble : on ne note que quelqu'un qu'on a vu jouer.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(played ? .secondary : JC.laiton)
                     HStack(spacing: 6) {
                         ForEach(1...5, id: \.self) { stars in
                             Button {
@@ -522,6 +529,8 @@ struct MusicianDetailView: View {
                             .accessibilityLabel(Text(verbatim: "\(stars)/5"))
                         }
                     }
+                    .disabled(!played)
+                    .opacity(played ? 1 : 0.45)
                     if mine != nil {
                         Button {
                             withAnimation(.snappy) { store.removeRating(for: musician) }
@@ -804,22 +813,36 @@ struct VideoThumbView: View {
 /// Lecteur vidéo plein écran : lance la lecture tout seul et active la
 /// sortie audio même si l'iPhone est en mode silencieux.
 struct VideoPlayerSheet: View {
+    @Environment(\.dismiss) private var dismiss
     let url: URL
     @State private var player: AVPlayer?
 
     var body: some View {
-        VideoPlayer(player: player)
-            .ignoresSafeArea()
-            .presentationDetents([.large])
-            .onAppear {
-                AppStore.activatePlaybackAudio()
-                let player = AVPlayer(url: url)
-                self.player = player
-                player.play()
+        ZStack(alignment: .topTrailing) {
+            VideoPlayer(player: player)
+                .ignoresSafeArea()
+            // Une vidéo en plein écran sans bouton de sortie, on s'y sent
+            // coincé — le glissement vers le bas ne saute pas aux yeux.
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title2)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.45))
+                    .padding(16)
             }
-            .onDisappear {
-                player?.pause()
-            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel(Text("Fermer"))
+        }
+        .presentationDetents([.large])
+        .onAppear {
+            AppStore.activatePlaybackAudio()
+            let player = AVPlayer(url: url)
+            self.player = player
+            player.play()
+        }
+        .onDisappear {
+            player?.pause()
+        }
     }
 }
 

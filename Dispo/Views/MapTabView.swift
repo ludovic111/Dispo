@@ -9,7 +9,9 @@ struct MapTabView: View {
     @State private var selected: Musician?
     @State private var position: MapCameraPosition = .automatic
 
-    /// Jamais d'épingle à une position placeholder.
+    /// Jamais d'épingle à une position placeholder — ni pour ceux qui ont
+    /// choisi de ne pas apparaître (leur profil n'a alors plus de
+    /// coordonnées côté serveur, `hasLocation` est faux).
     private var locatedMusicians: [Musician] {
         store.musicians.filter(\.hasLocation)
     }
@@ -44,6 +46,11 @@ struct MapTabView: View {
             .sheet(item: $selected) { musician in
                 NavigationStack {
                     MusicianDetailView(musician: musician)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("OK") { selected = nil }.font(.headline)
+                            }
+                        }
                 }
                 .presentationDetents([.large])
             }
@@ -71,12 +78,15 @@ struct MapTabView: View {
                 Spacer(minLength: 0)
             }
             HStack(spacing: 6) {
-                Image(systemName: "shield.lefthalf.filled")
+                let hidden = !store.locationPrecision.sharesLocation
+                Image(systemName: hidden ? "eye.slash.fill" : "shield.lefthalf.filled")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text("Positions approximatives (niveau ville), sauf partage exact choisi dans les réglages.")
+                    .foregroundStyle(hidden ? JC.laiton : .secondary)
+                Text(hidden
+                     ? "Tu n'apparais pas sur la carte — Réglages → Ma position pour changer."
+                     : "Positions approximatives (niveau ville), sauf partage exact choisi dans les réglages.")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(hidden ? JC.laiton : .secondary)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: 0)
             }

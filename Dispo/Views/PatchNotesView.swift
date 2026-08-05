@@ -11,6 +11,28 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.4",
+            title: "Notifications calmées & répertoire rangé",
+            points: [
+                "Créer une répétition récurrente n'envoie plus qu'UNE notification, pas une par date",
+                "Une série va au maximum jusqu'à un an — 52 semaines, 26 quinzaines ou 12 mois",
+                "Countdown de présence : tu vois le temps qu'il te reste pour dire si tu viens",
+                "« Prochain événement » en haut de l'accueil, avec le compte à rebours jusqu'au concert",
+                "Les partitions ne sont plus un onglet à part : elles vivent sous leur morceau, dans le répertoire",
+                "Trois petits points sur chaque morceau — un coup d'œil suffit à voir qu'il y a une fiche",
+                "Le lien iReal Pro s'ajoute et s'ouvre directement depuis la grille, et la grille se copie d'un tap",
+                "Saxophone alto et saxophone ténor deviennent des instruments à part entière, transposés comme il faut",
+                "Les instruments ressortent enfin dans l'accueil, avec le niveau sur chaque pastille",
+                "Recherche dans le répertoire dès qu'un groupe dépasse huit morceaux",
+                "Remplacement automatique : niveau « peu importe » ou « identique à l'absent », rien de plus à régler",
+                "Nouveau réglage de position : ne pas apparaître sur la carte du tout",
+                "Les étoiles ne s'ouvrent qu'après avoir déclaré que vous avez joué ensemble",
+                "Ta photo de profil part enfin sur le serveur — et les anciennes sont rattrapées toutes seules",
+                "Liens d'écoute plus fiables : Spotify, YouTube Music et Deezer résistent aux quotas",
+                "Boutons de sortie ajoutés là où il n'y en avait pas (vidéos, partitions, fiches ouvertes en feuille)"
+            ]
+        ),
+        PatchNote(
             version: "1.3",
             title: "Bêta — répétitions, remplacements et pros",
             points: [

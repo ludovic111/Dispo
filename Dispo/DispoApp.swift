@@ -528,7 +528,9 @@ extension String {
 struct AvatarView: View {
     let name: String
     var size: CGFloat = 52
-    /// Nom d'asset d'une photo de profil ; à défaut, pastille dégradée avec initiales.
+    /// Photo de profil : URL hébergée (`https://…`), chemin de fichier local
+    /// (`/…`, ma propre photo) ou nom d'asset bundlé (profils de démo). À
+    /// défaut, pastille dégradée avec initiales.
     var photo: String? = nil
 
     private var colors: [Color] {
@@ -556,6 +558,14 @@ struct AvatarView: View {
                 }
                 .frame(width: size, height: size)
                 .clipShape(Circle())
+            } else if let photo, photo.hasPrefix("/"),
+                      let image = UIImage(contentsOfFile: photo) {
+                // Ma photo, telle qu'elle est sur cet appareil.
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
             } else if let photo, UIImage(named: photo) != nil {
                 Image(photo)
                     .resizable()
@@ -692,6 +702,39 @@ struct TagView: View {
             // c'est au conteneur (FlowLayout, ScrollView…) de gérer —
             // fini les textes écrasés à la verticale.
             .fixedSize()
+    }
+}
+
+/// Pastille d'instrument — la donnée qu'on lit en premier quand on cherche
+/// quelqu'un. Plus appuyée qu'une pastille ordinaire (icône de famille,
+/// laiton, fond plein) et, quand on le connaît, le niveau collé derrière :
+/// « Saxophone ténor · Avancé ».
+struct InstrumentChip: View {
+    let instrument: Instrument
+    /// Niveau affiché à la suite (nil = pas de niveau connu, ou masqué).
+    var level: Level? = nil
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: instrument.category.symbol)
+                .font(.system(size: 9, weight: .black))
+            Text(LocalizedStringKey(instrument.rawValue))
+                .font(.caption.weight(.bold))
+            if let level {
+                Text(verbatim: "·")
+                    .font(.caption2)
+                    .foregroundStyle(JC.laiton.opacity(0.6))
+                Text(LocalizedStringKey(level.rawValue))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(JC.laiton.opacity(0.85))
+            }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(JC.laiton.opacity(0.16), in: Capsule())
+        .overlay(Capsule().stroke(JC.laiton.opacity(0.4), lineWidth: 1))
+        .foregroundStyle(JC.laiton)
+        .fixedSize()
     }
 }
 

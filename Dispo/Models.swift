@@ -191,6 +191,8 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
     case ukulele = "Ukulélé"
     // Vents & cuivres
     case saxophone = "Saxophone"
+    case saxAlto = "Saxophone alto"
+    case saxTenor = "Saxophone ténor"
     case trompette = "Trompette"
     case trombone = "Trombone"
     case clarinette = "Clarinette"
@@ -221,8 +223,8 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
         case .guitare, .guitareElectrique, .basse, .contrebasse, .violon,
              .alto, .violoncelle, .harpe, .banjo, .mandoline, .ukulele:
             return .cordes
-        case .saxophone, .trompette, .trombone, .clarinette, .flute,
-             .cor, .tuba, .harmonica:
+        case .saxophone, .saxAlto, .saxTenor, .trompette, .trombone, .clarinette,
+             .flute, .cor, .tuba, .harmonica:
             return .vents
         case .batterie, .percussions, .cajon, .congas, .timbales, .vibraphone:
             return .rythmique
@@ -257,6 +259,8 @@ enum Instrument: String, Codable, CaseIterable, Identifiable {
         case .mandoline: return ["mandoliniste"]
         case .ukulele: return []
         case .saxophone: return ["saxophoniste", "sax", "saxo"]
+        case .saxAlto: return ["saxophoniste", "sax", "saxo", "alto", "eb"]
+        case .saxTenor: return ["saxophoniste", "sax", "saxo", "ténor", "tenor", "bb"]
         case .trompette: return ["trompettiste"]
         case .trombone: return ["tromboniste"]
         case .clarinette: return ["clarinettiste"]
@@ -445,6 +449,8 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
 /// au « niveau ville » (grille ~5 km) ; la position exacte (~100 m) est un
 /// choix explicite, pour tous ou pour les amis (suivi mutuel) seulement.
 enum LocationPrecision: String, Codable, CaseIterable, Identifiable {
+    /// Aucune position publiée : pas d'épingle sur la carte, pas de distance.
+    case hidden = "hidden"
     case city = "city"
     case exactFriends = "exact_friends"
     case exactEveryone = "exact_everyone"
@@ -454,6 +460,7 @@ enum LocationPrecision: String, Codable, CaseIterable, Identifiable {
     /// Clé de traduction du libellé.
     var label: String {
         switch self {
+        case .hidden: return "Ne pas apparaître sur la carte"
         case .city: return "Approximative (ville)"
         case .exactFriends: return "Exacte pour mes amis"
         case .exactEveryone: return "Exacte pour tous"
@@ -462,11 +469,15 @@ enum LocationPrecision: String, Codable, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
+        case .hidden: return "eye.slash.fill"
         case .city: return "building.2"
         case .exactFriends: return "person.2.fill"
         case .exactEveryone: return "location.fill"
         }
     }
+
+    /// Publie-t-on une position (même approximative) ?
+    var sharesLocation: Bool { self != .hidden }
 }
 
 // MARK: - Moyen de versement du cachet
@@ -608,17 +619,24 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
         return .english
     }
 
-    /// Bundle de traductions de cette langue (repli : bundle principal).
-    var bundle: Bundle {
-        guard let path = Bundle.main.path(forResource: rawValue, ofType: "lproj"),
-              let bundle = Bundle(path: path) else { return .main }
-        return bundle
+    /// Bundle de traductions de cette langue, s'il existe. Le français est la
+    /// langue source du catalogue : Xcode ne produit donc pas de `fr.lproj`,
+    /// et cette propriété vaut nil pour lui.
+    var bundle: Bundle? {
+        guard let path = Bundle.main.path(forResource: rawValue, ofType: "lproj") else { return nil }
+        return Bundle(path: path)
     }
 
     /// Traduit une clé du catalogue dans cette langue (pour les chaînes
     /// construites en code — les `Text` littéraux passent par la locale).
+    ///
+    /// Sans bundle dédié, on rend la clé telle quelle : elle EST la chaîne
+    /// française. Retomber sur `Bundle.main` reviendrait à afficher la langue
+    /// du téléphone, pas celle choisie dans l'app — un iPhone en anglais
+    /// affichait ainsi des bouts d'anglais alors que l'app était en français.
     func tr(_ key: String) -> String {
-        bundle.localizedString(forKey: key, value: key, table: nil)
+        guard let bundle else { return key }
+        return bundle.localizedString(forKey: key, value: key, table: nil)
     }
 }
 
@@ -1204,6 +1222,43 @@ enum EventRecurrence: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Niveau demandé par un SOS automatique. Deux règles seulement, parce que
+/// c'est la seule question qui se pose vraiment quand un membre lâche :
+/// « n'importe qui fait l'affaire » ou « il me faut quelqu'un du calibre de
+/// celui qui manque ».
+enum AutoSOSLevelRule: String, CaseIterable, Identifiable {
+    case any
+    case sameAsAbsent = "same"
+
+    var id: String { rawValue }
+
+    /// Clé de traduction du libellé.
+    var label: String {
+        switch self {
+        case .any: return "Peu importe"
+        case .sameAsAbsent: return "Identique à l'absent"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .any: return "person.fill.questionmark"
+        case .sameAsAbsent: return "equal.circle.fill"
+        }
+    }
+
+    /// Valeur écrite dans `music_groups.auto_sos_min_level` (nil = `any`).
+    var stored: String? { self == .any ? nil : rawValue }
+
+    /// Relit la valeur stockée. Les groupes réglés avant la 1.4 portent un
+    /// niveau fixe (« Avancé ») : c'est « identique à l'absent » qui traduit
+    /// le mieux leur intention, on les y bascule.
+    static func fromStored(_ raw: String?) -> AutoSOSLevelRule {
+        guard let raw, !raw.isEmpty else { return .any }
+        return AutoSOSLevelRule(rawValue: raw) ?? .sameAsAbsent
+    }
+}
+
 /// Invitation à un groupe reçue — l'invité doit accepter avant de devenir
 /// membre. Les infos du groupe sont dénormalisées (RLS : l'invité ne peut
 /// pas encore lire `music_groups`).
@@ -1347,13 +1402,29 @@ struct GroupEvent: Codable, Identifiable, Hashable {
         responses.filter { $0.value == .unavailable }.map(\.key).sorted()
     }
 
-    /// Nombre maximum d'occurrences générées d'un coup — un garde-fou : une
-    /// répétition hebdomadaire sur un an, ça reste raisonnable côté serveur.
+    /// Une série ne va jamais plus loin qu'un an après sa première date :
+    /// au-delà, personne ne sait où il sera, et le serveur (comme le centre
+    /// de notifications) se retrouve avec des centaines de dates fantômes.
+    static let maxSeriesSpan = DateComponents(year: 1)
+
+    /// Nombre maximum d'occurrences pour un rythme donné — la borne d'un an,
+    /// exprimée en dates : 52 semaines, 26 quinzaines, 12 mois.
+    static func maxOccurrences(for recurrence: EventRecurrence) -> Int {
+        switch recurrence {
+        case .once: return 1
+        case .weekly: return 52
+        case .biweekly: return 26
+        case .monthly: return 12
+        }
+    }
+
+    /// Garde-fou global (le plus permissif des rythmes).
     static let maxOccurrences = 52
 
     /// Dates d'une série : la première date, puis un pas régulier. L'heure de
     /// la première date est conservée (le calendrier gère l'heure d'été et
     /// les mois courts — un 31 devient le dernier jour du mois suivant).
+    /// Rien n'est généré au-delà d'un an après la première date.
     static func occurrenceDates(
         from start: Date,
         recurrence: EventRecurrence,
@@ -1361,12 +1432,29 @@ struct GroupEvent: Codable, Identifiable, Hashable {
         calendar: Calendar = .current
     ) -> [Date] {
         guard let step = recurrence.step, count > 1 else { return [start] }
-        let total = min(max(count, 1), maxOccurrences)
-        return (0..<total).compactMap { index in
-            index == 0
-                ? start
-                : calendar.date(byAdding: step.component, value: step.value * index, to: start)
+        let total = min(max(count, 1), maxOccurrences(for: recurrence))
+        let horizon = calendar.date(byAdding: maxSeriesSpan, to: start) ?? start
+        return (0..<total).compactMap { index -> Date? in
+            guard index > 0 else { return start }
+            guard let date = calendar.date(
+                byAdding: step.component,
+                value: step.value * index,
+                to: start
+            ) else { return nil }
+            return date <= horizon ? date : nil
         }
+    }
+
+    /// Date limite de réponse : le jour où le rappel part. Au-delà, le leader
+    /// doit pouvoir compter sur les présences pour chercher un remplaçant.
+    var confirmDeadline: Date {
+        date.addingTimeInterval(-Double(reminderLead) * 24 * 3600)
+    }
+
+    /// Temps qu'il reste pour confirmer sa présence (nil = délai dépassé).
+    func timeLeftToConfirm(now: Date = Date()) -> TimeInterval? {
+        let left = confirmDeadline.timeIntervalSince(now)
+        return left > 0 ? left : nil
     }
 
     /// Décline cet événement en une série complète : même titre, même lieu,
@@ -1416,8 +1504,12 @@ struct GroupChat: Codable, Identifiable, Hashable {
     /// Remplacement automatique : quand un membre se déclare indisponible,
     /// un SOS part tout seul pour son poste. nil = désactivé.
     var autoSOSEnabled: Bool?
-    /// Niveau minimum demandé dans les SOS automatiques (nil = peu importe).
+    /// Règle de niveau des SOS automatiques (nil = peu importe, « same » =
+    /// identique au membre absent).
     var autoSOSMinLevel: String?
+
+    /// La règle de niveau relue.
+    var autoSOSLevelRule: AutoSOSLevelRule { .fromStored(autoSOSMinLevel) }
     var messages: [GroupMessage] = []
     var docs: [GroupDoc] = []
     /// Commentaires de morceaux, tous morceaux confondus.

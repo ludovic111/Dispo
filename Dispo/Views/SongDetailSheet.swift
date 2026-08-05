@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PhotosUI
 import UniformTypeIdentifiers
 
@@ -31,6 +32,8 @@ struct SongDetailSheet: View {
     @State private var previewURL: PreviewDoc?
     /// Instrument visé par la partition qu'on ajoute (nil = tout le monde).
     @State private var uploadInstrument: Instrument?
+    /// Grille copiée à l'instant (la coche remplace l'icône un moment).
+    @State private var copiedGrid = false
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -97,8 +100,17 @@ struct SongDetailSheet: View {
                 }
             }
             .sheet(item: $previewURL) { doc in
-                DocPreview(url: doc.url)
-                    .ignoresSafeArea()
+                NavigationStack {
+                    DocPreview(url: doc.url)
+                        .ignoresSafeArea(edges: .bottom)
+                        .navigationTitle(song?.title ?? "")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("OK") { previewURL = nil }.font(.headline)
+                            }
+                        }
+                }
             }
             .fileImporter(
                 isPresented: $importingFile,
@@ -234,6 +246,15 @@ struct SongDetailSheet: View {
 
         // La grille d'accords, transposée dans la foulée.
         if let chords = song.chords, !chords.isEmpty {
+            // La grille dans MA tonalité — c'est elle qu'on copie, pas celle
+            // du piano : coller ça dans un message doit servir tel quel.
+            let transposed = MusicTheory.transposeGrid(
+                chords,
+                by: shift,
+                // La grille s'écrit dans l'alphabet de la tonalité
+                // d'arrivée : dièses en mi majeur, bémols en si♭.
+                preferSharps: concert?.transposed(by: shift).prefersSharps ?? false
+            )
             JCCard {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -244,14 +265,24 @@ struct SongDetailSheet: View {
                         if shift != 0 {
                             TagView(text: activeTransposition.rawValue, color: JC.laiton)
                         }
+                        Button {
+                            UIPasteboard.general.string = transposed
+                            withAnimation { copiedGrid = true }
+                            Task {
+                                try? await Task.sleep(for: .seconds(2))
+                                withAnimation { copiedGrid = false }
+                            }
+                        } label: {
+                            Image(systemName: copiedGrid ? "checkmark" : "doc.on.doc")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(copiedGrid ? JC.feutrine : .secondary)
+                                .padding(6)
+                                .background(JC.inset, in: Circle())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityLabel(Text("Copier la grille"))
                     }
-                    Text(verbatim: MusicTheory.transposeGrid(
-                        chords,
-                        by: shift,
-                        // La grille s'écrit dans l'alphabet de la tonalité
-                        // d'arrivée : dièses en mi majeur, bémols en si♭.
-                        preferSharps: concert?.transposed(by: shift).prefersSharps ?? false
-                    ))
+                    Text(verbatim: transposed)
                         .font(JCFont.mono(15))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -265,14 +296,27 @@ struct SongDetailSheet: View {
             )
         }
 
-        // iReal Pro : le lien exporté depuis l'app, ouvert d'un tap.
-        if let ireal = song.irealURL, let url = URL(string: ireal) {
+        // iReal Pro : le lien exporté depuis l'app, à sa place — juste sous
+        // la grille, là où on le cherche quand on veut jouer dessus.
+        if let ireal = song.irealURL, !ireal.isEmpty, let url = URL(string: ireal) {
             Button { openURL(url) } label: {
                 Label("Ouvrir dans iReal Pro", systemImage: "arrow.up.forward.app.fill")
                     .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .background(JC.premiumTint.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(JC.premiumTint)
+            }
+            .buttonStyle(PressableStyle())
+        } else if isLeader {
+            // Pas de lien encore : on propose de l'ajouter ici plutôt que de
+            // laisser chercher le champ au fond de « Modifier ».
+            Button { showEdit = true } label: {
+                Label("Ajouter le lien iReal Pro", systemImage: "link.badge.plus")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .foregroundStyle(JC.premiumTint)
             }
             .buttonStyle(PressableStyle())

@@ -37,11 +37,13 @@ struct GroupChatView: View {
     @EnvironmentObject private var store: AppStore
     let groupID: GroupChat.ID
 
+    /// Trois onglets seulement : les partitions ne sont plus un rayon à part,
+    /// elles vivent sous leur morceau, dans le répertoire — c'est là qu'on
+    /// les cherche quand on répète.
     enum Tab: String, CaseIterable, Identifiable {
         case messages = "Messages"
         case repertoire = "Répertoire"
         case events = "Événements"
-        case docs = "Partitions"
         var id: String { rawValue }
 
         var symbol: String {
@@ -49,13 +51,14 @@ struct GroupChatView: View {
             case .messages: return "bubble.left.and.bubble.right.fill"
             case .repertoire: return "music.note.list"
             case .events: return "calendar.badge.clock"
-            case .docs: return "doc.richtext.fill"
             }
         }
     }
 
     @State private var tab: Tab = .messages
     @State private var draft = ""
+    /// Recherche dans le répertoire (apparaît au-delà de 8 morceaux).
+    @State private var songQuery = ""
     /// Document prêt à être affiché (fichier local ou copie téléchargée).
     @State private var previewingDoc: PreviewableDoc?
     /// Document en cours de téléchargement (spinner sur sa ligne).
@@ -94,7 +97,6 @@ struct GroupChatView: View {
                     case .messages: messagesTab(group)
                     case .repertoire: repertoireTab(group)
                     case .events: eventsTab(group)
-                    case .docs: docsTab(group)
                     }
                 }
             }
@@ -153,6 +155,11 @@ struct GroupChatView: View {
                     .ignoresSafeArea(edges: .bottom)
                     .navigationTitle(doc.title)
                     .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("OK") { previewingDoc = nil }.font(.headline)
+                        }
+                    }
             }
         }
         .sheet(isPresented: $addingEvent) {
@@ -334,6 +341,29 @@ struct GroupChatView: View {
                 }
 
                 SectionHeader(title: "Répertoire du groupe", subtitle: "\(group.approvedSongs.count) morceaux")
+                // Au-delà d'une dizaine de titres, retrouver « Autumn
+                // Leaves » au doigt devient pénible.
+                if group.approvedSongs.count > 8 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                        TextField("Chercher un morceau…", text: $songQuery)
+                            .font(.subheadline)
+                            .autocorrectionDisabled()
+                        if !songQuery.isEmpty {
+                            Button { songQuery = "" } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
                 if group.approvedSongs.isEmpty {
                     JCEmptyState(
                         icon: "music.note.list",
@@ -341,18 +371,40 @@ struct GroupChatView: View {
                         message: "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide."
                     )
                 }
-                ForEach(group.approvedSongs) { song in
+                let songs = matchingSongs(in: group)
+                if songs.isEmpty && !group.approvedSongs.isEmpty {
+                    Text("Aucun morceau ne correspond.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(songs) { song in
                     // Le bouton de retrait n'apparaît que pour le leader.
                     SongRow(
                         song: song,
                         isLeader: false,
                         onApprove: nil,
                         onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil,
-                        groupID: group.id
+                        groupID: group.id,
+                        attachedDocs: group.docs(for: song.id).count
                     )
                 }
+
+                groupDocsSection(group)
             }
             .padding(18)
+        }
+    }
+
+    /// Morceaux validés filtrés par la recherche (titre ou artiste).
+    private func matchingSongs(in group: GroupChat) -> [Song] {
+        let needle = songQuery
+            .trimmingCharacters(in: .whitespaces)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        guard !needle.isEmpty else { return group.approvedSongs }
+        return group.approvedSongs.filter { song in
+            "\(song.title) \(song.artist)"
+                .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+                .contains(needle)
         }
     }
 
@@ -438,9 +490,7 @@ struct GroupChatView: View {
                                             .font(.caption2.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                         if myStatus == .pending {
-                                            Text("À confirmer")
-                                                .font(.caption2.weight(.heavy))
-                                                .foregroundStyle(JC.laiton)
+                                            ConfirmCountdownBadge(event: event)
                                         } else if myStatus == .available {
                                             Text("Tu es dispo")
                                                 .font(.caption2.weight(.heavy))
@@ -468,57 +518,64 @@ struct GroupChatView: View {
         }
     }
 
-    // MARK: Partitions
+    // MARK: Documents du groupe (bas du répertoire)
 
-    private func docsTab(_ group: GroupChat) -> some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                Button {
-                    importingDoc = true
-                } label: {
-                    Label(
-                        store.docUploadInProgress ? "Envoi en cours…" : "Ajouter une partition",
-                        systemImage: store.docUploadInProgress ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
-                    )
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(JC.bronze)
-                }
-                .buttonStyle(PressableStyle())
-                .disabled(store.docUploadInProgress)
+    /// Ce qui n'appartient à aucun morceau : contrat, plan de scène, fiche
+    /// technique. Les partitions, elles, sont rangées sous leur morceau —
+    /// c'est là qu'on les cherche quand on répète.
+    @ViewBuilder
+    private func groupDocsSection(_ group: GroupChat) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(
+                title: "Documents du groupe",
+                subtitle: "Contrat, plan de scène, fiche technique — hors morceaux"
+            )
 
-                if store.isLive {
-                    Text("Partagées avec tout le groupe — chacun peut les ouvrir et les télécharger.")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            Button {
+                importingDoc = true
+            } label: {
+                Label(
+                    store.docUploadInProgress ? "Envoi en cours…" : "Ajouter un document",
+                    systemImage: store.docUploadInProgress ? "arrow.triangle.2.circlepath" : "plus.circle.fill"
+                )
+                .font(.subheadline.weight(.bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .foregroundStyle(JC.bronze)
+            }
+            .buttonStyle(PressableStyle())
+            .disabled(store.docUploadInProgress)
 
-                if group.docs.isEmpty {
-                    JCEmptyState(
-                        icon: "doc.richtext",
-                        title: "Aucune partition",
-                        message: "Partage les PDF du répertoire — tout le groupe les retrouve ici."
-                    )
-                }
-
-                // Les partitions rattachées à un morceau vivent sous ce
-                // morceau (onglet Répertoire) : on ne les répète pas ici,
-                // on dit juste où elles sont.
-                let attached = group.docs.count - group.looseDocs.count
-                if attached > 0 {
-                    Label(
-                        String(format: store.tr("%lld partitions sont rangées sous leurs morceaux — ouvre le morceau dans « Répertoire »."), attached),
-                        systemImage: "music.note.list"
-                    )
+            if store.isLive {
+                Text("Partagés avec tout le groupe — chacun peut les ouvrir et les télécharger.")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            }
 
-                ForEach(group.looseDocs) { doc in
+            // Les partitions rattachées à un morceau vivent sous ce morceau :
+            // on ne les répète pas ici, on dit juste où elles sont.
+            let attached = group.docs.count - group.looseDocs.count
+            if attached > 0 {
+                Label(
+                    String(format: store.tr("%lld partitions sont rangées sous leurs morceaux — ouvre le morceau juste au-dessus."), attached),
+                    systemImage: "music.note.list"
+                )
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if group.looseDocs.isEmpty && attached == 0 {
+                JCEmptyState(
+                    icon: "doc.richtext",
+                    title: "Aucun document",
+                    message: "Les partitions s'ajoutent depuis un morceau ; ici, tout ce qui concerne le groupe entier."
+                )
+            }
+
+            ForEach(group.looseDocs) { doc in
                     Button {
                         openDoc(doc, in: group)
                     } label: {
@@ -563,10 +620,9 @@ struct GroupChatView: View {
                     }
                     .buttonStyle(PressableStyle())
                     .disabled(downloadingDocID == doc.id)
-                }
             }
-            .padding(18)
         }
+        .padding(.top, 6)
     }
 
     /// Puis-je retirer cette partition ? Leader, ou celui qui l'a ajoutée
@@ -594,6 +650,39 @@ struct GroupChatView: View {
     }
 }
 
+/// Décompte de réponse à un événement de groupe. Tant que je n'ai pas dit
+/// si je viens, il montre le temps qu'il reste avant que le leader ait
+/// besoin de savoir (le jour où part le rappel) — et il vire au rouge quand
+/// le délai est dépassé.
+struct ConfirmCountdownBadge: View {
+    @EnvironmentObject private var store: AppStore
+    let event: GroupEvent
+    /// Compact = une seule pastille (cartes de liste) ; sinon une ligne.
+    var compact: Bool = true
+
+    var body: some View {
+        let left = store.countdown(to: event.confirmDeadline)
+        let urgent = left == nil || event.confirmDeadline.timeIntervalSinceNow < 24 * 3600
+        HStack(spacing: 4) {
+            Image(systemName: left == nil ? "exclamationmark.circle.fill" : "timer")
+                .font(.system(size: compact ? 9 : 11, weight: .bold))
+            Text(verbatim: label(left))
+                .font(compact
+                      ? .system(size: 10, weight: .heavy)
+                      : .caption.weight(.heavy))
+        }
+        .foregroundStyle(urgent ? JC.signal : JC.laiton)
+        .padding(.horizontal, compact ? 7 : 10)
+        .padding(.vertical, compact ? 3 : 5)
+        .background((urgent ? JC.signal : JC.laiton).opacity(0.14), in: Capsule())
+    }
+
+    private func label(_ left: String?) -> String {
+        guard let left else { return store.tr("Réponse attendue") }
+        return String(format: store.tr("Réponds sous %@"), left)
+    }
+}
+
 /// Document prêt à être prévisualisé (local ou fraîchement téléchargé).
 struct PreviewableDoc: Identifiable {
     let id: GroupDoc.ID
@@ -613,6 +702,8 @@ struct SongRow: View {
     /// Groupe du morceau : ouvre la fiche (partitions, tonalité, commentaires).
     /// nil = ligne d'affichage seule (aperçus, captures).
     let groupID: GroupChat.ID?
+    /// Nombre de partitions rattachées — affiché en pastille sur la ligne.
+    let attachedDocs: Int
     @State private var showListen = false
     @State private var showDetail = false
 
@@ -621,13 +712,15 @@ struct SongRow: View {
         isLeader: Bool,
         onApprove: (() -> Void)? = nil,
         onReject: (() -> Void)? = nil,
-        groupID: GroupChat.ID? = nil
+        groupID: GroupChat.ID? = nil,
+        attachedDocs: Int = 0
     ) {
         self.song = song
         self.isLeader = isLeader
         self.onApprove = onApprove
         self.onReject = onReject
         self.groupID = groupID
+        self.attachedDocs = attachedDocs
     }
 
     var body: some View {
@@ -669,7 +762,7 @@ struct SongRow: View {
                                 .frame(width: 46, height: 46)
                                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                         }
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 3) {
                             Text(song.title)
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(.primary)
@@ -684,13 +777,22 @@ struct SongRow: View {
                                     .foregroundStyle(JC.bronze)
                                     .lineLimit(1)
                             }
+                            if groupID != nil { detailHints }
                         }
                         Spacer(minLength: 0)
+                        // Les trois petits points : ce morceau a une fiche
+                        // (tonalité, grille, partitions, commentaires).
+                        if groupID != nil {
+                            Image(systemName: "ellipsis")
+                                .font(.caption.weight(.black))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableStyle())
                 .disabled(groupID == nil)
+                .accessibilityHint(Text("Ouvre la fiche du morceau"))
                 listenMenu
                 if !song.isApproved && isLeader {
                     // Le bouton d'acceptation demandé — un tap et c'est validé.
@@ -725,6 +827,39 @@ struct SongRow: View {
                 }
             }
         }
+    }
+
+    /// Ce que la fiche du morceau contient déjà : tonalité, grille, nombre de
+    /// partitions, lien iReal Pro. Un coup d'œil suffit à savoir s'il y a
+    /// quelque chose à ouvrir.
+    @ViewBuilder
+    private var detailHints: some View {
+        let hasChords = !(song.chords ?? "").isEmpty
+        let hasIreal = !(song.irealURL ?? "").isEmpty
+        let hasKey = !(song.key ?? "").isEmpty
+        if hasKey || hasChords || hasIreal || attachedDocs > 0 {
+            HStack(spacing: 5) {
+                if let key = song.key, hasKey { hint(icon: "tuningfork", label: key) }
+                if hasChords { hint(icon: "square.grid.2x2", label: nil) }
+                if attachedDocs > 0 { hint(icon: "doc.richtext.fill", label: "\(attachedDocs)") }
+                if hasIreal { hint(icon: "arrow.up.forward.app.fill", label: nil) }
+            }
+        }
+    }
+
+    private func hint(icon: String, label: String?) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 8, weight: .bold))
+            if let label {
+                Text(verbatim: label)
+                    .font(.system(size: 9, weight: .bold))
+            }
+        }
+        .foregroundStyle(JC.bronze)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(JC.bronze.opacity(0.12), in: Capsule())
     }
 
     /// Bouton d'écoute discret : un casque, et une feuille propose le
@@ -996,6 +1131,11 @@ struct GroupMembersSheet: View {
             .sheet(item: $viewingMusician) { musician in
                 NavigationStack {
                     MusicianDetailView(musician: musician)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("OK") { viewingMusician = nil }.font(.headline)
+                            }
+                        }
                 }
                 .presentationDetents([.large])
             }
@@ -1264,26 +1404,30 @@ struct GroupSettingsSheet: View {
                             "Chercher un remplaçant tout seul",
                             isOn: Binding(
                                 get: { group.autoSOSEnabled ?? false },
-                                set: { store.setAutoSOS(enabled: $0, minLevel: autoLevel, in: group) }
+                                set: { store.setAutoSOS(enabled: $0, levelRule: levelRule, in: group) }
                             )
                         )
                         .tint(JC.signal)
                         if group.autoSOSEnabled == true {
                             Picker("Niveau demandé", selection: Binding(
-                                get: { autoLevel },
-                                set: { store.setAutoSOS(enabled: true, minLevel: $0, in: group) }
+                                get: { levelRule },
+                                set: { store.setAutoSOS(enabled: true, levelRule: $0, in: group) }
                             )) {
-                                Text("Peu importe").tag(Level?.none)
-                                ForEach(Level.allCases) { level in
-                                    Text(LocalizedStringKey(level.rawValue)).tag(Level?.some(level))
+                                ForEach(AutoSOSLevelRule.allCases) { rule in
+                                    Label(
+                                        LocalizedStringKey(rule.label),
+                                        systemImage: rule.symbol
+                                    )
+                                    .tag(rule)
                                 }
                             }
+                            .pickerStyle(.inline)
                         }
                     } header: {
                         Text("Remplacement automatique")
                     } footer: {
                         Text(group.autoSOSEnabled == true
-                             ? "Dès qu'un membre se déclare indisponible, un SOS part pour son poste — tu es prévenu·e à chaque fois."
+                             ? "Dès qu'un membre se déclare indisponible, un SOS part pour son poste — tu es prévenu·e à chaque fois. « Identique à l'absent » reprend le niveau du musicien qui manque."
                              : "Désactivé : tu es prévenu·e du désistement, et c'est toi qui publies le SOS quand tu veux.")
                     }
                 }
@@ -1315,9 +1459,9 @@ struct GroupSettingsSheet: View {
         }
     }
 
-    /// Niveau minimum retenu pour les SOS automatiques du groupe.
-    private var autoLevel: Level? {
-        group?.autoSOSMinLevel.flatMap(Level.init(rawValue:))
+    /// Règle de niveau retenue pour les SOS automatiques du groupe.
+    private var levelRule: AutoSOSLevelRule {
+        group?.autoSOSLevelRule ?? .any
     }
 
     private func commitRename() {
@@ -1631,6 +1775,20 @@ struct GroupEventSheet: View {
                         .foregroundStyle(JC.bronze)
                 }
 
+                // Le décompte : combien de temps il reste pour répondre.
+                if myStatus == .pending {
+                    HStack(spacing: 8) {
+                        ConfirmCountdownBadge(event: event, compact: false)
+                        Text(String(
+                            format: store.tr("Réponse attendue avant le %@"),
+                            event.confirmDeadline.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute())
+                        ))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                    }
+                }
+
                 HStack(spacing: 10) {
                     attendanceButton(
                         title: "Dispo",
@@ -1655,7 +1813,7 @@ struct GroupEventSheet: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 } else if myStatus == .unavailable {
-                    Text("Le leader sera alerté 2 jours avant pour trouver un remplaçant.")
+                    Text("Le leader est alerté pour trouver un remplaçant.")
                         .font(.caption2)
                         .foregroundStyle(JC.signal)
                 }
@@ -1804,6 +1962,11 @@ struct AddGroupEventSheet: View {
         GroupEvent.occurrenceDates(from: date, recurrence: recurrence, count: occurrences)
     }
 
+    /// Plafond du rythme choisi : une série ne dépasse jamais un an.
+    private var maxOccurrences: Int {
+        max(2, GroupEvent.maxOccurrences(for: recurrence))
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -1825,9 +1988,19 @@ struct AddGroupEventSheet: View {
                             Text(LocalizedStringKey(option.rawValue)).tag(option)
                         }
                     }
+                    // Passer d'hebdomadaire à mensuel réduit le plafond :
+                    // on ramène le compteur dans les clous.
+                    .onChange(of: recurrence) { _, _ in
+                        occurrences = min(occurrences, maxOccurrences)
+                    }
                     if recurrence != .once {
-                        Stepper(value: $occurrences, in: 2...GroupEvent.maxOccurrences) {
+                        Stepper(value: $occurrences, in: 2...maxOccurrences) {
                             Text(String(format: store.tr("%lld dates"), occurrences))
+                        }
+                        if occurrences >= maxOccurrences {
+                            Label("Maximum : un an de dates.", systemImage: "info.circle")
+                                .font(.caption)
+                                .foregroundStyle(JC.laiton)
                         }
                         if let last = plannedDates.last {
                             Label(
@@ -1846,7 +2019,7 @@ struct AddGroupEventSheet: View {
                 } footer: {
                     Text(recurrence == .once
                          ? "Une date unique. Les événements qui reviennent sont affichés dans une autre couleur."
-                         : "Chaque date a sa propre setlist et sa propre feuille de présence — tu pourras en annuler une sans toucher aux autres.")
+                         : "Chaque date a sa propre setlist et sa propre feuille de présence — tu pourras en annuler une sans toucher aux autres. Une série va au maximum jusqu'à un an.")
                 }
 
                 Section {

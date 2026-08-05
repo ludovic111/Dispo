@@ -18,6 +18,13 @@ check("Sol mineur → sax alto", gMinor.transposed(by: 9).label, "Em")
 check("Sol mineur → trompette", gMinor.transposed(by: 2).label, "Am")
 // Bouclage par-dessus l'octave.
 check("Si♭ + 2 demi-tons", MusicalKey("Bb")!.transposed(by: 2).label, "C")
+// Le ténor sonne une neuvième majeure sous la note écrite : à l'octave près,
+// il lit donc comme la trompette (si♭).
+check("Do réel → sax ténor (si♭)", concertC.transposed(by: Transposition.bFlat.semitones).label, "D")
+// Le morceau en mi♭ : l'alto le lit en ut, le ténor en fa.
+let concertEFlat = MusicalKey("Eb")!
+check("Mi♭ réel → sax alto", concertEFlat.transposed(by: Transposition.eFlat.semitones).label, "C")
+check("Mi♭ réel → sax ténor", concertEFlat.transposed(by: Transposition.bFlat.semitones).label, "F")
 
 // Grille : la mise en page et la couleur des accords sont conservées.
 check("Grille ii-V-I (+2)",

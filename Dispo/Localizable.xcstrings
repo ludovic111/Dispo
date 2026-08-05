@@ -561,6 +561,86 @@
         }
       }
     },
+    "%lld h": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Std."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld h"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld時間"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld小时"
+          }
+        }
+      }
+    },
+    "%lld j": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld T"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld d"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld d"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld g"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld日"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld天"
+          }
+        }
+      }
+    },
     "%lld jours avant": {
       "localizations": {
         "de": {
@@ -677,6 +757,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld名成员 · %lld首歌 · %lld场活动"
+          }
+        }
+      }
+    },
+    "%lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Min."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分钟"
           }
         }
       }
@@ -957,6 +1077,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "有 %lld 份乐谱归在各自的曲目下——在「曲目库」中打开该曲。"
+          }
+        }
+      }
+    },
+    "%lld partitions sont rangées sous leurs morceaux — ouvre le morceau juste au-dessus.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Noten liegen bei ihren Songs — öffne den Song direkt darüber."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld scores are filed under their songs — open the song just above."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld partituras están guardadas en sus temas: abre el tema de arriba."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld spartiti sono archiviati sotto i loro brani: apri il brano qui sopra."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の楽譜は曲ごとに保存されています。上の曲を開いてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 份乐谱已归入各自的曲目——请打开上方的曲目。"
           }
         }
       }
@@ -2661,6 +2821,86 @@
         }
       }
     },
+    "Ajouter le lien iReal Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal-Pro-Link hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add the iReal Pro link"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir el enlace de iReal Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi il link iReal Pro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro のリンクを追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加 iReal Pro 链接"
+          }
+        }
+      }
+    },
+    "Ajouter un document": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokument hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a document"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir un documento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi un documento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加文件"
+          }
+        }
+      }
+    },
     "Ajouter un morceau": {
       "localizations": {
         "de": {
@@ -3951,6 +4191,46 @@
         }
       }
     },
+    "Aucun document": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Dokumente"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No documents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ningún documento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun documento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類はありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无文件"
+          }
+        }
+      }
+    },
     "Aucun favori": {
       "localizations": {
         "de": {
@@ -4027,6 +4307,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无乐队"
+          }
+        }
+      }
+    },
+    "Aucun morceau ne correspond.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Song passt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No song matches."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ningún tema coincide."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun brano corrisponde."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致する曲はありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的曲目。"
           }
         }
       }
@@ -4307,6 +4627,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无乐谱"
+          }
+        }
+      }
+    },
+    "Aucune épingle, aucune distance — trouvable par nom et instrument": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Pin, keine Entfernung — auffindbar über Name und Instrument"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No pin, no distance — still findable by name and instrument"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin chincheta ni distancia: te encuentran por nombre e instrumento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun segnaposto, nessuna distanza: ti trovano per nome e strumento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ピンも距離も表示されません（名前と楽器では見つかります）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有图钉、没有距离——仍可按姓名和乐器找到"
           }
         }
       }
@@ -5531,6 +5891,46 @@
         }
       }
     },
+    "Boutons de sortie ajoutés là où il n'y en avait pas (vidéos, partitions, fiches ouvertes en feuille)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen-Buttons ergänzt, wo sie fehlten (Videos, Noten, als Blatt geöffnete Profile)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit buttons added where there were none (videos, scores, profiles opened as sheets)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botones de salida añadidos donde faltaban (vídeos, partituras, fichas abiertas en hoja)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsanti di uscita aggiunti dove mancavano (video, spartiti, schede aperte a foglio)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じるボタンがなかった画面に追加（動画・楽譜・シート表示のプロフィール）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在原本没有的地方补上了退出按钮（视频、乐谱、以浮层打开的资料页）"
+          }
+        }
+      }
+    },
     "BÊTA": {
       "localizations": {
         "de": {
@@ -6581,6 +6981,46 @@
         }
       }
     },
+    "Chaque date a sa propre setlist et sa propre feuille de présence — tu pourras en annuler une sans toucher aux autres. Une série va au maximum jusqu'à un an.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Termin hat seine eigene Setlist und Anwesenheitsliste — du kannst einen absagen, ohne die anderen anzurühren. Eine Serie läuft höchstens ein Jahr."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each date has its own setlist and its own attendance sheet — you can cancel one without touching the others. A series runs for one year at most."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada fecha tiene su propio repertorio y su propia hoja de asistencia: puedes cancelar una sin tocar las demás. Una serie dura como máximo un año."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni data ha la sua scaletta e il suo foglio presenze: puoi annullarne una senza toccare le altre. Una serie dura al massimo un anno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各回にセットリストと出欠表があり、1回だけキャンセルすることもできます。シリーズは最長で1年です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个日期都有自己的曲目单和出勤表——可以单独取消其中一个。系列最长为一年。"
+          }
+        }
+      }
+    },
     "Chaque membre reçoit un rappel à ce moment-là — pour confirmer sa présence, ou juste ne pas oublier.": {
       "localizations": {
         "de": {
@@ -6817,6 +7257,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "自由搜索任何内容"
+          }
+        }
+      }
+    },
+    "Chercher un morceau…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Song suchen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search for a song…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar un tema…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca un brano…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲を検索…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索曲目…"
           }
         }
       }
@@ -8501,6 +8981,46 @@
         }
       }
     },
+    "Contrat, plan de scène, fiche technique — hors morceaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertrag, Bühnenplan, Technical Rider — nicht zu einem Song"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contract, stage plot, tech rider — not tied to a song"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contrato, plano de escenario, ficha técnica: fuera de los temas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contratto, piano palco, scheda tecnica — fuori dai brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "契約書・ステージプラン・テクニカルライダーなど、曲に紐づかない書類"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合同、舞台图、技术清单——不属于任何曲目"
+          }
+        }
+      }
+    },
     "Contrebasse": {
       "localizations": {
         "de": {
@@ -8617,6 +9137,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "会话"
+          }
+        }
+      }
+    },
+    "Copier la grille": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akkordraster kopieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the chart"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar la parrilla"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia la griglia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コード進行をコピー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制和弦谱"
           }
         }
       }
@@ -8817,6 +9377,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "后台与黄铜 — 全新视觉"
+          }
+        }
+      }
+    },
+    "Countdown de présence : tu vois le temps qu'il te reste pour dire si tu viens": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Countdown für die Zusage: du siehst, wie lange du noch Zeit hast"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attendance countdown: you can see how long you have left to say whether you’re coming"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuenta atrás de asistencia: ves cuánto tiempo te queda para decir si vas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conto alla rovescia per la presenza: vedi quanto tempo ti resta per dire se vieni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出欠のカウントダウン：返答期限までの残り時間が見えます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出席倒计时：你能看到还剩多久要回复是否参加"
           }
         }
       }
@@ -9177,6 +9777,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "创建活动"
+          }
+        }
+      }
+    },
+    "Créer une répétition récurrente n'envoie plus qu'UNE notification, pas une par date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine wiederkehrende Probe löst jetzt EINE Mitteilung aus, nicht eine pro Termin"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creating a recurring rehearsal now sends ONE notification, not one per date"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear un ensayo recurrente ahora envía UNA notificación, no una por fecha"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creare una prova ricorrente ora invia UNA sola notifica, non una per data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繰り返しリハーサルの作成で届く通知は1件だけに（日付ごとではなくなりました）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建周期性排练现在只发送一条通知，而不是每个日期一条"
           }
         }
       }
@@ -10391,6 +11031,46 @@
         }
       }
     },
+    "Documents du groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumente der Band"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Band documents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentos del grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documenti del gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バンドの書類"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐队文件"
+          }
+        }
+      }
+    },
     "Doigtés, intro, tempo, « on la finit comment ? » — tout le monde peut écrire ici.": {
       "localizations": {
         "de": {
@@ -10511,6 +11191,46 @@
         }
       }
     },
+    "Dès qu'un membre se déclare indisponible, un SOS part pour son poste — tu es prévenu·e à chaque fois. « Identique à l'absent » reprend le niveau du musicien qui manque.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobald sich jemand als nicht verfügbar meldet, geht ein SOS für den Platz raus — und du wirst jedes Mal benachrichtigt. „Wie die fehlende Person“ verlangt das Niveau der fehlenden Musikerin oder des fehlenden Musikers."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As soon as a member marks themselves unavailable, an SOS goes out for their spot — and you’re notified every time. “Same as the missing player” asks for the level of the musician who’s missing."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cuanto un miembro se declara no disponible, sale un SOS para su puesto y siempre se te avisa. «Igual que el ausente» pide el nivel del músico que falta."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appena un membro si dichiara non disponibile, parte un SOS per il suo posto e tu vieni avvisato ogni volta. «Uguale a chi manca» richiede il livello del musicista assente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メンバーが参加できないと表明すると、そのパートのSOSが自動で出て、毎回あなたに通知されます。「欠員と同じレベル」は、いないメンバーと同じレベルで募集します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要有成员表示无法参加，就会自动为该位置发出 SOS，并每次通知你。「与缺席者相同」会按缺席乐手的水平寻找。"
+          }
+        }
+      }
+    },
     "Débloquer": {
       "localizations": {
         "de": {
@@ -10587,6 +11307,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "初学者"
+          }
+        }
+      }
+    },
+    "Déclare d'abord que vous avez joué ensemble : on ne note que quelqu'un qu'on a vu jouer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib zuerst an, dass ihr zusammen gespielt habt: bewertet wird nur, wen man spielen gehört hat."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First declare that you’ve played together: you only rate someone you’ve heard play."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primero declara que habéis tocado juntos: solo se puntúa a quien has visto tocar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dichiara prima di aver suonato insieme: si valuta solo chi si è visto suonare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まず「一緒に演奏した」ことを申告してください。演奏を聴いた相手だけを評価できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先声明你们一起演奏过：只能给你亲耳听过的人评分。"
           }
         }
       }
@@ -11961,6 +12721,46 @@
         }
       }
     },
+    "Fermer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        }
+      }
+    },
     "Fichier": {
       "localizations": {
         "de": {
@@ -13297,6 +14097,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "浩室"
+          }
+        }
+      }
+    },
+    "Identique à l'absent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie die fehlende Person"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as the missing player"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Igual que el ausente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uguale a chi manca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠員と同じレベル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与缺席者相同"
           }
         }
       }
@@ -16291,6 +17131,46 @@
         }
       }
     },
+    "Le leader est alerté pour trouver un remplaçant.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Bandleitung wird informiert, um Ersatz zu finden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The leader is alerted so they can find a replacement."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se avisa al líder para que busque un sustituto."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il leader viene avvisato per trovare un sostituto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダーに通知され、代役を探せます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已通知队长寻找替补。"
+          }
+        }
+      }
+    },
     "Le leader peut renommer son groupe à tout moment": {
       "localizations": {
         "de": {
@@ -16447,6 +17327,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "队长身份只能转让给Premium成员。请将每位成员标记为常驻（核心）或临时。"
+          }
+        }
+      }
+    },
+    "Le lien iReal Pro s'ajoute et s'ouvre directement depuis la grille, et la grille se copie d'un tap": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der iReal-Pro-Link wird direkt im Akkordraster hinzugefügt und geöffnet, und das Raster kopiert sich mit einem Tipp"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The iReal Pro link is added and opened straight from the chart, and the chart copies in one tap"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El enlace de iReal Pro se añade y se abre desde la parrilla, y la parrilla se copia con un toque"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il link iReal Pro si aggiunge e si apre dalla griglia, e la griglia si copia con un tocco"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro のリンクはコード表から追加・起動でき、コード表はワンタップでコピーできます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro 链接可直接在和弦谱中添加和打开，和弦谱一键复制"
           }
         }
       }
@@ -17171,6 +18091,46 @@
         }
       }
     },
+    "Les instruments ressortent enfin dans l'accueil, avec le niveau sur chaque pastille": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instrumente stechen im Feed endlich hervor, mit dem Niveau auf jedem Chip"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instruments finally stand out on the home feed, with the level on each chip"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los instrumentos por fin destacan en el inicio, con el nivel en cada etiqueta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli strumenti risaltano finalmente nella home, con il livello su ogni etichetta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームで楽器が目立つようになり、各タグにレベルが表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐器终于在首页更醒目，每个标签上都带有水平"
+          }
+        }
+      }
+    },
     "Les invitations de groupe s'acceptent : personne n'entre dans un groupe sans dire oui": {
       "localizations": {
         "de": {
@@ -17331,6 +18291,86 @@
         }
       }
     },
+    "Les partitions ne sont plus un onglet à part : elles vivent sous leur morceau, dans le répertoire": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noten sind kein eigener Tab mehr: sie liegen beim Song, im Repertoire"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scores are no longer a separate tab: they live under their song, in the repertoire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las partituras ya no son una pestaña aparte: viven bajo su tema, en el repertorio"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli spartiti non sono più una scheda a parte: stanno sotto il loro brano, nel repertorio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽譜は独立したタブをやめ、レパートリーの各曲の下に置かれます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐谱不再是单独的标签页：它们归入曲库中各自的曲目下"
+          }
+        }
+      }
+    },
+    "Les partitions s'ajoutent depuis un morceau ; ici, tout ce qui concerne le groupe entier.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noten fügst du beim Song hinzu; hier steht, was die ganze Band betrifft."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scores are added from a song; here goes everything that concerns the whole band."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las partituras se añaden desde un tema; aquí va todo lo que atañe al grupo entero."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli spartiti si aggiungono da un brano; qui tutto ciò che riguarda l’intero gruppo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽譜は曲から追加します。ここにはバンド全体に関わるものを置きます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐谱从曲目中添加；这里放与整个乐队相关的文件。"
+          }
+        }
+      }
+    },
     "Les vidéos n'ont pas pu être synchronisées.": {
       "localizations": {
         "de": {
@@ -17367,6 +18407,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "视频同步失败。"
+          }
+        }
+      }
+    },
+    "Les étoiles ne s'ouvrent qu'après avoir déclaré que vous avez joué ensemble": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sterne gibt es erst, wenn ihr angegeben habt, zusammen gespielt zu haben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stars only unlock once you’ve declared that you played together"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las estrellas solo se abren tras declarar que habéis tocado juntos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le stelle si sbloccano solo dopo aver dichiarato di aver suonato insieme"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「一緒に演奏した」と申告して初めて星を付けられます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有在声明你们一起演奏过之后才能评星"
           }
         }
       }
@@ -17487,6 +18567,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "直达链接"
+          }
+        }
+      }
+    },
+    "Liens d'écoute plus fiables : Spotify, YouTube Music et Deezer résistent aux quotas": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuverlässigere Hörlinks: Spotify, YouTube Music und Deezer halten Ratenlimits stand"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More reliable listening links: Spotify, YouTube Music and Deezer now survive rate limits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enlaces de escucha más fiables: Spotify, YouTube Music y Deezer aguantan las cuotas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link d’ascolto più affidabili: Spotify, YouTube Music e Deezer reggono i limiti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試聴リンクがより確実に：Spotify・YouTube Music・Deezer がレート制限に強くなりました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试听链接更可靠：Spotify、YouTube Music 与 Deezer 不再被配额卡住"
           }
         }
       }
@@ -18127,6 +19247,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "匹配、社交与多语言"
+          }
+        }
+      }
+    },
+    "Maximum : un an de dates.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximum: ein Jahr an Terminen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximum: one year of dates."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Máximo: un año de fechas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Massimo: un anno di date."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最長で1年分の日程です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最多一年的日期。"
           }
         }
       }
@@ -19971,6 +21131,46 @@
         }
       }
     },
+    "Ne pas apparaître sur la carte": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht auf der Karte erscheinen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don’t appear on the map"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No aparecer en el mapa"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non apparire sulla mappa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地図に表示しない"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不显示在地图上"
+          }
+        }
+      }
+    },
     "Ne rate plus jamais un cachet": {
       "localizations": {
         "de": {
@@ -20207,6 +21407,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "音乐学院水平"
+          }
+        }
+      }
+    },
+    "Niveau demandé": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewünschtes Niveau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level required"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nivel requerido"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livello richiesto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "求めるレベル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所需水平"
           }
         }
       }
@@ -20971,6 +22211,46 @@
         }
       }
     },
+    "Notifications calmées & répertoire rangé": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ruhigere Mitteilungen & aufgeräumtes Repertoire"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calmer notifications & a tidier repertoire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notificaciones más tranquilas y repertorio ordenado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifiche più calme e repertorio in ordine"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知を静かに、レパートリーを整理"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更安静的通知与整理好的曲库"
+          }
+        }
+      }
+    },
     "Nouveau": {
       "localizations": {
         "de": {
@@ -21087,6 +22367,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "新建群组"
+          }
+        }
+      }
+    },
+    "Nouveau réglage de position : ne pas apparaître sur la carte du tout": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Standort-Einstellung: gar nicht auf der Karte erscheinen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New location setting: don’t appear on the map at all"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo ajuste de ubicación: no aparecer en el mapa en absoluto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuova impostazione di posizione: non apparire affatto sulla mappa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置設定に「地図に一切表示しない」を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的位置设置：完全不出现在地图上"
           }
         }
       }
@@ -21611,6 +22931,46 @@
         }
       }
     },
+    "Ouvre la fiche du morceau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Songseite"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the song page"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre la ficha del tema"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre la scheda del brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲の詳細を開きます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开曲目详情"
+          }
+        }
+      }
+    },
     "Ouvre le profil d'un musicien d'un tap depuis la conversation": {
       "localizations": {
         "de": {
@@ -22017,6 +23377,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "与整个小组共享 — 每个人都可以打开和下载。"
+          }
+        }
+      }
+    },
+    "Partagés avec tout le groupe — chacun peut les ouvrir et les télécharger.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit der ganzen Band geteilt — alle können sie öffnen und herunterladen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared with the whole band — everyone can open and download them."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartidos con todo el grupo: cualquiera puede abrirlos y descargarlos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Condivisi con tutto il gruppo: tutti possono aprirli e scaricarli."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バンド全員と共有され、誰でも開いてダウンロードできます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与全体成员共享——所有人都可以打开和下载。"
           }
         }
       }
@@ -23741,6 +25141,46 @@
         }
       }
     },
+    "Prochain événement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Termin"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next event"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Próximo evento"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prossimo evento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のイベント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一场活动"
+          }
+        }
+      }
+    },
     "Professionnel": {
       "localizations": {
         "de": {
@@ -24911,6 +26351,46 @@
         }
       }
     },
+    "Recherche dans le répertoire dès qu'un groupe dépasse huit morceaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche im Repertoire, sobald eine Band mehr als acht Songs hat"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in the repertoire as soon as a band has more than eight songs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búsqueda en el repertorio en cuanto un grupo pasa de ocho temas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricerca nel repertorio quando un gruppo supera gli otto brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲が8曲を超えたらレパートリー内を検索できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐队曲目超过八首时即可在曲库中搜索"
+          }
+        }
+      }
+    },
     "Recherche de ville par nom ou code postal": {
       "localizations": {
         "de": {
@@ -25427,6 +26907,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "自动找替补"
+          }
+        }
+      }
+    },
+    "Remplacement automatique : niveau « peu importe » ou « identique à l'absent », rien de plus à régler": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatischer Ersatz: Niveau „egal“ oder „wie die fehlende Person“ — mehr gibt es nicht einzustellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic replacement: level “any” or “same as the missing player” — nothing more to set"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sustitución automática: nivel «cualquiera» o «igual que el ausente», nada más que ajustar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituzione automatica: livello «indifferente» o «uguale a chi manca», nulla da regolare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動代役：レベルは「どれでも」か「欠員と同じ」の2択だけ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动替补：水平选「不限」或「与缺席者相同」，无需其他设置"
           }
         }
       }
@@ -26361,6 +27881,46 @@
         }
       }
     },
+    "Réponds sous %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antworte in %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reply within %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Responde en %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rispondi entro %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@以内に返答"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@内答复"
+          }
+        }
+      }
+    },
     "Réponse Apple invalide — réessaie.": {
       "localizations": {
         "de": {
@@ -26397,6 +27957,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple响应无效——请重试。"
+          }
+        }
+      }
+    },
+    "Réponse attendue": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antwort überfällig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reply overdue"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falta tu respuesta"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manca la tua risposta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返答期限を過ぎています"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待答复"
+          }
+        }
+      }
+    },
+    "Réponse attendue avant le %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antwort erwartet bis %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reply expected before %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Responde antes del %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risposta attesa entro il %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@までに返答してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在 %@ 前答复"
           }
         }
       }
@@ -27297,6 +28937,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "萨克斯"
+          }
+        }
+      }
+    },
+    "Saxophone alto": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altsaxofon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alto saxophone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saxofón alto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sassofono contralto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルトサックス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中音萨克斯"
+          }
+        }
+      }
+    },
+    "Saxophone alto et saxophone ténor deviennent des instruments à part entière, transposés comme il faut": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt- und Tenorsaxofon sind jetzt eigene Instrumente und werden korrekt transponiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alto and tenor saxophone are now instruments of their own, transposed correctly"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El saxofón alto y el tenor son ahora instrumentos propios, transpuestos como toca"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sassofono contralto e tenore diventano strumenti a sé, trasposti come si deve"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルトサックスとテナーサックスが独立した楽器になり、正しく移調されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中音与次中音萨克斯成为独立乐器，移调正确"
+          }
+        }
+      }
+    },
+    "Saxophone ténor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tenorsaxofon"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tenor saxophone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saxofón tenor"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sassofono tenore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テナーサックス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次中音萨克斯"
           }
         }
       }
@@ -28681,6 +30441,46 @@
         }
       }
     },
+    "Ta photo de profil part enfin sur le serveur — et les anciennes sont rattrapées toutes seules": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Profilbild landet endlich auf dem Server — ältere werden von selbst nachgeladen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your profile photo finally reaches the server — and older ones are re-uploaded on their own"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu foto de perfil por fin llega al servidor, y las antiguas se recuperan solas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua foto profilo arriva finalmente sul server, e quelle vecchie si recuperano da sole"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィール写真がようやくサーバーへ。以前の写真も自動で再アップロードされます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人照片终于会上传到服务器——旧照片也会自动补传"
+          }
+        }
+      }
+    },
     "Ta photo de profil te suit sur un nouvel appareil": {
       "localizations": {
         "de": {
@@ -28797,6 +30597,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "只有在打开应用时才会读取你的位置，绝不在后台读取。大致模式下，他人只能以约5公里的精度定位你——足以在搜索中找到你，而不会泄露你的地址。"
+          }
+        }
+      }
+    },
+    "Ta position est relevée quand tu ouvres l'app, jamais en arrière-plan. En approximatif, les autres te situent à ~5 km près — assez pour te trouver dans les recherches, sans révéler ton adresse. En masqué, aucune coordonnée n'est publiée : ton profil reste trouvable par nom, instrument et style.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Standort wird beim Öffnen der App gelesen, nie im Hintergrund. Ungefähr verortet dich auf etwa 5 km genau — genug, um gefunden zu werden, ohne deine Adresse preiszugeben. Versteckt veröffentlicht gar keine Koordinaten: dein Profil bleibt über Name, Instrument und Stil auffindbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your location is read when you open the app, never in the background. Approximate places you within about 5 km — enough to be found in searches, without giving away your address. Hidden publishes no coordinates at all: your profile stays findable by name, instrument and style."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu ubicación se lee al abrir la app, nunca en segundo plano. En aproximada, los demás te sitúan a unos 5 km: suficiente para aparecer en las búsquedas sin revelar tu dirección. En oculta no se publica ninguna coordenada: tu perfil sigue encontrándose por nombre, instrumento y estilo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua posizione viene rilevata quando apri l’app, mai in background. In approssimativa gli altri ti situano a circa 5 km: abbastanza per farti trovare nelle ricerche senza rivelare il tuo indirizzo. In nascosta non viene pubblicata alcuna coordinata: il tuo profilo resta trovabile per nome, strumento e stile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置情報はアプリを開いたときだけ取得し、バックグラウンドでは取得しません。「おおよそ」では約5km単位で表示され、住所を明かさずに検索で見つけてもらえます。「非表示」では座標を一切公開しません（名前・楽器・ジャンルでは見つかります）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只在你打开应用时读取位置，绝不在后台读取。「大致」会以约 5 公里精度显示——足以在搜索中被找到，又不暴露住址。「隐藏」则完全不发布坐标：你的资料仍可按姓名、乐器和风格被找到。"
           }
         }
       }
@@ -30561,6 +32401,46 @@
         }
       }
     },
+    "Trois petits points sur chaque morceau — un coup d'œil suffit à voir qu'il y a une fiche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drei Punkte bei jedem Song — ein Blick genügt, um zu sehen, dass es eine Seite gibt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Three little dots on every song — a glance is enough to see there’s a page behind it"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tres puntitos en cada tema: de un vistazo ves que hay una ficha"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tre puntini su ogni brano: basta un’occhiata per vedere che c’è una scheda"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各曲に「…」表示——詳細ページがあることがひと目で分かります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每首曲子上的三个小点——一眼就知道背后有详情页"
+          }
+        }
+      }
+    },
     "Trombone": {
       "localizations": {
         "de": {
@@ -30837,6 +32717,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "你被选上了！（%@）"
+          }
+        }
+      }
+    },
+    "Tu n'apparais pas sur la carte — Réglages → Ma position pour changer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du erscheinst nicht auf der Karte — Einstellungen → Mein Standort zum Ändern."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You don’t appear on the map — Settings → My location to change that."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apareces en el mapa: Ajustes → Mi ubicación para cambiarlo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non appari sulla mappa: Impostazioni → La mia posizione per cambiare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地図に表示されていません（設定 → 現在地 で変更）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你未显示在地图上——可在「设置 → 我的位置」中更改。"
           }
         }
       }
@@ -31677,6 +33597,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "提前一周"
+          }
+        }
+      }
+    },
+    "Une série va au maximum jusqu'à un an — 52 semaines, 26 quinzaines ou 12 mois": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Serie läuft höchstens ein Jahr — 52 Wochen, 26 zweiwöchige Termine oder 12 Monate"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A series now runs one year at most — 52 weeks, 26 fortnights or 12 months"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una serie llega como máximo a un año: 52 semanas, 26 quincenas o 12 meses"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una serie arriva al massimo a un anno: 52 settimane, 26 quindicine o 12 mesi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シリーズは最長1年（52週・26回の隔週・12か月）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系列最长一年——52 周、26 次双周或 12 个月"
           }
         }
       }
@@ -32811,6 +34771,46 @@
         }
       }
     },
+    "dans %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "en %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tra %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@後"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@后"
+          }
+        }
+      }
+    },
     "démos": {
       "localizations": {
         "de": {
@@ -33397,6 +35397,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "“Typing…”: see when your contact is replying"
+          }
+        }
+      }
+    },
+    "« Prochain événement » en haut de l'accueil, avec le compte à rebours jusqu'au concert": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Nächster Termin“ ganz oben auf der Startseite, mit Countdown bis zum Auftritt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Next event” at the top of the home screen, counting down to the gig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Próximo evento» en lo alto del inicio, con la cuenta atrás hasta el concierto"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Prossimo evento» in cima alla home, con il conto alla rovescia fino al concerto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホーム上部に「次のイベント」と本番までのカウントダウン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页顶部的「下一场活动」，附带到演出的倒计时"
           }
         }
       }

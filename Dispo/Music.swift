@@ -81,12 +81,16 @@ enum Transposition: String, Codable, CaseIterable, Identifiable {
 }
 
 extension Instrument {
-    /// Accord habituel de l'instrument. Le saxophone est proposé en mi♭
-    /// (alto, le plus courant) — un ténor bascule en si♭ d'un tap.
+    /// Accord habituel de l'instrument. « Saxophone » sans plus de précision
+    /// est proposé en mi♭ (l'alto, le plus courant) ; alto et ténor, eux,
+    /// sont désormais des instruments à part entière et n'ont plus à être
+    /// corrigés à la main.
     var defaultTransposition: Transposition {
         switch self {
-        case .trompette, .clarinette: return .bFlat
-        case .saxophone: return .eFlat
+        // Le ténor sonne une neuvième majeure sous la note écrite : la
+        // tonalité, elle, se lit un ton au-dessus du réel comme la trompette.
+        case .trompette, .clarinette, .saxTenor: return .bFlat
+        case .saxophone, .saxAlto: return .eFlat
         case .cor: return .f
         default: return .c
         }

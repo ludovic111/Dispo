@@ -14,4 +14,16 @@ PY
 cp main.swift "$work/"
 swiftc -O "$work/Music.swift" "$work/main.swift" -o "$work/musicchecks"
 "$work/musicchecks"
+
+# L'extension Instrument est retirée de la compilation (elle dépend des
+# modèles de l'app) : on vérifie son contenu au texte, sinon une erreur
+# d'accord d'instrument passerait sans bruit.
+mapping=$(sed -n '/extension Instrument {/,/^}/p' ../../Dispo/Music.swift)
+fail=0
+grep -q 'case .trompette, .clarinette, .saxTenor: return .bFlat' <<<"$mapping" || { echo "ECHEC  ténor et clarinette doivent lire en si♭"; fail=1; }
+grep -q 'case .saxophone, .saxAlto: return .eFlat' <<<"$mapping" || { echo "ECHEC  alto doit lire en mi♭"; fail=1; }
+grep -q 'case .cor: return .f' <<<"$mapping" || { echo "ECHEC  cor doit lire en fa"; fail=1; }
+[ $fail -eq 0 ] && echo "OK    accords d'instruments (alto mi♭, ténor si♭, cor fa)"
+
 rm -rf "$work"
+exit $fail

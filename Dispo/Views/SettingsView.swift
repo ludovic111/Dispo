@@ -182,7 +182,7 @@ struct SettingsSheet: View {
                     store.setLocationPrecision(option)
                 } label: {
                     HStack(spacing: 12) {
-                        settingsIcon(option.symbol, option == .city ? JC.bronze : JC.laiton)
+                        settingsIcon(option.symbol, iconColor(for: option))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(LocalizedStringKey(option.label))
                                 .foregroundStyle(.primary)
@@ -201,12 +201,21 @@ struct SettingsSheet: View {
         } header: {
             Text("Ma position")
         } footer: {
-            Text("Ta position est relevée quand tu ouvres l'app, jamais en arrière-plan. En approximatif, les autres te situent à ~5 km près — assez pour te trouver dans les recherches, sans révéler ton adresse.")
+            Text("Ta position est relevée quand tu ouvres l'app, jamais en arrière-plan. En approximatif, les autres te situent à ~5 km près — assez pour te trouver dans les recherches, sans révéler ton adresse. En masqué, aucune coordonnée n'est publiée : ton profil reste trouvable par nom, instrument et style.")
+        }
+    }
+
+    private func iconColor(for option: LocationPrecision) -> Color {
+        switch option {
+        case .hidden: return .secondary
+        case .city: return JC.bronze
+        case .exactFriends, .exactEveryone: return JC.laiton
         }
     }
 
     private func descriptionKey(for option: LocationPrecision) -> String {
         switch option {
+        case .hidden: return "Aucune épingle, aucune distance — trouvable par nom et instrument"
         case .city: return "Recommandé — visible à ~5 km près"
         case .exactFriends: return "Position précise pour les amis (suivi mutuel)"
         case .exactEveryone: return "Position précise pour tout le réseau"

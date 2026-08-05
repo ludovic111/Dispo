@@ -525,6 +525,19 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    /// Efface ma position publique : sans coordonnées, aucune épingle sur la
+    /// carte et aucune distance calculable côté client.
+    func clearCityLocation(userID: UUID) async throws {
+        struct Update: Encodable {
+            let latitude: Double?
+            let longitude: Double?
+        }
+        try await client.from("profiles")
+            .update(Update(latitude: nil, longitude: nil))
+            .eq("id", value: userID)
+            .execute()
+    }
+
     /// Écrit ma préférence de partage de position.
     func updateLocationPrecision(_ precision: LocationPrecision, userID: UUID) async throws {
         try await client.from("profiles")

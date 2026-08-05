@@ -88,15 +88,22 @@ struct HomeView: View {
             .sorted { store.rank($0, $1) }
     }
 
-    /// Prochain événement de groupe (7 jours) — pour le rappel + invitations.
+    /// Mon prochain événement de groupe, quelle que soit sa date : c'est la
+    /// première chose qu'on veut voir en ouvrant l'app.
     private var nextGroupEvent: (group: GroupChat, event: GroupEvent)? {
-        let next = store.groups
-            .flatMap { group in group.upcomingEvents.map { (group, $0) } }
-            .min { $0.1.date < $1.1.date }
-        guard let (group, event) = next,
-              event.date < Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+        store.groups
+            .flatMap { group in group.upcomingEvents.map { (group: group, event: $0) } }
+            .min { $0.event.date < $1.event.date }
+    }
+
+    /// Le même, mais seulement s'il approche : inviter un remplaçant pour un
+    /// concert dans six mois n'a pas de sens.
+    private var nextGroupEventSoon: (group: GroupChat, event: GroupEvent)? {
+        guard let next = nextGroupEvent,
+              let horizon = Calendar.current.date(byAdding: .day, value: 14, to: Date()),
+              next.event.date < horizon
         else { return nil }
-        return (group, event)
+        return next
     }
 
     private var greeting: LocalizedStringKey {
@@ -157,7 +164,7 @@ struct HomeView: View {
                 store.selectedTab = .profile
             } label: {
                 ZStack(alignment: .topTrailing) {
-                    AvatarView(name: store.profile.name, size: 48)
+                    AvatarView(name: store.profile.name, size: 48, photo: store.myPhotoReference)
                     if store.profile.isAvailable {
                         Circle()
                             .fill(store.profile.availability.color)
@@ -203,6 +210,22 @@ struct HomeView: View {
         if let (group, event) = nextGroupEvent {
             let myStatus = event.status(for: store.profile.name)
             VStack(spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(JC.bronze)
+                    Text("Prochain événement")
+                        .font(.caption2.weight(.heavy))
+                        .textCase(.uppercase)
+                        .foregroundStyle(JC.bronze)
+                    Spacer(minLength: 0)
+                    // Le compte à rebours jusqu'au concert lui-même.
+                    if let left = store.countdown(to: event.date) {
+                        Text(String(format: store.tr("dans %@"), left))
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(JC.laiton)
+                    }
+                }
                 NavigationLink(value: group.id) {
                     HStack(spacing: 11) {
                         Text(event.kind.emoji)
@@ -227,9 +250,7 @@ struct HomeView: View {
 
                 if myStatus == .pending {
                     HStack(spacing: 8) {
-                        Text("Tu viens ?")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.secondary)
+                        ConfirmCountdownBadge(event: event)
                         Spacer(minLength: 0)
                         Button {
                             store.setAttendance(.available, eventID: event.id, in: group.id)
@@ -277,7 +298,7 @@ struct HomeView: View {
     /// Musiciens déjà dispo le jour de l'événement — invitation en un tap.
     @ViewBuilder
     private var availableInviteRow: some View {
-        if let (group, event) = nextGroupEvent,
+        if let (group, event) = nextGroupEventSoon,
            store.canLead(group) {
             let invitees = store.availableInvitees(for: event, in: group)
             if !invitees.isEmpty {

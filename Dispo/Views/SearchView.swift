@@ -163,7 +163,27 @@ struct SearchMusicianRow: View {
                             .foregroundStyle(JC.bronze)
                         SocialLinkBadge(link: store.socialLink(with: musician.name))
                     }
-                    Text(verbatim: "\(musician.instruments.map { store.tr($0.rawValue) }.joined(separator: " · ")) · \(musician.neighborhood)")
+                    // Les instruments passent devant : c'est le premier
+                    // critère quand on cherche quelqu'un, avec son niveau.
+                    if !musician.instruments.isEmpty {
+                        FlowLayout(spacing: 5) {
+                            ForEach(musician.instruments.prefix(4)) { instrument in
+                                InstrumentChip(
+                                    instrument: instrument,
+                                    level: store.isPremium
+                                        ? (musician.level(for: instrument) ?? musician.level)
+                                        : nil
+                                )
+                            }
+                            if musician.instruments.count > 4 {
+                                TagView(
+                                    text: "+\(musician.instruments.count - 4)",
+                                    color: JC.bronze
+                                )
+                            }
+                        }
+                    }
+                    Text(verbatim: musician.neighborhood)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

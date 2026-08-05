@@ -349,11 +349,22 @@ final class AppStore: ObservableObject {
         pushLocationToServer()
     }
 
-    /// Publie ma position selon la préférence courante.
+    /// Publie ma position selon la préférence courante — ou l'efface
+    /// complètement si j'ai choisi de ne pas apparaître sur la carte.
     private func pushLocationToServer() {
-        guard let backend, let userID = liveUserID, let coordinate = myCoordinate else { return }
-        let city = Self.cityRounded(coordinate)
+        guard let backend, let userID = liveUserID else { return }
         let precision = locationPrecision
+        guard precision.sharesLocation else {
+            // Masqué : plus aucune coordonnée côté serveur, ni approximative
+            // ni exacte. Mon profil reste trouvable par nom et par instrument.
+            Task {
+                try? await backend.clearCityLocation(userID: userID)
+                try? await backend.deleteExactLocation(userID: userID)
+            }
+            return
+        }
+        guard let coordinate = myCoordinate else { return }
+        let city = Self.cityRounded(coordinate)
         Task {
             try? await backend.updateCityLocation(
                 latitude: city.latitude,
@@ -386,7 +397,7 @@ final class AppStore: ObservableObject {
             }
         }
         pushLocationToServer()
-        if myCoordinate == nil { requestLocation() }
+        if precision.sharesLocation && myCoordinate == nil { requestLocation() }
     }
 
     /// Profil par défaut de la démo.
@@ -549,7 +560,10 @@ final class AppStore: ObservableObject {
                     : nil
                 profile.demoVideos = (mine.demoVideos ?? []).map(\.asDemoVideo)
                 profile.videoFileNames = nil
+                // L'URL hébergée fait foi : c'est elle que les autres voient.
+                profile.photoURL = mine.photoUrl
             }
+            healProfilePhotoIfNeeded()
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
@@ -975,15 +989,20 @@ final class AppStore: ObservableObject {
 
     /// Flag anti-chevauchement du backfill Odesli.
     private var streamingBackfillActive = false
+    /// Morceaux qu'Odesli ne connaît pas — inutile de les redemander à chaque
+    /// synchro (le service a répondu, il n'a simplement pas le morceau).
+    private var streamingBackfillGaveUp: Set<UUID> = []
 
     /// Complète en tâche de fond les liens d'écoute directs (Odesli) des
-    /// morceaux de répertoire déjà enregistrés sans eux. Quelques-uns par
-    /// passage (quota Odesli ~10/min) ; idempotent, se relance aux refresh.
+    /// morceaux de répertoire enregistrés sans eux. Le débit est cadencé par
+    /// `OdesliPacer` ; idempotent, se relance à chaque synchro tant qu'il
+    /// reste des morceaux à résoudre.
     private func backfillStreamingLinks() {
         guard isLive, !streamingBackfillActive else { return }
         var targets: [(groupID: GroupChat.ID, songID: UUID, appleURL: String)] = []
         for group in groups {
-            for song in group.songs where song.platformLinks == nil {
+            for song in group.songs
+            where song.platformLinks == nil && !streamingBackfillGaveUp.contains(song.id) {
                 if let track = song.trackURL, !track.isEmpty {
                     targets.append((group.id, song.id, track))
                 }
@@ -998,6 +1017,8 @@ final class AppStore: ObservableObject {
             for t in batch {
                 if let links = await Self.fetchStreamingLinks(appleMusicURL: t.appleURL) {
                     self.updateSong(t.songID, in: t.groupID, eventID: nil) { $0.platformLinks = links }
+                } else {
+                    self.streamingBackfillGaveUp.insert(t.songID)
                 }
             }
         }
@@ -1192,10 +1213,24 @@ final class AppStore: ObservableObject {
 
     // MARK: - Social & Premium
 
-    /// Photo d'un musicien seed par nom (avis, conversations).
+    /// Photo d'un musicien par nom (avis, conversations, membres de groupe).
     func photo(forName name: String) -> String? {
+        // Moi : je ne figure pas dans le feed, il faut me traiter à part —
+        // sinon mon avatar retombe sur mes initiales partout sauf sur ma
+        // propre fiche.
+        if name == profile.name { return myPhotoReference }
         if let exact = musicians.first(where: { $0.name == name }) { return exact.photo }
         return musicians.first(where: { $0.name.hasPrefix(name + " ") })?.photo
+    }
+
+    /// Ma photo pour `AvatarView` : le fichier local s'il existe (instantané,
+    /// pas de réseau), sinon l'URL hébergée.
+    var myPhotoReference: String? {
+        if let fileName = profile.photoFileName {
+            let path = Self.mediaURL(for: fileName).path
+            if FileManager.default.fileExists(atPath: path) { return path }
+        }
+        return profile.photoURL
     }
 
     func isDemoContact(_ name: String) -> Bool {
@@ -1283,17 +1318,18 @@ final class AppStore: ObservableObject {
     private static let handledDropoutsKey = "dispo.autoSOS.handled"
 
     /// Active ou coupe le remplacement automatique du groupe (leader).
-    func setAutoSOS(enabled: Bool, minLevel: Level?, in group: GroupChat) {
+    func setAutoSOS(enabled: Bool, levelRule: AutoSOSLevelRule, in group: GroupChat) {
         guard canLead(group) else { return }
+        let stored = levelRule.stored
         updateGroup(group.id) {
             $0.autoSOSEnabled = enabled
-            $0.autoSOSMinLevel = minLevel?.rawValue
+            $0.autoSOSMinLevel = stored
         }
         if let backend, isLive {
             syncLive {
                 try await backend.updateAutoSOS(
                     enabled: enabled,
-                    minLevel: minLevel?.rawValue,
+                    minLevel: stored,
                     groupID: group.id
                 )
             }
@@ -1308,13 +1344,13 @@ final class AppStore: ObservableObject {
         var handled = Set(UserDefaults.standard.stringArray(forKey: Self.handledDropoutsKey) ?? [])
         var published = false
         for group in groups where group.autoSOSEnabled == true && isLeader(of: group) {
-            let minLevel = group.autoSOSMinLevel.flatMap(Level.init(rawValue:))
+            let rule = group.autoSOSLevelRule
             for event in group.upcomingEvents {
                 for member in event.unavailableNames where member != profile.name {
                     let key = "\(event.id.uuidString).\(member)"
                     guard !handled.contains(key) else { continue }
                     handled.insert(key)
-                    publishAutoSOS(for: event, in: group, replacing: member, minLevel: minLevel)
+                    publishAutoSOS(for: event, in: group, replacing: member, rule: rule)
                     published = true
                 }
             }
@@ -1340,14 +1376,24 @@ final class AppStore: ObservableObject {
         for event: GroupEvent,
         in group: GroupChat,
         replacing member: String,
-        minLevel: Level?
+        rule: AutoSOSLevelRule
     ) {
         // Le poste à pourvoir : son rôle dans le groupe, sinon son premier
         // instrument. Sans instrument connu, on ne devine pas.
         let instrument = group.role(for: member)
             ?? musicians.first(where: { $0.name == member })?.instruments.first
         guard let instrument else { return }
-        let levelNote = minLevel.map { String(format: tr("Niveau recherché : %@."), tr($0.rawValue)) } ?? ""
+        // « Identique à l'absent » : on demande son niveau sur cet instrument
+        // (son niveau global à défaut). « Peu importe » ne demande rien.
+        let wantedLevel: Level? = {
+            guard rule == .sameAsAbsent,
+                  let absent = musicians.first(where: { $0.name == member })
+            else { return nil }
+            return absent.level(for: instrument) ?? absent.level
+        }()
+        let levelNote = wantedLevel.map {
+            String(format: tr("Niveau recherché : %@."), tr($0.rawValue))
+        } ?? ""
         let sos = GigRequest(
             title: String(format: tr("Remplacement — %@"), event.title),
             hostName: profile.name,
@@ -1395,10 +1441,22 @@ final class AppStore: ObservableObject {
     /// (policy `ratings_insert_own`) — ceci n'est que la version affichable.
     func canBeRated(_ musician: Musician) -> Bool { musician.level == .pro }
 
+    /// Puis-je noter ce musicien ? Il faut qu'il soit professionnel ET qu'on
+    /// ait déclaré avoir joué ensemble : on ne note pas quelqu'un qu'on n'a
+    /// jamais vu jouer.
+    func canRate(_ musician: Musician) -> Bool {
+        canBeRated(musician) && hasPlayedWith(musician)
+    }
+
     /// Déclare (ou retire) « on a joué ensemble » — sans note. C'est le geste
     /// ouvert à tout le monde ; noter reste réservé aux pros.
     func togglePlayedWith(_ musician: Musician) {
         let wasPlayed = playedWith.contains(musician.name)
+        // Retirer la collaboration retire la note qui en dépendait : une note
+        // sans « on a joué ensemble » n'a plus de fondement.
+        if wasPlayed, myRating(for: musician) != nil {
+            removeRating(for: musician)
+        }
         if let backend, let userID = liveUserID {
             if wasPlayed {
                 playedWith.remove(musician.name)
@@ -1428,10 +1486,10 @@ final class AppStore: ObservableObject {
         Self.save(playedWith, key: Self.playedWithKey)
     }
 
-    /// Note un musicien (1–5). Noter vaut déclaration « on a joué
-    /// ensemble » : la collaboration est enregistrée en même temps.
+    /// Note un musicien professionnel (1–5). Il faut avoir déclaré « on a
+    /// joué ensemble » d'abord — le serveur applique la même règle.
     func rate(_ musician: Musician, stars: Int) {
-        guard canBeRated(musician) else { return }
+        guard canRate(musician) else { return }
         let clamped = min(5, max(1, stars))
         if let backend, let userID = liveUserID {
             let previous = liveMyRatings[musician.id]
@@ -1458,16 +1516,16 @@ final class AppStore: ObservableObject {
         Self.save(playedWith, key: Self.playedWithKey)
     }
 
-    /// Retire ma note (et la collaboration déclarée avec).
+    /// Retire ma note. La collaboration déclarée, elle, reste : avoir joué
+    /// ensemble est un fait, pas un avis — on ne l'efface qu'en le retirant
+    /// explicitement.
     func removeRating(for musician: Musician) {
         if let backend, let userID = liveUserID {
             guard let previous = liveMyRatings.removeValue(forKey: musician.id) else { return }
             applyLocalRating(musicianID: musician.id, previous: previous, new: nil)
-            playedWith.remove(musician.name)
             Task {
                 do {
                     try await backend.deleteRating(on: musician.id, me: userID)
-                    try await backend.removeCollaboration(with: musician.id, me: userID)
                     await refreshLiveData()
                 } catch {
                     backendError = tr("La note n'a pas pu être retirée.")
@@ -1477,9 +1535,7 @@ final class AppStore: ObservableObject {
             return
         }
         myStarRatings.removeValue(forKey: musician.name)
-        playedWith.remove(musician.name)
         Self.save(myStarRatings, key: Self.starRatingsKey)
-        Self.save(playedWith, key: Self.playedWithKey)
     }
 
     /// Ajuste l'agrégat local d'un musicien en attendant le serveur.
@@ -2291,16 +2347,32 @@ final class AppStore: ObservableObject {
             struct Link: Decodable { let url: String }
             let linksByPlatform: [String: Link]
         }
-        guard let (data, _) = try? await URLSession.shared.data(from: url),
-              let response = try? JSONDecoder().decode(Response.self, from: data)
-        else { return nil }
-        let by = response.linksByPlatform
-        var out: [String: String] = [:]
-        if let s = by["spotify"]?.url { out[StreamingPlatform.spotify.rawValue] = s }
-        if let y = by["youtubeMusic"]?.url ?? by["youtube"]?.url { out[StreamingPlatform.youtubeMusic.rawValue] = y }
-        if let d = by["deezer"]?.url { out[StreamingPlatform.deezer.rawValue] = d }
-        if let a = by["appleMusic"]?.url { out[StreamingPlatform.appleMusic.rawValue] = a }
-        return out.isEmpty ? nil : out
+        // Trois tentatives : un quota atteint (429) ou un hoquet du service
+        // ne doit pas condamner le morceau à n'avoir que des liens de
+        // recherche. Un 404 (morceau inconnu d'Odesli), lui, est définitif.
+        for attempt in 0..<3 {
+            await OdesliPacer.shared.wait()
+            guard let (data, response) = try? await URLSession.shared.data(from: url) else {
+                try? await Task.sleep(for: .seconds(Double(attempt + 1) * 4))
+                continue
+            }
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 429 || status >= 500 {
+                try? await Task.sleep(for: .seconds(Double(attempt + 1) * 8))
+                continue
+            }
+            guard status == 200,
+                  let decoded = try? JSONDecoder().decode(Response.self, from: data)
+            else { return nil }
+            let by = decoded.linksByPlatform
+            var out: [String: String] = [:]
+            if let s = by["spotify"]?.url { out[StreamingPlatform.spotify.rawValue] = s }
+            if let y = by["youtubeMusic"]?.url ?? by["youtube"]?.url { out[StreamingPlatform.youtubeMusic.rawValue] = y }
+            if let d = by["deezer"]?.url { out[StreamingPlatform.deezer.rawValue] = d }
+            if let a = by["appleMusic"]?.url { out[StreamingPlatform.appleMusic.rawValue] = a }
+            return out.isEmpty ? nil : out
+        }
+        return nil
     }
 
     // MARK: Événements (leader crée, membres suggèrent la setlist)
@@ -2325,9 +2397,9 @@ final class AppStore: ObservableObject {
             $0.events = ($0.events ?? []) + prepared
             $0.events?.sort { $0.date < $1.date }
         }
-        for event in prepared {
-            scheduleMyEventReminder(for: event, in: group)
-        }
+        // Une seule passe, plafonnée : programmer un rappel par occurrence
+        // ferait 52 notifications pour une répétition hebdomadaire.
+        rescheduleAllAttendanceNotifications()
         if let backend, isLive {
             syncLive {
                 try await backend.createEvents(prepared, groupID: group.id)
@@ -2425,6 +2497,20 @@ final class AppStore: ObservableObject {
         if let backend, isLive, let profileID = profileID(for: member) {
             syncLive { try await backend.setAttendance(status, eventID: eventID, profileID: profileID) }
         }
+    }
+
+    /// « 3 j », « 5 h », « 20 min » — le temps qui reste, en une pastille.
+    /// nil quand la date est passée.
+    func countdown(to date: Date, now: Date = Date()) -> String? {
+        let seconds = date.timeIntervalSince(now)
+        guard seconds > 0 else { return nil }
+        if seconds >= 48 * 3600 {
+            return String(format: tr("%lld j"), Int64(seconds / 86400))
+        }
+        if seconds >= 3600 {
+            return String(format: tr("%lld h"), Int64(seconds / 3600))
+        }
+        return String(format: tr("%lld min"), max(1, Int64(seconds / 60)))
     }
 
     /// Membres encore sans réponse pour un événement.
@@ -2544,18 +2630,49 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Reprogramme tous les rappels après un lancement, une synchro ou un
+    /// Combien de rappels d'événement on programme au maximum. iOS ne garde
+    /// que 64 notifications locales en attente par app : une répétition
+    /// hebdomadaire sur un an les mangerait toutes d'un coup — et noierait
+    /// l'utilisateur sous des rappels pour des dates dans six mois. On ne
+    /// programme donc que les prochaines ; les suivantes prennent le relais
+    /// à chaque synchro, au fur et à mesure que les dates passent.
+    private static let maxScheduledEventReminders = 16
+
+    /// Reprogramme les rappels après un lancement, une synchro ou un
     /// changement de présence. Idempotent : chaque rappel a un identifiant
-    /// stable, une nouvelle planification remplace l'ancienne.
+    /// stable, une nouvelle planification remplace l'ancienne. Tout ce qui
+    /// dépasse l'horizon est retiré du centre de notifications.
     private func rescheduleAllAttendanceNotifications() {
-        guard notificationsEnabled else { return }
-        for group in groups {
-            for event in group.upcomingEvents {
-                scheduleMyEventReminder(for: event, in: group)
-                for name in event.unavailableNames {
-                    scheduleUnavailableAlert(for: event, member: name, in: group)
-                }
+        guard notificationsEnabled else {
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            return
+        }
+        let upcoming = groups
+            .flatMap { group in group.upcomingEvents.map { (group: group, event: $0) } }
+            .sorted { $0.event.date < $1.event.date }
+        var keep = Set<String>()
+        for entry in upcoming.prefix(Self.maxScheduledEventReminders) {
+            scheduleMyEventReminder(for: entry.event, in: entry.group)
+            keep.insert(Self.eventReminderID(eventID: entry.event.id))
+            for name in entry.event.unavailableNames {
+                scheduleUnavailableAlert(for: entry.event, member: name, in: entry.group)
+                keep.insert(Self.unavailableAlertID(eventID: entry.event.id, member: name))
             }
+        }
+        pruneEventNotifications(keeping: keep)
+    }
+
+    /// Retire les rappels d'événement devenus caducs : dates passées, séries
+    /// supprimées, occurrences repoussées au-delà de l'horizon.
+    private func pruneEventNotifications(keeping keep: Set<String>) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let stale = requests.map(\.identifier).filter { identifier in
+                (identifier.hasPrefix("event.") || identifier.hasPrefix("unavailable."))
+                    && !keep.contains(identifier)
+            }
+            guard !stale.isEmpty else { return }
+            center.removePendingNotificationRequests(withIdentifiers: stale)
         }
     }
 
@@ -3036,17 +3153,47 @@ final class AppStore: ObservableObject {
             backendError = tr("La photo n'a pas pu être enregistrée.")
             return
         }
-        if let backend, let userID = liveUserID {
-            Task {
-                do {
-                    let url = try await backend.uploadAvatar(data, userID: userID)
-                    try await backend.updatePhotoURL(url.absoluteString, userID: userID)
-                    profile.photoURL = url.absoluteString
-                    Self.save(profile, key: Self.profileKey)
-                } catch {
-                    backendError = tr("La photo n'a pas pu être publiée sur ton profil réseau.")
-                }
+        Task { await publishProfilePhoto(data) }
+    }
+
+    /// Téléverse la photo et écrit son URL sur le profil serveur. C'est cette
+    /// URL — et elle seule — que les autres voient : tant qu'elle manque, la
+    /// photo n'existe que sur cet appareil.
+    @discardableResult
+    private func publishProfilePhoto(_ data: Data, silent: Bool = false) async -> Bool {
+        guard let backend, let userID = liveUserID else { return false }
+        do {
+            let url = try await backend.uploadAvatar(data, userID: userID)
+            try await backend.updatePhotoURL(url.absoluteString, userID: userID)
+            profile.photoURL = url.absoluteString
+            Self.save(profile, key: Self.profileKey)
+            return true
+        } catch {
+            if !silent {
+                backendError = tr("La photo n'a pas pu être publiée sur ton profil réseau.")
             }
+            return false
+        }
+    }
+
+    /// Envoi de photo en cours — évite de republier en boucle à chaque synchro.
+    private var photoPublishInFlight = false
+
+    /// Rattrape une photo restée prisonnière de l'appareil : j'ai bien choisi
+    /// une photo, mais le serveur n'en a aucune (envoi tombé, hors ligne au
+    /// moment du choix, ou photo posée par une version qui ne l'hébergeait
+    /// pas encore). On la republie en silence — sinon personne d'autre ne la
+    /// voit jamais, et elle disparaît à la réinstallation.
+    private func healProfilePhotoIfNeeded() {
+        guard isLive, !photoPublishInFlight,
+              profile.photoURL == nil,
+              let fileName = profile.photoFileName,
+              let data = try? Data(contentsOf: Self.mediaURL(for: fileName))
+        else { return }
+        photoPublishInFlight = true
+        Task { [weak self] in
+            await self?.publishProfilePhoto(data, silent: true)
+            self?.photoPublishInFlight = false
         }
     }
 
@@ -4040,4 +4187,30 @@ final class AppStore: ObservableObject {
         "Merci mille fois. Je te briefe sur le répertoire par téléphone ?",
         "Nickel. Je te mets sur la liste des musiciens, entrée par les artistes."
     ]
+}
+
+// MARK: - Cadence des appels Odesli (liens d'écoute directs)
+
+/// L'API publique song.link / Odesli est gratuite et sans clé, mais elle
+/// tolère une dizaine de requêtes par minute : au-delà elle répond 429, et
+/// les morceaux n'obtiennent jamais leurs vrais liens (Spotify, YouTube
+/// Music, Deezer) — ils retombent sur une simple recherche. Cet acteur
+/// sérialise les appels de toute l'app et garde un intervalle minimum entre
+/// deux, ce qui permet de remplir un répertoire entier sans brûler le quota.
+actor OdesliPacer {
+    static let shared = OdesliPacer()
+
+    /// ~9 requêtes par minute : sous le seuil, avec de la marge.
+    private let interval: TimeInterval = 6.5
+    private var nextSlot = Date.distantPast
+
+    /// Attend son tour, puis rend la main.
+    func wait() async {
+        let now = Date()
+        let slot = max(now, nextSlot)
+        nextSlot = slot.addingTimeInterval(interval)
+        let delay = slot.timeIntervalSince(now)
+        guard delay > 0 else { return }
+        try? await Task.sleep(for: .seconds(delay))
+    }
 }
