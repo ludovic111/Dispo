@@ -1,9 +1,24 @@
 import SwiftUI
 import MapKit
 
+/// L'onglet SOS tient les deux bouts de la même histoire, sans page en plus :
+/// le fil des annonces, ce que j'organise (mes SOS et leurs candidats), et ce
+/// que je joue (les dépannages qu'on m'a confiés + mes dates de groupe).
 struct EventsView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showCreate = false
+    @State private var segment: Segment = .feed
+    /// Annonces dépliées dans « J'organise ».
+    @State private var expanded: Set<UUID> = []
+    /// Annonce dont le retrait est en cours de confirmation.
+    @State private var gigToCancel: GigRequest?
+
+    enum Segment: String, CaseIterable, Identifiable {
+        case feed = "Annonces"
+        case hosting = "J'organise"
+        case playing = "Je joue"
+        var id: String { rawValue }
+    }
 
     var body: some View {
         NavigationStack {
@@ -14,40 +29,23 @@ struct EventsView: View {
                     VStack(spacing: 18) {
                         ScreenHeader(
                             title: "SOS dépannage",
-                            subtitle: "\(store.events.count) concerts cherchent un musicien",
+                            subtitle: headerSubtitle,
                             icon: "bolt.fill",
                             iconColor: JC.signal,
                             trailing: AnyView(createButton)
                         )
 
-                        if store.events.isEmpty {
-                            JCEmptyState(
-                                icon: "bolt.slash",
-                                title: "Aucun SOS en cours",
-                                message: "Un musicien te lâche ? Publie ton SOS avec le bouton +.",
-                                iconColor: JC.signal
-                            )
-                        }
-
-                        // Les annonces fraîches (< 30 min) sont en avant-première
-                        // Premium : les non-abonnés voient le cachet mais pas le
-                        // lieu — la minuterie rend l'avantage Premium concret.
-                        TimelineView(.periodic(from: .now, by: 30)) { context in
-                            VStack(spacing: 18) {
-                                ForEach(store.events) { event in
-                                    if event.isEarlyAccess(now: context.date) && !store.isPremium {
-                                        Button { store.showPaywall = true } label: {
-                                            LockedEventCard(event: event, now: context.date)
-                                        }
-                                        .buttonStyle(PressableStyle())
-                                    } else {
-                                        NavigationLink(value: event) {
-                                            EventCard(event: event)
-                                        }
-                                        .buttonStyle(PressableStyle())
-                                    }
-                                }
+                        Picker("Espace", selection: $segment.animation(.snappy)) {
+                            ForEach(Segment.allCases) { item in
+                                label(for: item).tag(item)
                             }
+                        }
+                        .pickerStyle(.segmented)
+
+                        switch segment {
+                        case .feed: feedSection
+                        case .hosting: hostingSection
+                        case .playing: playingSection
                         }
                     }
                     .padding(.horizontal, 18)
@@ -60,8 +58,182 @@ struct EventsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
+            .navigationDestination(for: GroupChat.ID.self) { GroupChatView(groupID: $0) }
             .sheet(isPresented: $showCreate) {
                 CreateEventView()
+            }
+            .onAppear { store.loadAllApplicants() }
+            .confirmationDialog(
+                "Retirer cette annonce ?",
+                isPresented: Binding(get: { gigToCancel != nil }, set: { if !$0 { gigToCancel = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Retirer l'annonce", role: .destructive) {
+                    if let gig = gigToCancel { store.cancelGig(gig) }
+                    gigToCancel = nil
+                }
+                Button("Annuler", role: .cancel) { gigToCancel = nil }
+            } message: {
+                Text("Les candidatures reçues seront supprimées.")
+            }
+        }
+    }
+
+    /// Libellé d'un segment, avec le nombre de choses à traiter.
+    private func label(for item: Segment) -> Text {
+        switch item {
+        case .feed:
+            return Text(LocalizedStringKey(item.rawValue))
+        case .hosting:
+            let todo = store.myGigs.reduce(0) { $0 + store.pendingApplicants(for: $1).count }
+            return todo > 0
+                ? Text(LocalizedStringKey(item.rawValue)) + Text(verbatim: " · \(todo)")
+                : Text(LocalizedStringKey(item.rawValue))
+        case .playing:
+            let todo = store.incomingRequests.filter { $0.targetStatus == .pending }.count
+            return todo > 0
+                ? Text(LocalizedStringKey(item.rawValue)) + Text(verbatim: " · \(todo)")
+                : Text(LocalizedStringKey(item.rawValue))
+        }
+    }
+
+    private var headerSubtitle: LocalizedStringKey {
+        switch segment {
+        case .feed: return "\(store.events.filter { !$0.isDirect }.count) concerts cherchent un musicien"
+        case .hosting: return "Accepte ou écarte tes candidats"
+        case .playing: return "Tes dépannages et tes dates à venir"
+        }
+    }
+
+    // MARK: Le fil des annonces
+
+    @ViewBuilder
+    private var feedSection: some View {
+        let feed = store.events.filter { !$0.isDirect }
+        if feed.isEmpty {
+            JCEmptyState(
+                icon: "bolt.slash",
+                title: "Aucun SOS en cours",
+                message: "Un musicien te lâche ? Publie ton SOS avec le bouton +.",
+                iconColor: JC.signal
+            )
+        }
+        // Les annonces fraîches (< 30 min) sont en avant-première Premium :
+        // les non-abonnés voient le cachet mais pas le lieu — la minuterie
+        // rend l'avantage Premium concret.
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            VStack(spacing: 18) {
+                ForEach(feed) { event in
+                    if event.isEarlyAccess(now: context.date) && !store.isPremium {
+                        Button { store.showPaywall = true } label: {
+                            LockedEventCard(event: event, now: context.date)
+                        }
+                        .buttonStyle(PressableStyle())
+                    } else {
+                        NavigationLink(value: event) {
+                            EventCard(event: event)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Ce que j'organise
+
+    @ViewBuilder
+    private var hostingSection: some View {
+        VStack(spacing: 16) {
+            if store.myGigs.isEmpty && store.mySentRequests.isEmpty {
+                JCEmptyState(
+                    icon: "megaphone",
+                    title: "Tu n'organises rien pour l'instant",
+                    message: "Publie un SOS avec le bouton + : les candidats arrivent ici, tu acceptes ou tu écartes en un tap.",
+                    iconColor: JC.signal
+                )
+            }
+
+            ForEach(store.myGigs) { gig in
+                ManagedGigCard(
+                    gig: gig,
+                    isExpanded: expanded.contains(gig.id)
+                        || !store.pendingApplicants(for: gig).isEmpty,
+                    onToggle: {
+                        withAnimation(.snappy) {
+                            if expanded.contains(gig.id) { expanded.remove(gig.id) } else { expanded.insert(gig.id) }
+                        }
+                    },
+                    onCancel: { gigToCancel = gig }
+                )
+            }
+
+            if !store.mySentRequests.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(
+                        title: "Demandes envoyées",
+                        subtitle: "Un musicien précis, à qui tu as demandé de dépanner"
+                    )
+                    ForEach(store.mySentRequests) { request in
+                        SentRequestRow(request: request) { gigToCancel = request }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Ce que je joue
+
+    @ViewBuilder
+    private var playingSection: some View {
+        VStack(spacing: 16) {
+            let toAnswer = store.incomingRequests.filter { $0.targetStatus == .pending }
+            let dates = store.myNextDates
+            let applications = store.myApplications.filter { $0.myApplicationStatus != .accepted }
+
+            if toAnswer.isEmpty && dates.isEmpty && applications.isEmpty {
+                JCEmptyState(
+                    icon: "music.mic",
+                    title: "Aucune date pour l'instant",
+                    message: "Postule à un SOS depuis les annonces : dès qu'on te prend, la date s'affiche ici.",
+                    iconColor: JC.feutrine
+                )
+            }
+
+            if !toAnswer.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(
+                        title: "On te demande de dépanner",
+                        subtitle: "Réponds d'un tap — l'organisateur est prévenu tout de suite"
+                    )
+                    ForEach(toAnswer) { request in
+                        IncomingRequestCard(request: request)
+                    }
+                }
+            }
+
+            if !dates.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(
+                        title: "Mes prochaines dates",
+                        subtitle: "Tes dépannages acceptés et les concerts de tes groupes"
+                    )
+                    ForEach(dates) { date in
+                        PlayingDateRow(item: date)
+                    }
+                }
+            }
+
+            if !applications.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionHeader(title: "Mes candidatures", subtitle: "En attente de la réponse de l'organisateur")
+                    ForEach(applications) { gig in
+                        NavigationLink(value: gig) {
+                            ApplicationStatusRow(gig: gig)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                }
             }
         }
     }
@@ -82,6 +254,460 @@ struct EventsView: View {
         }
         .buttonStyle(PressableStyle())
         .accessibilityLabel(Text("Publier un SOS"))
+    }
+}
+
+// MARK: - Gestion d'une de mes annonces (côté organisateur)
+
+/// Une de mes annonces avec sa gestion en ligne : postes, candidats, décisions.
+/// Tout se fait ici — pas d'écran de plus, pas de message à écrire.
+struct ManagedGigCard: View {
+    @EnvironmentObject private var store: AppStore
+    let gig: GigRequest
+    let isExpanded: Bool
+    let onToggle: () -> Void
+    let onCancel: () -> Void
+
+    private var applicants: [GigApplicant] { store.applicantsByGig[gig.id] ?? [] }
+    private var pending: [GigApplicant] { applicants.filter { $0.status == .pending } }
+
+    private func accepted(for instrument: Instrument) -> GigApplicant? {
+        applicants.first { $0.status == .accepted && $0.instrument == instrument }
+    }
+
+    var body: some View {
+        JCCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                slots
+                if isExpanded && !applicants.isEmpty { candidates }
+                footer
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(spacing: 1) {
+                Text(gig.date.formatted(.dateTime.day()))
+                    .font(JCFont.display(22))
+                Text(gig.date.formatted(.dateTime.month(.abbreviated)))
+                    .font(JCFont.monoBold(9))
+                    .textCase(.uppercase)
+                    .tracking(1.1)
+            }
+            .foregroundStyle(JC.billetInk)
+            .frame(width: 52)
+            .padding(.vertical, 10)
+            .background(gig.isFilled ? AnyShapeStyle(JC.serie) : AnyShapeStyle(JC.hero))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(gig.title)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+                Label("\(gig.place) · \(gig.date.formatted(date: .omitted, time: .shortened))", systemImage: "mappin.and.ellipse")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if gig.isFilled {
+                        TagView(text: "Complet", color: JC.feutrine)
+                    } else if pending.isEmpty {
+                        TagView(text: "En attente de candidats", color: JC.bronze)
+                    } else {
+                        // Typé explicitement : sans ça l'interpolation devient
+                        // une String et la clé de traduction est perdue.
+                        let todo: LocalizedStringKey = "\(pending.count) à traiter"
+                        TagView(text: todo, color: JC.signal)
+                    }
+                    if gig.eventId != nil {
+                        TagView(text: "Groupe", color: JC.bronze)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+    }
+
+    /// Les postes de l'annonce : ouvert, ou tenu par un musicien nommé.
+    private var slots: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(gig.wantedInstruments) { instrument in
+                HStack(spacing: 8) {
+                    Image(systemName: accepted(for: instrument) == nil ? "circle.dashed" : "checkmark.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accepted(for: instrument) == nil ? JC.bronze : JC.feutrine)
+                    Text(LocalizedStringKey(instrument.rawValue))
+                        .font(.caption.weight(.bold))
+                    if let taken = accepted(for: instrument) {
+                        Text(verbatim: "· \(taken.musician.name)")
+                            .font(.caption)
+                            .foregroundStyle(JC.feutrine)
+                            .lineLimit(1)
+                    } else {
+                        let waiting = applicants.filter { $0.status == .pending && $0.instrument == instrument }.count
+                        Text(waiting == 0
+                             ? store.tr("aucun candidat")
+                             : String(format: store.tr("%lld candidat·e·s"), Int64(waiting)))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
+    }
+
+    private var candidates: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider().opacity(0.4)
+            ForEach(applicants) { applicant in
+                ApplicantDecisionRow(applicant: applicant, gig: gig)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
+    }
+
+    private var footer: some View {
+        HStack(spacing: 10) {
+            if !applicants.isEmpty {
+                Button(action: onToggle) {
+                    HStack(spacing: 5) {
+                        Image(systemName: isExpanded ? "chevron.up" : "person.2.fill")
+                            .font(.caption2.weight(.bold))
+                        Text(isExpanded ? "Replier" : "\(applicants.count) candidatures")
+                            .font(.caption.weight(.heavy))
+                    }
+                    .foregroundStyle(JC.bronze)
+                }
+                .buttonStyle(PressableStyle())
+            }
+            Spacer(minLength: 0)
+            NavigationLink(value: gig) {
+                Text("Voir l'annonce")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(JC.laiton)
+            }
+            .buttonStyle(PressableStyle())
+            Button(action: onCancel) {
+                Image(systemName: "trash")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(JC.signal)
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel(Text("Retirer l'annonce"))
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+    }
+}
+
+/// Un candidat et la décision qui va avec — accepter, écarter, ou revenir
+/// dessus. Partagé entre « J'organise » et le détail d'une annonce.
+struct ApplicantDecisionRow: View {
+    @EnvironmentObject private var store: AppStore
+    let applicant: GigApplicant
+    let gig: GigRequest
+
+    var body: some View {
+        HStack(spacing: 10) {
+            NavigationLink(value: applicant.musician) {
+                HStack(spacing: 10) {
+                    AvatarView(name: applicant.musician.name, size: 38, photo: applicant.musician.photo)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(applicant.musician.name)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        HStack(spacing: 5) {
+                            if let instrument = applicant.instrument {
+                                Text(LocalizedStringKey(instrument.rawValue))
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(JC.bronze)
+                            }
+                            if let summary = store.ratingSummary(for: applicant.musician) {
+                                RatingBadge(summary: summary)
+                            }
+                            if applicant.musician.isDemo { DemoAccountBadge() }
+                        }
+                    }
+                }
+            }
+            .buttonStyle(PressableStyle())
+
+            Spacer(minLength: 0)
+
+            switch applicant.status {
+            case .pending:
+                Button {
+                    store.declineApplicant(applicant, in: gig)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(JC.signal)
+                        .frame(width: 30, height: 30)
+                        .background(JC.signal.opacity(0.14), in: Circle())
+                }
+                .buttonStyle(PressableStyle())
+                .accessibilityLabel(Text("Écarter"))
+                Button {
+                    store.acceptApplicant(applicant, in: gig)
+                } label: {
+                    Text("Accepter")
+                        .font(.caption.weight(.heavy))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(JC.hero, in: Capsule())
+                        .foregroundStyle(JC.billetInk)
+                }
+                .buttonStyle(PressableStyle())
+            case .accepted:
+                Menu {
+                    Button("Libérer le poste", systemImage: "arrow.uturn.backward") {
+                        store.reopenApplicant(applicant, in: gig)
+                    }
+                } label: {
+                    Label("Pris·e", systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(JC.feutrine)
+                }
+            case .declined:
+                Menu {
+                    Button("Revenir dessus", systemImage: "arrow.uturn.backward") {
+                        store.reopenApplicant(applicant, in: gig)
+                    }
+                } label: {
+                    Text("Écarté·e")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Demandes de dépannage adressées à une personne
+
+/// Une demande reçue : j'accepte ou je refuse, tout le reste est automatique.
+struct IncomingRequestCard: View {
+    @EnvironmentObject private var store: AppStore
+    let request: GigRequest
+
+    var body: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "bolt.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(JC.signal)
+                    Text("\(request.hostName) te demande de dépanner")
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    if let instrument = request.wantedInstruments.first {
+                        Label(LocalizedStringKey(instrument.rawValue), systemImage: "music.note")
+                    }
+                    Label(request.date.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
+                    Label(request.place, systemImage: "mappin.and.ellipse")
+                    if store.profile.level == .pro {
+                        Label {
+                            Text("Cachet : \(store.tr(request.feeLabel))")
+                        } icon: {
+                            Image(systemName: "banknote")
+                        }
+                        .foregroundStyle(JC.laiton)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                if !request.descriptionText.isEmpty {
+                    Text(request.descriptionText)
+                        .font(.caption)
+                        .foregroundStyle(.primary.opacity(0.9))
+                }
+
+                HStack(spacing: 10) {
+                    Button {
+                        store.respondToDirectRequest(request, accept: false)
+                    } label: {
+                        Text("Je ne peux pas")
+                            .font(.caption.weight(.heavy))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .foregroundStyle(Color.primary)
+                    }
+                    .buttonStyle(PressableStyle())
+                    Button {
+                        store.respondToDirectRequest(request, accept: true)
+                    } label: {
+                        Text("J'accepte")
+                            .font(.caption.weight(.heavy))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(JC.hero, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .foregroundStyle(JC.billetInk)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+        }
+    }
+}
+
+/// Une demande que j'ai envoyée à quelqu'un, et où elle en est.
+struct SentRequestRow: View {
+    @EnvironmentObject private var store: AppStore
+    let request: GigRequest
+    let onCancel: () -> Void
+
+    private var statusTag: (text: String, color: Color) {
+        switch request.targetStatus {
+        case .accepted: return ("Acceptée", JC.feutrine)
+        case .declined: return ("Refusée", JC.signal)
+        default: return ("En attente", JC.bronze)
+        }
+    }
+
+    var body: some View {
+        JCCard {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(request.title)
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    Text(verbatim: "\(request.date.formatted(date: .abbreviated, time: .shortened)) · \(request.place)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    TagView(text: statusTag.text, color: statusTag.color)
+                }
+                Spacer(minLength: 0)
+                if request.targetStatus != .accepted {
+                    Button(action: onCancel) {
+                        Image(systemName: "trash")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(JC.signal)
+                    }
+                    .buttonStyle(PressableStyle())
+                    .accessibilityLabel(Text("Retirer la demande"))
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Mes dates (côté musicien)
+
+/// Une date où je joue : dépannage accepté ou concert d'un de mes groupes.
+struct PlayingDateRow: View {
+    @EnvironmentObject private var store: AppStore
+    let item: PlayingDate
+
+    var body: some View {
+        Group {
+            switch item.origin {
+            case .group(_, _, let groupID):
+                NavigationLink(value: groupID) { card }
+                    .buttonStyle(PressableStyle())
+            case .sos:
+                if let gig = item.gig {
+                    NavigationLink(value: gig) { card }
+                        .buttonStyle(PressableStyle())
+                } else {
+                    card
+                }
+            }
+        }
+    }
+
+    private var card: some View {
+        JCCard {
+            HStack(spacing: 12) {
+                VStack(spacing: 1) {
+                    Text(item.date.formatted(.dateTime.day()))
+                        .font(JCFont.display(20))
+                    Text(item.date.formatted(.dateTime.month(.abbreviated)))
+                        .font(JCFont.monoBold(9))
+                        .textCase(.uppercase)
+                }
+                .foregroundStyle(JC.billetInk)
+                .frame(width: 46)
+                .padding(.vertical, 8)
+                .background(JC.serie, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title)
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    Text(verbatim: "\(item.date.formatted(date: .omitted, time: .shortened)) · \(item.place)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    HStack(spacing: 5) {
+                        switch item.origin {
+                        case .sos(let host):
+                            TagView(text: "Invité", color: JC.feutrine)
+                            Text(verbatim: store.tr("avec") + " \(host)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        case .group(let name, let emoji, _):
+                            Text(verbatim: "\(emoji) \(name)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(JC.bronze)
+                                .lineLimit(1)
+                        }
+                        if let instrument = item.instrument {
+                            TagView(text: instrument.rawValue, color: JC.bronze)
+                        }
+                    }
+                }
+                Spacer(minLength: 0)
+                if let left = store.countdown(to: item.date) {
+                    Text(String(format: store.tr("dans %@"), left))
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(JC.laiton)
+                }
+            }
+        }
+    }
+}
+
+/// Ma candidature en attente (ou écartée) sur une annonce.
+struct ApplicationStatusRow: View {
+    @EnvironmentObject private var store: AppStore
+    let gig: GigRequest
+
+    var body: some View {
+        JCCard {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(gig.title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text(verbatim: "\(gig.date.formatted(date: .abbreviated, time: .shortened)) · \(gig.place)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if gig.myApplicationStatus == .declined {
+                    TagView(text: "Non retenu·e", color: JC.bronze)
+                } else {
+                    TagView(text: "En attente", color: JC.laiton)
+                }
+            }
+        }
     }
 }
 
@@ -448,51 +1074,8 @@ struct EventDetailView: View {
                 if filled { TagView(text: "Pourvu", color: JC.feutrine) }
             }
             ForEach(applicants) { applicant in
-                HStack(spacing: 10) {
-                    NavigationLink(value: applicant.musician) {
-                        HStack(spacing: 10) {
-                            AvatarView(name: applicant.musician.name, size: 36, photo: applicant.musician.photo)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(applicant.musician.name)
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(.primary)
-                                if let summary = store.ratingSummary(for: applicant.musician) {
-                                    RatingBadge(summary: summary)
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(PressableStyle())
-                    Spacer(minLength: 0)
-                    applicantAction(applicant, in: event)
-                }
+                ApplicantDecisionRow(applicant: applicant, gig: event)
             }
-        }
-    }
-
-    @ViewBuilder
-    private func applicantAction(_ applicant: GigApplicant, in event: GigRequest) -> some View {
-        switch applicant.status {
-        case .accepted:
-            Label("Pris·e", systemImage: "checkmark.seal.fill")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(JC.feutrine)
-        case .declined:
-            Text("Non retenu·e")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        case .pending:
-            Button {
-                store.acceptApplicant(applicant, in: event)
-            } label: {
-                Text("Accepter")
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(JC.hero, in: Capsule())
-                    .foregroundStyle(JC.billetInk)
-            }
-            .buttonStyle(PressableStyle())
         }
     }
 
@@ -508,7 +1091,40 @@ struct EventDetailView: View {
 
     @ViewBuilder
     private func applyControl(for event: GigRequest) -> some View {
-        if event.myApplicationStatus == .accepted {
+        // Demande adressée à moi : je réponds, je ne « postule » pas.
+        if event.isDirect, event.targetStatus == .pending {
+            HStack(spacing: 10) {
+                Button {
+                    store.respondToDirectRequest(event, accept: false)
+                } label: {
+                    Text("Je ne peux pas")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .foregroundStyle(Color.primary)
+                }
+                .buttonStyle(PressableStyle())
+                Button {
+                    store.respondToDirectRequest(event, accept: true)
+                } label: {
+                    Text("J'accepte")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(JC.hero, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .foregroundStyle(JC.billetInk)
+                }
+                .buttonStyle(PressableStyle())
+            }
+        } else if event.isDirect, event.targetStatus == .declined {
+            Label("Tu as décliné cette demande", systemImage: "xmark.circle")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .foregroundStyle(.secondary)
+        } else if event.myApplicationStatus == .accepted {
             Label(
                 event.myApplicationInstrument.map {
                     String(format: store.tr("Tu es pris·e ! (%@)"), store.tr($0.rawValue))

@@ -1,14 +1,12 @@
 import SwiftUI
 
-/// Demande de dépannage adressée à un musicien précis — un vrai formulaire
-/// avec options (instrument, date, lieu, cachet), pas un simple message
-/// privé. La demande part ensuite dans la conversation, clairement balisée.
+/// Demande de dépannage adressée à un musicien précis — un vrai SOS, visible
+/// de lui seul, qu'il accepte ou refuse d'un tap. Rien ne part dans la
+/// messagerie : la réponse revient dans « SOS → J'organise ».
 struct SOSRequestSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     let musician: Musician
-    /// Appelé après l'envoi, avec la conversation à ouvrir.
-    let onSent: (Conversation) -> Void
 
     @State private var instrument: Instrument?
     @State private var date: Date = SOSRequestSheet.defaultDate
@@ -103,9 +101,13 @@ struct SOSRequestSheet: View {
                     }
                 }
 
-                Section("Message (optionnel)") {
+                Section {
                     TextField("Contexte, répertoire, matériel…", text: $note, axis: .vertical)
                         .lineLimit(2...5)
+                } header: {
+                    Text("Message (optionnel)")
+                } footer: {
+                    Text("\(musician.name) reçoit la demande et répond d'un tap. Tu verras sa réponse dans SOS → J'organise.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -139,22 +141,19 @@ struct SOSRequestSheet: View {
         guard let instrument, !isSending else { return }
         isSending = true
         let fee = Int(feeText.trimmingCharacters(in: .whitespaces))
-        Task {
-            let conversation = await store.sendSOSRequest(
-                to: musician,
-                instrument: instrument,
-                date: date,
-                place: place,
-                fee: fee,
-                paymentMethod: PaymentMethodField.storedValue(
-                    method: paymentMethod,
-                    custom: customPayment,
-                    useCustom: useCustomPayment
-                ),
-                note: note
-            )
-            dismiss()
-            onSent(conversation)
-        }
+        store.sendDirectSOS(
+            to: musician,
+            instrument: instrument,
+            date: date,
+            place: place,
+            fee: fee,
+            paymentMethod: PaymentMethodField.storedValue(
+                method: paymentMethod,
+                custom: customPayment,
+                useCustom: useCustomPayment
+            ),
+            note: note
+        )
+        dismiss()
     }
 }

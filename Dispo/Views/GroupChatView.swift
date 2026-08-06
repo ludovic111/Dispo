@@ -193,8 +193,11 @@ struct GroupChatView: View {
                 prefillPlace: event.venue,
                 prefillDate: event.date,
                 // « Dispo en fonction des rôles » : le SOS cible les rôles du
-                // groupe non couverts par un membre disponible ce jour-là.
-                prefillInstruments: (group?.uncoveredRoles(for: event)) ?? []
+                // groupe non couverts par un membre disponible ce jour-là
+                // (moins ceux déjà repris par un invité).
+                prefillInstruments: group.map { store.missingRoles(event, in: $0) } ?? [],
+                groupID: group?.id,
+                eventID: event.id
             )
         }
         .fileImporter(
@@ -205,6 +208,9 @@ struct GroupChatView: View {
             guard let group, case .success(let urls) = result, let url = urls.first else { return }
             store.addDoc(from: url, title: url.deletingPathExtension().lastPathComponent, to: group)
         }
+        // Le groupe est ouvert : ses messages sont lus (la puce s'éteint).
+        .onAppear { store.markGroupSeen(groupID) }
+        .onDisappear { store.markGroupSeen(groupID) }
     }
 
     /// Bandeau d'identité : photo, leader + membres, en un coup d'œil.
@@ -395,6 +401,17 @@ struct GroupChatView: View {
         }
     }
 
+    /// La couleur du talon d'un événement. L'état du line-up passe devant le
+    /// rythme : savoir qu'il manque un musicien change une décision, savoir
+    /// que la répé est hebdomadaire non.
+    private func talon(for event: GroupEvent, lineup: LineupState) -> LinearGradient {
+        switch lineup {
+        case .complete: return JC.complet
+        case .late: return JC.alerte
+        case .forming: return event.isRecurring ? JC.serie : JC.hero
+        }
+    }
+
     /// Morceaux validés filtrés par la recherche (titre ou artiste).
     private func matchingSongs(in group: GroupChat) -> [Song] {
         let needle = songQuery
@@ -440,6 +457,7 @@ struct GroupChatView: View {
                 }
 
                 ForEach(group.upcomingEvents) { event in
+                    let lineup = store.lineupState(event, in: group)
                     Button {
                         selectedEvent = event
                     } label: {
@@ -457,9 +475,11 @@ struct GroupChatView: View {
                                 .foregroundStyle(JC.billetInk)
                                 .frame(width: 62)
                                 .padding(.vertical, 10)
-                                // Talon vert feutrine pour ce qui revient,
-                                // laiton pour les dates exceptionnelles.
-                                .background(event.isRecurring ? JC.serie : JC.hero)
+                                // Le talon dit l'essentiel avant même la
+                                // lecture : vert quand tout le monde est là,
+                                // rouge quand le délai est passé et qu'il
+                                // manque du monde, sinon la couleur du rythme.
+                                .background(talon(for: event, lineup: lineup))
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 6) {
@@ -485,10 +505,33 @@ struct GroupChatView: View {
                                     let available = event.availableNames.count
                                     let total = store.roster(of: group).count
                                     let myStatus = event.status(for: store.profile.name)
+                                    HStack(spacing: 6) {
+                                        switch lineup {
+                                        case .complete:
+                                            Label("Line-up complet", systemImage: "checkmark.seal.fill")
+                                                .font(.caption2.weight(.heavy))
+                                                .foregroundStyle(JC.feutrine)
+                                        case .late:
+                                            Label("Il manque du monde", systemImage: "exclamationmark.triangle.fill")
+                                                .font(.caption2.weight(.heavy))
+                                                .foregroundStyle(JC.signal)
+                                        case .forming:
+                                            Text("Présence : \(available)/\(total)")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        let guests = store.guests(for: event).count
+                                        if guests > 0 {
+                                            let label: LocalizedStringKey = "+\(guests) invité·e·s"
+                                            TagView(text: label, color: JC.laiton)
+                                        }
+                                    }
                                     HStack(spacing: 8) {
-                                        Text("Présence : \(available)/\(total)")
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundStyle(.secondary)
+                                        if lineup != .forming {
+                                            Text("Présence : \(available)/\(total)")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                        }
                                         if myStatus == .pending {
                                             ConfirmCountdownBadge(event: event)
                                         } else if myStatus == .available {
@@ -1595,6 +1638,10 @@ struct GroupEventSheet: View {
 
                             attendanceCard(event: event, group: group)
 
+                            // Les SOS de ce concert se gèrent ici même : le
+                            // leader accepte le remplaçant sans changer d'écran.
+                            sosCard(event: event)
+
                             // Un membre lâche ? SOS pré-rempli — le réflexe
                             // Dispo. Publier au nom du groupe engage le
                             // groupe : c'est au leader de le faire. (Un SOS
@@ -1766,6 +1813,8 @@ struct GroupEventSheet: View {
 
         JCCard {
             VStack(alignment: .leading, spacing: 12) {
+                lineupBanner(event: event, group: group)
+
                 HStack {
                     Label("Ta présence", systemImage: "person.crop.circle.badge.questionmark")
                         .font(.subheadline.weight(.bold))
@@ -1823,7 +1872,114 @@ struct GroupEventSheet: View {
                 attendanceSummaryRow(title: "Dispo", names: available, color: JC.feutrine)
                 attendanceSummaryRow(title: "Indispo", names: unavailable, color: JC.signal)
                 attendanceSummaryRow(title: "En attente", names: pending, color: .secondary)
+
+                // Les invités d'un soir : trouvés par SOS, ils jouent CE
+                // concert et n'entrent pas dans le groupe.
+                let guests = store.guests(for: event)
+                if !guests.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Circle().fill(JC.laiton).frame(width: 7, height: 7)
+                            Text("Invités")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(JC.laiton)
+                            Text(verbatim: "· \(guests.count)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        ForEach(guests) { guest in
+                            HStack(spacing: 8) {
+                                AvatarView(name: guest.name, size: 26, photo: guest.photoURL)
+                                Text(guest.name)
+                                    .font(.caption.weight(.semibold))
+                                if let instrument = guest.instrument {
+                                    Text(LocalizedStringKey(instrument.rawValue))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                TagView(text: "Invité", color: JC.laiton)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    /// L'état du line-up en tête de la carte de présence : vert quand tout le
+    /// monde est là (remplaçants compris), rouge quand la date limite est
+    /// passée et qu'il manque encore quelqu'un.
+    @ViewBuilder
+    private func lineupBanner(event: GroupEvent, group: GroupChat) -> some View {
+        let state = store.lineupState(event, in: group)
+        let missing = store.missingRoles(event, in: group)
+        if state != .forming {
+            HStack(spacing: 8) {
+                Image(systemName: state == .complete ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                    .font(.subheadline.weight(.bold))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(state == .complete ? "Line-up complet" : "Il manque du monde")
+                        .font(.caption.weight(.heavy))
+                    Text(state == .complete
+                         ? "Tout le monde est là — le concert peut se jouer."
+                         : (missing.isEmpty
+                            ? "La date limite de réponse est passée."
+                            : "Postes à pourvoir : \(missing.map { store.tr($0.rawValue) }.joined(separator: ", "))"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(state == .complete ? JC.feutrine : JC.signal)
+            .padding(10)
+            .background(
+                (state == .complete ? JC.feutrine : JC.signal).opacity(0.12),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+        }
+    }
+
+    /// Les SOS lancés pour ce concert, avec leurs candidats : le leader
+    /// accepte ou écarte sans quitter l'événement.
+    @ViewBuilder
+    private func sosCard(event: GroupEvent) -> some View {
+        let gigs = store.gigs(for: event).filter(\.isMine)
+        if !gigs.isEmpty {
+            JCCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("SOS en cours pour ce concert", systemImage: "bolt.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(JC.signal)
+                    ForEach(gigs) { gig in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 6) {
+                                Text(gig.wantedInstruments.map { store.tr($0.rawValue) }.joined(separator: " · "))
+                                    .font(.caption.weight(.bold))
+                                Spacer(minLength: 0)
+                                if gig.isFilled {
+                                    TagView(text: "Pourvu", color: JC.feutrine)
+                                } else {
+                                    let waiting = store.pendingApplicants(for: gig).count
+                                    // Typage explicite : une interpolation non
+                                    // typée deviendrait une String et perdrait
+                                    // sa clé de traduction.
+                                    let todo: LocalizedStringKey = "\(waiting) à traiter"
+                                    TagView(
+                                        text: waiting == 0 ? LocalizedStringKey("En attente de candidats") : todo,
+                                        color: waiting == 0 ? JC.bronze : JC.signal
+                                    )
+                                }
+                            }
+                            ForEach(store.applicantsByGig[gig.id] ?? []) { applicant in
+                                ApplicantDecisionRow(applicant: applicant, gig: gig)
+                            }
+                        }
+                    }
+                }
+            }
+            .task { for gig in gigs { store.loadApplicants(for: gig) } }
         }
     }
 

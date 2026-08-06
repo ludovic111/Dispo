@@ -104,13 +104,7 @@ struct MusicianDetailView: View {
             VideoPlayerSheet(url: video.url)
         }
         .sheet(isPresented: $showSOSRequest) {
-            SOSRequestSheet(musician: musician) { conversation in
-                // Laisser la feuille se refermer avant d'ouvrir la conversation.
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(450))
-                    openedConversation = conversation
-                }
-            }
+            SOSRequestSheet(musician: musician)
         }
         .sheet(isPresented: $showPlayedWith) {
             PlayedWithSheet(ownerName: firstName, collaborators: playedWithMusicians)
@@ -295,8 +289,8 @@ struct MusicianDetailView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 8) {
-            // La demande de dépannage n'est pas un simple message : c'est un
-            // formulaire (instrument, date, lieu, cachet) envoyé balisé 🚨.
+            // La demande de dépannage n'est pas un message : c'est un vrai
+            // SOS adressé à cette personne, qu'elle accepte ou refuse d'un tap.
             if musician.isAvailable {
                 Button {
                     showSOSRequest = true

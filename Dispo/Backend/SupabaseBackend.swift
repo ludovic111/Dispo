@@ -376,6 +376,10 @@ final class SupabaseBackend: Sendable {
         var postedAt: Date
         var isLocked: Bool
         var paymentMethod: String?
+        var groupId: UUID?
+        var eventId: UUID?
+        var targetId: UUID?
+        var targetStatus: String?
 
         enum CodingKeys: String, CodingKey {
             case id, date, genre, fee, description, title, place, neighborhood
@@ -385,6 +389,10 @@ final class SupabaseBackend: Sendable {
             case postedAt = "posted_at"
             case isLocked = "is_locked"
             case paymentMethod = "payment_method"
+            case groupId = "group_id"
+            case eventId = "event_id"
+            case targetId = "target_id"
+            case targetStatus = "target_status"
         }
 
         func asGigRequest(
@@ -410,7 +418,11 @@ final class SupabaseBackend: Sendable {
                 myApplicationInstrument: application?.instrument,
                 myApplicationStatus: application?.status,
                 isMine: isMine,
-                postedAt: postedAt
+                postedAt: postedAt,
+                groupId: groupId,
+                eventId: eventId,
+                targetId: targetId,
+                targetStatus: targetStatus.flatMap(DirectRequestStatus.init(rawValue:))
             )
         }
     }
@@ -795,11 +807,30 @@ final class SupabaseBackend: Sendable {
         }
     }
 
+    /// Une candidature avec le profil de son auteur — l'organisateur doit voir
+    /// TOUS ses candidats, y compris ceux absents de son fil (hors rayon,
+    /// compte de démo, profil filtré…).
+    struct ApplicantRow: Codable {
+        var id: UUID
+        var musicianId: UUID
+        var instrument: String?
+        var status: String?
+        var createdAt: Date?
+        var profiles: ProfileRow?
+
+        enum CodingKeys: String, CodingKey {
+            case id, instrument, status, profiles
+            case musicianId = "musician_id"
+            case createdAt = "created_at"
+        }
+    }
+
     /// Toutes les candidatures d'une annonce (RLS : réservé à l'organisateur).
-    func fetchApplicants(gigID: UUID) async throws -> [ApplicationRow] {
+    func fetchApplicants(gigID: UUID) async throws -> [ApplicantRow] {
         try await client.from("gig_applications")
-            .select()
+            .select("id,musician_id,instrument,status,created_at,profiles(*)")
             .eq("gig_id", value: gigID)
+            .order("created_at")
             .execute().value
     }
 
@@ -816,6 +847,10 @@ final class SupabaseBackend: Sendable {
             let fee: Int?
             let payment_method: String?
             let description: String
+            let group_id: UUID?
+            let event_id: UUID?
+            let target_id: UUID?
+            let target_status: String?
         }
         let insert = Insert(
             id: gig.id,
@@ -828,9 +863,19 @@ final class SupabaseBackend: Sendable {
             wanted_instruments: gig.wantedInstruments.map(\.rawValue),
             fee: gig.fee,
             payment_method: gig.paymentMethod,
-            description: gig.descriptionText
+            description: gig.descriptionText,
+            group_id: gig.groupId,
+            event_id: gig.eventId,
+            target_id: gig.targetId,
+            target_status: gig.targetId == nil ? nil : DirectRequestStatus.pending.rawValue
         )
         try await client.from("gig_requests").insert(insert).execute()
+    }
+
+    /// Retire une de mes annonces (RLS : organisateur uniquement). Les
+    /// candidatures partent avec, en cascade.
+    func deleteGig(_ gigID: UUID) async throws {
+        try await client.from("gig_requests").delete().eq("id", value: gigID).execute()
     }
 
     func apply(to gigID: UUID, musicianID: UUID, instrument: Instrument?) async throws {
@@ -857,6 +902,57 @@ final class SupabaseBackend: Sendable {
     func acceptApplication(_ applicationID: UUID) async throws {
         try await client
             .rpc("accept_gig_application", params: ["application_id": applicationID.uuidString])
+            .execute()
+    }
+
+    /// L'organisateur refuse une candidature (RPC host-only). Refuser
+    /// quelqu'un de déjà pris libère son poste.
+    func declineApplication(_ applicationID: UUID) async throws {
+        try await client
+            .rpc("decline_gig_application", params: ["application_id": applicationID.uuidString])
+            .execute()
+    }
+
+    /// L'organisateur remet une candidature en attente : le poste se rouvre.
+    func reopenApplication(_ applicationID: UUID) async throws {
+        try await client
+            .rpc("reopen_gig_application", params: ["application_id": applicationID.uuidString])
+            .execute()
+    }
+
+    /// Les invités d'un soir des événements de mes groupes : les musiciens
+    /// retenus sur un SOS lié à un événement (RPC réservée aux membres).
+    struct EventGuestRow: Codable {
+        var eventId: UUID
+        var groupId: UUID
+        var gigId: UUID
+        var musicianId: UUID
+        var name: String
+        var instrument: String?
+        var photoUrl: String?
+
+        enum CodingKeys: String, CodingKey {
+            case name, instrument
+            case eventId = "event_id"
+            case groupId = "group_id"
+            case gigId = "gig_id"
+            case musicianId = "musician_id"
+            case photoUrl = "photo_url"
+        }
+    }
+
+    func fetchEventGuests() async throws -> [EventGuestRow] {
+        try await client.rpc("my_event_guests").execute().value
+    }
+
+    /// Le musicien visé par une demande de dépannage répond (RPC target-only).
+    func respondToDirectGig(_ gigID: UUID, accept: Bool) async throws {
+        struct Params: Encodable {
+            let p_gig: UUID
+            let p_accept: Bool
+        }
+        try await client
+            .rpc("respond_to_direct_gig", params: Params(p_gig: gigID, p_accept: accept))
             .execute()
     }
 

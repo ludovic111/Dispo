@@ -29,14 +29,29 @@ struct CreateEventView: View {
     /// L'annonce venant d'être publiée — déclenche l'écran de matching.
     @State private var published: GigRequest?
 
+    /// Groupe et événement à l'origine du SOS — le lien reste attaché à
+    /// l'annonce : le remplaçant trouvé rejoint ce concert-là (et seulement
+    /// celui-là), et le line-up du groupe redevient complet tout seul.
+    private let groupID: UUID?
+    private let eventID: UUID?
+
     /// Pré-remplissage (ex. SOS lancé depuis un concert de groupe).
-    init(prefillTitle: String = "", prefillPlace: String = "", prefillDate: Date? = nil, prefillInstruments: [Instrument] = []) {
+    init(
+        prefillTitle: String = "",
+        prefillPlace: String = "",
+        prefillDate: Date? = nil,
+        prefillInstruments: [Instrument] = [],
+        groupID: UUID? = nil,
+        eventID: UUID? = nil
+    ) {
         _title = State(initialValue: prefillTitle)
         _place = State(initialValue: prefillPlace)
         _date = State(initialValue: prefillDate
             ?? Calendar.current.date(byAdding: .day, value: 2, to: Date())
             ?? Date())
         _wanted = State(initialValue: Set(prefillInstruments))
+        self.groupID = groupID
+        self.eventID = eventID
     }
 
     private let neighborhoods = [
@@ -188,7 +203,9 @@ struct CreateEventView: View {
                                 useCustom: useCustomPayment
                             ),
                             descriptionText: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
-                            isMine: true
+                            isMine: true,
+                            groupId: groupID,
+                            eventId: eventID
                         )
                         store.addEvent(gig)
                         withAnimation { published = gig }

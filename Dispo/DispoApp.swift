@@ -48,9 +48,14 @@ struct RootView: View {
                     .tag(AppTab.map)
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
+                    // Candidats à trancher + demandes de dépannage reçues :
+                    // ce sont des gens qui attendent une réponse.
+                    .badge(store.sosTodoCount)
                     .tag(AppTab.sos)
                 ChatListView()
                     .tabItem { Label("Messages", systemImage: "bubble.left.and.bubble.right") }
+                    // Messages reçus et pas encore ouverts (1:1 + groupes).
+                    .badge(store.totalUnread)
                     .tag(AppTab.messages)
                 MyProfileView()
                     .tabItem { Label("Profil", systemImage: "person.crop.circle") }
@@ -349,6 +354,27 @@ enum JC {
         colors: [
             Color(red: 0.729, green: 0.792, blue: 0.690),
             Color(red: 0.612, green: 0.694, blue: 0.588)
+        ],
+        startPoint: .top, endPoint: .bottom
+    )
+
+    /// Talon « line-up complet » — vert franc : tous les postes sont tenus
+    /// (membres présents ou remplaçants trouvés), le concert peut se jouer.
+    /// Plus saturé que `serie` pour ne pas confondre routine et complet.
+    static let complet = LinearGradient(
+        colors: [
+            Color(red: 0.553, green: 0.812, blue: 0.612),
+            Color(red: 0.376, green: 0.678, blue: 0.463)
+        ],
+        startPoint: .top, endPoint: .bottom
+    )
+    /// Talon « il manque du monde » — la date limite de réponse est passée et
+    /// des postes restent vides. Terre cuite claire, de la famille du signal,
+    /// mais assez lumineuse pour porter l'encre sombre du billet.
+    static let alerte = LinearGradient(
+        colors: [
+            Color(red: 0.937, green: 0.616, blue: 0.482),
+            Color(red: 0.878, green: 0.451, blue: 0.310)
         ],
         startPoint: .top, endPoint: .bottom
     )

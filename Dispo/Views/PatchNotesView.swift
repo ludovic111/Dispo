@@ -11,6 +11,28 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.5",
+            title: "Le SOS devient une vraie machine",
+            points: [
+                "Accueil : « Ce soir », « Ce week-end », « Près de chez toi » — on répond d'abord à qui peut jouer, et quand",
+                "Fini les « suggestions pour toi » : l'accueil parle de dispos, pas d'un algorithme",
+                "Le prochain événement de CHACUN de tes groupes s'affiche en haut de l'accueil",
+                "Un événement dont tout le monde est là passe au vert : line-up complet",
+                "Un événement à qui il manque du monde passe au rouge dès que la date limite de réponse est dépassée",
+                "L'onglet SOS a désormais trois espaces : les annonces, ce que tu organises, ce que tu joues",
+                "Tu organises un SOS ? Accepte ou écarte chaque candidat d'un tap, poste par poste — sans quitter la page",
+                "Le musicien retenu est prévenu tout de suite, les autres aussi : plus un seul message à écrire",
+                "Tu t'es trompé·e ? Libère le poste : l'annonce se rouvre et le candidat repasse en attente",
+                "« Demander un dépannage » n'envoie plus un message : c'est une vraie demande, acceptée ou refusée d'un tap",
+                "« Je joue » réunit toutes tes prochaines dates : dépannages acceptés et concerts de tes groupes",
+                "Le remplaçant trouvé pour un concert apparaît dans CE concert, avec le badge Invité — il n'entre pas dans le groupe",
+                "Le leader gère les candidats de son SOS directement depuis l'événement du groupe",
+                "Une pastille sur l'onglet SOS compte ce qui t'attend : candidats à trancher et demandes à répondre",
+                "Messages non lus : une puce sur la conversation et un compteur sur l'onglet — fini les messages ratés",
+                "iReal Pro : la grille du groupe s'ouvre directement dans l'app, transposée dans ta tonalité, sans rien coller"
+            ]
+        ),
+        PatchNote(
             version: "1.4",
             title: "Notifications calmées & répertoire rangé",
             points: [

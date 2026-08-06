@@ -45,4 +45,35 @@ check("Si♭ majeur préfère les bémols", MusicalKey("Bb")!.prefersSharps ? "o
 check("Transposition nulle inchangée",
       MusicTheory.transposeGrid("| Cmaj7 | Am7 |", by: 0), "| Cmaj7 | Am7 |")
 
+// MARK: - Export iReal Pro (format irealbook://, en clair)
+
+check("Accord majeur 7 → iReal", IRealPro.chord("Cmaj7"), "C^7")
+check("Accord mineur 7 → iReal", IRealPro.chord("Am7"), "A-7")
+check("Demi-diminué → iReal", IRealPro.chord("Bø7"), "Bh7")
+check("Diminué → iReal", IRealPro.chord("C°7"), "Co7")
+check("Bémol Unicode → iReal", IRealPro.chord("B♭maj7"), "Bb^7")
+check("Accord slash conservé", IRealPro.chord("Bbmaj7/D"), "Bb^7/D")
+check("Altération intacte", IRealPro.chord("G7#5"), "G7#5")
+check("Mesures depuis les barres",
+      IRealPro.measures(from: "| Dm7 | G7 | Cmaj7 |").joined(separator: "/"),
+      "Dm7/G7/Cmaj7")
+check("Mesures depuis les lignes (sans barre)",
+      IRealPro.measures(from: "Dm7\nG7").joined(separator: "/"), "Dm7/G7")
+check("Corps du chart",
+      IRealPro.body(from: "| Dm7 | G7 | Cmaj7 |"),
+      "T44*AD-7 |G7 |C^7 Z")
+// L'URL doit être encodée : ni espace ni dièse ne survivent en clair.
+let sample = IRealPro.link(
+    title: "Blue Bossa", composer: "Dorham Kenny", style: "",
+    key: MusicalKey("C")!, grid: "| Cm7 | Fm7 | Dm7b5 | G7#5 |"
+)
+check("Lien iReal généré", sample?.scheme ?? "(nil)", "irealbook")
+check("Lien sans espace brut", (sample?.absoluteString.contains(" ") ?? true) ? "oui" : "non", "non")
+check("Dièse encodé", (sample?.absoluteString.contains("%23") ?? false) ? "oui" : "non", "oui")
+check("Titre présent dans le lien",
+      (sample?.absoluteString.contains("Blue%20Bossa") ?? false) ? "oui" : "non", "oui")
+check("Grille vide → pas de lien",
+      IRealPro.link(title: "X", composer: "", style: "", key: nil, grid: "   ") == nil ? "nil" : "url",
+      "nil")
+
 print(failures == 0 ? "\n✅ tout passe" : "\n❌ \(failures) échec(s)")

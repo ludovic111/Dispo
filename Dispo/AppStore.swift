@@ -130,6 +130,8 @@ final class AppStore: ObservableObject {
     @Published var groups: [GroupChat] = []
     /// Candidatures reçues par annonce (côté organisateur d'un SOS).
     @Published var applicantsByGig: [UUID: [GigApplicant]] = [:]
+    /// Invités d'un soir par événement de groupe (remplaçants acceptés).
+    @Published private(set) var guestsByEvent: [UUID: [EventGuest]] = [:]
 
     // MARK: - Backend (mode live)
 
@@ -573,7 +575,10 @@ final class AppStore: ObservableObject {
             // sont hébergées depuis la 1.0 — visibles par tout le groupe).
             groups = remoteGroups
             persistGroups()
+            seedGroupLastSeenIfNeeded()
             await refreshGroupInvitations(nameByID: nameByID)
+            await refreshEventGuests()
+            loadAllApplicants()
             rescheduleAllAttendanceNotifications()
             runAutoSOSIfNeeded()
             backendError = nil
@@ -740,6 +745,7 @@ final class AppStore: ObservableObject {
                 if visibleConversationID == row.conversationId {
                     // Je regarde la conversation : lu immédiatement, pas de bannière.
                     markConversationRead(row.conversationId)
+                    markLocalRead(row.conversationId)
                 } else {
                     acknowledgeDelivery()
                     pushLocal(
@@ -780,6 +786,65 @@ final class AppStore: ObservableObject {
         Task { try? await backend.markConversationRead(conversationID) }
     }
 
+    // MARK: - Messages non lus
+
+    /// Dernière visite de chaque groupe (les messages de groupe n'ont pas
+    /// d'accusé de lecture serveur — on garde le repère sur l'appareil).
+    private static let groupLastSeenKey = "dispo.groups.lastSeen"
+    private var groupLastSeen: [String: Date] {
+        get { (UserDefaults.standard.dictionary(forKey: Self.groupLastSeenKey) as? [String: Date]) ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: Self.groupLastSeenKey) }
+    }
+
+    /// Messages reçus et pas encore lus dans une conversation. En démo il n'y
+    /// a pas d'accusés : rien n'est « non lu ».
+    func unreadCount(in conversation: Conversation) -> Int {
+        guard isLive else { return 0 }
+        return conversation.messages.filter { !$0.isFromMe && $0.readAt == nil }.count
+    }
+
+    /// Messages de groupe arrivés depuis ma dernière visite.
+    func unreadCount(in group: GroupChat) -> Int {
+        guard let seen = groupLastSeen[group.id.uuidString] else { return 0 }
+        return group.messages.filter { !$0.isFromMe && $0.date > seen }.count
+    }
+
+    /// La pastille de l'onglet Messages.
+    var totalUnread: Int {
+        conversations.reduce(0) { $0 + unreadCount(in: $1) }
+            + groups.reduce(0) { $0 + unreadCount(in: $1) }
+    }
+
+    /// Un groupe jamais ouvert ne doit pas afficher tout son historique comme
+    /// non lu : on pose le repère à maintenant la première fois qu'on le voit.
+    private func seedGroupLastSeenIfNeeded() {
+        var seen = groupLastSeen
+        var changed = false
+        for group in groups where seen[group.id.uuidString] == nil {
+            seen[group.id.uuidString] = Date()
+            changed = true
+        }
+        if changed { groupLastSeen = seen }
+    }
+
+    /// Le groupe vient d'être ouvert : tout ce qui précède est lu.
+    func markGroupSeen(_ groupID: GroupChat.ID) {
+        var seen = groupLastSeen
+        seen[groupID.uuidString] = Date()
+        groupLastSeen = seen
+        objectWillChange.send()
+    }
+
+    /// Reflète « lu » localement, sans attendre l'aller-retour serveur : la
+    /// puce doit disparaître à l'instant où on ouvre la conversation.
+    private func markLocalRead(_ conversationID: UUID) {
+        guard let index = conversations.firstIndex(where: { $0.id == conversationID }) else { return }
+        for m in conversations[index].messages.indices
+        where !conversations[index].messages[m].isFromMe && conversations[index].messages[m].readAt == nil {
+            conversations[index].messages[m].readAt = Date()
+        }
+    }
+
     // MARK: - Conversation ouverte & indicateur de saisie
 
     /// ChatView vient d'apparaître : marquer lu et écouter le typing.
@@ -787,6 +852,7 @@ final class AppStore: ObservableObject {
         visibleConversationID = conversationID
         guard isLive else { return }
         markConversationRead(conversationID)
+        markLocalRead(conversationID)
         startTypingChannel(conversationID)
     }
 
@@ -916,6 +982,8 @@ final class AppStore: ObservableObject {
             events = fresh.sorted { $0.date < $1.date }
         }
         persistEvents()
+        loadAllApplicants()
+        await refreshEventGuests()
     }
 
     private func handleIncomingGroupMessage(_ row: SupabaseBackend.GroupMessageRow) async {
@@ -1409,7 +1477,9 @@ final class AppStore: ObservableObject {
                 member, event.title, group.name, levelNote
             ).trimmingCharacters(in: .whitespaces),
             isMine: true,
-            postedAt: Date()
+            postedAt: Date(),
+            groupId: group.id,
+            eventId: event.id
         )
         addEvent(sos)
         pushLocal(
@@ -3085,11 +3155,11 @@ final class AppStore: ObservableObject {
         sendMessage(text, in: conversation)
     }
 
-    /// Envoie une demande de dépannage structurée à un musicien : ouvre (ou
-    /// crée) la conversation et y poste la demande balisée 🚨 avec ses
-    /// options (instrument, date, lieu, cachet). Distinct d'un simple
-    /// message privé envoyé via « Contacter ».
-    func sendSOSRequest(
+    /// Demande de dépannage adressée à UN musicien. Ce n'est plus un message
+    /// à écrire puis à relancer : c'est un vrai SOS, visible de lui seul, qu'il
+    /// accepte ou refuse d'un tap. Le reste se fait tout seul — notification à
+    /// l'envoi, poste pourvu à l'acceptation, réponse notifiée à l'auteur.
+    func sendDirectSOS(
         to musician: Musician,
         instrument: Instrument,
         date: Date,
@@ -3097,29 +3167,26 @@ final class AppStore: ObservableObject {
         fee: Int?,
         paymentMethod: String?,
         note: String
-    ) async -> Conversation {
-        let conversation = await conversation(with: musician)
-        let dateLabel = date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
-        var lines = [
-            tr("🚨 Demande de dépannage"),
-            String(format: tr("🎸 Instrument : %@"), tr(instrument.rawValue)),
-            String(format: tr("📅 Date : %@"), dateLabel)
-        ]
+    ) {
         let trimmedPlace = place.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedPlace.isEmpty {
-            lines.append(String(format: tr("📍 Lieu : %@"), trimmedPlace))
-        }
-        var feeLine = String(format: tr("💰 Cachet : %@"), fee.map { "CHF \($0)" } ?? tr("À discuter"))
-        if let paymentMethod, !paymentMethod.isEmpty {
-            feeLine += " · " + tr(PaymentMethod.displayLabel(for: paymentMethod))
-        }
-        lines.append(feeLine)
-        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedNote.isEmpty {
-            lines.append(trimmedNote)
-        }
-        sendMessage(lines.joined(separator: "\n"), in: conversation)
-        return conversation
+        let request = GigRequest(
+            title: String(format: tr("Dépannage — %@"), tr(instrument.rawValue)),
+            hostName: profile.name,
+            hostId: liveUserID,
+            date: date,
+            place: trimmedPlace.isEmpty ? tr("À préciser") : trimmedPlace,
+            neighborhood: profile.cityLabel,
+            genre: profile.genres.first ?? musician.genres.first ?? .jazz,
+            wantedInstruments: [instrument],
+            fee: fee,
+            paymentMethod: paymentMethod,
+            descriptionText: note.trimmingCharacters(in: .whitespacesAndNewlines),
+            isMine: true,
+            postedAt: Date(),
+            targetId: musician.id,
+            targetStatus: .pending
+        )
+        addEvent(request)
     }
 
     // MARK: - Médias du profil (photo + vidéos de démo)
@@ -3627,42 +3694,6 @@ final class AppStore: ObservableObject {
         return musicians.filter { myFollowers.contains($0.name) }.sorted { $0.name < $1.name }
     }
 
-    // MARK: - Suggestions de musiciens à suivre
-
-    /// Profils recommandés : pas encore suivis, classés par affinité —
-    /// styles partagés, instrument complémentaire, bien notés, proches,
-    /// déjà croisés via un ami ou déjà abonnés à moi.
-    var followSuggestions: [Musician] {
-        let myGenres = Set(profile.genres)
-        let myInstruments = Set(profile.instruments)
-        return musicians
-            .filter { !isFollowing($0) }
-            .map { musician -> (musician: Musician, score: Double) in
-                var score = 0.0
-                score += Double(min(3, Set(musician.genres).intersection(myGenres).count)) * 2
-                if Set(musician.instruments).isDisjoint(with: myInstruments),
-                   !musician.instruments.isEmpty {
-                    score += 1 // complémentaire : on peut jouer ensemble
-                }
-                if let summary = ratingSummary(for: musician), summary.average >= 4 {
-                    score += 1.5
-                }
-                if let distance = distance(to: musician), distance <= 25 {
-                    score += 1
-                }
-                if playedWithAFriend(musician) { score += 2 }
-                if socialLink(with: musician.name) == .follower { score += 2.5 }
-                return (musician, score)
-            }
-            .filter { $0.score > 0 }
-            .sorted {
-                if $0.score != $1.score { return $0.score > $1.score }
-                return followerCount(of: $0.musician) > followerCount(of: $1.musician)
-            }
-            .prefix(8)
-            .map(\.musician)
-    }
-
     // MARK: - Groupes : photo, visibilité, profils publics
 
     /// Groupes publics par profil, chargés à l'ouverture d'une fiche.
@@ -3908,8 +3939,9 @@ final class AppStore: ObservableObject {
 
     /// Postuler à un SOS sur un instrument précis (le poste choisi). Optimiste
     /// mais SÛR : si l'envoi échoue on annule proprement (fini le bouton qui
-    /// « revient » tout seul) et on affiche l'erreur réelle. Un message auto
-    /// balisé part à l'organisateur.
+    /// « revient » tout seul) et on affiche l'erreur réelle. Rien ne part dans
+    /// la messagerie : la candidature EST l'objet, l'organisateur la traite
+    /// depuis « Mes SOS » et reçoit une notification.
     func applyToGig(_ event: GigRequest, instrument: Instrument?) {
         guard let index = events.firstIndex(where: { $0.id == event.id }), !events[index].applied else { return }
         events[index].applied = true
@@ -3923,7 +3955,6 @@ final class AppStore: ObservableObject {
             do {
                 try await backend.apply(to: gigID, musicianID: userID, instrument: instrument)
                 await backend.deliverPendingPushNotifications()
-                await self.sendApplicationMessage(for: event, instrument: instrument)
             } catch {
                 if let i = self.events.firstIndex(where: { $0.id == gigID }) {
                     self.events[i].applied = false
@@ -3951,28 +3982,18 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Message auto envoyé à l'organisateur au moment où je postule.
-    private func sendApplicationMessage(for gig: GigRequest, instrument: Instrument?) async {
-        guard let hostId = gig.hostId,
-              let host = musicians.first(where: { $0.id == hostId }) else { return }
-        let conversation = await conversation(with: host)
-        let dateLabel = gig.date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
-        var lines = [tr("🚨 Je peux te dépanner !")]
-        if let instrument {
-            lines.append(String(format: tr("🎸 Instrument : %@"), tr(instrument.rawValue)))
-        }
-        lines.append(String(format: tr("Pour « %@ » le %@."), gig.title, dateLabel))
-        sendMessage(lines.joined(separator: "\n"), in: conversation)
-    }
-
-    /// Charge les candidatures d'une de MES annonces (organisateur).
+    /// Charge les candidatures d'une de MES annonces (organisateur). Le profil
+    /// du candidat vient du serveur avec la candidature : un musicien absent
+    /// de mon fil (hors rayon, filtré…) doit quand même apparaître ici.
     func loadApplicants(for gig: GigRequest) {
         guard let backend, isLive, gig.isMine else { return }
         let gigID = gig.id
         Task { [weak self] in
             guard let self, let rows = try? await backend.fetchApplicants(gigID: gigID) else { return }
             let applicants: [GigApplicant] = rows.compactMap { row in
-                guard let musician = self.musicians.first(where: { $0.id == row.musicianId }) else { return nil }
+                let musician = row.profiles?.asMusician()
+                    ?? self.musicians.first(where: { $0.id == row.musicianId })
+                guard let musician else { return nil }
                 return GigApplicant(
                     id: row.id,
                     musician: musician,
@@ -3984,21 +4005,240 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Charge les candidatures de TOUTES mes annonces — la page SOS affiche la
+    /// gestion en ligne, elle a besoin de tout d'un coup.
+    func loadAllApplicants() {
+        for gig in myGigs { loadApplicants(for: gig) }
+    }
+
     /// L'organisateur accepte un candidat : le poste devient pourvu, les
-    /// concurrents sur cet instrument sont refusés (côté serveur).
+    /// concurrents sur cet instrument sont refusés (côté serveur), et le
+    /// musicien retenu est prévenu par notification.
     func acceptApplicant(_ applicant: GigApplicant, in gig: GigRequest) {
+        decide(applicant, in: gig, action: { try await $0.acceptApplication(applicant.id) },
+               failure: "Le candidat n'a pas pu être accepté.")
+    }
+
+    /// L'organisateur écarte un candidat (il est prévenu). Refuser quelqu'un
+    /// de déjà pris libère son poste : l'annonce se rouvre.
+    func declineApplicant(_ applicant: GigApplicant, in gig: GigRequest) {
+        decide(applicant, in: gig, action: { try await $0.declineApplication(applicant.id) },
+               failure: "Le candidat n'a pas pu être écarté.")
+    }
+
+    /// Remet un candidat en attente : le poste redevient ouvert (erreur de
+    /// clic, ou remplaçant qui se décommande).
+    func reopenApplicant(_ applicant: GigApplicant, in gig: GigRequest) {
+        decide(applicant, in: gig, action: { try await $0.reopenApplication(applicant.id) },
+               failure: "Le poste n'a pas pu être rouvert.")
+    }
+
+    /// Trame commune des décisions de l'organisateur : appel serveur, envoi
+    /// des notifications en attente, puis rechargement des candidats et du fil.
+    private func decide(
+        _ applicant: GigApplicant,
+        in gig: GigRequest,
+        action: @escaping (SupabaseBackend) async throws -> Void,
+        failure: String
+    ) {
         guard let backend, isLive else { return }
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await backend.acceptApplication(applicant.id)
+                try await action(backend)
                 await backend.deliverPendingPushNotifications()
                 self.loadApplicants(for: gig)
                 await self.refreshGigs()
             } catch {
-                self.backendError = self.tr("Le candidat n'a pas pu être accepté.") + " (\(error.localizedDescription))"
+                self.backendError = self.tr(failure) + " (\(error.localizedDescription))"
             }
         }
+    }
+
+    /// Retire une de mes annonces (les candidatures partent avec).
+    func cancelGig(_ gig: GigRequest) {
+        guard gig.isMine else { return }
+        withAnimation { events.removeAll { $0.id == gig.id } }
+        applicantsByGig[gig.id] = nil
+        persistEvents()
+        guard let backend, isLive else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            do { try await backend.deleteGig(gig.id) }
+            catch {
+                self.backendError = self.tr("L'annonce n'a pas pu être retirée.")
+                await self.refreshGigs()
+            }
+        }
+    }
+
+    /// Le musicien visé par une demande de dépannage répond — un tap, tout le
+    /// reste est automatique (poste pourvu, organisateur notifié).
+    func respondToDirectRequest(_ gig: GigRequest, accept: Bool) {
+        guard let index = events.firstIndex(where: { $0.id == gig.id }) else { return }
+        let previous = events[index].targetStatus
+        withAnimation { events[index].targetStatus = accept ? .accepted : .declined }
+        if accept {
+            events[index].applied = true
+            events[index].myApplicationInstrument = gig.wantedInstruments.first
+            events[index].myApplicationStatus = .accepted
+        }
+        persistEvents()
+        guard let backend, isLive else { return }
+        let gigID = gig.id
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await backend.respondToDirectGig(gigID, accept: accept)
+                await backend.deliverPendingPushNotifications()
+                await self.refreshGigs()
+            } catch {
+                if let i = self.events.firstIndex(where: { $0.id == gigID }) {
+                    self.events[i].targetStatus = previous
+                    self.events[i].applied = false
+                    self.events[i].myApplicationStatus = nil
+                    self.persistEvents()
+                }
+                self.backendError = self.tr("La réponse n'a pas pu être envoyée.")
+            }
+        }
+    }
+
+    // MARK: - Mes SOS (organisateur et candidat)
+
+    /// Mes annonces en cours, la date la plus proche d'abord.
+    var myGigs: [GigRequest] {
+        events.filter { $0.isMine && !$0.isDirect }.sorted { $0.date < $1.date }
+    }
+
+    /// Les demandes que j'ai adressées à quelqu'un et qui attendent sa réponse
+    /// (ou viennent d'être tranchées).
+    var mySentRequests: [GigRequest] {
+        events.filter { $0.isMine && $0.isDirect }.sorted { $0.date < $1.date }
+    }
+
+    /// Les demandes de dépannage qui m'ont été adressées, en attente d'abord.
+    var incomingRequests: [GigRequest] {
+        events
+            .filter { $0.isDirect && !$0.isMine }
+            .sorted {
+                let a = $0.targetStatus == .pending ? 0 : 1
+                let b = $1.targetStatus == .pending ? 0 : 1
+                return a == b ? $0.date < $1.date : a < b
+            }
+    }
+
+    /// Les annonces auxquelles j'ai postulé (hors demandes ciblées).
+    var myApplications: [GigRequest] {
+        events.filter { $0.applied && !$0.isMine && !$0.isDirect }.sorted { $0.date < $1.date }
+    }
+
+    /// Candidats en attente sur mes annonces + demandes reçues non traitées :
+    /// la pastille rouge de l'onglet SOS.
+    var sosTodoCount: Int {
+        let pending = myGigs.reduce(0) { total, gig in
+            total + (applicantsByGig[gig.id]?.filter { $0.status == .pending }.count ?? 0)
+        }
+        return pending + incomingRequests.filter { $0.targetStatus == .pending }.count
+    }
+
+    /// Candidats en attente d'une décision sur une annonce donnée.
+    func pendingApplicants(for gig: GigRequest) -> [GigApplicant] {
+        (applicantsByGig[gig.id] ?? []).filter { $0.status == .pending }
+    }
+
+    // MARK: - Line-up d'un événement de groupe
+
+    /// Instruments pourvus par un SOS publié pour cet événement — le
+    /// remplaçant trouvé compte comme un poste tenu.
+    func replacements(for event: GroupEvent) -> [Instrument] {
+        events
+            .filter { $0.eventId == event.id }
+            .flatMap { $0.filledInstruments ?? [] }
+    }
+
+    /// L'état du line-up : complet (vert), en retard (rouge), ou en cours.
+    func lineupState(_ event: GroupEvent, in group: GroupChat) -> LineupState {
+        group.lineupState(
+            for: event,
+            roster: roster(of: group),
+            replacements: replacements(for: event)
+        )
+    }
+
+    /// Le line-up de l'événement est-il complet (tout le monde est là, ou
+    /// remplacé) ? C'est ce qui fait passer la carte au vert.
+    func isLineupComplete(_ event: GroupEvent, in group: GroupChat) -> Bool {
+        lineupState(event, in: group).isComplete
+    }
+
+    /// Postes encore à trouver pour cet événement (remplaçants compris).
+    func missingRoles(_ event: GroupEvent, in group: GroupChat) -> [Instrument] {
+        group.missingRoles(for: event, replacements: replacements(for: event))
+    }
+
+    /// Les SOS publiés pour cet événement de groupe — le leader les gère
+    /// depuis l'événement lui-même.
+    func gigs(for event: GroupEvent) -> [GigRequest] {
+        events.filter { $0.eventId == event.id }.sorted { $0.date < $1.date }
+    }
+
+    /// Les invités d'un soir de cet événement (remplaçants acceptés). Ils ne
+    /// sont pas membres du groupe : ils n'existent que sur cette date.
+    func guests(for event: GroupEvent) -> [EventGuest] {
+        (guestsByEvent[event.id] ?? []).sorted { $0.name < $1.name }
+    }
+
+    /// Recharge les invités des événements de tous mes groupes.
+    func refreshEventGuests() async {
+        guard let backend, isLive else { return }
+        guard let rows = try? await backend.fetchEventGuests() else { return }
+        let guests = rows.map {
+            EventGuest(
+                eventID: $0.eventId,
+                groupID: $0.groupId,
+                musicianID: $0.musicianId,
+                name: $0.name,
+                instrument: Instrument(rawValue: $0.instrument ?? ""),
+                photoURL: $0.photoUrl
+            )
+        }
+        guestsByEvent = Dictionary(grouping: guests, by: \.eventID)
+    }
+
+    /// Mes prochaines dates, toutes origines confondues : les SOS où j'ai été
+    /// retenu, les demandes que j'ai acceptées, et les événements de mes
+    /// groupes où j'ai confirmé ma présence. C'est l'agenda du musicien.
+    var myNextDates: [PlayingDate] {
+        var dates: [PlayingDate] = events
+            .filter { !$0.isMine && $0.myApplicationStatus == .accepted }
+            .map { gig in
+                PlayingDate(
+                    id: gig.id,
+                    date: gig.date,
+                    title: gig.title,
+                    place: [gig.place, gig.neighborhood].filter { !$0.isEmpty }.joined(separator: " · "),
+                    instrument: gig.myApplicationInstrument,
+                    origin: .sos(host: gig.hostName),
+                    gig: gig
+                )
+            }
+        for group in groups {
+            for event in group.upcomingEvents where event.status(for: profile.name) == .available {
+                dates.append(
+                    PlayingDate(
+                        id: event.id,
+                        date: event.date,
+                        title: event.title,
+                        place: event.venue,
+                        instrument: group.role(for: profile.name),
+                        origin: .group(name: group.name, emoji: group.emoji, groupID: group.id),
+                        gig: nil
+                    )
+                )
+            }
+        }
+        return dates.sorted { $0.date < $1.date }
     }
 
     func saveProfile() {

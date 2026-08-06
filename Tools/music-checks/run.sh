@@ -8,7 +8,9 @@ python3 - "$work" <<'PY'
 import sys, pathlib
 src = pathlib.Path("../../Dispo/Music.swift").read_text()
 start = src.index("extension Instrument {")
-end = src.index("// MARK: - Transposition d'une grille")
+# On ne retire QUE l'extension Instrument (elle dépend des modèles de
+# l'app) : l'export iReal Pro qui suit doit rester testé.
+end = src.index("// MARK: - Export iReal Pro")
 pathlib.Path(sys.argv[1], "Music.swift").write_text(src[:start] + src[end:])
 PY
 cp main.swift "$work/"

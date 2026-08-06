@@ -100,6 +100,107 @@ extension Instrument {
     var isTransposing: Bool { defaultTransposition != .c }
 }
 
+// MARK: - Export iReal Pro
+
+/// Fabrique un lien iReal Pro à partir d'une grille d'accords.
+///
+/// iReal Pro lit deux formats : `irealb://` (le sien, obfusqué, exporté depuis
+/// l'app) et `irealbook://`, l'ancien format en clair — que l'éditeur continue
+/// d'accepter à l'import justement parce que des milliers de grilles circulent
+/// comme ça. C'est celui qu'on écrit :
+///
+///   irealbook://Titre=Compositeur=Style=Tonalité=n=T44*A{C^7 |A-7 |D-9 |G7 }
+///
+/// Le groupe n'a donc plus rien à coller : sa grille Dispo s'ouvre dans iReal
+/// Pro, déjà transposée dans la tonalité de celui qui l'ouvre.
+enum IRealPro {
+    /// Schéma d'URL de l'app (pour savoir si elle est installée).
+    static let scheme = "irealbook"
+    /// La fiche App Store, quand l'app n'est pas installée.
+    static let appStoreURL = URL(string: "https://apps.apple.com/app/ireal-pro/id409035833")!
+
+    /// Traduit un accord dans l'alphabet d'iReal Pro : `Cmaj7` → `C^7`,
+    /// `Am7` → `A-7`, `Bø` → `Bh`, `C♯` → `C#`.
+    static func chord(_ raw: String) -> String {
+        let text = raw
+            .replacingOccurrences(of: "♭", with: "b")
+            .replacingOccurrences(of: "♯", with: "#")
+            .replacingOccurrences(of: "∆", with: "^")
+            .replacingOccurrences(of: "Δ", with: "^")
+            .replacingOccurrences(of: "ø", with: "h")
+            .replacingOccurrences(of: "°", with: "o")
+        guard let root = MusicTheory.parseRoot(text) else { return text }
+        let head = String(text.prefix(root.length))
+        var tail = String(text.dropFirst(root.length))
+        // La basse d'un accord slash garde sa notation, on ne traite que la
+        // couleur de l'accord.
+        var bass = ""
+        if let slash = tail.firstIndex(of: "/") {
+            bass = String(tail[slash...])
+            tail = String(tail[..<slash])
+        }
+        // Du plus long au plus court : « maj7 » avant « maj », « min » avant « m ».
+        let table: [(String, String)] = [
+            ("majeur", "^"), ("maj", "^"), ("Maj", "^"), ("MAJ", "^"), ("M", "^"),
+            ("mineur", "-"), ("min", "-"), ("mi", "-"), ("m", "-"),
+            ("dim", "o"), ("aug", "+"), ("halfdim", "h")
+        ]
+        for (from, to) in table where tail.hasPrefix(from) {
+            tail = to + tail.dropFirst(from.count)
+            break
+        }
+        return head + tail + bass
+    }
+
+    /// Découpe la grille en mesures. Les barres `|` font foi ; sans barre, une
+    /// ligne vaut une mesure (c'est ainsi que les grilles se collent souvent).
+    static func measures(from grid: String) -> [String] {
+        let cleaned = grid.replacingOccurrences(of: "\n", with: " | ")
+        let parts: [String] = cleaned.contains("|")
+            ? cleaned.split(separator: "|").map(String.init)
+            : grid.split(separator: "\n").map(String.init)
+        return parts
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Le corps du chart : signature rythmique, section A, puis les mesures.
+    static func body(from grid: String) -> String {
+        let bars = measures(from: grid).map { bar -> String in
+            let chords = bar.split(separator: " ").map { chord(String($0)) }
+            return chords.isEmpty ? " " : chords.joined(separator: " ")
+        }
+        guard !bars.isEmpty else { return "" }
+        return "T44*A" + bars.map { $0 + " " }.joined(separator: "|") + "Z"
+    }
+
+    /// Le lien complet, prêt à ouvrir. nil si la grille ne donne rien.
+    static func link(title: String, composer: String, style: String, key: MusicalKey?, grid: String) -> URL? {
+        let chart = body(from: grid)
+        guard !chart.isEmpty else { return nil }
+        // Le compositeur est rangé « Nom Prénom » dans iReal Pro ; on passe le
+        // nom d'artiste tel quel, c'est ce que le groupe a saisi.
+        let keyName = (key?.name ?? "C")
+            .replacingOccurrences(of: "♭", with: "b")
+            .replacingOccurrences(of: "♯", with: "#")
+        let fields = [
+            title.replacingOccurrences(of: "=", with: "-"),
+            composer.replacingOccurrences(of: "=", with: "-"),
+            style.isEmpty ? "Jazz-Medium Swing" : style,
+            key?.isMinor == true ? keyName + "-" : keyName,
+            "n",
+            chart
+        ]
+        let payload = fields.joined(separator: "=")
+        // Tout ce qui n'est pas alphanumérique est encodé : l'espace (%20) et
+        // le dièse (%23) casseraient l'URL sinon.
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        guard let encoded = payload.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
+        return URL(string: "\(scheme)://" + encoded)
+    }
+}
+
 // MARK: - Transposition d'une grille d'accords
 
 /// Décale une grille d'accords écrite en toutes lettres. On ne touche qu'aux

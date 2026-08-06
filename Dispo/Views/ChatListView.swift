@@ -95,6 +95,7 @@ struct ChatListView: View {
         }
 
         ForEach(store.conversations) { conversation in
+            let unread = store.unreadCount(in: conversation)
             NavigationLink(value: ChatRoute.conversation(conversation.id)) {
                 JCCard(padding: 13) {
                     HStack(spacing: 12) {
@@ -102,7 +103,7 @@ struct ChatListView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack {
                                 Text(conversation.contactName)
-                                    .font(.subheadline.weight(.bold))
+                                    .font(.subheadline.weight(unread > 0 ? .heavy : .bold))
                                 if store.isDemoContact(conversation.contactName) {
                                     DemoAccountBadge()
                                 }
@@ -110,7 +111,7 @@ struct ChatListView: View {
                                 if let last = conversation.lastMessage {
                                     Text(last.date.formatted(.relative(presentation: .named)))
                                         .font(.caption2)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(unread > 0 ? JC.laiton : .secondary)
                                 }
                             }
                             Text(LocalizedStringKey(conversation.contactInstrument.rawValue))
@@ -118,11 +119,12 @@ struct ChatListView: View {
                                 .foregroundStyle(JC.laiton)
                             if let last = conversation.lastMessage {
                                 Text((last.isFromMe ? store.tr("Toi : ") : "") + last.text)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.caption.weight(unread > 0 ? .semibold : .regular))
+                                    .foregroundStyle(unread > 0 ? .primary : .secondary)
                                     .lineLimit(1)
                             }
                         }
+                        UnreadDot(count: unread)
                     }
                 }
             }
@@ -158,6 +160,7 @@ struct ChatListView: View {
         }
 
         ForEach(store.groups) { group in
+            let unread = store.unreadCount(in: group)
             NavigationLink(value: ChatRoute.group(group.id)) {
                 JCCard(padding: 13) {
                     HStack(spacing: 12) {
@@ -165,7 +168,7 @@ struct ChatListView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack {
                                 Text(group.name)
-                                    .font(.subheadline.weight(.bold))
+                                    .font(.subheadline.weight(unread > 0 ? .heavy : .bold))
                                     .lineLimit(1)
                                 if group.isPublic == true {
                                     TagView(text: "Public", color: JC.feutrine)
@@ -183,15 +186,34 @@ struct ChatListView: View {
                                 .lineLimit(1)
                             if let last = group.lastMessage {
                                 Text((last.isFromMe ? store.tr("Toi : ") : "\(last.sender) : ") + last.text)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.caption.weight(unread > 0 ? .semibold : .regular))
+                                    .foregroundStyle(unread > 0 ? .primary : .secondary)
                                     .lineLimit(1)
                             }
                         }
+                        UnreadDot(count: unread)
                     }
                 }
             }
             .buttonStyle(PressableStyle())
+        }
+    }
+}
+
+/// La puce « pas encore lu » : une pastille laiton avec le nombre de
+/// messages en attente. Invisible quand tout est lu.
+struct UnreadDot: View {
+    let count: Int
+
+    var body: some View {
+        if count > 0 {
+            Text(verbatim: count > 99 ? "99+" : "\(count)")
+                .font(JCFont.monoBold(11))
+                .foregroundStyle(JC.billetInk)
+                .frame(minWidth: 22, minHeight: 22)
+                .padding(.horizontal, count > 9 ? 5 : 0)
+                .background(JC.hero, in: Capsule())
+                .accessibilityLabel(Text("\(count) messages non lus"))
         }
     }
 }

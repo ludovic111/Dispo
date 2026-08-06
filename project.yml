@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
-    MARKETING_VERSION: "1.4"
-    CURRENT_PROJECT_VERSION: "19"
+    MARKETING_VERSION: "1.5"
+    CURRENT_PROJECT_VERSION: "20"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -74,6 +74,9 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: ch.dispo.auth
             CFBundleURLSchemes: [dispo]
+        # iReal Pro : sans déclaration, `canOpenURL` répond toujours non et on
+        # ne sait pas si l'app est installée (le bouton semblait alors mort).
+        LSApplicationQueriesSchemes: [irealbook, irealb]
         # Polices de la DA « Coulisses & Laiton » (display + mono ticket).
         # Copiées à plat dans le bundle par Xcode (groupes, pas de dossier).
         UIAppFonts:

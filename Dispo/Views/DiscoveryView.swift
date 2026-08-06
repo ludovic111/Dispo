@@ -77,9 +77,47 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
+    @State private var scope: AvailabilityScope = .tonight
     /// Musicien en cours d'invitation depuis l'accueil (un tap).
     @State private var invitingName: String?
 
+    /// La vraie question d'un musicien qui ouvre l'app : qui peut jouer, et
+    /// quand ? On répond avant de parler de distance — c'est ce qui distingue
+    /// Dispo d'un annuaire de profils.
+    enum AvailabilityScope: String, CaseIterable, Identifiable {
+        case tonight = "Ce soir"
+        case weekend = "Ce week-end"
+        case nearby = "Près de chez toi"
+        var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .tonight: return "bolt.fill"
+            case .weekend: return "calendar.badge.clock"
+            case .nearby: return "location.fill"
+            }
+        }
+
+        /// Les couleurs des badges de dispo, à l'identique — le rouge signal
+        /// reste réservé au SOS, jamais à une simple disponibilité.
+        var color: Color {
+            switch self {
+            case .tonight: return JC.feutrine
+            case .weekend: return JC.laiton
+            case .nearby: return JC.bronze
+            }
+        }
+
+        var subtitle: LocalizedStringKey {
+            switch self {
+            case .tonight: return "Dispos aujourd'hui — appelle, ça joue ce soir"
+            case .weekend: return "Dispos samedi ou dimanche"
+            case .nearby: return "Tes relations d'abord, puis les plus proches"
+            }
+        }
+    }
+
+    /// Les musiciens qui passent les filtres, classés comme d'habitude.
     private var filtered: [Musician] {
         // Amis / a joué avec un ami / suivis d'abord, puis niveau (Premium),
         // puis urgence de dispo et distance — voir AppStore.rank.
@@ -88,18 +126,57 @@ struct HomeView: View {
             .sorted { store.rank($0, $1) }
     }
 
-    /// Mon prochain événement de groupe, quelle que soit sa date : c'est la
-    /// première chose qu'on veut voir en ouvrant l'app.
-    private var nextGroupEvent: (group: GroupChat, event: GroupEvent)? {
-        store.groups
-            .flatMap { group in group.upcomingEvents.map { (group: group, event: $0) } }
-            .min { $0.event.date < $1.event.date }
+    /// La liste affichée : le créneau choisi restreint les musiciens à ceux
+    /// qui ont vraiment coché ces jours-là.
+    private var visible: [Musician] {
+        switch scope {
+        case .tonight: return filtered.filter { $0.isAvailable(on: Date()) }
+        case .weekend: return filtered.filter { musician in
+            Self.weekendDays.contains { musician.isAvailable(on: $0) }
+        }
+        case .nearby: return filtered
+        }
     }
 
-    /// Le même, mais seulement s'il approche : inviter un remplaçant pour un
-    /// concert dans six mois n'a pas de sens.
+    /// Combien de musiciens dans chaque créneau (les pastilles du sélecteur).
+    private func count(for scope: AvailabilityScope) -> Int {
+        switch scope {
+        case .tonight: return filtered.filter { $0.isAvailable(on: Date()) }.count
+        case .weekend: return filtered.filter { musician in
+            Self.weekendDays.contains { musician.isAvailable(on: $0) }
+        }.count
+        case .nearby: return filtered.count
+        }
+    }
+
+    /// Le prochain samedi et le dimanche qui suit (aujourd'hui compris quand
+    /// on est déjà dans le week-end).
+    private static var weekendDays: [Date] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return (0...7).compactMap { offset -> Date? in
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { return nil }
+            let weekday = calendar.component(.weekday, from: day)
+            return (weekday == 7 || weekday == 1) ? day : nil
+        }
+        .prefix(2)
+        .map { $0 }
+    }
+
+    /// Le prochain événement de CHAQUE groupe dont je fais partie — pas
+    /// seulement le plus proche : on joue rarement dans un seul groupe.
+    private var nextGroupEvents: [(group: GroupChat, event: GroupEvent)] {
+        store.groups
+            .compactMap { group in
+                group.upcomingEvents.first.map { (group: group, event: $0) }
+            }
+            .sorted { $0.event.date < $1.event.date }
+    }
+
+    /// Le plus proche, et seulement s'il approche : inviter un remplaçant pour
+    /// un concert dans six mois n'a pas de sens.
     private var nextGroupEventSoon: (group: GroupChat, event: GroupEvent)? {
-        guard let next = nextGroupEvent,
+        guard let next = nextGroupEvents.first,
               let horizon = Calendar.current.date(byAdding: .day, value: 14, to: Date()),
               next.event.date < horizon
         else { return nil }
@@ -122,7 +199,7 @@ struct HomeView: View {
                         searchBar
                         groupEventReminder
                         availableInviteRow
-                        suggestionsRow
+                        scopePicker
                         actionBar
                         feed
                     }
@@ -204,94 +281,69 @@ struct HomeView: View {
         .buttonStyle(PressableStyle())
     }
 
-    /// Prochain événement d'un de mes groupes — le pont accueil ↔ groupes.
+    /// Le prochain événement de chacun de mes groupes — le pont accueil ↔
+    /// groupes. Un musicien joue dans plusieurs formations : il les voit
+    /// toutes, la date la plus proche en premier.
     @ViewBuilder
     private var groupEventReminder: some View {
-        if let (group, event) = nextGroupEvent {
-            let myStatus = event.status(for: store.profile.name)
-            VStack(spacing: 10) {
+        let events = nextGroupEvents
+        if !events.isEmpty {
+            VStack(spacing: 12) {
                 HStack(spacing: 6) {
                     Image(systemName: "calendar.badge.clock")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(JC.bronze)
-                    Text("Prochain événement")
+                    Text(events.count == 1 ? "Prochain événement" : "Prochains événements")
                         .font(.caption2.weight(.heavy))
                         .textCase(.uppercase)
                         .foregroundStyle(JC.bronze)
                     Spacer(minLength: 0)
-                    // Le compte à rebours jusqu'au concert lui-même.
-                    if let left = store.countdown(to: event.date) {
-                        Text(String(format: store.tr("dans %@"), left))
-                            .font(.caption2.weight(.heavy))
-                            .foregroundStyle(JC.laiton)
-                    }
                 }
-                NavigationLink(value: group.id) {
-                    HStack(spacing: 11) {
-                        Text(event.kind.emoji)
-                            .font(.title3)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: "\(group.emoji) \(group.name) — \(event.title)")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month())) · \(event.venue)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .buttonStyle(PressableStyle())
-
-                if myStatus == .pending {
-                    HStack(spacing: 8) {
-                        ConfirmCountdownBadge(event: event)
-                        Spacer(minLength: 0)
-                        Button {
-                            store.setAttendance(.available, eventID: event.id, in: group.id)
-                        } label: {
-                            Text("Dispo")
-                                .font(.caption.weight(.heavy))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(JC.feutrine, in: Capsule())
-                        }
-                        .buttonStyle(PressableStyle())
-                        Button {
-                            store.setAttendance(.unavailable, eventID: event.id, in: group.id)
-                        } label: {
-                            Text("Indispo")
-                                .font(.caption.weight(.heavy))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(JC.signal, in: Capsule())
-                        }
-                        .buttonStyle(PressableStyle())
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Image(systemName: myStatus == .available ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(myStatus == .available ? JC.feutrine : JC.signal)
-                        Text(myStatus == .available ? "Tu as confirmé ta présence" : "Tu as indiqué être indispo")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Spacer(minLength: 0)
-                    }
+                ForEach(events, id: \.event.id) { item in
+                    GroupEventReminderCard(group: item.group, event: item.event)
                 }
             }
-            .padding(12)
-            .background(JC.bronze.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(JC.bronze.opacity(0.3), lineWidth: 1)
-            )
+        }
+    }
+
+    /// Le créneau : ce soir, ce week-end, ou tout ce qu'il y a autour de moi.
+    private var scopePicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 9) {
+                ForEach(AvailabilityScope.allCases) { item in
+                    let isOn = scope == item
+                    Button {
+                        withAnimation(.snappy) { scope = item }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: item.icon)
+                                .font(.system(size: 11, weight: .bold))
+                            Text(LocalizedStringKey(item.rawValue))
+                                .font(.subheadline.weight(.bold))
+                            Text(verbatim: "\(count(for: item))")
+                                .font(JCFont.monoBold(11))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    isOn ? Color.black.opacity(0.16) : JC.inset,
+                                    in: Capsule()
+                                )
+                        }
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 9)
+                        .background(
+                            isOn ? AnyShapeStyle(item.color) : AnyShapeStyle(JC.card),
+                            in: Capsule()
+                        )
+                        .overlay(
+                            Capsule().stroke(isOn ? .clear : JC.cardStroke, lineWidth: 1)
+                        )
+                        .foregroundStyle(isOn ? (item == .weekend ? JC.billetInk : .white) : .primary)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+            .padding(.vertical, 2)
         }
     }
 
@@ -373,33 +425,6 @@ struct HomeView: View {
         }
     }
 
-    /// Suggestions de profils à suivre — affinité de styles, bien notés,
-    /// proches ou déjà croisés via un ami.
-    @ViewBuilder
-    private var suggestionsRow: some View {
-        let suggestions = store.followSuggestions
-        if !suggestions.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.crop.circle.badge.plus")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(JC.feutrine)
-                    Text("Suggestions pour toi")
-                        .font(.subheadline.weight(.bold))
-                    Spacer(minLength: 0)
-                }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(suggestions) { musician in
-                            SuggestionCard(musician: musician)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
-            }
-        }
-    }
-
     private var actionBar: some View {
         HStack(spacing: 10) {
             JCPillButton(
@@ -409,7 +434,7 @@ struct HomeView: View {
             ) { showFilters = true }
 
             Spacer()
-            Text("\(filtered.count) profils")
+            Text("\(visible.count) profils")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.tertiary)
         }
@@ -418,27 +443,82 @@ struct HomeView: View {
     private var feed: some View {
         LazyVStack(spacing: 18) {
             SectionHeader(
-                title: "Près de chez toi",
-                subtitle: store.isPremium
+                title: LocalizedStringKey(scope.rawValue),
+                subtitle: scope == .nearby && store.isPremium
                     ? "Tes relations d'abord, puis les meilleurs niveaux"
-                    : "Tes relations d'abord, puis les plus proches"
+                    : scope.subtitle
             )
-            if filtered.isEmpty {
-                JCEmptyState(
-                    icon: "person.2.slash",
-                    title: "Aucun musicien trouvé",
-                    message: "Élargis le rayon ou retire un filtre pour voir plus de profils."
-                )
+            if visible.isEmpty {
+                emptyScopeState
             }
-            ForEach(Array(filtered.enumerated()), id: \.element.id) { index, musician in
+            ForEach(Array(visible.enumerated()), id: \.element.id) { index, musician in
                 NavigationLink(value: musician) {
-                    SearchMusicianRow(musician: musician, on: filters.neededDate)
+                    SearchMusicianRow(musician: musician, on: scopeDate)
                 }
                 .buttonStyle(PressableStyle())
-                if index == min(2, filtered.count - 1), !store.isPremium {
+                if index == min(2, visible.count - 1), !store.isPremium {
                     levelUpsellBox
                 }
             }
+        }
+    }
+
+    /// La date mise en avant sur les lignes : celle du créneau choisi (elle
+    /// sert à afficher où le musicien se trouve ce jour-là).
+    private var scopeDate: Date? {
+        switch scope {
+        case .tonight: return Date()
+        case .weekend: return Self.weekendDays.first
+        case .nearby: return filters.neededDate
+        }
+    }
+
+    /// Créneau vide : on propose le suivant plutôt que d'afficher un mur.
+    @ViewBuilder
+    private var emptyScopeState: some View {
+        switch scope {
+        case .tonight:
+            VStack(spacing: 10) {
+                JCEmptyState(
+                    icon: "moon.zzz",
+                    title: "Personne ce soir",
+                    message: "Personne n'a coché aujourd'hui. Regarde le week-end — ou lance un SOS, il partira à tous les musiciens compatibles.",
+                    iconColor: JC.signal
+                )
+                Button { withAnimation(.snappy) { scope = .weekend } } label: {
+                    Text("Voir ce week-end")
+                        .font(.caption.weight(.heavy))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .background(JC.hero, in: Capsule())
+                        .foregroundStyle(JC.billetInk)
+                }
+                .buttonStyle(PressableStyle())
+            }
+        case .weekend:
+            VStack(spacing: 10) {
+                JCEmptyState(
+                    icon: "calendar.badge.exclamationmark",
+                    title: "Personne ce week-end",
+                    message: "Aucun musicien n'a coché samedi ou dimanche pour l'instant.",
+                    iconColor: JC.laiton
+                )
+                Button { withAnimation(.snappy) { scope = .nearby } } label: {
+                    Text("Voir tous les musiciens")
+                        .font(.caption.weight(.heavy))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .background(JC.hero, in: Capsule())
+                        .foregroundStyle(JC.billetInk)
+                }
+                .buttonStyle(PressableStyle())
+            }
+        case .nearby:
+            JCEmptyState(
+                icon: "person.2.slash",
+                title: "Aucun musicien trouvé",
+                message: "Élargis le rayon ou retire un filtre pour voir plus de profils."
+            )
         }
     }
 
@@ -489,58 +569,157 @@ struct SocialLinkBadge: View {
     }
 }
 
-// MARK: - Carte de suggestion « à suivre »
+// MARK: - Prochain événement d'un groupe
 
-/// Carte compacte d'un profil suggéré : identité + bouton Suivre en un tap.
-struct SuggestionCard: View {
+/// Le prochain rendez-vous d'un de mes groupes, avec l'état de son line-up :
+/// vert quand tout le monde est là (ou remplacé), rouge quand la date limite
+/// de réponse est passée et qu'il manque encore du monde.
+struct GroupEventReminderCard: View {
     @EnvironmentObject private var store: AppStore
-    let musician: Musician
+    let group: GroupChat
+    let event: GroupEvent
+
+    private var state: LineupState { store.lineupState(event, in: group) }
+    private var missing: [Instrument] { store.missingRoles(event, in: group) }
+    private var guests: [EventGuest] { store.guests(for: event) }
+
+    private var tint: Color {
+        switch state {
+        case .complete: return JC.feutrine
+        case .late: return JC.signal
+        case .forming: return JC.bronze
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 8) {
-            NavigationLink(value: musician) {
-                VStack(spacing: 8) {
-                    AvatarView(name: musician.name, size: 58, photo: musician.photo)
-                    VStack(spacing: 2) {
-                        Text(musician.name.split(separator: " ").first.map(String.init) ?? musician.name)
+        VStack(spacing: 10) {
+            NavigationLink(value: group.id) {
+                HStack(spacing: 11) {
+                    Text(event.kind.emoji)
+                        .font(.title3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: "\(group.emoji) \(group.name) — \(event.title)")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text(LocalizedStringKey(musician.instruments.first?.rawValue ?? ""))
-                            .font(.system(size: 10))
+                        Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month())) · \(event.venue)")
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                        if let summary = store.ratingSummary(for: musician) {
-                            RatingBadge(summary: summary)
-                        } else if musician.isDemo {
-                            DemoAccountBadge()
-                        }
                     }
+                    Spacer(minLength: 0)
+                    if let left = store.countdown(to: event.date) {
+                        Text(String(format: store.tr("dans %@"), left))
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(JC.laiton)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.tertiary)
                 }
             }
             .buttonStyle(PressableStyle())
 
-            Button {
-                withAnimation(.snappy) { store.toggleFollow(musician) }
-            } label: {
-                Text(store.isFollowing(musician) ? "Suivi" : "Suivre")
-                    .font(.caption.weight(.heavy))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(
-                        store.isFollowing(musician) ? AnyShapeStyle(JC.inset) : AnyShapeStyle(JC.hero),
-                        in: Capsule()
-                    )
-                    .foregroundStyle(store.isFollowing(musician) ? Color.primary : JC.billetInk)
-            }
-            .buttonStyle(PressableStyle())
+            lineupLine
+            if !guests.isEmpty { guestLine }
+            attendanceControls
         }
-        .frame(width: 116)
-        .padding(10)
-        .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(12)
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(JC.cardStroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(tint.opacity(state == .forming ? 0.3 : 0.55), lineWidth: 1)
         )
+    }
+
+    /// La ligne qui dit tout : line-up complet, ou ce qu'il manque encore.
+    @ViewBuilder
+    private var lineupLine: some View {
+        HStack(spacing: 6) {
+            switch state {
+            case .complete:
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(JC.feutrine)
+                Text("Line-up complet — tout le monde est là")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(JC.feutrine)
+            case .late:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(JC.signal)
+                Text(missing.isEmpty
+                     ? "Il manque encore des réponses"
+                     : "Il manque : \(missing.map { store.tr($0.rawValue) }.joined(separator: ", "))")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(JC.signal)
+                    .lineLimit(2)
+            case .forming:
+                Image(systemName: "person.2.fill")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Text("Présence : \(event.availableNames.count)/\(store.roster(of: group).count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Les invités d'un soir trouvés par SOS — ils ne sont pas du groupe.
+    private var guestLine: some View {
+        FlowLayout(spacing: 5) {
+            Text("Invités")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+            ForEach(guests) { guest in
+                TagView(
+                    text: guest.instrument.map { "\(guest.name) · \(store.tr($0.rawValue))" } ?? guest.name,
+                    color: JC.feutrine
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var attendanceControls: some View {
+        let myStatus = event.status(for: store.profile.name)
+        if myStatus == .pending {
+            HStack(spacing: 8) {
+                ConfirmCountdownBadge(event: event)
+                Spacer(minLength: 0)
+                Button {
+                    store.setAttendance(.available, eventID: event.id, in: group.id)
+                } label: {
+                    Text("Dispo")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(JC.feutrine, in: Capsule())
+                }
+                .buttonStyle(PressableStyle())
+                Button {
+                    store.setAttendance(.unavailable, eventID: event.id, in: group.id)
+                } label: {
+                    Text("Indispo")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(JC.signal, in: Capsule())
+                }
+                .buttonStyle(PressableStyle())
+            }
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: myStatus == .available ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(myStatus == .available ? JC.feutrine : JC.signal)
+                Text(myStatus == .available ? "Tu as confirmé ta présence" : "Tu as indiqué être indispo")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+        }
     }
 }

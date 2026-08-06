@@ -34,6 +34,8 @@ struct SongDetailSheet: View {
     @State private var uploadInstrument: Instrument?
     /// Grille copiée à l'instant (la coche remplace l'icône un moment).
     @State private var copiedGrid = false
+    /// iReal Pro n'est pas installé : on le dit au lieu de ne rien faire.
+    @State private var missingIReal = false
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -93,6 +95,12 @@ struct SongDetailSheet: View {
             }
             .sheet(isPresented: $showEdit) {
                 if let song { SongEditSheet(groupID: groupID, song: song) }
+            }
+            .alert("iReal Pro n'est pas installé", isPresented: $missingIReal) {
+                Button("Voir dans l'App Store") { openURL(IRealPro.appStoreURL) }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("La grille s'ouvre dans iReal Pro, l'app de play-along des musiciens. Sans elle, la grille reste lisible ici et se copie d'un tap.")
             }
             .sheet(isPresented: $showListen) {
                 if let song {
@@ -296,21 +304,59 @@ struct SongDetailSheet: View {
             )
         }
 
-        // iReal Pro : le lien exporté depuis l'app, à sa place — juste sous
-        // la grille, là où on le cherche quand on veut jouer dessus.
-        if let ireal = song.irealURL, !ireal.isEmpty, let url = URL(string: ireal) {
-            Button { openURL(url) } label: {
-                Label("Ouvrir dans iReal Pro", systemImage: "arrow.up.forward.app.fill")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(JC.premiumTint.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(JC.premiumTint)
+        // iReal Pro : le lien collé par le groupe s'il existe, sinon un lien
+        // fabriqué à partir de la grille — déjà transposée pour celui qui
+        // l'ouvre. Plus rien à coller pour jouer dessus.
+        irealSection(song: song, concert: concert, shift: shift)
+    }
+
+    /// Le bloc iReal Pro : ouvrir, ou expliquer honnêtement pourquoi non.
+    @ViewBuilder
+    private func irealSection(song: Song, concert: MusicalKey?, shift: Int) -> some View {
+        let pasted = song.irealURL.flatMap { $0.isEmpty ? nil : URL(string: $0) }
+        let generated = (song.chords?.isEmpty == false)
+            ? IRealPro.link(
+                title: song.title,
+                composer: song.artist,
+                style: "",
+                key: concert?.transposed(by: shift),
+                grid: MusicTheory.transposeGrid(
+                    song.chords ?? "",
+                    by: shift,
+                    preferSharps: concert?.transposed(by: shift).prefersSharps ?? false
+                )
+            )
+            : nil
+
+        if let url = pasted ?? generated {
+            VStack(spacing: 6) {
+                Button { openIReal(url) } label: {
+                    Label("Ouvrir dans iReal Pro", systemImage: "arrow.up.forward.app.fill")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(JC.premiumTint.opacity(0.16), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.premiumTint)
+                }
+                .buttonStyle(PressableStyle())
+                if pasted == nil {
+                    Text(shift == 0
+                         ? "Grille envoyée telle quelle dans iReal Pro."
+                         : "Grille envoyée dans ta tonalité (\(store.tr(activeTransposition.rawValue))).")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                if isLeader, pasted == nil {
+                    Button { showEdit = true } label: {
+                        Text("Coller plutôt le lien exporté d'iReal Pro")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(JC.bronze)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
             }
-            .buttonStyle(PressableStyle())
         } else if isLeader {
-            // Pas de lien encore : on propose de l'ajouter ici plutôt que de
-            // laisser chercher le champ au fond de « Modifier ».
+            // Ni grille ni lien : on propose d'en ajouter un.
             Button { showEdit = true } label: {
                 Label("Ajouter le lien iReal Pro", systemImage: "link.badge.plus")
                     .font(.subheadline.weight(.bold))
@@ -321,6 +367,18 @@ struct SongDetailSheet: View {
             }
             .buttonStyle(PressableStyle())
         }
+    }
+
+    /// Ouvre le lien, ou emmène sur l'App Store si iReal Pro n'est pas
+    /// installé — un bouton qui ne fait rien est pire que pas de bouton.
+    private func openIReal(_ url: URL) {
+        guard let probe = URL(string: "\(IRealPro.scheme)://"),
+              UIApplication.shared.canOpenURL(probe) || UIApplication.shared.canOpenURL(url)
+        else {
+            missingIReal = true
+            return
+        }
+        openURL(url)
     }
 
     private func keyBlock(title: LocalizedStringKey, key: String, highlighted: Bool) -> some View {

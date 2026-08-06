@@ -1479,6 +1479,18 @@ struct GroupEvent: Codable, Identifiable, Hashable {
     }
 }
 
+/// L'état d'un événement de groupe, lu d'un coup d'œil : tout le monde est là
+/// (vert), il manque du monde alors que la date limite est passée (rouge), ou
+/// les réponses arrivent encore (couleur habituelle).
+enum LineupState {
+    case complete
+    case late
+    case forming
+
+    var isComplete: Bool { self == .complete }
+    var isLate: Bool { self == .late }
+}
+
 /// Un groupe de musique : le leader (créateur, forcément Premium) gère les
 /// membres, le répertoire et les événements ; les membres — Premium ou non —
 /// discutent, partagent des partitions et font des suggestions.
@@ -1572,6 +1584,43 @@ struct GroupChat: Codable, Identifiable, Hashable {
         return all.subtracting(covered).sorted { $0.rawValue < $1.rawValue }
     }
 
+    /// Postes encore découverts pour l'événement, une fois comptés les
+    /// remplaçants trouvés par SOS (`replacements` = instruments pourvus).
+    func missingRoles(for event: GroupEvent, replacements: [Instrument] = []) -> [Instrument] {
+        let covered = Set(replacements)
+        return uncoveredRoles(for: event).filter { !covered.contains($0) }
+    }
+
+    /// Le line-up est-il au complet ? Tous les postes du groupe sont tenus ce
+    /// jour-là — par un membre qui a confirmé, ou par un remplaçant accepté
+    /// sur un SOS. Sans rôles définis, on retombe sur la règle simple : tout
+    /// le monde a répondu « dispo ».
+    func isLineupComplete(
+        for event: GroupEvent,
+        roster: [String],
+        replacements: [Instrument] = []
+    ) -> Bool {
+        let hasRoles = (memberRoles ?? [:]).values.contains { Instrument(rawValue: $0) != nil }
+        if hasRoles {
+            return missingRoles(for: event, replacements: replacements).isEmpty
+        }
+        guard !roster.isEmpty else { return false }
+        return roster.allSatisfy { event.status(for: $0) == .available }
+    }
+
+    /// L'état du line-up, tel qu'il se lit d'un coup d'œil sur la carte.
+    func lineupState(
+        for event: GroupEvent,
+        roster: [String],
+        replacements: [Instrument] = [],
+        now: Date = Date()
+    ) -> LineupState {
+        if isLineupComplete(for: event, roster: roster, replacements: replacements) {
+            return .complete
+        }
+        return event.timeLeftToConfirm(now: now) == nil ? .late : .forming
+    }
+
     var permanentMembers: [String] {
         memberNames.filter { memberKind(for: $0) == .permanent }
     }
@@ -1624,6 +1673,15 @@ struct GigRequest: Codable, Identifiable, Hashable {
     /// Date de publication — les 30 premières minutes sont réservées aux
     /// membres Premium (la killer feature « alerte en avance »).
     var postedAt: Date?
+    /// Groupe et événement à l'origine du SOS (remplacement d'un membre).
+    /// Le lien sert au groupe : dès que le poste est pourvu, le line-up de
+    /// l'événement redevient complet, sans que personne ait à le dire.
+    var groupId: UUID?
+    var eventId: UUID?
+    /// SOS adressé à UN musicien précis (« Demander un dépannage ») : lui seul
+    /// le voit, et il l'accepte ou le refuse. nil = annonce ouverte à tous.
+    var targetId: UUID?
+    var targetStatus: DirectRequestStatus?
 
     /// Postes encore à pourvoir (recherchés moins déjà pourvus).
     var openInstruments: [Instrument] {
@@ -1631,10 +1689,17 @@ struct GigRequest: Codable, Identifiable, Hashable {
         return wantedInstruments.filter { !filled.contains($0) }
     }
 
+    /// Tous les postes sont pourvus.
+    var isFilled: Bool { !wantedInstruments.isEmpty && openInstruments.isEmpty }
+
+    /// Demande adressée à une personne, plutôt qu'une annonce publique.
+    var isDirect: Bool { targetId != nil }
+
     enum CodingKeys: String, CodingKey {
         case id, title, hostName, hostId, date, place, neighborhood, genre
         case wantedInstruments, filledInstruments, fee, paymentMethod, descriptionText
         case applied, myApplicationInstrument, myApplicationStatus, isMine, postedAt
+        case groupId, eventId, targetId, targetStatus
     }
 
     var feeLabel: String {
@@ -1666,6 +1731,46 @@ struct GigRequest: Codable, Identifiable, Hashable {
 /// État d'une candidature à un SOS.
 enum GigApplicationStatus: String, Codable, Hashable {
     case pending, accepted, declined
+}
+
+/// État d'une demande de dépannage adressée à un musicien précis.
+enum DirectRequestStatus: String, Codable, Hashable {
+    case pending, accepted, declined
+}
+
+/// Une date où JE joue : un SOS où j'ai été retenu, ou un événement d'un de
+/// mes groupes où j'ai confirmé. Les deux côtés du SOS (celui qui cherche,
+/// celui qui dépanne) vivent au même endroit — l'onglet SOS.
+struct PlayingDate: Identifiable, Hashable {
+    enum Origin: Hashable {
+        /// Dépannage accepté chez quelqu'un.
+        case sos(host: String)
+        /// Date d'un de mes groupes.
+        case group(name: String, emoji: String, groupID: UUID)
+    }
+
+    var id: UUID
+    var date: Date
+    var title: String
+    var place: String
+    var instrument: Instrument?
+    var origin: Origin
+    /// L'annonce d'origine, pour rouvrir le SOS d'un tap.
+    var gig: GigRequest?
+}
+
+/// Un musicien qui joue UN soir avec le groupe : trouvé par SOS, accepté par
+/// le leader. Il n'entre pas dans le groupe — il n'apparaît que dans cet
+/// événement-là, avec son badge « Invité ».
+struct EventGuest: Identifiable, Hashable {
+    var eventID: UUID
+    var groupID: UUID
+    var musicianID: UUID
+    var name: String
+    var instrument: Instrument?
+    var photoURL: String?
+
+    var id: String { "\(eventID.uuidString)-\(musicianID.uuidString)" }
 }
 
 /// Un candidat à un SOS, vu par l'organisateur (liste groupée par instrument).
