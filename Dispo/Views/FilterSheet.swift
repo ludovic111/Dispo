@@ -107,7 +107,7 @@ struct FilterSheet: View {
                         Picker("Niveau minimum", selection: $filters.minLevel) {
                             Text("Tous").tag(Level?.none)
                             ForEach(Level.allCases) { level in
-                                Text(LocalizedStringKey(level.rawValue)).tag(Level?.some(level))
+                                Text(LocalizedStringKey(level.label)).tag(Level?.some(level))
                             }
                         }
                         .pickerStyle(.segmented)

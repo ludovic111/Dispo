@@ -43,9 +43,11 @@ struct RootView: View {
                 HomeView()
                     .tabItem { Label("Accueil", systemImage: "house.fill") }
                     .tag(AppTab.home)
-                MapTabView()
-                    .tabItem { Label("Carte", systemImage: "map.fill") }
-                    .tag(AppTab.map)
+                MyEventsView()
+                    .tabItem { Label("Agenda", systemImage: "calendar") }
+                    // Les dates de groupe qui attendent encore ma réponse.
+                    .badge(store.agendaToConfirm.count)
+                    .tag(AppTab.agenda)
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
                     // Candidats à trancher + demandes de dépannage reçues :
@@ -172,7 +174,7 @@ struct RootView: View {
         // Laisse la démo se charger et la TabView se poser.
         try? await Task.sleep(for: .milliseconds(800))
         switch route {
-        case "map": store.selectedTab = .map
+        case "agenda": store.selectedTab = .agenda
         case "sos": store.selectedTab = .sos
         case "messages": store.selectedTab = .messages
         case "profile": store.selectedTab = .profile
@@ -750,7 +752,7 @@ struct InstrumentChip: View {
                 Text(verbatim: "·")
                     .font(.caption2)
                     .foregroundStyle(JC.laiton.opacity(0.6))
-                Text(LocalizedStringKey(level.rawValue))
+                Text(LocalizedStringKey(level.label))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(JC.laiton.opacity(0.85))
             }

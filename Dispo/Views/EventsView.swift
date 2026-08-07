@@ -83,7 +83,10 @@ struct EventsView: View {
     private func label(for item: Segment) -> Text {
         switch item {
         case .feed:
-            return Text(LocalizedStringKey(item.rawValue))
+            let fresh = store.unseenGigCount
+            return fresh > 0
+                ? Text(LocalizedStringKey(item.rawValue)) + Text(verbatim: " · \(fresh)")
+                : Text(LocalizedStringKey(item.rawValue))
         case .hosting:
             let todo = store.myGigs.reduce(0) { $0 + store.pendingApplicants(for: $1).count }
             return todo > 0
@@ -99,7 +102,7 @@ struct EventsView: View {
 
     private var headerSubtitle: LocalizedStringKey {
         switch segment {
-        case .feed: return "\(store.events.filter { !$0.isDirect }.count) concerts cherchent un musicien"
+        case .feed: return "\(store.visibleGigs.count) concerts cherchent un musicien"
         case .hosting: return "Accepte ou écarte tes candidats"
         case .playing: return "Tes dépannages et tes dates à venir"
         }
@@ -109,12 +112,15 @@ struct EventsView: View {
 
     @ViewBuilder
     private var feedSection: some View {
-        let feed = store.events.filter { !$0.isDirect }
+        let feed = store.visibleGigs
+        scopeSwitch
         if feed.isEmpty {
             JCEmptyState(
                 icon: "bolt.slash",
-                title: "Aucun SOS en cours",
-                message: "Un musicien te lâche ? Publie ton SOS avec le bouton +.",
+                title: store.sosShowAll ? "Aucun SOS en cours" : "Aucun SOS pour toi",
+                message: store.sosShowAll
+                    ? "Un musicien te lâche ? Publie ton SOS avec le bouton +."
+                    : "Rien à ton instrument et à ton niveau pour l'instant. Passe sur « Tout » pour voir le reste.",
                 iconColor: JC.signal
             )
         }
@@ -131,11 +137,48 @@ struct EventsView: View {
                         .buttonStyle(PressableStyle())
                     } else {
                         NavigationLink(value: event) {
-                            EventCard(event: event)
+                            EventCard(event: event, isNew: store.isUnseenGig(event))
                         }
                         .buttonStyle(PressableStyle())
                     }
                 }
+            }
+        }
+    }
+
+    /// « Pour moi » / « Tout » — le fil est filtré par défaut sur mon
+    /// instrument et mon niveau, mais rien n'est caché de force : le nombre
+    /// d'annonces écartées est écrit noir sur blanc.
+    private var scopeSwitch: some View {
+        HStack(spacing: 10) {
+            ForEach([false, true], id: \.self) { showAll in
+                Button {
+                    withAnimation(.snappy) { store.sosShowAll = showAll }
+                } label: {
+                    Text(showAll ? "Tout" : "Pour moi")
+                        .font(.caption.weight(.heavy))
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 7)
+                        .background(
+                            store.sosShowAll == showAll ? JC.laiton.opacity(0.2) : JC.inset,
+                            in: Capsule()
+                        )
+                        .overlay(
+                            Capsule().stroke(
+                                store.sosShowAll == showAll ? JC.laiton.opacity(0.5) : .clear,
+                                lineWidth: 1
+                            )
+                        )
+                        .foregroundStyle(store.sosShowAll == showAll ? JC.laiton : .secondary)
+                }
+                .buttonStyle(PressableStyle())
+            }
+            Spacer(minLength: 0)
+            if store.filteredOutCount > 0 {
+                Text(String(format: store.tr("%lld autre·s dans « Tout »"), Int64(store.filteredOutCount)))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
     }
@@ -716,6 +759,9 @@ struct ApplicationStatusRow: View {
 /// sur le billet, il se découvre en ouvrant le SOS.
 struct EventCard: View {
     let event: GigRequest
+    /// Annonce jamais ouverte : une pastille laiton devant le titre, comme
+    /// une conversation non lue.
+    var isNew = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -737,10 +783,19 @@ struct EventCard: View {
                         TagView(text: "Postulé", color: JC.billetFeutrine)
                     }
                 }
-                Text(event.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(JC.billetInk)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if isNew {
+                        Circle()
+                            .fill(JC.billetLaiton)
+                            .frame(width: 8, height: 8)
+                            .accessibilityLabel(Text("Nouveau"))
+                    }
+                    Text(event.title)
+                        .font(.subheadline.weight(isNew ? .heavy : .bold))
+                        .foregroundStyle(JC.billetInk)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
                 Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
                     .font(.caption)
                     .foregroundStyle(JC.billetInk.opacity(0.62))
@@ -980,6 +1035,20 @@ struct EventDetailView: View {
                                         }
                                     }
                                 }
+                                // Le niveau demandé, quand l'organisateur en
+                                // a choisi un : c'est ce qui décide qui voit
+                                // l'annonce dans son fil.
+                                if let levels = event.levelsLabel {
+                                    FlowLayout(spacing: 5) {
+                                        Text("Niveau demandé")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(.secondary)
+                                        ForEach(event.levels.sorted(), id: \.self) { level in
+                                            TagView(text: level.label, color: JC.laiton)
+                                        }
+                                    }
+                                    .accessibilityLabel(Text(verbatim: levels))
+                                }
                                 if let filled = event.filledInstruments, !filled.isEmpty {
                                     FlowLayout(spacing: 5) {
                                         Text("Pourvu")
@@ -1017,7 +1086,11 @@ struct EventDetailView: View {
             .navigationTitle("SOS dépannage")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(JC.bg, for: .navigationBar)
-            .onAppear { store.loadApplicants(for: event) }
+            .onAppear {
+                store.loadApplicants(for: event)
+                // L'annonce est ouverte : sa pastille « nouveau » s'éteint.
+                store.markGigOpened(event.id)
+            }
             .safeAreaInset(edge: .bottom) {
                 bottomBar(for: event)
             }

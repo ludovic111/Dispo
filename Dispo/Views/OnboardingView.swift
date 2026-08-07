@@ -390,7 +390,7 @@ struct OnboardingView: View {
                         Button {
                             level = option
                         } label: {
-                            Text(LocalizedStringKey(option.rawValue))
+                            Text(LocalizedStringKey(option.label))
                                 .font(.caption2.weight(.bold))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)

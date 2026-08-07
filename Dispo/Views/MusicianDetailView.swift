@@ -141,7 +141,7 @@ struct MusicianDetailView: View {
                 if let summary = store.ratingSummary(for: musician) {
                     statBlock(value: "★ \(summary.averageLabel)", label: "note")
                 } else {
-                    statBlock(value: store.tr(musician.level.rawValue), label: "niveau")
+                    statBlock(value: store.tr(musician.level.label), label: "niveau")
                 }
                 Button { showFollowers = true } label: {
                     statBlock(value: "\(store.followerCount(of: musician))", label: "abonnés")
@@ -187,7 +187,7 @@ struct MusicianDetailView: View {
                 AvailabilityBadge(availability: musician.availability)
                 // Niveau : avantage Premium.
                 if store.isPremium {
-                    TagView(text: musician.level.rawValue, color: JC.laiton)
+                    TagView(text: musician.level.label, color: JC.laiton)
                 } else {
                     Button { store.showPaywall = true } label: {
                         HStack(spacing: 4) {

@@ -11,6 +11,26 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.6",
+            title: "Mes événements, et des SOS qui te parlent",
+            points: [
+                "La carte laisse sa place à « Mes événements » : toutes tes dates au même endroit, mois par mois",
+                "Ce qui attend ta réponse passe en tête — tu réponds dispo ou indispo sans quitter l'agenda",
+                "Ta prochaine date s'affiche en grand, avec le compte à rebours et l'état du line-up",
+                "L'onglet Agenda porte une pastille tant qu'un de tes groupes attend ta réponse",
+                "Les dates déjà jouées se rangent dans « Passés » : douze mois d'historique",
+                "Le fil des SOS ne te montre plus que ce qui te correspond — ton instrument, ton niveau",
+                "À la publication d'un SOS, tu choisis un ou plusieurs niveaux (ou « peu importe »)",
+                "Une pastille marque les annonces que tu n'as pas encore ouvertes",
+                "Une annonce dont tous les postes sont pourvus disparaît du fil des autres",
+                "Un lieu se saisit au code postal : la ville se trouve toute seule",
+                "Quelques musiciens d'exemple reviennent dans le réseau, avec photo et badge « Démo »",
+                "iReal Pro expliqué en clair — ce que c'est, ce que Dispo envoie, et ce qu'il se passe sans l'app",
+                "Le leader peut supprimer la grille iReal Pro d'un morceau",
+                "Le niveau « Professionnel » s'écrit désormais « Pro », partout"
+            ]
+        ),
+        PatchNote(
             version: "1.5",
             title: "Le SOS devient une vraie machine",
             points: [

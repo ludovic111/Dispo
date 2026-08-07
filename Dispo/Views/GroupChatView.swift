@@ -56,6 +56,12 @@ struct GroupChatView: View {
     }
 
     @State private var tab: Tab = .messages
+    /// Ouvre directement sur un onglet donné (l'agenda arrive sur les dates).
+    init(groupID: GroupChat.ID, initialTab: Tab = .messages) {
+        self.groupID = groupID
+        _tab = State(initialValue: initialTab)
+    }
+
     @State private var draft = ""
     /// Recherche dans le répertoire (apparaît au-delà de 8 morceaux).
     @State private var songQuery = ""

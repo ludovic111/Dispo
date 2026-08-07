@@ -123,8 +123,17 @@ final class AppStore: ObservableObject {
     @Published private(set) var pushRegistrationError: String?
     private var pushDeviceToken: String?
     private var notificationObservers: [NSObjectProtocol] = []
-    /// SOS déjà vus — pour ne notifier que les vraies nouveautés.
+    /// SOS déjà passés dans le fil — pour ne notifier que les vraies
+    /// nouveautés (rien à voir avec « ouvert », plus bas).
     private var seenGigIDs: Set<UUID> = []
+    /// SOS que j'ai réellement ouverts : tout le reste porte une pastille
+    /// « nouveau » dans la liste.
+    @Published private(set) var openedGigIDs: Set<UUID> = []
+    /// Le fil montre-t-il toutes les annonces, ou seulement celles qui
+    /// correspondent à mes instruments et à mon niveau ?
+    @Published var sosShowAll: Bool = false {
+        didSet { UserDefaults.standard.set(sosShowAll, forKey: Self.sosShowAllKey) }
+    }
     /// Groupes (messagerie d'équipe Premium) — synchronisés serveur en live
     /// (messages, événements, présence, membres) ; partitions locales.
     @Published var groups: [GroupChat] = []
@@ -202,6 +211,8 @@ final class AppStore: ObservableObject {
         "Marco Fernández", "Yann Broillet", "Léa Zbinden"
     ]
     private static let seenGigsKey = "jamconnect.seenGigs"
+    private static let openedGigsKey = "dispo.openedGigs"
+    private static let sosShowAllKey = "dispo.sosShowAll"
     private static let groupsKey = "jamconnect.groups"
     private static let myLatitudeKey = "dispo.myLatitude"
     private static let myLongitudeKey = "dispo.myLongitude"
@@ -291,6 +302,10 @@ final class AppStore: ObservableObject {
         if let saved: Set<UUID> = Self.load(key: Self.seenGigsKey) {
             seenGigIDs = saved
         }
+        if let saved: Set<UUID> = Self.load(key: Self.openedGigsKey) {
+            openedGigIDs = saved
+        }
+        sosShowAll = UserDefaults.standard.bool(forKey: Self.sosShowAllKey)
         if let saved: [GroupChat] = Self.load(key: Self.groupsKey) {
             groups = saved
         }
@@ -2031,9 +2046,7 @@ final class AppStore: ObservableObject {
         for gig in gigs where !seenGigIDs.contains(gig.id) {
             seenGigIDs.insert(gig.id)
             changed = true
-            guard !isFirstScan, !gig.isMine,
-                  !Set(gig.wantedInstruments).isDisjoint(with: profile.instruments)
-            else { continue }
+            guard !isFirstScan, !gig.isMine, gigMatchesMe(gig) else { continue }
             pushLocal(
                 title: tr("🚨 Nouveau SOS pour toi"),
                 body: "\(gig.title) · \(tr(gig.feeLabel))"
@@ -3164,18 +3177,20 @@ final class AppStore: ObservableObject {
         instrument: Instrument,
         date: Date,
         place: String,
+        neighborhood: String? = nil,
         fee: Int?,
         paymentMethod: String?,
         note: String
     ) {
         let trimmedPlace = place.trimmingCharacters(in: .whitespacesAndNewlines)
+        let town = (neighborhood ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let request = GigRequest(
             title: String(format: tr("Dépannage — %@"), tr(instrument.rawValue)),
             hostName: profile.name,
             hostId: liveUserID,
             date: date,
             place: trimmedPlace.isEmpty ? tr("À préciser") : trimmedPlace,
-            neighborhood: profile.cityLabel,
+            neighborhood: town.isEmpty ? profile.cityLabel : town,
             genre: profile.genres.first ?? musician.genres.first ?? .jazz,
             wantedInstruments: [instrument],
             fee: fee,
@@ -3898,6 +3913,7 @@ final class AppStore: ObservableObject {
             parts.append(genre.family.rawValue)
         }
         parts.append(musician.level.rawValue)
+        parts.append(musician.level.label)
         parts.append(musician.availability.badgeLabel)
         return parts.flatMap { (part: String) -> [String] in
             Self.normalized(part).split(separator: " ").map(String.init)
@@ -4145,6 +4161,140 @@ final class AppStore: ObservableObject {
     /// Candidats en attente d'une décision sur une annonce donnée.
     func pendingApplicants(for gig: GigRequest) -> [GigApplicant] {
         (applicantsByGig[gig.id] ?? []).filter { $0.status == .pending }
+    }
+
+    // MARK: - Le fil des annonces (ce que je vois, ce qui est nouveau)
+
+    /// Les annonces publiques du fil. Une annonce dont tous les postes sont
+    /// pourvus disparaît : le serveur la retire déjà de la vue, on double la
+    /// règle ici pour le mode démo et pour l'instant qui sépare l'acceptation
+    /// du prochain rafraîchissement.
+    var feedGigs: [GigRequest] {
+        events.filter { gig in
+            guard !gig.isDirect else { return false }
+            return !gig.isFilled || gig.isMine || gig.applied
+        }
+    }
+
+    /// Ce SOS me correspond-il ? Mon instrument, et le niveau demandé s'il y
+    /// en a un — avec mon niveau sur CET instrument, pas le niveau global.
+    func gigMatchesMe(_ gig: GigRequest) -> Bool {
+        gig.matches(instruments: profile.instruments) { instrument in
+            profile.level(for: instrument) ?? profile.level
+        }
+    }
+
+    /// Le fil tel qu'il s'affiche : par défaut, seulement ce qui me
+    /// correspond ; « Tout » lève le filtre sans rien cacher définitivement.
+    var visibleGigs: [GigRequest] {
+        sosShowAll ? feedGigs : feedGigs.filter(gigMatchesMe)
+    }
+
+    /// Annonces qui me correspondent mais que le filtre ne montre pas — sert
+    /// à dire honnêtement « 3 autres annonces ne correspondent pas à ton
+    /// profil » plutôt que de faire disparaître le fil en silence.
+    var filteredOutCount: Int {
+        sosShowAll ? 0 : feedGigs.count - visibleGigs.count
+    }
+
+    /// Une annonce jamais ouverte porte une pastille.
+    func isUnseenGig(_ gig: GigRequest) -> Bool {
+        !gig.isMine && !openedGigIDs.contains(gig.id)
+    }
+
+    /// Nombre d'annonces neuves (visibles et jamais ouvertes).
+    var unseenGigCount: Int {
+        visibleGigs.filter(isUnseenGig).count
+    }
+
+    /// L'annonce a été ouverte : la pastille s'éteint, définitivement.
+    func markGigOpened(_ id: UUID) {
+        guard !openedGigIDs.contains(id) else { return }
+        openedGigIDs.insert(id)
+        // Les annonces disparues (concert passé, poste pourvu) n'ont plus à
+        // occuper de place : on ne retient que ce que le fil connaît encore.
+        let alive = Set(events.map(\.id))
+        openedGigIDs.formIntersection(alive.union([id]))
+        Self.save(openedGigIDs, key: Self.openedGigsKey)
+    }
+
+    // MARK: - Agenda (« Mes événements »)
+
+    /// Tout ce qui m'attend, dans l'ordre : les dates de mes groupes, les
+    /// dépannages qu'on m'a confiés, les SOS que j'organise et les
+    /// candidatures en attente de réponse. C'est la page « Mes événements ».
+    var agenda: [AgendaItem] {
+        var items: [AgendaItem] = []
+        for group in groups {
+            for event in group.upcomingEvents {
+                items.append(
+                    AgendaItem(
+                        source: .group(
+                            groupID: group.id,
+                            name: group.name,
+                            emoji: group.emoji,
+                            event: event
+                        ),
+                        date: event.date
+                    )
+                )
+            }
+        }
+        for gig in events where !gig.isMine && gig.date > Date() {
+            if gig.myApplicationStatus == .accepted || gig.targetStatus == .accepted {
+                items.append(AgendaItem(source: .playing(gig: gig), date: gig.date))
+            } else if gig.applied && gig.myApplicationStatus == .pending {
+                items.append(AgendaItem(source: .applied(gig: gig), date: gig.date))
+            }
+        }
+        for gig in events where gig.isMine && gig.date > Date() {
+            items.append(AgendaItem(source: .hosting(gig: gig), date: gig.date))
+        }
+        return items.sorted { $0.date < $1.date }
+    }
+
+    /// Les dates de groupe où l'on attend encore ma réponse — la pastille de
+    /// l'onglet Agenda, et le premier bloc de la page.
+    var agendaToConfirm: [AgendaItem] {
+        agenda.filter { item in
+            guard case .group(_, _, _, let event) = item.source else { return false }
+            return event.status(for: profile.name) == .pending
+        }
+    }
+
+    /// Mon statut de présence sur une date de groupe.
+    func myAttendance(for event: GroupEvent) -> AttendanceStatus {
+        event.status(for: profile.name)
+    }
+
+    /// La prochaine chose qui m'attend, quelle qu'elle soit.
+    var nextAgendaItem: AgendaItem? { agenda.first }
+
+    /// Ce que j'ai joué : les dates de groupe passées (12 mois) où je n'étais
+    /// pas indisponible. Les SOS passés, eux, ne remontent plus du serveur —
+    /// la vue du fil s'arrête à aujourd'hui.
+    var pastAgenda: [AgendaItem] {
+        let now = Date()
+        let floor = Calendar.current.date(byAdding: .month, value: -12, to: now) ?? now
+        var items: [AgendaItem] = []
+        for group in groups {
+            for event in group.allEvents
+            where event.date <= now && event.date >= floor
+                && event.status(for: profile.name) != .unavailable {
+                items.append(
+                    AgendaItem(
+                        source: .group(
+                            groupID: group.id,
+                            name: group.name,
+                            emoji: group.emoji,
+                            event: event
+                        ),
+                        date: event.date
+                    )
+                )
+            }
+        }
+        return items.sorted { $0.date > $1.date }
     }
 
     // MARK: - Line-up d'un événement de groupe

@@ -11,6 +11,8 @@ struct SOSRequestSheet: View {
     @State private var instrument: Instrument?
     @State private var date: Date = SOSRequestSheet.defaultDate
     @State private var place: String = ""
+    @State private var postalCode: String = ""
+    @State private var city: String = ""
     @State private var feeText: String = ""
     @State private var paymentMethod: PaymentMethod?
     @State private var customPayment = ""
@@ -82,8 +84,17 @@ struct SOSRequestSheet: View {
                     }
                 }
 
-                Section("Lieu") {
+                Section {
                     TextField("Salle, bar, adresse…", text: $place)
+                    PostalCodeField(
+                        postalCode: $postalCode,
+                        city: $city,
+                        country: store.profile.resolvedCountry
+                    )
+                } header: {
+                    Text("Lieu")
+                } footer: {
+                    Text("Tape le code postal : la ville se trouve toute seule.")
                 }
 
                 // Cachet entre professionnels uniquement.
@@ -133,6 +144,10 @@ struct SOSRequestSheet: View {
             }
             .onAppear {
                 if instrument == nil { instrument = musician.instruments.first }
+                if postalCode.isEmpty && city.isEmpty {
+                    postalCode = store.profile.postalCode ?? ""
+                    city = store.profile.resolvedCity
+                }
             }
         }
     }
@@ -146,6 +161,10 @@ struct SOSRequestSheet: View {
             instrument: instrument,
             date: date,
             place: place,
+            neighborhood: [postalCode, city]
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " "),
             fee: fee,
             paymentMethod: PaymentMethodField.storedValue(
                 method: paymentMethod,

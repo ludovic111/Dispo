@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
-    MARKETING_VERSION: "1.5"
-    CURRENT_PROJECT_VERSION: "20"
+    MARKETING_VERSION: "1.6"
+    CURRENT_PROJECT_VERSION: "21"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift

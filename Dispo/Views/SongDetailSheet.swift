@@ -36,6 +36,8 @@ struct SongDetailSheet: View {
     @State private var copiedGrid = false
     /// iReal Pro n'est pas installé : on le dit au lieu de ne rien faire.
     @State private var missingIReal = false
+    /// Suppression du lien iReal Pro en attente de confirmation.
+    @State private var confirmIRealDelete = false
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -101,6 +103,16 @@ struct SongDetailSheet: View {
                 Button("Annuler", role: .cancel) {}
             } message: {
                 Text("La grille s'ouvre dans iReal Pro, l'app de play-along des musiciens. Sans elle, la grille reste lisible ici et se copie d'un tap.")
+            }
+            .confirmationDialog(
+                "Supprimer la grille iReal Pro ?",
+                isPresented: $confirmIRealDelete,
+                titleVisibility: .visible
+            ) {
+                Button("Supprimer", role: .destructive) { removeIRealLink() }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("Le lien partagé par le groupe est retiré. La grille d'accords et la tonalité, elles, restent en place.")
             }
             .sheet(isPresented: $showListen) {
                 if let song {
@@ -329,7 +341,7 @@ struct SongDetailSheet: View {
             : nil
 
         if let url = pasted ?? generated {
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 Button { openIReal(url) } label: {
                     Label("Ouvrir dans iReal Pro", systemImage: "arrow.up.forward.app.fill")
                         .font(.subheadline.weight(.bold))
@@ -339,34 +351,93 @@ struct SongDetailSheet: View {
                         .foregroundStyle(JC.premiumTint)
                 }
                 .buttonStyle(PressableStyle())
-                if pasted == nil {
-                    Text(shift == 0
-                         ? "Grille envoyée telle quelle dans iReal Pro."
-                         : "Grille envoyée dans ta tonalité (\(store.tr(activeTransposition.rawValue))).")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                if isLeader, pasted == nil {
-                    Button { showEdit = true } label: {
-                        Text("Coller plutôt le lien exporté d'iReal Pro")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(JC.bronze)
+
+                irealExplainer(pasted: pasted != nil, shift: shift)
+
+                if isLeader {
+                    HStack(spacing: 14) {
+                        if pasted == nil {
+                            Button { showEdit = true } label: {
+                                Text("Coller le lien exporté d'iReal Pro")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(JC.bronze)
+                            }
+                            .buttonStyle(PressableStyle())
+                        } else {
+                            Button(role: .destructive) { confirmIRealDelete = true } label: {
+                                Label("Supprimer la grille iReal Pro", systemImage: "trash")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(JC.signal)
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .buttonStyle(PressableStyle())
                 }
             }
         } else if isLeader {
             // Ni grille ni lien : on propose d'en ajouter un.
-            Button { showEdit = true } label: {
-                Label("Ajouter le lien iReal Pro", systemImage: "link.badge.plus")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(JC.premiumTint)
+            VStack(spacing: 8) {
+                Button { showEdit = true } label: {
+                    Label("Ajouter la grille iReal Pro", systemImage: "link.badge.plus")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(JC.premiumTint)
+                }
+                .buttonStyle(PressableStyle())
+                irealExplainer(pasted: false, shift: shift)
             }
-            .buttonStyle(PressableStyle())
         }
+    }
+
+    /// Dire ce qu'est iReal Pro, en français, à quelqu'un qui n'en a jamais
+    /// entendu parler — et ce que Dispo lui envoie exactement.
+    private func irealExplainer(pasted: Bool, shift: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 7) {
+                Image(systemName: "info.circle")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(JC.premiumTint)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("iReal Pro est une app à part (payante, ~15 CHF) qui joue une grille d'accords en boucle avec basse, batterie et piano — pour travailler un morceau tout seul.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    if pasted {
+                        Text("Ici, c'est la grille partagée par le groupe qui s'ouvre.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(shift == 0
+                             ? "Dispo envoie la grille du morceau telle quelle."
+                             : "Dispo envoie la grille déjà transposée dans ta tonalité (\(store.tr(activeTransposition.rawValue))) — rien à recopier.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("Sans l'app installée, la grille reste lisible ici et se copie d'un tap.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(10)
+        .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    /// Retire le lien iReal Pro partagé par le groupe. La tonalité et la
+    /// grille d'accords restent : elles servent à tout le monde, y compris à
+    /// ceux qui n'ont pas l'app.
+    private func removeIRealLink() {
+        guard let group, let song else { return }
+        store.updateSongDetails(
+            song,
+            key: song.key ?? "",
+            chords: song.chords ?? "",
+            irealURL: "",
+            in: group
+        )
     }
 
     /// Ouvre le lien, ou emmène sur l'App Store si iReal Pro n'est pas
@@ -622,10 +693,17 @@ struct SongEditSheet: View {
                     TextField("irealb://…", text: $ireal)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                    if !ireal.trimmingCharacters(in: .whitespaces).isEmpty {
+                        Button(role: .destructive) {
+                            ireal = ""
+                        } label: {
+                            Label("Supprimer la grille iReal Pro", systemImage: "trash")
+                        }
+                    }
                 } header: {
                     Text("iReal Pro")
                 } footer: {
-                    Text("Dans iReal Pro : appui long sur le morceau → Partager → Copier le lien, puis colle-le ici. Les membres qui ont l'app l'ouvrent d'un tap.")
+                    Text("iReal Pro est une app à part qui joue la grille en boucle avec un accompagnement. Dans iReal Pro : appui long sur le morceau → Partager → Copier le lien, puis colle-le ici. Sans lien collé, Dispo fabrique la grille tout seul à partir des accords ci-dessus.")
                 }
             }
             .scrollContentBackground(.hidden)

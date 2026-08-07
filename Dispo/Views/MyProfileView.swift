@@ -280,7 +280,7 @@ struct MyProfileView: View {
         guard let level = store.profile.level(for: instrument) else {
             return store.tr(instrument.rawValue)
         }
-        return store.tr(instrument.rawValue) + " · " + store.tr(level.rawValue)
+        return store.tr(instrument.rawValue) + " · " + store.tr(level.label)
     }
 
     /// Bouton principal — comme « Suivre / Contacter » sur les autres profils.
@@ -818,14 +818,14 @@ struct EditProfileSheet: View {
                             store.saveProfile()
                         } label: {
                             if level == option {
-                                Label(LocalizedStringKey(option.rawValue), systemImage: "checkmark")
+                                Label(LocalizedStringKey(option.label), systemImage: "checkmark")
                             } else {
-                                Text(LocalizedStringKey(option.rawValue))
+                                Text(LocalizedStringKey(option.label))
                             }
                         }
                     }
                 } label: {
-                    Text(LocalizedStringKey(level?.rawValue ?? "Niveau"))
+                    Text(LocalizedStringKey(level?.label ?? "Niveau"))
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)

@@ -200,7 +200,7 @@ struct SOSMatchRow: View {
                     SocialLinkBadge(link: store.socialLink(with: match.musician.name))
                         .fixedSize()
                     Text(store.isPremium
-                         ? "\(matchedInstruments) · \(store.tr(match.musician.level.rawValue))"
+                         ? "\(matchedInstruments) · \(store.tr(match.musician.level.label))"
                          : matchedInstruments)
                         .font(.caption)
                         .foregroundStyle(.secondary)

@@ -460,7 +460,7 @@ enum LocationPrecision: String, Codable, CaseIterable, Identifiable {
     /// Clé de traduction du libellé.
     var label: String {
         switch self {
-        case .hidden: return "Ne pas apparaître sur la carte"
+        case .hidden: return "Ne pas partager ma position"
         case .city: return "Approximative (ville)"
         case .exactFriends: return "Exacte pour mes amis"
         case .exactEveryone: return "Exacte pour tous"
@@ -528,6 +528,13 @@ enum Level: String, Codable, CaseIterable, Identifiable, Comparable {
     case pro = "Professionnel"
 
     var id: String { rawValue }
+
+    /// Ce qu'on lit à l'écran. Le rawValue reste « Professionnel » (il est
+    /// stocké tel quel en base et dans les profils sauvegardés) — mais entre
+    /// musiciens, on dit « pro ».
+    var label: String {
+        self == .pro ? "Pro" : rawValue
+    }
 
     private var rank: Int {
         switch self {
@@ -1655,6 +1662,10 @@ struct GigRequest: Codable, Identifiable, Hashable {
     var neighborhood: String
     var genre: Genre
     var wantedInstruments: [Instrument]
+    /// Niveaux acceptés pour ce SOS (nil ou vide = tous les niveaux). Sert à
+    /// ne montrer l'annonce qu'aux musiciens du bon calibre. Optionnel — les
+    /// annonces d'avant la 1.6 n'en ont pas.
+    var wantedLevels: [Level]?
     /// Instruments déjà pourvus (candidat accepté) — retirés des postes
     /// ouverts. Optionnel : absent de SeedData.json et des caches d'avant 1.2
     /// (le décodeur synthétisé ignore les valeurs par défaut).
@@ -1697,9 +1708,39 @@ struct GigRequest: Codable, Identifiable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, title, hostName, hostId, date, place, neighborhood, genre
-        case wantedInstruments, filledInstruments, fee, paymentMethod, descriptionText
+        case wantedInstruments, wantedLevels, filledInstruments, fee, paymentMethod
+        case descriptionText
         case applied, myApplicationInstrument, myApplicationStatus, isMine, postedAt
         case groupId, eventId, targetId, targetStatus
+    }
+
+    /// Les niveaux demandés, prêts à l'emploi (vide = tous les niveaux).
+    var levels: [Level] { wantedLevels ?? [] }
+
+    /// Libellé des niveaux demandés (nil = ouvert à tous).
+    var levelsLabel: String? {
+        guard !levels.isEmpty, levels.count < Level.allCases.count else { return nil }
+        return levels.sorted().map(\.label).joined(separator: " · ")
+    }
+
+    /// Ce SOS me correspond-il ? Deux questions, celles qu'on se pose vraiment
+    /// en regardant une annonce : « est-ce que je joue de cet instrument ? »
+    /// et « est-ce que je suis du niveau demandé ? ». Un poste déjà pourvu ne
+    /// compte pas, et un profil sans instrument voit tout (il n'a rien dit de
+    /// lui, on ne va pas décider à sa place).
+    func matches(instruments myInstruments: [Instrument], levelFor: (Instrument) -> Level) -> Bool {
+        // Mes annonces, celles qui me sont adressées et celles où j'ai posé
+        // ma candidature restent visibles quoi qu'il arrive : on ne fait pas
+        // disparaître quelque chose que la personne suit déjà.
+        if isMine || isDirect || applied { return true }
+        guard !myInstruments.isEmpty else { return true }
+        let open = openInstruments.isEmpty ? wantedInstruments : openInstruments
+        guard !open.isEmpty else { return true }
+        let mine = Set(myInstruments)
+        let playable = open.filter { mine.contains($0) }
+        guard !playable.isEmpty else { return false }
+        guard !levels.isEmpty else { return true }
+        return playable.contains { levels.contains(levelFor($0)) }
     }
 
     var feeLabel: String {
@@ -1757,6 +1798,54 @@ struct PlayingDate: Identifiable, Hashable {
     var origin: Origin
     /// L'annonce d'origine, pour rouvrir le SOS d'un tap.
     var gig: GigRequest?
+}
+
+/// Une ligne de l'agenda « Mes événements » : tout ce qui m'attend, d'où que
+/// ça vienne — une date de mes groupes, un dépannage qu'on m'a confié, un SOS
+/// que j'organise, une candidature en attente de réponse.
+struct AgendaItem: Identifiable, Hashable {
+    enum Source: Hashable {
+        /// Une date d'un de mes groupes (concert, répé, jam).
+        case group(groupID: UUID, name: String, emoji: String, event: GroupEvent)
+        /// Un dépannage accepté : je joue chez quelqu'un.
+        case playing(gig: GigRequest)
+        /// Un SOS que j'ai publié et que je gère.
+        case hosting(gig: GigRequest)
+        /// J'ai postulé, j'attends la réponse de l'organisateur.
+        case applied(gig: GigRequest)
+    }
+
+    var source: Source
+    var date: Date
+
+    var id: String {
+        switch source {
+        case .group(_, _, _, let event): return "group-\(event.id.uuidString)"
+        case .playing(let gig): return "playing-\(gig.id.uuidString)"
+        case .hosting(let gig): return "hosting-\(gig.id.uuidString)"
+        case .applied(let gig): return "applied-\(gig.id.uuidString)"
+        }
+    }
+
+    var title: String {
+        switch source {
+        case .group(_, _, _, let event): return event.title
+        case .playing(let gig), .hosting(let gig), .applied(let gig): return gig.title
+        }
+    }
+
+    var place: String {
+        switch source {
+        case .group(_, _, _, let event): return event.venue
+        case .playing(let gig), .hosting(let gig), .applied(let gig):
+            return [gig.place, gig.neighborhood].filter { !$0.isEmpty }.joined(separator: " · ")
+        }
+    }
+
+    /// Le mois d'appartenance, pour grouper la liste.
+    func monthKey(calendar: Calendar = .current) -> Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
 }
 
 /// Un musicien qui joue UN soir avec le groupe : trouvé par SOS, accepté par

@@ -171,6 +171,9 @@ final class SupabaseBackend: Sendable {
         var photoUrl: String?
         var isPremium: Bool
         var isDemo: Bool?
+        /// Profil d'exemple laissé visible dans le feed des vrais comptes
+        /// (toujours badgé « Démo »). Sans lui, un `is_demo` reste caché.
+        var isShowcase: Bool?
         /// Pseudos réseaux sociaux (jsonb côté serveur).
         var socials: [String: String]?
         /// Niveau par instrument (jsonb côté serveur).
@@ -192,6 +195,7 @@ final class SupabaseBackend: Sendable {
             case photoUrl = "photo_url"
             case isPremium = "is_premium"
             case isDemo = "is_demo"
+            case isShowcase = "is_showcase"
             case ratingAvg = "rating_avg"
             case ratingCount = "rating_count"
             case demoVideos = "demo_videos"
@@ -370,6 +374,8 @@ final class SupabaseBackend: Sendable {
         var neighborhood: String?
         var genre: String
         var wantedInstruments: [String]
+        /// Niveaux acceptés (nil / vide = tous).
+        var wantedLevels: [String]?
         var filledInstruments: [String]?
         var fee: Int?
         var description: String?
@@ -385,6 +391,7 @@ final class SupabaseBackend: Sendable {
             case id, date, genre, fee, description, title, place, neighborhood
             case hostId = "host_id"
             case wantedInstruments = "wanted_instruments"
+            case wantedLevels = "wanted_levels"
             case filledInstruments = "filled_instruments"
             case postedAt = "posted_at"
             case isLocked = "is_locked"
@@ -410,6 +417,7 @@ final class SupabaseBackend: Sendable {
                 neighborhood: neighborhood ?? "",
                 genre: Genre(rawValue: genre) ?? .jazz,
                 wantedInstruments: wantedInstruments.compactMap(Instrument.init(rawValue:)),
+                wantedLevels: wantedLevels.map { $0.compactMap(Level.init(rawValue:)) },
                 filledInstruments: (filledInstruments ?? []).compactMap(Instrument.init(rawValue:)),
                 fee: fee,
                 paymentMethod: paymentMethod,
@@ -475,16 +483,17 @@ final class SupabaseBackend: Sendable {
 
     /// Musiciens du feed (profils complets, sauf moi). La note étoilée
     /// arrive agrégée sur le profil (moyenne + nombre, jamais le détail).
-    /// Les musiciens du réseau. Les comptes d'exemple (`is_demo`) sont écartés
-    /// dès qu'un vrai compte regarde : un utilisateur ne doit jamais tomber
-    /// sur un profil fabriqué. Ils restent visibles entre comptes de démo
-    /// (App Review), et le mode découverte hors connexion garde son jeu local.
+    /// Les musiciens du réseau. Les comptes d'exemple (`is_demo`) restent
+    /// écartés — un utilisateur ne doit pas croire qu'un profil fabriqué est
+    /// un vrai musicien — SAUF la poignée marquée `is_showcase` : elle donne
+    /// un réseau habité à celui qui vient de s'inscrire, et l'app la badge
+    /// « Démo » partout où elle apparaît.
     func fetchMusicians(excluding myID: UUID) async throws -> [Musician] {
         let profiles = try await fetchProfiles()
         let iAmDemo = profiles.first { $0.id == myID }?.isDemo == true
         return profiles
             .filter { $0.id != myID }
-            .filter { iAmDemo || $0.isDemo != true }
+            .filter { iAmDemo || $0.isDemo != true || $0.isShowcase == true }
             .compactMap { $0.asMusician() }
     }
 
@@ -844,6 +853,7 @@ final class SupabaseBackend: Sendable {
             let neighborhood: String
             let genre: String
             let wanted_instruments: [String]
+            let wanted_levels: [String]?
             let fee: Int?
             let payment_method: String?
             let description: String
@@ -861,6 +871,7 @@ final class SupabaseBackend: Sendable {
             neighborhood: gig.neighborhood,
             genre: gig.genre.rawValue,
             wanted_instruments: gig.wantedInstruments.map(\.rawValue),
+            wanted_levels: gig.levels.isEmpty ? nil : gig.levels.map(\.rawValue),
             fee: gig.fee,
             payment_method: gig.paymentMethod,
             description: gig.descriptionText,

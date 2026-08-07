@@ -215,7 +215,7 @@ struct SettingsSheet: View {
 
     private func descriptionKey(for option: LocationPrecision) -> String {
         switch option {
-        case .hidden: return "Aucune épingle, aucune distance — trouvable par nom et instrument"
+        case .hidden: return "Aucune distance affichée — trouvable par nom et instrument"
         case .city: return "Recommandé — visible à ~5 km près"
         case .exactFriends: return "Position précise pour les amis (suivi mutuel)"
         case .exactEveryone: return "Position précise pour tout le réseau"

@@ -414,40 +414,97 @@ struct CityPickerSheet: View {
     let onPick: (City) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
+    /// Ville trouvée par géocodage quand le code postal tapé n'est pas dans
+    /// l'annuaire embarqué (1201, 1205, 74100…).
+    @StateObject private var resolver = PostalCodeResolver()
+    @State private var resolvedCity: String?
+
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespaces)
+    }
 
     private var results: [City] {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return country.cities }
+        guard !trimmedQuery.isEmpty else { return country.cities }
         return country.cities.filter {
-            $0.name.localizedCaseInsensitiveContains(trimmed)
-                || $0.postalCode.localizedCaseInsensitiveContains(trimmed)
+            $0.name.localizedCaseInsensitiveContains(trimmedQuery)
+                || $0.postalCode.localizedCaseInsensitiveContains(trimmedQuery)
         }
     }
 
     var body: some View {
         NavigationStack {
-            List(results) { city in
-                Button {
-                    onPick(city)
-                    dismiss()
-                } label: {
-                    HStack {
-                        Text(city.postalCode)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 64, alignment: .leading)
-                        Text(city.name)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if selected == city {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(JC.laiton)
+            List {
+                // Un code postal inconnu de la liste reste utilisable : Apple
+                // nous donne la ville, on la propose telle quelle.
+                if let resolvedCity, results.isEmpty {
+                    Section {
+                        Button {
+                            onPick(City(name: resolvedCity, postalCode: trimmedQuery.uppercased()))
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Text(trimmedQuery.uppercased())
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 64, alignment: .leading)
+                                Text(resolvedCity)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "sparkle.magnifyingglass")
+                                    .foregroundStyle(JC.laiton)
+                            }
+                        }
+                    } header: {
+                        Text("Trouvé pour ce code postal")
+                    }
+                }
+                ForEach(results) { city in
+                    Button {
+                        onPick(city)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Text(city.postalCode)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 64, alignment: .leading)
+                            Text(city.name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if selected == city {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(JC.laiton)
+                            }
                         }
                     }
                 }
+                if results.isEmpty && resolvedCity == nil {
+                    Text(resolver.status == .searching
+                         ? "Recherche…"
+                         : "Aucune ville — essaie le code postal.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .searchable(text: $query, prompt: Text("Ville ou code postal…"))
+            .onChange(of: query) { _, value in
+                resolvedCity = nil
+                // On n'appelle le géocodeur que pour ce qui ressemble à un
+                // code postal, et seulement si l'annuaire n'a rien : taper
+                // « Gen » ne doit pas déclencher une recherche réseau.
+                guard value.contains(where: \.isNumber), results.isEmpty else {
+                    resolver.reset()
+                    return
+                }
+                resolver.resolve(
+                    code: value.trimmingCharacters(in: .whitespaces),
+                    country: country
+                ) { found in
+                    resolvedCity = found
+                }
+            }
             .navigationTitle("Ville / région")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

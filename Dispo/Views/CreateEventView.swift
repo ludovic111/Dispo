@@ -7,10 +7,14 @@ struct CreateEventView: View {
 
     @State private var title: String
     @State private var place: String
-    @State private var neighborhood = "Carouge"
+    /// Le lieu se saisit au code postal : la ville se trouve toute seule.
+    @State private var postalCode = ""
+    @State private var city = ""
     @State private var date: Date
     @State private var genre: Genre = .latin
     @State private var wanted: Set<Instrument> = []
+    /// Niveaux acceptés (vide = ouvert à tous les niveaux).
+    @State private var levels: Set<Level> = []
     @State private var feeMode: FeeMode = .negotiable
     @State private var feeText = ""
     @State private var paymentMethod: PaymentMethod?
@@ -54,15 +58,40 @@ struct CreateEventView: View {
         self.eventID = eventID
     }
 
-    private let neighborhoods = [
-        "Carouge", "Eaux-Vives", "Plainpalais", "Pâquis", "Champel",
-        "Servette", "Jonction", "Vieille-Ville", "Meyrin", "Lancy", "Onex", "Vernier"
-    ]
-
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
         !place.trimmingCharacters(in: .whitespaces).isEmpty &&
         !wanted.isEmpty
+    }
+
+    /// Ce qu'on lit sous le nom de la salle : « 1227 Carouge », ou la ville
+    /// seule si le code postal n'a rien donné.
+    private var neighborhoodLabel: String {
+        let code = postalCode.trimmingCharacters(in: .whitespaces)
+        let town = city.trimmingCharacters(in: .whitespaces)
+        if !code.isEmpty && !town.isEmpty { return "\(code) \(town)" }
+        return town.isEmpty ? code : town
+    }
+
+    /// Pastille de niveau — `nil` = « Peu importe » (aucun niveau coché).
+    private func levelChip(_ level: Level?) -> some View {
+        let isOn = level.map { levels.contains($0) } ?? levels.isEmpty
+        return Button {
+            if let level {
+                if levels.contains(level) { levels.remove(level) } else { levels.insert(level) }
+            } else {
+                levels.removeAll()
+            }
+        } label: {
+            Text(LocalizedStringKey(level?.label ?? "Peu importe"))
+                .font(.caption.weight(.heavy))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(isOn ? JC.laiton.opacity(0.2) : JC.inset, in: Capsule())
+                .overlay(Capsule().stroke(isOn ? JC.laiton.opacity(0.5) : .clear, lineWidth: 1))
+                .foregroundStyle(isOn ? JC.laiton : .primary)
+        }
+        .buttonStyle(.plain)
     }
 
     var body: some View {
@@ -93,11 +122,33 @@ struct CreateEventView: View {
                     }
                 }
 
-                Section("Lieu") {
+                Section {
                     TextField("Salle ou bar — ex. Le Chat Noir", text: $place)
-                    Picker("Quartier", selection: $neighborhood) {
-                        ForEach(neighborhoods, id: \.self) { Text($0) }
+                    PostalCodeField(
+                        postalCode: $postalCode,
+                        city: $city,
+                        country: store.profile.resolvedCountry
+                    )
+                } header: {
+                    Text("Lieu")
+                } footer: {
+                    Text("Tape le code postal : la ville se trouve toute seule.")
+                }
+
+                Section {
+                    FlowLayout(spacing: 8) {
+                        levelChip(nil)
+                        ForEach(Level.allCases) { level in
+                            levelChip(level)
+                        }
                     }
+                    .padding(.vertical, 2)
+                } header: {
+                    Text("Niveau demandé")
+                } footer: {
+                    Text(levels.isEmpty
+                         ? "Ouvert à tous : l'annonce s'affiche chez tous les musiciens qui jouent de l'instrument recherché."
+                         : "Seuls les musiciens de ce niveau verront l'annonce dans leur fil.")
                 }
 
                 // Musicien recherché — une section par famille d'instruments.
@@ -176,6 +227,14 @@ struct CreateEventView: View {
             .background(JC.bg)
             .navigationTitle("Publier un SOS")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                // Par défaut, le concert est chez moi : le cas le plus
+                // fréquent ne demande alors aucune saisie.
+                if postalCode.isEmpty && city.isEmpty {
+                    postalCode = store.profile.postalCode ?? ""
+                    city = store.profile.resolvedCity
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }
@@ -187,9 +246,10 @@ struct CreateEventView: View {
                             hostName: store.profile.name,
                             date: date,
                             place: place,
-                            neighborhood: neighborhood,
+                            neighborhood: neighborhoodLabel,
                             genre: genre,
                             wantedInstruments: Array(wanted).sorted { $0.rawValue < $1.rawValue },
+                            wantedLevels: levels.isEmpty ? nil : levels.sorted(),
                             fee: {
                                 switch feeMode {
                                 case .amount: return Int(feeText.trimmingCharacters(in: .whitespaces))

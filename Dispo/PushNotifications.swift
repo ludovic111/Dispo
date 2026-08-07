@@ -59,7 +59,8 @@ final class DispoAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
 
 enum AppTab: String, Hashable {
     case home
-    case map
+    /// « Mes événements » — l'agenda du musicien (a remplacé la carte en 1.6).
+    case agenda
     case sos
     case messages
     case profile
