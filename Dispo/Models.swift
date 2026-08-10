@@ -387,10 +387,13 @@ enum Availability: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Libellé court des badges.
+    /// Libellé court des badges. Attention : le rawValue « Ce soir » est
+    /// persisté (SeedData, Supabase) et ne bouge pas ; seul l'affichage dit
+    /// « aujourd'hui », qui est la vérité — le filtre travaille au jour près,
+    /// pas à l'heure près.
     var badgeLabel: String {
         switch self {
-        case .tonight: return "Dispo ce soir"
+        case .tonight: return "Dispo aujourd'hui"
         case .thisWeek: return "Cette semaine"
         case .weekend: return "Ce week-end"
         case .onRequest: return "Sur demande"
@@ -1777,27 +1780,6 @@ enum GigApplicationStatus: String, Codable, Hashable {
 /// État d'une demande de dépannage adressée à un musicien précis.
 enum DirectRequestStatus: String, Codable, Hashable {
     case pending, accepted, declined
-}
-
-/// Une date où JE joue : un SOS où j'ai été retenu, ou un événement d'un de
-/// mes groupes où j'ai confirmé. Les deux côtés du SOS (celui qui cherche,
-/// celui qui dépanne) vivent au même endroit — l'onglet SOS.
-struct PlayingDate: Identifiable, Hashable {
-    enum Origin: Hashable {
-        /// Dépannage accepté chez quelqu'un.
-        case sos(host: String)
-        /// Date d'un de mes groupes.
-        case group(name: String, emoji: String, groupID: UUID)
-    }
-
-    var id: UUID
-    var date: Date
-    var title: String
-    var place: String
-    var instrument: Instrument?
-    var origin: Origin
-    /// L'annonce d'origine, pour rouvrir le SOS d'un tap.
-    var gig: GigRequest?
 }
 
 /// Une ligne de l'agenda « Mes événements » : tout ce qui m'attend, d'où que

@@ -1,22 +1,24 @@
 import SwiftUI
 import MapKit
 
-/// L'onglet SOS tient les deux bouts de la même histoire, sans page en plus :
-/// le fil des annonces, ce que j'organise (mes SOS et leurs candidats), et ce
-/// que je joue (les dépannages qu'on m'a confiés + mes dates de groupe).
+/// L'onglet SOS ne parle que de dépannage, et en deux temps : les SOS des
+/// autres (« SOS »), et les miens avec leurs candidats (« Mes SOS »).
+///
+/// Ce que je joue — dépannages acceptés, candidatures en attente, demandes
+/// reçues — a rejoint l'onglet Sessions en 1.7 : une date est une date, elle
+/// n'a pas à vivre dans deux écrans.
 struct EventsView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showCreate = false
     @State private var segment: Segment = .feed
-    /// Annonces dépliées dans « J'organise ».
+    /// Annonces dépliées dans « Mes SOS ».
     @State private var expanded: Set<UUID> = []
     /// Annonce dont le retrait est en cours de confirmation.
     @State private var gigToCancel: GigRequest?
 
     enum Segment: String, CaseIterable, Identifiable {
-        case feed = "Annonces"
-        case hosting = "J'organise"
-        case playing = "Je joue"
+        case feed = "SOS"
+        case hosting = "Mes SOS"
         var id: String { rawValue }
     }
 
@@ -45,7 +47,6 @@ struct EventsView: View {
                         switch segment {
                         case .feed: feedSection
                         case .hosting: hostingSection
-                        case .playing: playingSection
                         }
                     }
                     .padding(.horizontal, 18)
@@ -92,11 +93,6 @@ struct EventsView: View {
             return todo > 0
                 ? Text(LocalizedStringKey(item.rawValue)) + Text(verbatim: " · \(todo)")
                 : Text(LocalizedStringKey(item.rawValue))
-        case .playing:
-            let todo = store.incomingRequests.filter { $0.targetStatus == .pending }.count
-            return todo > 0
-                ? Text(LocalizedStringKey(item.rawValue)) + Text(verbatim: " · \(todo)")
-                : Text(LocalizedStringKey(item.rawValue))
         }
     }
 
@@ -104,7 +100,6 @@ struct EventsView: View {
         switch segment {
         case .feed: return "\(store.visibleGigs.count) concerts cherchent un musicien"
         case .hosting: return "Accepte ou écarte tes candidats"
-        case .playing: return "Tes dépannages et tes dates à venir"
         }
     }
 
@@ -114,6 +109,8 @@ struct EventsView: View {
     private var feedSection: some View {
         let feed = store.visibleGigs
         scopeSwitch
+        // Le fil ne montre plus mes annonces (1.7) : sans ça, on les cherche.
+        mineElsewhereHint
         if feed.isEmpty {
             JCEmptyState(
                 icon: "bolt.slash",
@@ -146,6 +143,35 @@ struct EventsView: View {
         }
     }
 
+    /// Mes propres annonces ne sont plus dans le fil : on dit où elles sont,
+    /// et un tap y emmène. Une chose qui disparaît sans explication, on la
+    /// cherche — et on finit par la republier.
+    @ViewBuilder
+    private var mineElsewhereHint: some View {
+        let mine = store.myGigs.count
+        if mine > 0 {
+            Button { withAnimation(.snappy) { segment = .hosting } } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "megaphone.fill")
+                        .font(.caption2.weight(.bold))
+                    Text(String(
+                        format: store.tr("Tes %lld annonce·s sont dans « Mes SOS »"),
+                        Int64(mine)
+                    ))
+                    .font(.caption.weight(.semibold))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
+                }
+                .foregroundStyle(JC.laiton)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(JC.laiton.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(PressableStyle())
+        }
+    }
+
     /// « Pour moi » / « Tout » — le fil est filtré par défaut sur mon
     /// instrument et mon niveau, mais rien n'est caché de force : le nombre
     /// d'annonces écartées est écrit noir sur blanc.
@@ -155,7 +181,7 @@ struct EventsView: View {
                 Button {
                     withAnimation(.snappy) { store.sosShowAll = showAll }
                 } label: {
-                    Text(showAll ? "Tout" : "Pour moi")
+                    Text(showAll ? LocalizedStringKey("Tout") : "Pour moi")
                         .font(.caption.weight(.heavy))
                         .padding(.horizontal, 13)
                         .padding(.vertical, 7)
@@ -219,62 +245,6 @@ struct EventsView: View {
                     )
                     ForEach(store.mySentRequests) { request in
                         SentRequestRow(request: request) { gigToCancel = request }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: Ce que je joue
-
-    @ViewBuilder
-    private var playingSection: some View {
-        VStack(spacing: 16) {
-            let toAnswer = store.incomingRequests.filter { $0.targetStatus == .pending }
-            let dates = store.myNextDates
-            let applications = store.myApplications.filter { $0.myApplicationStatus != .accepted }
-
-            if toAnswer.isEmpty && dates.isEmpty && applications.isEmpty {
-                JCEmptyState(
-                    icon: "music.mic",
-                    title: "Aucune date pour l'instant",
-                    message: "Postule à un SOS depuis les annonces : dès qu'on te prend, la date s'affiche ici.",
-                    iconColor: JC.feutrine
-                )
-            }
-
-            if !toAnswer.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeader(
-                        title: "On te demande de dépanner",
-                        subtitle: "Réponds d'un tap — l'organisateur est prévenu tout de suite"
-                    )
-                    ForEach(toAnswer) { request in
-                        IncomingRequestCard(request: request)
-                    }
-                }
-            }
-
-            if !dates.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeader(
-                        title: "Mes prochaines dates",
-                        subtitle: "Tes dépannages acceptés et les concerts de tes groupes"
-                    )
-                    ForEach(dates) { date in
-                        PlayingDateRow(item: date)
-                    }
-                }
-            }
-
-            if !applications.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeader(title: "Mes candidatures", subtitle: "En attente de la réponse de l'organisateur")
-                    ForEach(applications) { gig in
-                        NavigationLink(value: gig) {
-                            ApplicationStatusRow(gig: gig)
-                        }
-                        .buttonStyle(PressableStyle())
                     }
                 }
             }
@@ -423,7 +393,7 @@ struct ManagedGigCard: View {
                     HStack(spacing: 5) {
                         Image(systemName: isExpanded ? "chevron.up" : "person.2.fill")
                             .font(.caption2.weight(.bold))
-                        Text(isExpanded ? "Replier" : "\(applicants.count) candidatures")
+                        Text(isExpanded ? LocalizedStringKey("Replier") : "\(applicants.count) candidatures")
                             .font(.caption.weight(.heavy))
                     }
                     .foregroundStyle(JC.bronze)
@@ -648,115 +618,10 @@ struct SentRequestRow: View {
     }
 }
 
-// MARK: - Mes dates (côté musicien)
+// MARK: - Le billet d'un SOS dans le fil
 
-/// Une date où je joue : dépannage accepté ou concert d'un de mes groupes.
-struct PlayingDateRow: View {
-    @EnvironmentObject private var store: AppStore
-    let item: PlayingDate
-
-    var body: some View {
-        Group {
-            switch item.origin {
-            case .group(_, _, let groupID):
-                NavigationLink(value: groupID) { card }
-                    .buttonStyle(PressableStyle())
-            case .sos:
-                if let gig = item.gig {
-                    NavigationLink(value: gig) { card }
-                        .buttonStyle(PressableStyle())
-                } else {
-                    card
-                }
-            }
-        }
-    }
-
-    private var card: some View {
-        JCCard {
-            HStack(spacing: 12) {
-                VStack(spacing: 1) {
-                    Text(item.date.formatted(.dateTime.day()))
-                        .font(JCFont.display(20))
-                    Text(item.date.formatted(.dateTime.month(.abbreviated)))
-                        .font(JCFont.monoBold(9))
-                        .textCase(.uppercase)
-                }
-                .foregroundStyle(JC.billetInk)
-                .frame(width: 46)
-                .padding(.vertical, 8)
-                .background(JC.serie, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(item.title)
-                        .font(.subheadline.weight(.bold))
-                        .lineLimit(1)
-                    Text(verbatim: "\(item.date.formatted(date: .omitted, time: .shortened)) · \(item.place)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    HStack(spacing: 5) {
-                        switch item.origin {
-                        case .sos(let host):
-                            TagView(text: "Invité", color: JC.feutrine)
-                            Text(verbatim: store.tr("avec") + " \(host)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        case .group(let name, let emoji, _):
-                            Text(verbatim: "\(emoji) \(name)")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.bronze)
-                                .lineLimit(1)
-                        }
-                        if let instrument = item.instrument {
-                            TagView(text: instrument.rawValue, color: JC.bronze)
-                        }
-                    }
-                }
-                Spacer(minLength: 0)
-                if let left = store.countdown(to: item.date) {
-                    Text(String(format: store.tr("dans %@"), left))
-                        .font(.caption2.weight(.heavy))
-                        .foregroundStyle(JC.laiton)
-                }
-            }
-        }
-    }
-}
-
-/// Ma candidature en attente (ou écartée) sur une annonce.
-struct ApplicationStatusRow: View {
-    @EnvironmentObject private var store: AppStore
-    let gig: GigRequest
-
-    var body: some View {
-        JCCard {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(gig.title)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Text(verbatim: "\(gig.date.formatted(date: .abbreviated, time: .shortened)) · \(gig.place)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                if gig.myApplicationStatus == .declined {
-                    TagView(text: "Non retenu·e", color: JC.bronze)
-                } else {
-                    TagView(text: "En attente", color: JC.laiton)
-                }
-            }
-        }
-    }
-}
-
-/// Un SOS est un concert : la carte est un billet — papier ivoire, encre
-/// fixe, perforation punchée et talon-date. Le cachet ne s'affiche pas
-/// sur le billet, il se découvre en ouvrant le SOS.
+/// Une annonce du fil, en billet de concert : talon-date, postes ouverts,
+/// pastille « nouveau » tant qu'elle n'a pas été ouverte.
 struct EventCard: View {
     let event: GigRequest
     /// Annonce jamais ouverte : une pastille laiton devant le titre, comme

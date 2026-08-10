@@ -104,23 +104,90 @@ extension Instrument {
 
 /// Fabrique un lien iReal Pro à partir d'une grille d'accords.
 ///
-/// iReal Pro lit deux formats : `irealb://` (le sien, obfusqué, exporté depuis
-/// l'app) et `irealbook://`, l'ancien format en clair — que l'éditeur continue
-/// d'accepter à l'import justement parce que des milliers de grilles circulent
-/// comme ça. C'est celui qu'on écrit :
+/// iReal Pro lit deux formats : `irealb://`, le sien — obfusqué, non
+/// documenté, ce que l'app produit à l'export — et `irealbook://`, le format
+/// en clair que l'éditeur documente publiquement et s'engage à continuer de
+/// supporter. C'est celui qu'on écrit, six champs séparés par `=` :
 ///
-///   irealbook://Titre=Compositeur=Style=Tonalité=n=T44*A{C^7 |A-7 |D-9 |G7 }
+///   irealbook://Titre=Compositeur=Style=Tonalité=n=[*AT44C^7   |A-7   |G7   Z
 ///
-/// Le groupe n'a donc plus rien à coller : sa grille Dispo s'ouvre dans iReal
-/// Pro, déjà transposée dans la tonalité de celui qui l'ouvre.
+/// Le groupe n'a donc rien à coller : sa grille Dispo s'ouvre dans iReal Pro,
+/// déjà transposée dans la tonalité de celui qui l'ouvre.
+///
+/// Trois règles de la doc officielle font toute la différence entre un lien
+/// qui marche et un morceau qui s'ouvre vide, sans le moindre message :
+/// la tonalité doit appartenir à une liste fermée de 24 valeurs, la qualité
+/// d'accord à une liste fermée elle aussi, et le `#` doit être encodé (sinon
+/// tout ce qui suit passe pour un fragment d'URL et disparaît).
 enum IRealPro {
-    /// Schéma d'URL de l'app (pour savoir si elle est installée).
+    /// Schéma d'URL utilisé pour les grilles qu'on fabrique.
     static let scheme = "irealbook"
+    /// Les deux schémas que l'app enregistre (déclarés dans
+    /// `LSApplicationQueriesSchemes`, project.yml) — un lien exporté depuis
+    /// iReal Pro utilise `irealb://`, les grilles écrites à la main
+    /// `irealbook://`.
+    static let schemes = ["irealbook", "irealb"]
     /// La fiche App Store, quand l'app n'est pas installée.
     static let appStoreURL = URL(string: "https://apps.apple.com/app/ireal-pro/id409035833")!
 
+    /// Relit un lien collé par l'utilisateur — et refuse tout ce qui ne vient
+    /// pas d'iReal Pro.
+    ///
+    /// Sans ce filtre, un lien `https://` collé par erreur passe `canOpenURL`
+    /// et ouvre Safari : le bouton « Ouvrir iReal Pro » ment. On rattrape au
+    /// passage les liens dont les espaces n'ont pas été encodés, ce que
+    /// `URL(string:)` refuse.
+    static func appLink(_ raw: String?) -> URL? {
+        guard let raw else { return nil }
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        let lower = text.lowercased()
+        guard schemes.contains(where: { lower.hasPrefix("\($0)://") }) else { return nil }
+        if let url = URL(string: text) { return url }
+        return URL(string: text.replacingOccurrences(of: " ", with: "%20"))
+    }
+
+    // MARK: Listes fermées de la doc officielle
+    //
+    // iReal Pro n'accepte que 24 tonalités et une liste finie de qualités
+    // d'accord. Tout ce qui en sort fait ouvrir un morceau VIDE, sans message
+    // d'erreur — c'est la cause la plus probable des « parfois ça ne marche
+    // pas » : « F# » n'est pas une tonalité valide (c'est « Gb »), et
+    // « Csus4 » n'est pas une qualité valide (c'est « Csus »).
+
+    /// Les 12 tonalités majeures acceptées, par hauteur — que des bémols.
+    private static let majorKeys = [
+        "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"
+    ]
+    /// Les 12 tonalités mineures acceptées — trois dièses seulement.
+    private static let minorKeys = [
+        "C-", "C#-", "D-", "Eb-", "E-", "F-", "F#-", "G-", "G#-", "A-", "Bb-", "B-"
+    ]
+
+    /// Les qualités d'accord de la doc officielle. Ce qui n'y figure pas doit
+    /// être écrit entre astérisques, sinon l'accord casse la grille.
+    private static let qualities: Set<String> = [
+        "5", "2", "add9", "+", "o", "h", "sus", "^", "-", "^7", "-7", "7", "7sus",
+        "h7", "o7", "^9", "^13", "6", "69", "^7#11", "^9#11", "^7#5", "-6", "-69",
+        "-^7", "-^9", "-9", "-11", "-7b5", "h9", "-b6", "-#5", "9", "7b9", "7#9",
+        "7#11", "7b5", "7#5", "9#11", "9b5", "9#5", "7b13", "7#9#5", "7#9b5",
+        "7#9#11", "7b9#11", "7b9b5", "7b9#5", "7b9#9", "7b9b13", "7alt", "13",
+        "13#11", "13b9", "13#9", "7b9sus", "7susadd3", "9sus", "13sus", "7b13sus",
+        "11", "min13", "min^11", "min^13", "maj13#11", "maj7b5", "maj7#9",
+        "min7b6", "min9b6", "maj(add4)", "min(add4)", "7(add13)"
+    ]
+
+    /// La tonalité, écrite comme iReal Pro l'attend. Hors des 24 valeurs
+    /// admises l'import s'ouvre vide : on ramène donc toujours la hauteur sur
+    /// l'orthographe officielle (fa♯ majeur → « Gb », ré♯ mineur → « Eb- »).
+    static func keyLabel(for key: MusicalKey?) -> String {
+        guard let key else { return "C" }
+        let pitch = ((key.pitchClass % 12) + 12) % 12
+        return key.isMinor ? minorKeys[pitch] : majorKeys[pitch]
+    }
+
     /// Traduit un accord dans l'alphabet d'iReal Pro : `Cmaj7` → `C^7`,
-    /// `Am7` → `A-7`, `Bø` → `Bh`, `C♯` → `C#`.
+    /// `Am7` → `A-7`, `Bø` → `Bh`, `C♯` → `C#`, `Csus4` → `Csus`.
     static func chord(_ raw: String) -> String {
         let text = raw
             .replacingOccurrences(of: "♭", with: "b")
@@ -129,6 +196,8 @@ enum IRealPro {
             .replacingOccurrences(of: "Δ", with: "^")
             .replacingOccurrences(of: "ø", with: "h")
             .replacingOccurrences(of: "°", with: "o")
+            // Avant tout découpage : la barre de « C6/9 » n'est pas une basse.
+            .replacingOccurrences(of: "6/9", with: "69")
         guard let root = MusicTheory.parseRoot(text) else { return text }
         let head = String(text.prefix(root.length))
         var tail = String(text.dropFirst(root.length))
@@ -139,7 +208,8 @@ enum IRealPro {
             bass = String(tail[slash...])
             tail = String(tail[..<slash])
         }
-        // Du plus long au plus court : « maj7 » avant « maj », « min » avant « m ».
+        // Du plus long au plus court : « maj7 » avant « maj », « min » avant
+        // « m ». L'ordre porte le sens, ne pas le réarranger.
         let table: [(String, String)] = [
             ("majeur", "^"), ("maj", "^"), ("Maj", "^"), ("MAJ", "^"), ("M", "^"),
             ("mineur", "-"), ("min", "-"), ("mi", "-"), ("m", "-"),
@@ -149,51 +219,97 @@ enum IRealPro {
             tail = to + tail.dropFirst(from.count)
             break
         }
-        return head + tail + bass
+        return head + normalizedQuality(tail) + bass
+    }
+
+    /// Ramène une couleur d'accord dans la liste officielle. Les écritures
+    /// courantes (`sus4`, `alt`, `6/9`) y ont leur équivalent ; le reste part
+    /// entre astérisques — la façon documentée d'écrire une qualité qu'iReal
+    /// Pro ne connaît pas, plutôt que de casser la grille entière.
+    static func normalizedQuality(_ quality: String) -> String {
+        var text = quality.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return "" }
+        // « 7sus4 » → « 7sus », « C6/9 » → « C69 », « alt » → « 7alt ».
+        let aliases: [(String, String)] = [("6/9", "69"), ("sus4", "sus"), ("sus2", "2"), ("alt", "7alt")]
+        for (from, to) in aliases where text.hasSuffix(from) {
+            text = String(text.dropLast(from.count)) + to
+            break
+        }
+        return qualities.contains(text) ? text : "*\(text)*"
     }
 
     /// Découpe la grille en mesures. Les barres `|` font foi ; sans barre, une
     /// ligne vaut une mesure (c'est ainsi que les grilles se collent souvent).
+    /// Les symboles de structure tapés à la main (`{ } [ ] Z`) sont retirés :
+    /// `body(from:)` en réécrit une propre.
     static func measures(from grid: String) -> [String] {
-        let cleaned = grid.replacingOccurrences(of: "\n", with: " | ")
+        var stripped = grid
+        for symbol in ["{", "}", "[", "]"] {
+            stripped = stripped.replacingOccurrences(of: symbol, with: "")
+        }
+        let cleaned = stripped.replacingOccurrences(of: "\n", with: " | ")
         let parts: [String] = cleaned.contains("|")
             ? cleaned.split(separator: "|").map(String.init)
-            : grid.split(separator: "\n").map(String.init)
+            : stripped.split(separator: "\n").map(String.init)
         return parts
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
     }
 
-    /// Le corps du chart : signature rythmique, section A, puis les mesures.
+    /// Une grille tient dans 16 cellules par ligne et 12 lignes — 192 cellules.
+    /// Au-delà, iReal Pro ne promet rien : on s'arrête sur une mesure entière
+    /// plutôt que de livrer un chart coupé au milieu.
+    static let maxCells = 192
+
+    /// Le corps du chart : barre ouvrante, section A, mesure à 4 temps, puis
+    /// les mesures — chacune calée sur quatre cellules, ce qui donne les
+    /// quatre mesures par ligne attendues par iReal Pro.
     static func body(from grid: String) -> String {
-        let bars = measures(from: grid).map { bar -> String in
+        var cells = 0
+        var bars: [String] = []
+        for bar in measures(from: grid) {
             let chords = bar.split(separator: " ").map { chord(String($0)) }
-            return chords.isEmpty ? " " : chords.joined(separator: " ")
+            guard !chords.isEmpty else { continue }
+            // Un accord = une cellule, un espace = une cellule. Une mesure
+            // occupe au minimum les quatre cellules d'une mesure à 4 temps.
+            let written = chords.count * 2 - 1
+            let used = max(4, written)
+            if cells + used > maxCells { break }
+            cells += used
+            let padding = String(repeating: " ", count: max(1, 4 - written))
+            bars.append(chords.joined(separator: " ") + padding)
         }
         guard !bars.isEmpty else { return "" }
-        return "T44*A" + bars.map { $0 + " " }.joined(separator: "|") + "Z"
+        return "[*AT44" + bars.joined(separator: "|") + "Z"
     }
 
     /// Le lien complet, prêt à ouvrir. nil si la grille ne donne rien.
     static func link(title: String, composer: String, style: String, key: MusicalKey?, grid: String) -> URL? {
         let chart = body(from: grid)
         guard !chart.isEmpty else { return nil }
-        // Le compositeur est rangé « Nom Prénom » dans iReal Pro ; on passe le
-        // nom d'artiste tel quel, c'est ce que le groupe a saisi.
-        let keyName = (key?.name ?? "C")
-            .replacingOccurrences(of: "♭", with: "b")
-            .replacingOccurrences(of: "♯", with: "#")
+        // Le `=` sépare les six champs : la doc interdit noir sur blanc qu'il
+        // apparaisse dans les données elles-mêmes.
+        func field(_ text: String) -> String {
+            text.replacingOccurrences(of: "=", with: "-")
+        }
         let fields = [
-            title.replacingOccurrences(of: "=", with: "-"),
-            composer.replacingOccurrences(of: "=", with: "-"),
-            style.isEmpty ? "Jazz-Medium Swing" : style,
-            key?.isMinor == true ? keyName + "-" : keyName,
+            field(title),
+            // Le compositeur est rangé « Nom Prénom » dans iReal Pro ; on passe
+            // le nom d'artiste tel quel, c'est ce que le groupe a saisi.
+            field(composer),
+            field(style.isEmpty ? "Medium Swing" : style),
+            keyLabel(for: key),
+            // Cinquième champ : « no longer used », mais les six sont exigés.
             "n",
             chart
         ]
         let payload = fields.joined(separator: "=")
-        // Tout ce qui n'est pas alphanumérique est encodé : l'espace (%20) et
-        // le dièse (%23) casseraient l'URL sinon.
+        // Un seul passage d'encodage, jeu strict (les « unreserved » de la
+        // RFC 3986). iReal Pro percent-décode toute la chaîne AVANT de
+        // découper sur les `=` — l'éditeur encode d'ailleurs ses propres
+        // séparateurs en %3D dans ses exemples officiels. Sur-encoder est donc
+        // sans danger ; laisser un `#` en clair, lui, tronque l'URL au
+        // fragment et fait ouvrir un morceau vide.
         var allowed = CharacterSet.alphanumerics
         allowed.insert(charactersIn: "-._~")
         guard let encoded = payload.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }

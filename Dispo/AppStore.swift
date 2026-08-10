@@ -96,6 +96,9 @@ final class AppStore: ObservableObject {
     /// true si le SDK RevenueCat est configuré — sinon repli StoreKit direct.
     let revenueCatEnabled: Bool
     @Published var hasOnboarded: Bool = false
+    /// Les nouveautés de cette version, à montrer une fois après la mise à
+    /// jour. Piloté par `markWhatsNewSeen()` — jamais au premier lancement.
+    @Published var showWhatsNew: Bool = false
     /// Préférence d'apparence (système / clair / sombre).
     @Published var theme: AppTheme = .system
     /// Langue de l'interface, choisie dans l'onboarding ou le profil.
@@ -200,6 +203,8 @@ final class AppStore: ObservableObject {
     private static let premiumKey = "jamconnect.premium"
     private static let premiumPlanKey = "jamconnect.premiumPlan"
     private static let onboardedKey = "jamconnect.onboarded"
+    /// Dernière version dont on a montré les nouveautés.
+    private static let lastSeenVersionKey = "jamconnect.lastSeenVersion"
     private static let themeKey = "jamconnect.theme"
     private static let languageKey = "jamconnect.language"
     private static let followingKey = "jamconnect.following"
@@ -282,6 +287,7 @@ final class AppStore: ObservableObject {
         isPremium = Self.isBeta || UserDefaults.standard.bool(forKey: Self.premiumKey)
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
+        prepareWhatsNew()
         theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .system
         language = UserDefaults.standard.string(forKey: Self.languageKey).flatMap(AppLanguage.init) ?? .systemDefault
         if let saved: Set<String> = Self.load(key: Self.followingKey) {
@@ -1910,6 +1916,8 @@ final class AppStore: ObservableObject {
         case "sos": selectedTab = .sos
         case "message", "messages", "groups": selectedTab = .messages
         case "profile": selectedTab = .profile
+        // « agenda » est le nom historique de l'onglet Sessions côté serveur.
+        case "agenda", "sessions": selectedTab = .agenda
         default: selectedTab = .home
         }
         Task { try? await UNUserNotificationCenter.current().setBadgeCount(0) }
@@ -2490,6 +2498,107 @@ final class AppStore: ObservableObject {
             }
         } else if let first = prepared.first {
             scheduleDemoSuggestion(for: group.id, eventID: first.id)
+        }
+    }
+
+    /// Portée d'une modification d'événement : cette date, ou toute la suite
+    /// de la série.
+    enum EventEditScope {
+        case thisDate
+        case futureOccurrences
+    }
+
+    /// Modifie une date déjà créée (leader) : heure, jour, titre, lieu.
+    ///
+    /// Sur toute une série, on ne déplace pas les jours — un « chaque jeudi »
+    /// reste un « chaque jeudi » — on reporte seulement l'HEURE, le titre et
+    /// le lieu sur les occurrences à venir. C'est ce qu'on veut dire quand on
+    /// dit « la répé passe à 20 h ». Une occurrence isolée, elle, se déplace
+    /// où on veut.
+    ///
+    /// Quand le JOUR d'une date change, les réponses de présence sont
+    /// effacées et redemandées : « je suis dispo jeudi » ne dit rien de
+    /// samedi. Un simple changement d'heure les conserve.
+    func updateEvent(
+        _ event: GroupEvent,
+        in group: GroupChat,
+        date: Date,
+        title: String,
+        venue: String,
+        scope: EventEditScope
+    ) {
+        guard canLead(group) else { return }
+        let calendar = Calendar.current
+        let time = calendar.dateComponents([.hour, .minute], from: date)
+        let leader = leaderDisplayName(of: group)
+
+        // Les dates concernées : celle-ci seule, ou toutes celles de la série
+        // encore à venir (celle-ci comprise).
+        let targets: [GroupEvent]
+        if scope == .futureOccurrences, let seriesID = event.seriesID {
+            let now = Date()
+            targets = group.allEvents
+                .filter { $0.seriesID == seriesID && ($0.date > now || $0.id == event.id) }
+                .sorted { $0.date < $1.date }
+        } else {
+            targets = [event]
+        }
+        guard !targets.isEmpty else { return }
+
+        /// La nouvelle date d'une occurrence donnée.
+        func newDate(for occurrence: GroupEvent) -> Date {
+            guard scope == .futureOccurrences, occurrence.id != event.id else { return date }
+            // Même jour, nouvelle heure.
+            return calendar.date(
+                bySettingHour: time.hour ?? 0,
+                minute: time.minute ?? 0,
+                second: 0,
+                of: occurrence.date
+            ) ?? occurrence.date
+        }
+
+        var updated: [GroupEvent] = []
+        var dayChanged: [UUID] = []
+        for occurrence in targets {
+            let target = newDate(for: occurrence)
+            let movedToAnotherDay = !calendar.isDate(target, inSameDayAs: occurrence.date)
+            var copy = occurrence
+            copy.date = target
+            copy.title = title
+            copy.venue = venue
+            if movedToAnotherDay {
+                dayChanged.append(occurrence.id)
+                // On repart d'une feuille de présence vierge — sauf le leader,
+                // qui vient de choisir la date.
+                copy.attendance = [leader: .available]
+            }
+            updated.append(copy)
+        }
+
+        let byID = Dictionary(uniqueKeysWithValues: updated.map { ($0.id, $0) })
+        updateGroup(group.id) { group in
+            guard var events = group.events else { return }
+            for index in events.indices {
+                if let replacement = byID[events[index].id] { events[index] = replacement }
+            }
+            events.sort { $0.date < $1.date }
+            group.events = events
+        }
+        rescheduleAllAttendanceNotifications()
+
+        guard let backend, isLive else { return }
+        let groupID = group.id
+        let anchorID = updated.first?.id ?? event.id
+        let count = updated.count
+        let resetIDs = dayChanged
+        let leaderID = profileID(for: leader)
+        syncLive {
+            try await backend.updateEventSchedules(updated, groupID: groupID)
+            if !resetIDs.isEmpty, let leaderID {
+                try await backend.resetAttendance(eventIDs: resetIDs, keeping: leaderID)
+            }
+            try await backend.notifyEventMoved(eventID: anchorID, dates: count)
+            await backend.deliverPendingPushNotifications()
         }
     }
 
@@ -3915,6 +4024,9 @@ final class AppStore: ObservableObject {
         parts.append(musician.level.rawValue)
         parts.append(musician.level.label)
         parts.append(musician.availability.badgeLabel)
+        // Le rawValue en plus du libellé : « ce soir » doit continuer de
+        // trouver les dispos du jour alors que le badge dit « aujourd'hui ».
+        parts.append(musician.availability.rawValue)
         return parts.flatMap { (part: String) -> [String] in
             Self.normalized(part).split(separator: " ").map(String.init)
         }
@@ -4149,13 +4261,53 @@ final class AppStore: ObservableObject {
         events.filter { $0.applied && !$0.isMine && !$0.isDirect }.sorted { $0.date < $1.date }
     }
 
-    /// Candidats en attente sur mes annonces + demandes reçues non traitées :
-    /// la pastille rouge de l'onglet SOS.
+    // MARK: - Nouveautés de la version
+
+    /// Décide, au lancement, s'il faut montrer les nouveautés.
+    ///
+    /// Trois cas :
+    /// - installation neuve (personne n'a encore fait l'onboarding) : on
+    ///   enregistre la version en silence, on ne montre rien ;
+    /// - mise à jour depuis une version qui n'enregistrait pas encore rien
+    ///   (≤ 1.6) : on montre, c'est justement pour ça qu'on l'a écrit ;
+    /// - relancement de la même version : rien.
+    private func prepareWhatsNew() {
+        let current = Bundle.main.appVersion
+        let seen = UserDefaults.standard.string(forKey: Self.lastSeenVersionKey)
+        guard seen != current else { return }
+        guard hasOnboarded else {
+            UserDefaults.standard.set(current, forKey: Self.lastSeenVersionKey)
+            return
+        }
+        // Rien à raconter sur une version sans notes : on note et on passe.
+        guard PatchNote.all.contains(where: { $0.version == current }) else {
+            UserDefaults.standard.set(current, forKey: Self.lastSeenVersionKey)
+            return
+        }
+        showWhatsNew = true
+    }
+
+    /// Les nouveautés ont été vues : on ne les represente plus pour cette
+    /// version (elles restent lisibles dans Réglages → Nouveautés).
+    func markWhatsNewSeen() {
+        UserDefaults.standard.set(Bundle.main.appVersion, forKey: Self.lastSeenVersionKey)
+        showWhatsNew = false
+    }
+
+    /// Candidats en attente sur mes annonces : la pastille de l'onglet SOS.
+    /// Les demandes qu'on m'adresse, elles, comptent pour Sessions — c'est là
+    /// qu'on y répond depuis la 1.7.
     var sosTodoCount: Int {
-        let pending = myGigs.reduce(0) { total, gig in
+        myGigs.reduce(0) { total, gig in
             total + (applicantsByGig[gig.id]?.filter { $0.status == .pending }.count ?? 0)
         }
-        return pending + incomingRequests.filter { $0.targetStatus == .pending }.count
+    }
+
+    /// La pastille de l'onglet Sessions : tout ce qui attend un mot de moi —
+    /// les dates de groupe que je n'ai pas confirmées et les dépannages qu'on
+    /// me demande.
+    var sessionsTodoCount: Int {
+        agendaToConfirm.count + incomingRequests.filter { $0.targetStatus == .pending }.count
     }
 
     /// Candidats en attente d'une décision sur une annonce donnée.
@@ -4165,14 +4317,17 @@ final class AppStore: ObservableObject {
 
     // MARK: - Le fil des annonces (ce que je vois, ce qui est nouveau)
 
-    /// Les annonces publiques du fil. Une annonce dont tous les postes sont
-    /// pourvus disparaît : le serveur la retire déjà de la vue, on double la
-    /// règle ici pour le mode démo et pour l'instant qui sépare l'acceptation
-    /// du prochain rafraîchissement.
+    /// Les annonces publiques du fil : celles des AUTRES, et seulement celles
+    /// où il reste un poste à prendre.
+    ///
+    /// Mes propres annonces n'y figurent plus (1.7) — elles vivent dans
+    /// « Mes SOS », où je les gère ; les voir deux fois ne servait qu'à
+    /// gonfler le compteur. Une annonce complète disparaît de même : il n'y a
+    /// plus rien à y faire. Ce que j'ai postulé reste suivi dans Sessions.
     var feedGigs: [GigRequest] {
         events.filter { gig in
-            guard !gig.isDirect else { return false }
-            return !gig.isFilled || gig.isMine || gig.applied
+            guard !gig.isDirect, !gig.isMine, !gig.isFilled else { return false }
+            return true
         }
     }
 
@@ -4354,41 +4509,6 @@ final class AppStore: ObservableObject {
             )
         }
         guestsByEvent = Dictionary(grouping: guests, by: \.eventID)
-    }
-
-    /// Mes prochaines dates, toutes origines confondues : les SOS où j'ai été
-    /// retenu, les demandes que j'ai acceptées, et les événements de mes
-    /// groupes où j'ai confirmé ma présence. C'est l'agenda du musicien.
-    var myNextDates: [PlayingDate] {
-        var dates: [PlayingDate] = events
-            .filter { !$0.isMine && $0.myApplicationStatus == .accepted }
-            .map { gig in
-                PlayingDate(
-                    id: gig.id,
-                    date: gig.date,
-                    title: gig.title,
-                    place: [gig.place, gig.neighborhood].filter { !$0.isEmpty }.joined(separator: " · "),
-                    instrument: gig.myApplicationInstrument,
-                    origin: .sos(host: gig.hostName),
-                    gig: gig
-                )
-            }
-        for group in groups {
-            for event in group.upcomingEvents where event.status(for: profile.name) == .available {
-                dates.append(
-                    PlayingDate(
-                        id: event.id,
-                        date: event.date,
-                        title: event.title,
-                        place: event.venue,
-                        instrument: group.role(for: profile.name),
-                        origin: .group(name: group.name, emoji: group.emoji, groupID: group.id),
-                        gig: nil
-                    )
-                )
-            }
-        }
-        return dates.sorted { $0.date < $1.date }
     }
 
     func saveProfile() {

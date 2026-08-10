@@ -77,22 +77,22 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
-    @State private var scope: AvailabilityScope = .tonight
-    /// Musicien en cours d'invitation depuis l'accueil (un tap).
-    @State private var invitingName: String?
+    @State private var scope: AvailabilityScope = .today
+    /// Le créneau d'ouverture n'est choisi qu'une fois, au premier chargement.
+    @State private var scopePicked = false
 
     /// La vraie question d'un musicien qui ouvre l'app : qui peut jouer, et
     /// quand ? On répond avant de parler de distance — c'est ce qui distingue
     /// Dispo d'un annuaire de profils.
     enum AvailabilityScope: String, CaseIterable, Identifiable {
-        case tonight = "Ce soir"
+        case today = "Aujourd'hui"
         case weekend = "Ce week-end"
         case nearby = "Près de chez toi"
         var id: String { rawValue }
 
         var icon: String {
             switch self {
-            case .tonight: return "bolt.fill"
+            case .today: return "bolt.fill"
             case .weekend: return "calendar.badge.clock"
             case .nearby: return "location.fill"
             }
@@ -102,7 +102,7 @@ struct HomeView: View {
         /// reste réservé au SOS, jamais à une simple disponibilité.
         var color: Color {
             switch self {
-            case .tonight: return JC.feutrine
+            case .today: return JC.feutrine
             case .weekend: return JC.laiton
             case .nearby: return JC.bronze
             }
@@ -110,7 +110,7 @@ struct HomeView: View {
 
         var subtitle: LocalizedStringKey {
             switch self {
-            case .tonight: return "Dispos aujourd'hui — appelle, ça joue ce soir"
+            case .today: return "Dispos aujourd'hui — appelle, ça peut jouer ce soir"
             case .weekend: return "Dispos samedi ou dimanche"
             case .nearby: return "Tes relations d'abord, puis les plus proches"
             }
@@ -130,7 +130,7 @@ struct HomeView: View {
     /// qui ont vraiment coché ces jours-là.
     private var visible: [Musician] {
         switch scope {
-        case .tonight: return filtered.filter { $0.isAvailable(on: Date()) }
+        case .today: return filtered.filter { $0.isAvailable(on: Date()) }
         case .weekend: return filtered.filter { musician in
             Self.weekendDays.contains { musician.isAvailable(on: $0) }
         }
@@ -141,11 +141,29 @@ struct HomeView: View {
     /// Combien de musiciens dans chaque créneau (les pastilles du sélecteur).
     private func count(for scope: AvailabilityScope) -> Int {
         switch scope {
-        case .tonight: return filtered.filter { $0.isAvailable(on: Date()) }.count
+        case .today: return filtered.filter { $0.isAvailable(on: Date()) }.count
         case .weekend: return filtered.filter { musician in
             Self.weekendDays.contains { musician.isAvailable(on: $0) }
         }.count
         case .nearby: return filtered.count
+        }
+    }
+
+    /// Ouvre sur le premier créneau qui a du monde.
+    ///
+    /// Arriver sur « Aujourd'hui » vide un mardi après-midi oblige à
+    /// comprendre le sélecteur avant de voir le moindre musicien — on répond
+    /// à la question « qui peut jouer ? » par un mur. On choisit donc pour
+    /// l'utilisateur, une seule fois, et il reste libre de changer.
+    private func pickOpeningScope() {
+        guard !scopePicked, !store.musicians.isEmpty else { return }
+        scopePicked = true
+        if count(for: .today) > 0 {
+            scope = .today
+        } else if count(for: .weekend) > 0 {
+            scope = .weekend
+        } else {
+            scope = .nearby
         }
     }
 
@@ -173,16 +191,6 @@ struct HomeView: View {
             .sorted { $0.event.date < $1.event.date }
     }
 
-    /// Le plus proche, et seulement s'il approche : inviter un remplaçant pour
-    /// un concert dans six mois n'a pas de sens.
-    private var nextGroupEventSoon: (group: GroupChat, event: GroupEvent)? {
-        guard let next = nextGroupEvents.first,
-              let horizon = Calendar.current.date(byAdding: .day, value: 14, to: Date()),
-              next.event.date < horizon
-        else { return nil }
-        return next
-    }
-
     private var greeting: LocalizedStringKey {
         let hour = Calendar.current.component(.hour, from: Date())
         return (hour >= 17 || hour < 5) ? "Bonsoir" : "Salut"
@@ -198,7 +206,6 @@ struct HomeView: View {
                         header
                         searchBar
                         groupEventReminder
-                        availableInviteRow
                         scopePicker
                         actionBar
                         feed
@@ -211,6 +218,10 @@ struct HomeView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear { pickOpeningScope() }
+            // Les musiciens arrivent après le premier rendu : on choisit le
+            // créneau dès qu'il y a de quoi choisir, puis plus jamais.
+            .onChange(of: store.musicians.count) { _, _ in pickOpeningScope() }
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
             .navigationDestination(for: GroupChat.ID.self) { GroupChatView(groupID: $0) }
@@ -347,84 +358,6 @@ struct HomeView: View {
         }
     }
 
-    /// Musiciens déjà dispo le jour de l'événement — invitation en un tap.
-    @ViewBuilder
-    private var availableInviteRow: some View {
-        if let (group, event) = nextGroupEventSoon,
-           store.canLead(group) {
-            let invitees = store.availableInvitees(for: event, in: group)
-            if !invitees.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "person.badge.plus")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(JC.bronze)
-                        Text("Dispos pour \(event.title)")
-                            .font(.subheadline.weight(.bold))
-                            .lineLimit(1)
-                        Spacer()
-                        Text("\(invitees.count)")
-                            .font(.caption.weight(.heavy))
-                            .foregroundStyle(JC.bronze)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(JC.bronze.opacity(0.14), in: Capsule())
-                    }
-                    Text("Un tap pour inviter — ils rejoignent l'événement directement.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(invitees.prefix(12)) { musician in
-                                VStack(spacing: 8) {
-                                    AvatarView(name: musician.name, size: 52, photo: musician.photo)
-                                    Text(musician.name.split(separator: " ").first.map(String.init) ?? musician.name)
-                                        .font(.caption2.weight(.semibold))
-                                        .lineLimit(1)
-                                        .frame(width: 72)
-                                    if musician.isDemo { DemoAccountBadge() }
-                                    Button {
-                                        guard invitingName == nil else { return }
-                                        invitingName = musician.name
-                                        Task {
-                                            await store.inviteAvailable(musician, to: event, in: group)
-                                            invitingName = nil
-                                        }
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            if invitingName == musician.name {
-                                                ProgressView().controlSize(.mini)
-                                            } else {
-                                                Image(systemName: "paperplane.fill")
-                                                    .font(.system(size: 9, weight: .bold))
-                                            }
-                                            Text("Inviter")
-                                                .font(.caption2.weight(.heavy))
-                                        }
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(JC.bronze, in: Capsule())
-                                    }
-                                    .buttonStyle(PressableStyle())
-                                    .disabled(invitingName != nil)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-                .padding(14)
-                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(JC.cardStroke, lineWidth: 1)
-                )
-            }
-        }
-    }
-
     private var actionBar: some View {
         HStack(spacing: 10) {
             JCPillButton(
@@ -467,7 +400,7 @@ struct HomeView: View {
     /// sert à afficher où le musicien se trouve ce jour-là).
     private var scopeDate: Date? {
         switch scope {
-        case .tonight: return Date()
+        case .today: return Date()
         case .weekend: return Self.weekendDays.first
         case .nearby: return filters.neededDate
         }
@@ -477,11 +410,11 @@ struct HomeView: View {
     @ViewBuilder
     private var emptyScopeState: some View {
         switch scope {
-        case .tonight:
+        case .today:
             VStack(spacing: 10) {
                 JCEmptyState(
                     icon: "moon.zzz",
-                    title: "Personne ce soir",
+                    title: "Personne aujourd'hui",
                     message: "Personne n'a coché aujourd'hui. Regarde le week-end — ou lance un SOS, il partira à tous les musiciens compatibles.",
                     iconColor: JC.signal
                 )
@@ -649,7 +582,7 @@ struct GroupEventReminderCard: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(JC.signal)
                 Text(missing.isEmpty
-                     ? "Il manque encore des réponses"
+                     ? LocalizedStringKey("Il manque encore des réponses")
                      : "Il manque : \(missing.map { store.tr($0.rawValue) }.joined(separator: ", "))")
                     .font(.caption.weight(.heavy))
                     .foregroundStyle(JC.signal)

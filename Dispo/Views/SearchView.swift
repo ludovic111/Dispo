@@ -155,7 +155,10 @@ struct SearchMusicianRow: View {
                             .layoutPriority(1)
                         if musician.isDemo { DemoAccountBadge() }
                         Spacer(minLength: 4)
+                        // Le badge ne se comprime pas : « Free t… » ne veut
+                        // rien dire, un nom tronqué reste reconnaissable.
                         AvailabilityBadge(availability: musician.availability)
+                            .fixedSize()
                     }
                     HStack(spacing: 7) {
                         Text(verbatim: musician.handle)

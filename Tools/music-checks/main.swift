@@ -61,7 +61,36 @@ check("Mesures depuis les lignes (sans barre)",
       IRealPro.measures(from: "Dm7\nG7").joined(separator: "/"), "Dm7/G7")
 check("Corps du chart",
       IRealPro.body(from: "| Dm7 | G7 | Cmaj7 |"),
-      "T44*AD-7 |G7 |C^7 Z")
+      "[*AT44D-7   |G7   |C^7   Z")
+// Deux accords dans la mesure : quatre cellules quand même.
+check("Mesure à deux accords",
+      IRealPro.body(from: "| Dm7 G7 |"),
+      "[*AT44D-7 G7 Z")
+// Les barres de structure tapées à la main ne doivent pas doubler les nôtres.
+check("Structure saisie à la main nettoyée",
+      IRealPro.body(from: "{ Cmaj7 | Am7 }"),
+      "[*AT44C^7   |A-7   Z")
+
+// --- Listes fermées : hors liste, iReal Pro ouvre un morceau VIDE ---
+// Fa♯ majeur n'existe pas dans les 24 tonalités admises : c'est « Gb ».
+check("Fa♯ majeur → Gb", IRealPro.keyLabel(for: MusicalKey(pitchClass: 6, isMinor: false)), "Gb")
+// Ré♯ mineur non plus : c'est « Eb- ».
+check("Ré♯ mineur → Eb-", IRealPro.keyLabel(for: MusicalKey(pitchClass: 3, isMinor: true)), "Eb-")
+check("Do♯ mineur reste C#-", IRealPro.keyLabel(for: MusicalKey(pitchClass: 1, isMinor: true)), "C#-")
+check("Si♭ majeur", IRealPro.keyLabel(for: MusicalKey("Bb")!), "Bb")
+check("Tonalité absente → C", IRealPro.keyLabel(for: nil), "C")
+// « sus4 » et « alt » ne sont pas des qualités valides.
+check("Csus4 → Csus", IRealPro.chord("Csus4"), "Csus")
+check("C7sus4 → C7sus", IRealPro.chord("C7sus4"), "C7sus")
+check("Calt → C7alt", IRealPro.chord("Calt"), "C7alt")
+check("C6/9 → C69", IRealPro.chord("C6/9"), "C69")
+check("Qualité inconnue encadrée", IRealPro.chord("C7b9b11"), "C*7b9b11*")
+check("Qualité valide intacte", IRealPro.chord("Cm7b5"), "C-7b5")
+check("Accord nu intact", IRealPro.chord("C"), "C")
+// Le plafond de 192 cellules : 60 mesures d'un accord = 240 cellules.
+check("Grille trop longue tronquée sur une mesure entière",
+      "\(IRealPro.body(from: Array(repeating: "C", count: 60).joined(separator: "\n")).components(separatedBy: "|").count)",
+      "48")
 // L'URL doit être encodée : ni espace ni dièse ne survivent en clair.
 let sample = IRealPro.link(
     title: "Blue Bossa", composer: "Dorham Kenny", style: "",

@@ -11,6 +11,26 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.7",
+            title: "Chaque chose à sa place",
+            points: [
+                "L'onglet Agenda s'appelle maintenant Sessions — et il réunit TOUT ce que tu joues",
+                "« Je joue » quitte l'onglet SOS : les dépannages qu'on te demande se répondent dans Sessions",
+                "L'onglet SOS ne garde que deux espaces : « SOS » (ceux des autres) et « Mes SOS » (les tiens)",
+                "Le fil ne montre plus tes propres annonces ni celles dont tous les postes sont pris",
+                "Accueil : « Ce soir » devient « Aujourd'hui » — c'est la journée entière qui compte, pas la soirée",
+                "Accueil épuré : l'encart « Dispos pour… » s'en va, les musiciens dispos apparaissent là où il manque quelqu'un, dans l'événement",
+                "Tu peux enfin changer l'heure d'une date déjà créée — même une répétition qui se répète",
+                "Sur une série : cette date seulement, ou toutes les suivantes. Une seule notification part, jamais cinquante",
+                "Si le jour change, les présences sont redemandées : « dispo jeudi » ne veut pas dire « dispo samedi »",
+                "iReal Pro devient la façon normale de travailler un morceau, et sa fiche s'organise autour de lui",
+                "Les liens iReal Pro qui ne s'ouvraient pas sont réparés : tonalité, accords et structure suivent enfin la spec officielle",
+                "Le leader peut supprimer une grille d'accords remplie, et le lien iReal Pro, séparément",
+                "Une grille peut toujours s'écrire à la main — c'est juste rangé à part",
+                "Les partitions PDF et photo ne bougent pas : elles restent sous leur morceau"
+            ]
+        ),
+        PatchNote(
             version: "1.6",
             title: "Mes événements, et des SOS qui te parlent",
             points: [
@@ -323,6 +343,123 @@ extension Bundle {
     /// Version marketing de l'app (ex. « 0.4.0 »).
     var appVersion: String {
         (infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0.0.0"
+    }
+}
+
+// MARK: - Les nouveautés, au premier lancement après une mise à jour
+
+/// Ce qui s'ouvre tout seul la première fois qu'on lance une nouvelle
+/// version : uniquement les nouveautés de CETTE version, annoncées comme
+/// importantes. L'historique complet reste dans Réglages → Nouveautés.
+///
+/// Ne s'affiche jamais sur une installation neuve : quelqu'un qui découvre
+/// l'app n'a pas à lire ce qui a changé depuis une version qu'il n'a pas eue.
+struct WhatsNewSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var showFullHistory = false
+
+    private var note: PatchNote? {
+        PatchNote.all.first { $0.version == Bundle.main.appVersion }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                            banner
+                            if let note {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(verbatim: "v\(note.version)")
+                                        .font(JCFont.monoBold(12))
+                                        .foregroundStyle(JC.laiton)
+                                    Text(note.title)
+                                        .font(JCFont.display(26))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                JCCard {
+                                    VStack(alignment: .leading, spacing: 11) {
+                                        ForEach(Array(note.points.enumerated()), id: \.offset) { _, point in
+                                            HStack(alignment: .top, spacing: 9) {
+                                                Image(systemName: "sparkle")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundStyle(JC.bronze)
+                                                    .padding(.top, 3)
+                                                Text(point)
+                                                    .font(.callout)
+                                                    .foregroundStyle(.primary.opacity(0.9))
+                                                    .fixedSize(horizontal: false, vertical: true)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Button { showFullHistory = true } label: {
+                                Label("Voir tout l'historique des versions", systemImage: "clock.arrow.circlepath")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(JC.bronze)
+                            }
+                            .buttonStyle(PressableStyle())
+                        }
+                    .padding(18)
+                }
+                // safeAreaInset plutôt qu'un VStack : le bouton reste sous la
+                // main ET la liste se décale d'autant — sinon la dernière
+                // nouveauté passe dessous et personne ne la lit.
+                .safeAreaInset(edge: .bottom) {
+                    Button {
+                        store.markWhatsNewSeen()
+                        dismiss()
+                    } label: {
+                        Text("J'ai lu, c'est parti")
+                            .font(.subheadline.weight(.heavy))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(JC.hero, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .foregroundStyle(JC.billetInk)
+                    }
+                    .buttonStyle(PressableStyle())
+                    .padding(.horizontal, 18)
+                    .padding(.top, 8)
+                    .padding(.bottom, 14)
+                    .background(.ultraThinMaterial)
+                }
+            }
+            .navigationTitle("Nouveautés")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showFullHistory) { PatchNotesView() }
+        }
+        .interactiveDismissDisabled()
+        // Balayer vers le bas ou fermer autrement vaut « vu » : on ne
+        // represente pas les mêmes notes au lancement suivant.
+        .onDisappear { store.markWhatsNewSeen() }
+    }
+
+    private var banner: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "exclamationmark.bubble.fill")
+                .font(.title3)
+                .foregroundStyle(JC.signal)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Important — à lire")
+                    .font(.subheadline.weight(.heavy))
+                    .foregroundStyle(JC.signal)
+                Text("Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(JC.signal.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(JC.signal.opacity(0.35), lineWidth: 1)
+        )
     }
 }
 

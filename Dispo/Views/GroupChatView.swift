@@ -888,10 +888,11 @@ struct SongRow: View {
         let hasKey = !(song.key ?? "").isEmpty
         if hasKey || hasChords || hasIreal || attachedDocs > 0 {
             HStack(spacing: 5) {
+                // iReal Pro en tête : c'est ce qu'on ouvre en premier.
+                if hasIreal { hint(icon: "arrow.up.forward.app.fill", label: nil) }
                 if let key = song.key, hasKey { hint(icon: "tuningfork", label: key) }
                 if hasChords { hint(icon: "square.grid.2x2", label: nil) }
                 if attachedDocs > 0 { hint(icon: "doc.richtext.fill", label: "\(attachedDocs)") }
-                if hasIreal { hint(icon: "arrow.up.forward.app.fill", label: nil) }
             }
         }
     }
@@ -1593,6 +1594,10 @@ struct GroupEventSheet: View {
     @State private var addingSong = false
     /// Série : on demande si on annule cette date ou toutes les suivantes.
     @State private var confirmingDelete = false
+    /// Édition de la date (heure, jour, lieu, titre) — leader.
+    @State private var editing = false
+    /// Musicien en cours d'invitation (un tap).
+    @State private var invitingName: String?
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
@@ -1643,6 +1648,11 @@ struct GroupEventSheet: View {
                             }
 
                             attendanceCard(event: event, group: group)
+
+                            // Des musiciens ont déjà coché ce jour-là : on les
+                            // propose là où le trou se voit — dans l'événement,
+                            // pas sur l'accueil comme jusqu'en 1.6.
+                            availableInviteRow(event: event, group: group)
 
                             // Les SOS de ce concert se gèrent ici même : le
                             // leader accepte le remplaçant sans changer d'écran.
@@ -1716,7 +1726,11 @@ struct GroupEventSheet: View {
                                         isLeader: false,
                                         onApprove: nil,
                                         onReject: isLeader ? { store.rejectSong(song, in: groupID, eventID: eventID) } : nil,
-                                        groupID: groupID
+                                        groupID: groupID,
+                                        // En répétition on ouvre la setlist,
+                                        // pas le répertoire : l'indice des
+                                        // partitions doit être là aussi.
+                                        attachedDocs: group.docs(for: song.id).count
                                     )
                                 }
                             }
@@ -1732,7 +1746,9 @@ struct GroupEventSheet: View {
                                         dismiss()
                                     }
                                 } label: {
-                                    Text(event.isRecurring ? "Annuler cette répétition" : "Supprimer l'événement")
+                                    Text(event.isRecurring
+                                         ? LocalizedStringKey("Annuler cette répétition")
+                                         : "Supprimer l'événement")
                                         .font(.caption.weight(.bold))
                                         .frame(maxWidth: .infinity)
                                 }
@@ -1746,8 +1762,18 @@ struct GroupEventSheet: View {
             .navigationTitle("Événement")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if isLeader {
+                        Button("Modifier") { editing = true }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") { dismiss() }.font(.headline)
+                }
+            }
+            .sheet(isPresented: $editing) {
+                if let group, let event {
+                    EditGroupEventSheet(group: group, event: event)
                 }
             }
             .sheet(isPresented: $addingSong) {
@@ -1770,6 +1796,80 @@ struct GroupEventSheet: View {
                     }
                 }
                 Button("Ne rien annuler", role: .cancel) {}
+            }
+        }
+    }
+
+    /// Musiciens hors du groupe qui ont déjà coché ce jour-là — invitation en
+    /// un tap. N'apparaît que pour le leader et que s'il manque du monde :
+    /// une proposition qui tombe quand il n'y a rien à combler est du bruit.
+    @ViewBuilder
+    private func availableInviteRow(event: GroupEvent, group: GroupChat) -> some View {
+        if isLeader, !store.isLineupComplete(event, in: group) {
+            let invitees = store.availableInvitees(for: event, in: group)
+            if !invitees.isEmpty {
+                JCCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.badge.plus")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(JC.bronze)
+                            Text("Dispos ce jour-là")
+                                .font(.subheadline.weight(.bold))
+                            Spacer(minLength: 0)
+                            Text(verbatim: "\(invitees.count)")
+                                .font(JCFont.monoBold(11))
+                                .foregroundStyle(JC.bronze)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(JC.bronze.opacity(0.14), in: Capsule())
+                        }
+                        Text("Un tap pour inviter — la personne rejoint cet événement, pas le groupe.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(invitees.prefix(12)) { musician in
+                                    VStack(spacing: 8) {
+                                        AvatarView(name: musician.name, size: 48, photo: musician.photo)
+                                        Text(musician.name.split(separator: " ").first.map(String.init) ?? musician.name)
+                                            .font(.caption2.weight(.semibold))
+                                            .lineLimit(1)
+                                            .frame(width: 68)
+                                        if musician.isDemo { DemoAccountBadge() }
+                                        Button {
+                                            guard invitingName == nil else { return }
+                                            invitingName = musician.name
+                                            Task {
+                                                await store.inviteAvailable(musician, to: event, in: group)
+                                                invitingName = nil
+                                            }
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                if invitingName == musician.name {
+                                                    ProgressView().controlSize(.mini)
+                                                } else {
+                                                    Image(systemName: "paperplane.fill")
+                                                        .font(.system(size: 9, weight: .bold))
+                                                }
+                                                Text("Inviter")
+                                                    .font(.caption2.weight(.heavy))
+                                            }
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(JC.bronze, in: Capsule())
+                                        }
+                                        .buttonStyle(PressableStyle())
+                                        .disabled(invitingName != nil)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
             }
         }
     }
@@ -2241,6 +2341,122 @@ struct AddGroupEventSheet: View {
         }
     }
 
+}
+
+// MARK: - Modifier une date
+
+/// Changer l'heure, le jour, le lieu ou le titre d'une date déjà créée
+/// (leader). Sur une série, on choisit si ça vaut pour cette date seulement
+/// ou pour toutes les suivantes — auquel cas seule l'HEURE est reportée, les
+/// jours de la série ne bougent pas.
+struct EditGroupEventSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let group: GroupChat
+    let event: GroupEvent
+
+    @State private var title: String
+    @State private var venue: String
+    @State private var date: Date
+    @State private var scope: AppStore.EventEditScope = .thisDate
+
+    init(group: GroupChat, event: GroupEvent) {
+        self.group = group
+        self.event = event
+        _title = State(initialValue: event.title)
+        _venue = State(initialValue: event.venue)
+        _date = State(initialValue: event.date)
+    }
+
+    private var isValid: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !venue.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Le jour change-t-il ? C'est ce qui décide si les réponses de présence
+    /// sont redemandées.
+    private var dayChanges: Bool {
+        !Calendar.current.isDate(date, inSameDayAs: event.date)
+    }
+
+    /// Combien de dates seront touchées.
+    private var affectedCount: Int {
+        guard scope == .futureOccurrences else { return 1 }
+        return store.remainingOccurrences(of: event, in: group)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("La date") {
+                    DatePicker("Date et heure", selection: $date)
+                    TextField("Titre", text: $title)
+                    TextField("Salle ou bar", text: $venue)
+                }
+
+                if event.isRecurring {
+                    Section {
+                        Picker("Ça s'applique à", selection: $scope) {
+                            Text("Cette date seulement").tag(AppStore.EventEditScope.thisDate)
+                            Text("Toutes les dates à venir").tag(AppStore.EventEditScope.futureOccurrences)
+                        }
+                        .pickerStyle(.inline)
+                    } header: {
+                        Text("Portée")
+                    } footer: {
+                        Text(scope == .thisDate
+                             ? "Seule cette date bouge. Les autres répétitions gardent leur horaire."
+                             : "Le nouvel horaire, le titre et le lieu sont reportés sur les dates à venir. Les jours de la série, eux, ne changent pas.")
+                    }
+                }
+
+                Section {
+                    if dayChanges {
+                        Label(
+                            "Le jour change : les réponses de présence seront redemandées.",
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(JC.signal)
+                    }
+                    Label(
+                        affectedCount > 1
+                            ? String(format: store.tr("%lld dates seront modifiées."), Int64(affectedCount))
+                            : store.tr("Le groupe est prévenu du changement."),
+                        systemImage: "bell.badge"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                } footer: {
+                    Text("Une seule notification part, même si toute la série se déplace.")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Modifier la date")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") {
+                        store.updateEvent(
+                            event,
+                            in: group,
+                            date: date,
+                            title: title.trimmingCharacters(in: .whitespaces),
+                            venue: venue.trimmingCharacters(in: .whitespaces),
+                            scope: scope
+                        )
+                        dismiss()
+                    }
+                    .font(.headline)
+                    .disabled(!isValid)
+                }
+            }
+        }
+    }
 }
 
 extension AppStore {

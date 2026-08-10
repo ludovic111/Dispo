@@ -159,7 +159,7 @@ struct NotificationsSettingsView: View {
                 Text("Vérifier sur cet iPhone")
                     .font(.headline)
                 Text(store.isLive
-                    ? "Le test ci-dessous est local. Les alertes distantes utilisent aussi ton compte Dispo et ce téléphone."
+                    ? LocalizedStringKey("Le test ci-dessous est local. Les alertes distantes utilisent aussi ton compte Dispo et ce téléphone.")
                     : "En mode démo, seuls les rappels locaux sont disponibles.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

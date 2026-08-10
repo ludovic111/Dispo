@@ -1728,6 +1728,61 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
+    /// Réécrit la date, le titre et le lieu d'une ou plusieurs occurrences en
+    /// un seul aller-retour.
+    ///
+    /// C'est un `upsert` sur la clé primaire : les lignes existent déjà, donc
+    /// seul le `DO UPDATE` s'exécute et les colonnes non citées (setlist,
+    /// série, rythme, délai de rappel) ne bougent pas. Côté serveur, le
+    /// trigger `group_events_guard_core` refuse ces champs à quelqu'un qui
+    /// n'est pas le leader — la policy `update`, elle, est ouverte à tous les
+    /// membres depuis les setlists.
+    func updateEventSchedules(_ events: [GroupEvent], groupID: UUID) async throws {
+        guard !events.isEmpty else { return }
+        struct Row: Encodable {
+            let id: UUID
+            let group_id: UUID
+            let kind: String
+            let title: String
+            let venue: String
+            let date: Date
+        }
+        let rows = events.map {
+            Row(
+                id: $0.id,
+                group_id: groupID,
+                kind: $0.kind.rawValue,
+                title: $0.title,
+                venue: $0.venue,
+                date: $0.date
+            )
+        }
+        try await client.from("group_events").upsert(rows).execute()
+    }
+
+    /// Efface les réponses de présence de ces dates, sauf celle du leader :
+    /// quand le JOUR change, « je suis dispo jeudi » ne veut plus rien dire.
+    func resetAttendance(eventIDs: [UUID], keeping leaderID: UUID) async throws {
+        guard !eventIDs.isEmpty else { return }
+        try await client.from("event_attendance")
+            .delete()
+            .in("event_id", values: eventIDs.map(\.uuidString))
+            .neq("profile_id", value: leaderID)
+            .execute()
+    }
+
+    /// Prévient le groupe qu'une date a bougé — UNE notification, même si la
+    /// série entière a été déplacée (la RPC compte les dates elle-même).
+    func notifyEventMoved(eventID: UUID, dates: Int) async throws {
+        struct Params: Encodable {
+            let p_event_id: UUID
+            let p_dates: Int
+        }
+        try await client
+            .rpc("notify_group_event_moved", params: Params(p_event_id: eventID, p_dates: dates))
+            .execute()
+    }
+
     func deleteEvent(_ eventID: UUID) async throws {
         try await client.from("group_events").delete().eq("id", value: eventID).execute()
     }

@@ -62,10 +62,10 @@ struct AccountSheet: View {
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(store.isLive ? JC.feutrine : JC.bronze)
             }
-            Text(store.isLive ? "Connecté au réseau Dispo" : "Rejoins le réseau Dispo")
+            Text(store.isLive ? LocalizedStringKey("Connecté au réseau Dispo") : "Rejoins le réseau Dispo")
                 .font(.headline)
             Text(store.isLive
-                 ? "Ton profil, les annonces SOS et tes messages sont synchronisés en temps réel."
+                 ? LocalizedStringKey("Ton profil, les annonces SOS et tes messages sont synchronisés en temps réel.")
                  : "Ton profil devient visible des autres musiciens — annonces SOS et messages en temps réel.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

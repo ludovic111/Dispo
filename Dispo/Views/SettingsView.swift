@@ -76,7 +76,9 @@ struct SettingsSheet: View {
                         store.isLive ? JC.feutrine : JC.bronze
                     )
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(store.isLive ? "Mon compte" : "Se connecter")
+                        // Typé : un ternaire de littéraux donne une String,
+                        // et une String n'est jamais localisée.
+                        Text(store.isLive ? LocalizedStringKey("Mon compte") : "Se connecter")
                             .foregroundStyle(.primary)
                         if let email = store.liveEmail {
                             Text(verbatim: email)

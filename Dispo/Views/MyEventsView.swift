@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// « Mes événements » — l'agenda du musicien, à la place de la carte.
+/// « Sessions » — tout ce que je joue, au même endroit.
 ///
 /// Un musicien ne se demande pas « qui est autour de moi ? » (le fil et la
 /// recherche répondent déjà), il se demande « qu'est-ce que j'ai, et à quoi
-/// dois-je répondre ? ». Cette page rassemble donc au même endroit ce qui
-/// était éparpillé : les dates de mes groupes, les dépannages qu'on m'a
-/// confiés, les SOS que j'organise et les candidatures en attente — avec, en
-/// tête, ce qui attend une réponse de ma part.
+/// dois-je répondre ? ». Cette page rassemble donc ce qui était éparpillé :
+/// les dates de mes groupes, les dépannages qu'on m'a confiés, les SOS que
+/// j'organise et les candidatures en attente — avec, en tête, ce qui attend
+/// une réponse de ma part.
+///
+/// Depuis la 1.7 elle absorbe aussi « Je joue » (ex-onglet SOS) : les
+/// demandes de dépannage qu'on m'adresse se répondent ici. Une date se
+/// consulte à un seul endroit.
 struct MyEventsView: View {
     @EnvironmentObject private var store: AppStore
     @State private var scope: Scope = .upcoming
@@ -39,7 +43,7 @@ struct MyEventsView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         ScreenHeader(
-                            title: "Mes événements",
+                            title: "Sessions",
                             subtitle: headerSubtitle,
                             icon: "calendar",
                             iconColor: JC.laiton
@@ -92,22 +96,30 @@ struct MyEventsView: View {
         if scope == .past {
             return "\(items.count) date·s jouée·s"
         }
-        let waiting = store.agendaToConfirm.count
+        let waiting = store.sessionsTodoCount
         if waiting > 0 { return "\(waiting) réponse·s attendue·s" }
         return "\(store.agenda.count) date·s à venir"
     }
 
     // MARK: Ce qui attend une réponse
 
+    /// Le premier bloc de la page : tout ce sur quoi quelqu'un attend un mot
+    /// de moi. Les dépannages qu'on me demande et les dates de groupe non
+    /// confirmées sont la même chose du point de vue du musicien — ils se
+    /// répondent côte à côte, sans changer d'onglet.
     @ViewBuilder
     private var toConfirmSection: some View {
+        let requests = store.incomingRequests.filter { $0.targetStatus == .pending }
         let waiting = store.agendaToConfirm
-        if !waiting.isEmpty {
+        if !requests.isEmpty || !waiting.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 SectionHeader(
                     title: "On attend ta réponse",
-                    subtitle: "Un tap suffit — ton groupe sait tout de suite s'il doit chercher un remplaçant"
+                    subtitle: "Un tap suffit — en face, on sait tout de suite s'il faut chercher quelqu'un d'autre"
                 )
+                ForEach(requests) { request in
+                    IncomingRequestCard(request: request)
+                }
                 ForEach(waiting) { item in
                     if case .group(let groupID, let name, let emoji, let event) = item.source {
                         AnswerCard(groupID: groupID, groupName: name, emoji: emoji, event: event)
@@ -134,7 +146,7 @@ struct MyEventsView: View {
             icon: scope == .upcoming ? "calendar.badge.plus" : "clock.arrow.circlepath",
             title: scope == .upcoming ? "Rien de prévu" : "Aucune date passée",
             message: scope == .upcoming
-                ? "Tes concerts de groupe, les dépannages qu'on te confie et les SOS que tu publies apparaissent ici."
+                ? "Tes concerts de groupe, les dépannages qu'on te confie, tes candidatures et les SOS que tu publies apparaissent ici."
                 : "Les dates que tu auras jouées se rangent ici, mois par mois.",
             iconColor: JC.laiton
         )
@@ -239,6 +251,11 @@ struct AgendaRow: View {
                 .foregroundStyle(JC.bronze)
                 .lineLimit(1)
             TagView(text: event.kind.rawValue, color: JC.bronze)
+            // Sans ça, une série hebdomadaire donne cinquante-deux lignes
+            // rigoureusement identiques et rien ne dit que c'est la même.
+            if let recurrence = event.recurrence, event.isRecurring {
+                TagView(text: recurrence.shortLabel, color: JC.feutrine)
+            }
             if let group = store.groups.first(where: { $0.id == groupID }),
                let role = group.role(for: store.profile.name) {
                 TagView(text: role.rawValue, color: JC.laiton)
@@ -377,7 +394,7 @@ struct NextDateCard: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(JC.signal)
                 Text(missing.isEmpty
-                     ? "Il manque encore des réponses"
+                     ? LocalizedStringKey("Il manque encore des réponses")
                      : "Il manque : \(missing.map { store.tr($0.rawValue) }.joined(separator: ", "))")
                     .font(.caption.weight(.heavy))
                     .foregroundStyle(JC.signal)

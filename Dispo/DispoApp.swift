@@ -44,9 +44,10 @@ struct RootView: View {
                     .tabItem { Label("Accueil", systemImage: "house.fill") }
                     .tag(AppTab.home)
                 MyEventsView()
-                    .tabItem { Label("Agenda", systemImage: "calendar") }
-                    // Les dates de groupe qui attendent encore ma réponse.
-                    .badge(store.agendaToConfirm.count)
+                    .tabItem { Label("Sessions", systemImage: "calendar") }
+                    // Tout ce qui attend une réponse de ma part : les dates de
+                    // groupe non confirmées et les dépannages qu'on me demande.
+                    .badge(store.sessionsTodoCount)
                     .tag(AppTab.agenda)
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
@@ -117,6 +118,22 @@ struct RootView: View {
                 .zIndex(2)
             }
         }
+        // Les nouveautés de la version, une seule fois après la mise à jour.
+        // Posée sur le ZStack et non sur la TabView : deux `.sheet` sur la
+        // même vue se marchent dessus (le paywall vit sur la TabView).
+        // Jamais par-dessus l'onboarding ni l'écran de connexion.
+        .sheet(
+            isPresented: Binding(
+                get: {
+                    store.showWhatsNew
+                        && store.hasOnboarded
+                        && (store.backend == nil || store.isLive)
+                },
+                set: { if !$0 { store.markWhatsNewSeen() } }
+            )
+        ) {
+            WhatsNewSheet()
+        }
         .animation(.snappy(duration: 0.4), value: store.hasOnboarded)
         .animation(.snappy(duration: 0.3), value: store.backendError)
         .animation(.snappy(duration: 0.35), value: store.liveUserID)
@@ -174,7 +191,13 @@ struct RootView: View {
         // Laisse la démo se charger et la TabView se poser.
         try? await Task.sleep(for: .milliseconds(800))
         switch route {
-        case "agenda": store.selectedTab = .agenda
+        case "agenda", "sessions": store.selectedTab = .agenda
+        // Les nouveautés ne s'ouvrent qu'après une vraie mise à jour : sans
+        // cette route, impossible de les relire en QA sans trafiquer les
+        // préférences du simulateur.
+        case "whatsnew":
+            store.hasOnboarded = true
+            store.showWhatsNew = true
         case "sos": store.selectedTab = .sos
         case "messages": store.selectedTab = .messages
         case "profile": store.selectedTab = .profile

@@ -3,9 +3,14 @@ import UIKit
 import PhotosUI
 import UniformTypeIdentifiers
 
-/// La fiche d'un morceau du répertoire : sa tonalité — transposée pour TON
-/// instrument —, sa grille d'accords, ses partitions (PDF ou photos) et le
-/// fil de commentaires du groupe.
+/// La fiche d'un morceau du répertoire.
+///
+/// Depuis la 1.7 elle assume une hiérarchie : **iReal Pro est la façon
+/// normale de travailler un morceau** — c'est l'app que les musiciens ont
+/// déjà, elle joue la grille en boucle avec un accompagnement, et Dispo la
+/// lui envoie déjà transposée dans la tonalité du lecteur. Restent deux
+/// portes de sortie, clairement à part : les partitions qu'on photographie ou
+/// qu'on importe en PDF, et — pour qui y tient — une grille écrite à la main.
 struct SongDetailSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -15,13 +20,13 @@ struct SongDetailSheet: View {
 
     /// Onglets de la fiche.
     private enum Tab: String, CaseIterable, Identifiable {
-        case chart = "Grille"
+        case ireal = "iReal Pro"
         case scores = "Partitions"
         case comments = "Commentaires"
         var id: String { rawValue }
     }
 
-    @State private var tab: Tab = .chart
+    @State private var tab: Tab = .ireal
     /// Accord de lecture choisi (par défaut celui de mon instrument).
     @State private var transposition: Transposition?
     @State private var showEdit = false
@@ -38,6 +43,8 @@ struct SongDetailSheet: View {
     @State private var missingIReal = false
     /// Suppression du lien iReal Pro en attente de confirmation.
     @State private var confirmIRealDelete = false
+    /// Suppression de la grille écrite à la main, en attente de confirmation.
+    @State private var confirmGridDelete = false
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -74,7 +81,7 @@ struct SongDetailSheet: View {
                             .pickerStyle(.segmented)
 
                             switch tab {
-                            case .chart: chartTab(song)
+                            case .ireal: irealTab(song)
                             case .scores: scoresTab(song, group: group)
                             case .comments: commentsTab(song, group: group)
                             }
@@ -105,7 +112,7 @@ struct SongDetailSheet: View {
                 Text("La grille s'ouvre dans iReal Pro, l'app de play-along des musiciens. Sans elle, la grille reste lisible ici et se copie d'un tap.")
             }
             .confirmationDialog(
-                "Supprimer la grille iReal Pro ?",
+                "Supprimer le lien iReal Pro ?",
                 isPresented: $confirmIRealDelete,
                 titleVisibility: .visible
             ) {
@@ -113,6 +120,16 @@ struct SongDetailSheet: View {
                 Button("Annuler", role: .cancel) {}
             } message: {
                 Text("Le lien partagé par le groupe est retiré. La grille d'accords et la tonalité, elles, restent en place.")
+            }
+            .confirmationDialog(
+                "Supprimer la grille d'accords ?",
+                isPresented: $confirmGridDelete,
+                titleVisibility: .visible
+            ) {
+                Button("Supprimer", role: .destructive) { removeChordGrid() }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("Les accords écrits à la main sont effacés pour tout le groupe. La tonalité et le lien iReal Pro restent en place.")
             }
             .sheet(isPresented: $showListen) {
                 if let song {
@@ -206,13 +223,26 @@ struct SongDetailSheet: View {
         }
     }
 
-    // MARK: - Grille et tonalité
+    // MARK: - iReal Pro (la voie normale) et, à part, la grille manuelle
 
     @ViewBuilder
-    private func chartTab(_ song: Song) -> some View {
+    private func irealTab(_ song: Song) -> some View {
         let concert = song.musicalKey
         let shift = activeTransposition.semitones
 
+        keyCard(song, concert: concert, shift: shift)
+
+        // iReal Pro d'abord : c'est ce qu'on fait dans 90 % des cas.
+        irealSection(song: song, concert: concert, shift: shift)
+
+        // La grille écrite à la main, en dessous et clairement séparée : elle
+        // reste possible pour qui n'a pas iReal Pro, mais ce n'est plus la
+        // proposition principale.
+        manualGridSection(song: song, concert: concert, shift: shift)
+    }
+
+    /// Tonalité réelle → ta tonalité, avec le choix de l'accord de lecture.
+    private func keyCard(_ song: Song, concert: MusicalKey?, shift: Int) -> some View {
         JCCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -245,7 +275,7 @@ struct SongDetailSheet: View {
                     }
                 } else {
                     Text(isLeader
-                         ? "Tonalité non renseignée — ajoute-la avec « Modifier », chacun verra la sienne."
+                         ? LocalizedStringKey("Tonalité non renseignée — ajoute-la avec « Modifier », chacun verra la sienne.")
                          : "Tonalité non renseignée par le leader.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -263,69 +293,12 @@ struct SongDetailSheet: View {
                 .tint(JC.laiton)
             }
         }
-
-        // La grille d'accords, transposée dans la foulée.
-        if let chords = song.chords, !chords.isEmpty {
-            // La grille dans MA tonalité — c'est elle qu'on copie, pas celle
-            // du piano : coller ça dans un message doit servir tel quel.
-            let transposed = MusicTheory.transposeGrid(
-                chords,
-                by: shift,
-                // La grille s'écrit dans l'alphabet de la tonalité
-                // d'arrivée : dièses en mi majeur, bémols en si♭.
-                preferSharps: concert?.transposed(by: shift).prefersSharps ?? false
-            )
-            JCCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Label("Grille", systemImage: "square.grid.2x2")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(JC.bronze)
-                        Spacer()
-                        if shift != 0 {
-                            TagView(text: activeTransposition.rawValue, color: JC.laiton)
-                        }
-                        Button {
-                            UIPasteboard.general.string = transposed
-                            withAnimation { copiedGrid = true }
-                            Task {
-                                try? await Task.sleep(for: .seconds(2))
-                                withAnimation { copiedGrid = false }
-                            }
-                        } label: {
-                            Image(systemName: copiedGrid ? "checkmark" : "doc.on.doc")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(copiedGrid ? JC.feutrine : .secondary)
-                                .padding(6)
-                                .background(JC.inset, in: Circle())
-                        }
-                        .buttonStyle(PressableStyle())
-                        .accessibilityLabel(Text("Copier la grille"))
-                    }
-                    Text(verbatim: transposed)
-                        .font(JCFont.mono(15))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        } else if isLeader {
-            JCEmptyState(
-                icon: "square.grid.2x2",
-                title: "Pas encore de grille",
-                message: "Colle la grille d'accords dans « Modifier » : elle sera transposée automatiquement pour chaque instrument."
-            )
-        }
-
-        // iReal Pro : le lien collé par le groupe s'il existe, sinon un lien
-        // fabriqué à partir de la grille — déjà transposée pour celui qui
-        // l'ouvre. Plus rien à coller pour jouer dessus.
-        irealSection(song: song, concert: concert, shift: shift)
     }
 
     /// Le bloc iReal Pro : ouvrir, ou expliquer honnêtement pourquoi non.
     @ViewBuilder
     private func irealSection(song: Song, concert: MusicalKey?, shift: Int) -> some View {
-        let pasted = song.irealURL.flatMap { $0.isEmpty ? nil : URL(string: $0) }
+        let pasted = song.irealURL.flatMap { IRealPro.appLink($0) }
         let generated = (song.chords?.isEmpty == false)
             ? IRealPro.link(
                 title: song.title,
@@ -343,7 +316,7 @@ struct SongDetailSheet: View {
         if let url = pasted ?? generated {
             VStack(spacing: 8) {
                 Button { openIReal(url) } label: {
-                    Label("Ouvrir dans iReal Pro", systemImage: "arrow.up.forward.app.fill")
+                    Label("Ouvrir iReal Pro", systemImage: "arrow.up.forward.app.fill")
                         .font(.subheadline.weight(.bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -365,7 +338,7 @@ struct SongDetailSheet: View {
                             .buttonStyle(PressableStyle())
                         } else {
                             Button(role: .destructive) { confirmIRealDelete = true } label: {
-                                Label("Supprimer la grille iReal Pro", systemImage: "trash")
+                                Label("Supprimer le lien iReal Pro", systemImage: "trash")
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(JC.signal)
                             }
@@ -375,18 +348,26 @@ struct SongDetailSheet: View {
                     }
                 }
             }
-        } else if isLeader {
-            // Ni grille ni lien : on propose d'en ajouter un.
+        } else {
+            // Ni grille ni lien : c'est ici que tout commence.
             VStack(spacing: 8) {
-                Button { showEdit = true } label: {
-                    Label("Ajouter la grille iReal Pro", systemImage: "link.badge.plus")
-                        .font(.subheadline.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .foregroundStyle(JC.premiumTint)
+                if isLeader {
+                    Button { showEdit = true } label: {
+                        Label("Ajouter la grille iReal Pro", systemImage: "link.badge.plus")
+                            .font(.subheadline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(JC.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .foregroundStyle(JC.premiumTint)
+                    }
+                    .buttonStyle(PressableStyle())
+                } else {
+                    JCEmptyState(
+                        icon: "arrow.up.forward.app",
+                        title: "Pas encore de grille",
+                        message: "Le leader n'a pas encore partagé la grille de ce morceau."
+                    )
                 }
-                .buttonStyle(PressableStyle())
                 irealExplainer(pasted: false, shift: shift)
             }
         }
@@ -426,6 +407,74 @@ struct SongDetailSheet: View {
         .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    /// La grille d'accords écrite à la main — la porte de sortie pour qui n'a
+    /// pas iReal Pro. Volontairement en second, et supprimable d'un tap.
+    @ViewBuilder
+    private func manualGridSection(song: Song, concert: MusicalKey?, shift: Int) -> some View {
+        if let chords = song.chords, !chords.isEmpty {
+            // La grille dans MA tonalité — c'est elle qu'on copie, pas celle
+            // du piano : coller ça dans un message doit servir tel quel.
+            let transposed = MusicTheory.transposeGrid(
+                chords,
+                by: shift,
+                // La grille s'écrit dans l'alphabet de la tonalité
+                // d'arrivée : dièses en mi majeur, bémols en si♭.
+                preferSharps: concert?.transposed(by: shift).prefersSharps ?? false
+            )
+            JCCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label("Grille d'accords", systemImage: "square.grid.2x2")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(JC.bronze)
+                        Spacer()
+                        if shift != 0 {
+                            TagView(text: activeTransposition.rawValue, color: JC.laiton)
+                        }
+                        Button {
+                            UIPasteboard.general.string = transposed
+                            withAnimation { copiedGrid = true }
+                            Task {
+                                try? await Task.sleep(for: .seconds(2))
+                                withAnimation { copiedGrid = false }
+                            }
+                        } label: {
+                            Image(systemName: copiedGrid ? "checkmark" : "doc.on.doc")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(copiedGrid ? JC.feutrine : .secondary)
+                                .padding(6)
+                                .background(JC.inset, in: Circle())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityLabel(Text("Copier la grille"))
+                    }
+                    Text(verbatim: transposed)
+                        .font(JCFont.mono(15))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if isLeader {
+                        Button(role: .destructive) { confirmGridDelete = true } label: {
+                            Label("Supprimer la grille d'accords", systemImage: "trash")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(JC.signal)
+                        }
+                        .buttonStyle(PressableStyle())
+                    }
+                }
+            }
+        } else if isLeader {
+            Button { showEdit = true } label: {
+                Label("Écrire la grille à la main", systemImage: "square.grid.2x2")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(PressableStyle())
+        }
+    }
+
     /// Retire le lien iReal Pro partagé par le groupe. La tonalité et la
     /// grille d'accords restent : elles servent à tout le monde, y compris à
     /// ceux qui n'ont pas l'app.
@@ -440,12 +489,26 @@ struct SongDetailSheet: View {
         )
     }
 
+    /// Efface la grille écrite à la main. Le lien iReal Pro et la tonalité
+    /// restent en place — on ne supprime que ce qu'on a demandé.
+    private func removeChordGrid() {
+        guard let group, let song else { return }
+        store.updateSongDetails(
+            song,
+            key: song.key ?? "",
+            chords: "",
+            irealURL: song.irealURL ?? "",
+            in: group
+        )
+    }
+
     /// Ouvre le lien, ou emmène sur l'App Store si iReal Pro n'est pas
     /// installé — un bouton qui ne fait rien est pire que pas de bouton.
     private func openIReal(_ url: URL) {
-        guard let probe = URL(string: "\(IRealPro.scheme)://"),
-              UIApplication.shared.canOpenURL(probe) || UIApplication.shared.canOpenURL(url)
-        else {
+        let installed = IRealPro.schemes
+            .compactMap { URL(string: "\($0)://") }
+            .contains { UIApplication.shared.canOpenURL($0) }
+        guard installed || UIApplication.shared.canOpenURL(url) else {
             missingIReal = true
             return
         }
@@ -674,6 +737,24 @@ struct SongEditSheet: View {
                 }
 
                 Section {
+                    TextField("irealb://…", text: $ireal)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    if !ireal.isEmpty, IRealPro.appLink(ireal) == nil {
+                        Label(
+                            "Ce lien ne vient pas d'iReal Pro — il doit commencer par irealb:// ou irealbook://.",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(JC.signal)
+                    }
+                } header: {
+                    Text("iReal Pro")
+                } footer: {
+                    Text("La façon normale de partager un morceau. Dans iReal Pro : appui long sur le morceau → Partager → Copier, puis colle ici. Tout le groupe l'ouvre d'un tap. Pour l'enlever, utilise le bouton sur la fiche du morceau.")
+                }
+
+                Section {
                     TextField(
                         "Ex.  | Cmaj7 | Am7 | Dm7 | G7 |",
                         text: $chords,
@@ -684,26 +765,9 @@ struct SongEditSheet: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                 } header: {
-                    Text("Grille d'accords")
+                    Text("Grille écrite à la main (facultatif)")
                 } footer: {
-                    Text("Écris les accords en lettres (C, Bb, F#m7…). Dispo les transpose tout seul pour chaque instrument — la mise en page et les barres de mesure sont conservées.")
-                }
-
-                Section {
-                    TextField("irealb://…", text: $ireal)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                    if !ireal.trimmingCharacters(in: .whitespaces).isEmpty {
-                        Button(role: .destructive) {
-                            ireal = ""
-                        } label: {
-                            Label("Supprimer la grille iReal Pro", systemImage: "trash")
-                        }
-                    }
-                } header: {
-                    Text("iReal Pro")
-                } footer: {
-                    Text("iReal Pro est une app à part qui joue la grille en boucle avec un accompagnement. Dans iReal Pro : appui long sur le morceau → Partager → Copier le lien, puis colle-le ici. Sans lien collé, Dispo fabrique la grille tout seul à partir des accords ci-dessus.")
+                    Text("Sans lien iReal Pro, Dispo fabrique la grille à partir de ces accords. Écris-les en lettres (C, Bb, F#m7…) : ils sont transposés tout seuls pour chaque instrument, mise en page et barres de mesure conservées.")
                 }
             }
             .scrollContentBackground(.hidden)

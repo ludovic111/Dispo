@@ -147,7 +147,7 @@ struct CreateEventView: View {
                     Text("Niveau demandé")
                 } footer: {
                     Text(levels.isEmpty
-                         ? "Ouvert à tous : l'annonce s'affiche chez tous les musiciens qui jouent de l'instrument recherché."
+                         ? LocalizedStringKey("Ouvert à tous : l'annonce s'affiche chez tous les musiciens qui jouent de l'instrument recherché.")
                          : "Seuls les musiciens de ce niveau verront l'annonce dans leur fil.")
                 }
 

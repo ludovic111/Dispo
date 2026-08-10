@@ -502,7 +502,7 @@ struct MusicianDetailView: View {
                     // même règle — ici, on l'explique.
                     Text(played
                          ? (mine == nil
-                            ? "\(firstName) est musicien·ne professionnel·le : tu peux aussi noter la prestation. Ta note est anonyme."
+                            ? LocalizedStringKey("\(firstName) est musicien·ne professionnel·le : tu peux aussi noter la prestation. Ta note est anonyme.")
                             : "Ta note (anonyme) — modifie-la ou retire-la quand tu veux.")
                          : "Déclare d'abord que vous avez joué ensemble : on ne note que quelqu'un qu'on a vu jouer.")
                         .font(.caption)

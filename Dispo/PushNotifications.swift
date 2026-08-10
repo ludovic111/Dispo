@@ -59,7 +59,10 @@ final class DispoAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
 
 enum AppTab: String, Hashable {
     case home
-    /// « Mes événements » — l'agenda du musicien (a remplacé la carte en 1.6).
+    /// « Sessions » — tout ce que je joue : dates de groupe, dépannages
+    /// acceptés, candidatures. (A remplacé la carte en 1.6, s'appelait
+    /// « Agenda » jusqu'à la 1.7 ; le rawValue reste `agenda` parce qu'il
+    /// sert de cible aux deep links envoyés par le serveur.)
     case agenda
     case sos
     case messages
