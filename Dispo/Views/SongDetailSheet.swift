@@ -45,6 +45,14 @@ struct SongDetailSheet: View {
     @State private var confirmIRealDelete = false
     /// Suppression de la grille écrite à la main, en attente de confirmation.
     @State private var confirmGridDelete = false
+    /// Recherche officielle dans la bibliothèque iReal Pro installée.
+    @State private var irealSearch = ""
+    @State private var importingIRealHTML = false
+    @State private var exportingIRealHTML = false
+    @State private var irealExportDocument = IRealHTMLDocument()
+    @State private var importedIRealCharts: [IRealPro.HTMLChart] = []
+    @State private var choosingImportedChart = false
+    @State private var irealImportError: String?
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -112,14 +120,14 @@ struct SongDetailSheet: View {
                 Text("La grille s'ouvre dans iReal Pro, l'app de play-along des musiciens. Sans elle, la grille reste lisible ici et se copie d'un tap.")
             }
             .confirmationDialog(
-                "Supprimer le lien iReal Pro ?",
+                "Supprimer la grille iReal Pro ?",
                 isPresented: $confirmIRealDelete,
                 titleVisibility: .visible
             ) {
-                Button("Supprimer", role: .destructive) { removeIRealLink() }
+                Button("Supprimer", role: .destructive) { removeIRealChart() }
                 Button("Annuler", role: .cancel) {}
             } message: {
-                Text("Le lien partagé par le groupe est retiré. La grille d'accords et la tonalité, elles, restent en place.")
+                Text("La grille iReal Pro est retirée pour tout le groupe. La grille d'accords lisible dans Dispo et la tonalité restent en place.")
             }
             .confirmationDialog(
                 "Supprimer la grille d'accords ?",
@@ -161,6 +169,46 @@ struct SongDetailSheet: View {
                     songID: song.id,
                     instrument: uploadInstrument
                 )
+            }
+            .fileImporter(
+                isPresented: $importingIRealHTML,
+                allowedContentTypes: [.html]
+            ) { result in
+                guard case .success(let url) = result else { return }
+                importIRealHTML(from: url)
+            }
+            .fileExporter(
+                isPresented: $exportingIRealHTML,
+                document: irealExportDocument,
+                contentType: .html,
+                defaultFilename: song.map { safeFileName($0.title) } ?? "grille-ireal-pro"
+            ) { result in
+                if case .failure = result {
+                    irealImportError = store.tr("Le fichier iReal Pro n'a pas pu être exporté.")
+                }
+            }
+            .confirmationDialog(
+                "Choisir la grille à importer",
+                isPresented: $choosingImportedChart,
+                titleVisibility: .visible
+            ) {
+                ForEach(importedIRealCharts.prefix(20)) { chart in
+                    Button(chart.title) { saveImportedIRealChart(chart) }
+                }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("Ce fichier contient plusieurs grilles iReal Pro.")
+            }
+            .alert(
+                "Fichier iReal Pro illisible",
+                isPresented: Binding(
+                    get: { irealImportError != nil },
+                    set: { if !$0 { irealImportError = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { irealImportError = nil }
+            } message: {
+                Text(irealImportError ?? "")
             }
             .onChange(of: photoItem) { _, item in
                 guard let item, let group, let song else { return }
@@ -232,6 +280,8 @@ struct SongDetailSheet: View {
 
         keyCard(song, concert: concert, shift: shift)
 
+        irealSearchAndImport(song)
+
         // iReal Pro d'abord : c'est ce qu'on fait dans 90 % des cas.
         irealSection(song: song, concert: concert, shift: shift)
 
@@ -239,6 +289,50 @@ struct SongDetailSheet: View {
         // reste possible pour qui n'a pas iReal Pro, mais ce n'est plus la
         // proposition principale.
         manualGridSection(song: song, concert: concert, shift: shift)
+    }
+
+    /// Recherche via le schéma officiel, puis import du vrai fichier HTML
+    /// exporté par iReal Pro. Aucun catalogue privé n'est copié dans Dispo.
+    private func irealSearchAndImport(_ song: Song) -> some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Rechercher dans iReal Pro", systemImage: "magnifyingglass")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(JC.electric)
+                HStack(spacing: 8) {
+                    TextField(song.title, text: $irealSearch)
+                        .textInputAutocapitalization(.words)
+                        .submitLabel(.search)
+                        .onSubmit { searchInIReal(song) }
+                    Button { searchInIReal(song) } label: {
+                        Image(systemName: "arrow.up.forward.app.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(JC.billetInk)
+                            .padding(9)
+                            .background(JC.electric, in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+                .padding(.leading, 11)
+                .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Text("La recherche s'ouvre dans ta bibliothèque iReal Pro. Pour trouver de nouvelles grilles gratuites, utilise ensuite les Forums intégrés à iReal Pro.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                if isLeader {
+                    Button { importingIRealHTML = true } label: {
+                        Label("Importer un fichier iReal Pro (.html)", systemImage: "doc.badge.plus")
+                            .font(.caption.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(JC.electric.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                            .foregroundStyle(JC.electric)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+        }
     }
 
     /// Tonalité réelle → ta tonalité, avec le choix de l'accord de lecture.
@@ -299,7 +393,7 @@ struct SongDetailSheet: View {
     @ViewBuilder
     private func irealSection(song: Song, concert: MusicalKey?, shift: Int) -> some View {
         let pasted = song.irealURL.flatMap { IRealPro.appLink($0) }
-        let generated = (song.chords?.isEmpty == false)
+        let generated = (song.irealDisabled != true && song.chords?.isEmpty == false)
             ? IRealPro.link(
                 title: song.title,
                 composer: song.artist,
@@ -331,6 +425,16 @@ struct SongDetailSheet: View {
                 }
                 .buttonStyle(PressableStyle())
 
+                Button { exportIRealHTML(url, title: song.title) } label: {
+                    Label("Exporter le fichier iReal Pro (.html)", systemImage: "square.and.arrow.up")
+                        .font(.caption.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(JC.inset, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .foregroundStyle(JC.electric)
+                }
+                .buttonStyle(PressableStyle())
+
                 irealExplainer(pasted: pasted != nil, shift: shift)
 
                 if isLeader {
@@ -342,15 +446,14 @@ struct SongDetailSheet: View {
                                     .foregroundStyle(JC.bronze)
                             }
                             .buttonStyle(PressableStyle())
-                        } else {
-                            Button(role: .destructive) { confirmIRealDelete = true } label: {
-                                Label("Supprimer le lien iReal Pro", systemImage: "trash")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(JC.signal)
-                            }
-                            .buttonStyle(PressableStyle())
                         }
                         Spacer(minLength: 0)
+                        Button(role: .destructive) { confirmIRealDelete = true } label: {
+                            Label("Supprimer la grille iReal Pro", systemImage: "trash")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(JC.signal)
+                        }
+                        .buttonStyle(PressableStyle())
                     }
                 }
             }
@@ -484,16 +587,77 @@ struct SongDetailSheet: View {
         }
     }
 
-    /// Retire le lien iReal Pro partagé par le groupe. La tonalité et la
-    /// grille d'accords restent : elles servent à tout le monde, y compris à
-    /// ceux qui n'ont pas l'app.
-    private func removeIRealLink() {
+    private func searchInIReal(_ song: Song) {
+        let query = irealSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = IRealPro.searchURL(query.isEmpty ? song.title : query) else { return }
+        openIReal(url)
+    }
+
+    private func importIRealHTML(from url: URL) {
+        let secured = url.startAccessingSecurityScopedResource()
+        defer { if secured { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url, options: .mappedIfSafe)
+            let charts = try IRealPro.charts(fromHTML: data)
+            if let song,
+               let exact = charts.first(where: {
+                   $0.title.compare(song.title, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+               }) {
+                saveImportedIRealChart(exact)
+            } else if let only = charts.first, charts.count == 1 {
+                saveImportedIRealChart(only)
+            } else {
+                importedIRealCharts = charts
+                choosingImportedChart = true
+            }
+        } catch IRealPro.HTMLError.tooLarge {
+            irealImportError = store.tr("Fichier trop lourd — 4 Mo maximum pour une grille iReal Pro.")
+        } catch {
+            irealImportError = store.tr("Aucun lien irealb:// ou irealbook:// valide n'a été trouvé dans ce fichier HTML.")
+        }
+    }
+
+    private func saveImportedIRealChart(_ chart: IRealPro.HTMLChart) {
+        guard let group, let song else { return }
+        store.updateSongDetails(
+            song,
+            key: song.key ?? "",
+            chords: song.chords ?? "",
+            irealURL: chart.url.absoluteString,
+            irealDisabled: false,
+            in: group
+        )
+        importedIRealCharts = []
+    }
+
+    private func exportIRealHTML(_ url: URL, title: String) {
+        guard let data = IRealPro.htmlDocument(title: title, chartURL: url) else {
+            irealImportError = store.tr("La grille iReal Pro n'a pas pu être exportée.")
+            return
+        }
+        irealExportDocument = IRealHTMLDocument(data: data)
+        exportingIRealHTML = true
+    }
+
+    private func safeFileName(_ title: String) -> String {
+        let cleaned = title
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+            .lowercased()
+        return cleaned.isEmpty ? "grille-ireal-pro" : String(cleaned.prefix(80))
+    }
+
+    /// Retire vraiment la grille iReal Pro. Le drapeau empêche la grille
+    /// texte, conservée pour lecture dans Dispo, de la recréer aussitôt.
+    private func removeIRealChart() {
         guard let group, let song else { return }
         store.updateSongDetails(
             song,
             key: song.key ?? "",
             chords: song.chords ?? "",
             irealURL: "",
+            irealDisabled: true,
             in: group
         )
     }
@@ -795,6 +959,7 @@ struct SongEditSheet: View {
                                 key: key,
                                 chords: chords.trimmingCharacters(in: .whitespacesAndNewlines),
                                 irealURL: ireal.trimmingCharacters(in: .whitespaces),
+                                irealDisabled: false,
                                 in: group
                             )
                         }
@@ -809,5 +974,26 @@ struct SongEditSheet: View {
                 ireal = song.irealURL ?? ""
             }
         }
+    }
+}
+
+/// Document exportable par le sélecteur Fichiers. Le contenu est une page
+/// HTML iReal Pro complète générée par `IRealPro.htmlDocument`.
+struct IRealHTMLDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.html] }
+    static var writableContentTypes: [UTType] { [.html] }
+
+    var data: Data = Data()
+
+    init(data: Data = Data()) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }

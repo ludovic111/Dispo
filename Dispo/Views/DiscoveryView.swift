@@ -185,20 +185,13 @@ struct HomeView: View {
         .map { $0 }
     }
 
-    /// Groupes que je peux réellement diriger : leader ET Premium. Un membre
-    /// ordinaire n'a pas besoin d'un cockpit de gestion sur son accueil.
+    /// Groupes que je peux réellement diriger, dédoublonnés par identité.
+    /// Le cache local et un rafraîchissement realtime peuvent se chevaucher
+    /// pendant une frame : la maison ne doit jamais afficher deux fois la
+    /// même tuile.
     private var managedGroups: [GroupChat] {
-        store.groups.filter(store.canLead)
-    }
-
-    /// Une seule prochaine session, tous mes groupes dirigés confondus : la
-    /// plus proche. Les autres restent dans Sessions et dans chaque groupe.
-    private var nextManagedEvent: (group: GroupChat, event: GroupEvent)? {
-        managedGroups
-            .compactMap { group in
-                group.upcomingEvents.first.map { (group: group, event: $0) }
-            }
-            .min { $0.event.date < $1.event.date }
+        var seen = Set<GroupChat.ID>()
+        return store.groups.filter { store.canLead($0) && seen.insert($0.id).inserted }
     }
 
     private var greeting: LocalizedStringKey {
@@ -235,6 +228,13 @@ struct HomeView: View {
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
             .navigationDestination(for: GroupChat.ID.self) { GroupChatView(groupID: $0) }
+            .navigationDestination(for: GroupEventRoute.self) { route in
+                GroupEventSheet(
+                    groupID: route.groupID,
+                    eventID: route.eventID,
+                    presentedModally: false
+                )
+            }
             .sheet(isPresented: $showFilters) {
                 FilterSheet(filters: $filters)
                     .presentationDetents([.medium, .large])
@@ -309,9 +309,8 @@ struct HomeView: View {
         .buttonStyle(PressableStyle())
     }
 
-    /// Cockpit volontairement réduit : la prochaine session, puis trois
-    /// raccourcis par groupe. Répertoire, réglages, invitations et gestion
-    /// fine restent dans la vraie page du groupe.
+    /// Une tuile par groupe. Sa prochaine session vit DANS la tuile : aucune
+    /// carte événement autonome ne vient doubler le groupe sur l'accueil.
     ///
     /// La section n'existe que pour un leader Premium (`managedGroups`) :
     /// l'accueil des autres musiciens reste centré sur qui est disponible.
@@ -326,19 +325,10 @@ struct HomeView: View {
                     Text("Mes groupes")
                         .font(.caption2.weight(.heavy))
                         .textCase(.uppercase)
-                        .foregroundStyle(JC.premiumTint)
-                    PremiumBadge()
+                        .foregroundStyle(.primary)
                     Spacer(minLength: 0)
                     Text("Gestion rapide")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let next = nextManagedEvent {
-                    GroupEventReminderCard(group: next.group, event: next.event)
-                } else {
-                    Text("Aucune session planifiée — crée la prochaine sans quitter l'accueil.")
-                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -393,6 +383,20 @@ struct HomeView: View {
                     }
                 }
                 .buttonStyle(PressableStyle())
+
+                if let event = group.upcomingEvents.first {
+                    GroupEventReminderCard(group: group, event: event)
+                } else {
+                    HStack(spacing: 7) {
+                        Image(systemName: "calendar.badge.plus")
+                            .foregroundStyle(JC.premiumTint)
+                        Text("Aucune session planifiée")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                }
 
                 HStack(spacing: 8) {
                     Button { newEventGroup = group } label: {
@@ -642,12 +646,14 @@ struct GroupEventReminderCard: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            NavigationLink(value: group.id) {
+            NavigationLink(value: GroupEventRoute(groupID: group.id, eventID: event.id)) {
                 HStack(spacing: 11) {
                     Text(event.kind.emoji)
                         .font(.title3)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: "\(group.emoji) \(group.name) — \(event.title)")
+                        // Le nom du groupe est déjà juste au-dessus : ici on
+                        // garde uniquement le rendez-vous, lisible sans troncature.
+                        Text(verbatim: event.title)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)

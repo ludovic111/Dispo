@@ -1007,6 +1007,36 @@ extension Musician {
 
 // MARK: - Groupes de musique
 
+/// Fichier joint à un message. `remotePath` pointe vers le bucket privé
+/// `message-files`; en démo il commence par `local:` et vise le cache local.
+struct MessageAttachment: Codable, Identifiable, Hashable {
+    var id: String { remotePath }
+    var remotePath: String
+    var fileName: String
+    var contentType: String
+    var byteCount: Int64
+
+    var fileExtension: String {
+        let ext = URL(fileURLWithPath: fileName).pathExtension.lowercased()
+        return ext.isEmpty ? "dat" : ext
+    }
+
+    var iconName: String {
+        if contentType.hasPrefix("image/") { return "photo.fill" }
+        switch fileExtension {
+        case "pdf": return "doc.richtext.fill"
+        case "html", "htm": return "music.note.list"
+        case "musicxml", "xml", "mxl": return "music.quarternote.3"
+        case "mid", "midi": return "pianokeys"
+        default: return "doc.fill"
+        }
+    }
+
+    var sizeLabel: String {
+        ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file)
+    }
+}
+
 /// Un message dans un groupe.
 struct GroupMessage: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
@@ -1014,6 +1044,7 @@ struct GroupMessage: Codable, Identifiable, Hashable {
     var isFromMe: Bool
     var text: String
     var date: Date
+    var attachment: MessageAttachment? = nil
 }
 
 /// Une partition (ou tout document) partagée dans un groupe. En mode live
@@ -1084,6 +1115,9 @@ struct Song: Codable, Identifiable, Hashable {
     /// Lien iReal Pro partagé par le groupe (`irealbook://` ou `irealb://`),
     /// exporté depuis iReal Pro.
     var irealURL: String?
+    /// Le leader a volontairement retiré la grille iReal Pro. On conserve la
+    /// grille texte pour les membres sans iReal, sans la régénérer aussitôt.
+    var irealDisabled: Bool? = nil
 
     /// Tonalité relue, nil si non renseignée ou illisible.
     var musicalKey: MusicalKey? { key.flatMap(MusicalKey.init) }
@@ -1504,7 +1538,7 @@ enum LineupState {
 /// Un groupe de musique : le leader (créateur, forcément Premium) gère les
 /// membres, le répertoire et les événements ; les membres — Premium ou non —
 /// discutent, partagent des partitions et font des suggestions.
-/// Synchronisé via Supabase en mode live ; messages/partitions restent locaux.
+/// Synchronisé via Supabase en mode live, pièces jointes privées comprises.
 struct GroupChat: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var name: String
@@ -1560,7 +1594,10 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var lastMessage: GroupMessage? { messages.max(by: { $0.date < $1.date }) }
     /// Événements à venir, les plus proches d'abord.
     var upcomingEvents: [GroupEvent] {
-        allEvents.filter { $0.date > Date() }.sorted { $0.date < $1.date }
+        var seen = Set<GroupEvent.ID>()
+        return allEvents
+            .filter { $0.date > Date() && seen.insert($0.id).inserted }
+            .sorted { $0.date < $1.date }
     }
     /// Suggestions de morceaux en attente de validation du leader.
     var pendingSongs: [Song] { songs.filter { !$0.isApproved } }
@@ -1830,6 +1867,13 @@ struct AgendaItem: Identifiable, Hashable {
     }
 }
 
+/// Destination typée vers UNE date de groupe. Transporter les deux UUID
+/// empêche l'agenda de retomber sur l'écran complet du groupe.
+struct GroupEventRoute: Hashable {
+    let groupID: GroupChat.ID
+    let eventID: GroupEvent.ID
+}
+
 /// Un musicien qui joue UN soir avec le groupe : trouvé par SOS, accepté par
 /// le leader. Il n'entre pas dans le groupe — il n'apparaît que dans cet
 /// événement-là, avec son badge « Invité ».
@@ -1863,8 +1907,11 @@ struct Message: Codable, Identifiable, Hashable {
     /// Accusés de réception (mes envois uniquement) — nil = simple « envoyé ».
     var deliveredAt: Date?
     var readAt: Date?
+    var attachment: MessageAttachment? = nil
 
-    enum CodingKeys: String, CodingKey { case id, text, isFromMe, date, deliveredAt, readAt }
+    enum CodingKeys: String, CodingKey {
+        case id, text, isFromMe, date, deliveredAt, readAt, attachment
+    }
 
     /// État de la coche affichée sous mes messages.
     enum Receipt { case sent, delivered, read }

@@ -86,8 +86,12 @@ struct MyEventsView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
-            .navigationDestination(for: GroupChat.ID.self) {
-                GroupChatView(groupID: $0, initialTab: .events)
+            .navigationDestination(for: GroupEventRoute.self) { route in
+                GroupEventSheet(
+                    groupID: route.groupID,
+                    eventID: route.eventID,
+                    presentedModally: false
+                )
             }
         }
     }
@@ -172,8 +176,8 @@ struct AgendaRow: View {
     var body: some View {
         Group {
             switch item.source {
-            case .group(let groupID, _, _, _):
-                NavigationLink(value: groupID) { card }
+            case .group(let groupID, _, _, let event):
+                NavigationLink(value: GroupEventRoute(groupID: groupID, eventID: event.id)) { card }
                     .buttonStyle(PressableStyle())
             case .playing(let gig), .hosting(let gig), .applied(let gig):
                 NavigationLink(value: gig) { card }
@@ -320,8 +324,9 @@ struct NextDateCard: View {
     var body: some View {
         Group {
             switch item.source {
-            case .group(let groupID, _, _, _):
-                NavigationLink(value: groupID) { card }.buttonStyle(PressableStyle())
+            case .group(let groupID, _, _, let event):
+                NavigationLink(value: GroupEventRoute(groupID: groupID, eventID: event.id)) { card }
+                    .buttonStyle(PressableStyle())
             case .playing(let gig), .hosting(let gig), .applied(let gig):
                 NavigationLink(value: gig) { card }.buttonStyle(PressableStyle())
             }

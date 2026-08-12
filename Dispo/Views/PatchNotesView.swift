@@ -11,6 +11,18 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.9",
+            title: "Nocturne, groupes et partitions",
+            points: [
+                "L'accueil affiche une seule tuile par groupe, avec sa prochaine session directement dedans",
+                "Dans Sessions, un tap ouvre la date précise — plus l'écran entier du groupe",
+                "Les conversations privées et de groupe acceptent maintenant partitions et fichiers jusqu'à 20 Mo",
+                "iReal Pro recherche dans ta bibliothèque, importe et exporte ses vrais fichiers .html",
+                "Une grille iReal Pro supprimée ne réapparaît plus automatiquement",
+                "La nouvelle identité Nocturne & Brass mêle fond profond, or musical et cyan électrique"
+            ]
+        ),
+        PatchNote(
             version: "1.8",
             title: "Tes groupes, sans perdre le fil",
             points: [

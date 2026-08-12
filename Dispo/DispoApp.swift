@@ -319,28 +319,26 @@ extension AppTheme {
     }
 }
 
-/// Palette « Coulisses & Laiton », adaptative clair / sombre.
-/// Sombre : scène éteinte, bois chaud, lueur laiton. Clair : papier partition.
-/// Discipline : un accent (laiton), un signal (rouge, réservé au SOS),
-/// un positif (feutrine), un secondaire discret (bronze) — c'est tout.
+/// Palette « Nocturne & Brass », issue de la référence visuelle : noir chaud,
+/// cartes brunes, or musical et cyan électrique pour l'interactif.
 enum JC {
     // Fonds
     static let bg = Color(
         light: Color(red: 0.949, green: 0.918, blue: 0.851),
-        dark: Color(red: 0.090, green: 0.075, blue: 0.063)
+        dark: Color(red: 22 / 255, green: 19 / 255, blue: 11 / 255) // #16130B
     )
     static let card = Color(
         light: Color(red: 0.984, green: 0.961, blue: 0.910),
-        dark: Color(red: 0.129, green: 0.102, blue: 0.078)
+        dark: Color(red: 31 / 255, green: 27 / 255, blue: 19 / 255) // #1F1B13
     )
     /// Surface interne (bulles, champs, encarts posés sur une carte).
     static let inset = Color(
         light: Color(red: 0.929, green: 0.890, blue: 0.804),
-        dark: Color(red: 0.106, green: 0.086, blue: 0.067)
+        dark: Color(red: 24 / 255, green: 21 / 255, blue: 15 / 255)
     )
     static let cardStroke = Color(
         light: Color(red: 0.090, green: 0.075, blue: 0.063).opacity(0.08),
-        dark: Color(red: 0.965, green: 0.937, blue: 0.878).opacity(0.09)
+        dark: Color(red: 0, green: 209 / 255, blue: 1).opacity(0.13)
     )
     /// Reflet interne des cartes — simule une légère épaisseur.
     static let cardHighlight = Color(
@@ -357,8 +355,17 @@ enum JC {
     /// L'accent unique : boutons, états actifs, lueurs, étoiles.
     static let laiton = Color(
         light: Color(red: 0.663, green: 0.439, blue: 0.122),
-        dark: Color(red: 0.851, green: 0.643, blue: 0.255)
+        dark: Color(red: 212 / 255, green: 175 / 255, blue: 55 / 255) // #D4AF37
     )
+    /// Accent électrique de la référence : liens, import, recherche et
+    /// couronne. En clair, une version assombrie garde le contraste.
+    static let electric = Color(
+        light: Color(red: 0, green: 0.49, blue: 0.61),
+        dark: Color(red: 0, green: 209 / 255, blue: 1) // #00D1FF
+    )
+    /// #3D392F demandé dans l'identité. Sur le fond sombre il ne satisfait
+    /// pas le contraste du texte : on le réserve aux séparateurs/surfaces.
+    static let warmMuted = Color(red: 61 / 255, green: 57 / 255, blue: 47 / 255)
     /// Réservé au SOS (urgence, erreurs) — à rien d'autre.
     static let signal = Color(
         light: Color(red: 0.720, green: 0.250, blue: 0.100),
@@ -428,23 +435,16 @@ enum JC {
         startPoint: .top, endPoint: .bottom
     )
 
-    /// « Velours des coulisses » — le dégradé signature réservé au Premium /
-    /// pass backstage. Un bleu-vert paon, volontairement distinct du laiton :
-    /// l'or reste le CTA (hero), le teal dit « backstage ».
+    /// Pass backstage : cyan électrique plongé dans le fond nocturne.
     static let premium = LinearGradient(
         colors: [
-            Color(red: 0.173, green: 0.431, blue: 0.416),  // #2C6E6A teal éclairé
-            Color(red: 0.122, green: 0.329, blue: 0.314),  // #1F5450 paon
-            Color(red: 0.078, green: 0.235, blue: 0.227)   // #143C3A teal profond
+            Color(red: 0, green: 0.64, blue: 0.78),
+            Color(red: 0, green: 0.32, blue: 0.42),
+            Color(red: 22 / 255, green: 19 / 255, blue: 11 / 255)
         ],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    /// Teinte pleine du Premium (icônes, halos, petites touches teal) —
-    /// le contrepoint froid qui « colore » la palette sans casser la discipline.
-    static let premiumTint = Color(
-        light: Color(red: 0.106, green: 0.286, blue: 0.271),  // #1B4945
-        dark: Color(red: 0.239, green: 0.518, blue: 0.498)    // #3D847F
-    )
+    static let premiumTint = electric
 
     /// Apparence globale (tab bar, navigation bar).
     static func configureAppearance() {
@@ -453,6 +453,7 @@ enum JC {
         tab.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
         UITabBar.appearance().standardAppearance = tab
         UITabBar.appearance().scrollEdgeAppearance = tab
+        UITabBar.appearance().tintColor = UIColor(red: 0, green: 209 / 255, blue: 1, alpha: 1)
 
         let nav = UINavigationBarAppearance()
         nav.configureWithDefaultBackground()
@@ -480,8 +481,7 @@ enum JCFont {
     }
 }
 
-/// Fond signature « lumière de scène » : une lueur laiton qui tombe d'en
-/// haut à droite, une braise chaude au sol — la scène juste avant le set.
+/// Fond signature : halo électrique en haut, reflet laiton au sol.
 struct JCBackground: View {
     /// Braise du bas de scène (sable chaud en clair, brun profond en sombre).
     private static let braise = Color(
@@ -496,10 +496,10 @@ struct JCBackground: View {
                 let w = geo.size.width
                 let h = geo.size.height
                 Circle()
-                    .fill(JC.laiton)
+                    .fill(JC.electric)
                     .frame(width: w * 1.05)
                     .blur(radius: 110)
-                    .opacity(0.15)
+                    .opacity(0.17)
                     .position(x: w * 0.94, y: h * 0.02)
                 Circle()
                     .fill(Self.braise)

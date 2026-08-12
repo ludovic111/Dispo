@@ -63,6 +63,10 @@ struct GroupChatView: View {
     }
 
     @State private var draft = ""
+    @State private var outgoingMessageAttachment: OutgoingMessageAttachment?
+    @State private var importingMessageAttachment = false
+    @State private var previewingMessageAttachment: MessageAttachmentPreview?
+    @State private var downloadingMessageAttachmentID: String?
     /// Recherche dans le répertoire (apparaît au-delà de 8 morceaux).
     @State private var songQuery = ""
     /// Document prêt à être affiché (fichier local ou copie téléchargée).
@@ -74,10 +78,6 @@ struct GroupChatView: View {
     @State private var addingSong = false
     @State private var selectedEvent: GroupEvent?
     @State private var showMembers = false
-    /// Concert du groupe pour lequel on publie un SOS (pré-rempli).
-    @State private var sosEvent: GroupEvent?
-    /// Événement en attente de SOS, présenté après fermeture de sa feuille.
-    @State private var pendingSOSEvent: GroupEvent?
     @State private var showDeleteConfirm = false
     @State private var showGroupSettings = false
     @Environment(\.dismiss) private var dismiss
@@ -168,6 +168,19 @@ struct GroupChatView: View {
                     }
             }
         }
+        .sheet(item: $previewingMessageAttachment) { preview in
+            NavigationStack {
+                DocPreview(url: preview.url)
+                    .ignoresSafeArea(edges: .bottom)
+                    .navigationTitle(preview.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("OK") { previewingMessageAttachment = nil }.font(.headline)
+                        }
+                    }
+            }
+        }
         .sheet(isPresented: $addingEvent) {
             if let group {
                 AddGroupEventSheet(group: group)
@@ -180,31 +193,10 @@ struct GroupChatView: View {
                     .presentationDetents([.medium])
             }
         }
-        .sheet(item: $selectedEvent, onDismiss: {
-            // Enchaîner deux sheets dans la même transaction fait sauter la
-            // présentation : on n'ouvre le SOS qu'après fermeture de l'événement.
-            if let pending = pendingSOSEvent {
-                pendingSOSEvent = nil
-                sosEvent = pending
-            }
-        }) { event in
+        .sheet(item: $selectedEvent) { event in
             if let group {
-                GroupEventSheet(groupID: group.id, eventID: event.id, onPublishSOS: { pendingSOSEvent = $0 })
+                GroupEventSheet(groupID: group.id, eventID: event.id)
             }
-        }
-        .sheet(item: $sosEvent) { event in
-            // SOS pré-rempli depuis l'événement — connexion groupe ↔ SOS.
-            CreateEventView(
-                prefillTitle: event.title,
-                prefillPlace: event.venue,
-                prefillDate: event.date,
-                // « Dispo en fonction des rôles » : le SOS cible les rôles du
-                // groupe non couverts par un membre disponible ce jour-là
-                // (moins ceux déjà repris par un invité).
-                prefillInstruments: group.map { store.missingRoles(event, in: $0) } ?? [],
-                groupID: group?.id,
-                eventID: event.id
-            )
         }
         .fileImporter(
             isPresented: $importingDoc,
@@ -213,6 +205,20 @@ struct GroupChatView: View {
         ) { result in
             guard let group, case .success(let urls) = result, let url = urls.first else { return }
             store.addDoc(from: url, title: url.deletingPathExtension().lastPathComponent, to: group)
+        }
+        .fileImporter(
+            isPresented: $importingMessageAttachment,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            do {
+                outgoingMessageAttachment = try OutgoingMessageAttachment.load(from: url)
+            } catch OutgoingMessageAttachment.ImportError.tooLarge {
+                store.backendError = store.tr("Fichier trop lourd — 20 Mo maximum.")
+            } catch {
+                store.backendError = store.tr("Le fichier n'a pas pu être importé.")
+            }
         }
         // Le groupe est ouvert : ses messages sont lus (la puce s'éteint).
         .onAppear { store.markGroupSeen(groupID) }
@@ -276,7 +282,11 @@ struct GroupChatView: View {
                             .padding(.top, 20)
                         }
                         ForEach(group.messages) { message in
-                            GroupMessageBubble(message: message)
+                            GroupMessageBubble(
+                                message: message,
+                                isAttachmentLoading: downloadingMessageAttachmentID == message.attachment?.id,
+                                onOpenAttachment: openMessageAttachment
+                            )
                                 .id(message.id)
                         }
                     }
@@ -289,31 +299,74 @@ struct GroupChatView: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                TextField("Message au groupe…", text: $draft, axis: .vertical)
-                    .lineLimit(1...4)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(JC.card, in: RoundedRectangle(cornerRadius: 20))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
-                Button {
-                    let text = draft.trimmingCharacters(in: .whitespaces)
-                    guard !text.isEmpty else { return }
-                    draft = ""
-                    store.sendGroupMessage(text, in: group)
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 34))
-                        .foregroundStyle(
-                            draft.trimmingCharacters(in: .whitespaces).isEmpty
-                                ? AnyShapeStyle(Color.gray)
-                                : AnyShapeStyle(JC.hero)
-                        )
+            VStack(spacing: 8) {
+                if let outgoingMessageAttachment {
+                    MessageAttachmentDraftChip(attachment: outgoingMessageAttachment) {
+                        self.outgoingMessageAttachment = nil
+                    }
                 }
-                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                HStack(spacing: 10) {
+                    Button { importingMessageAttachment = true } label: {
+                        Image(systemName: "paperclip")
+                            .font(.body.weight(.bold))
+                            .foregroundStyle(JC.electric)
+                            .frame(width: 36, height: 36)
+                            .background(JC.card, in: Circle())
+                    }
+                    .buttonStyle(PressableStyle())
+                    .disabled(store.messageAttachmentUploadInProgress)
+                    .accessibilityLabel(Text("Joindre un fichier"))
+
+                    TextField("Message au groupe…", text: $draft, axis: .vertical)
+                        .lineLimit(1...4)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(JC.card, in: RoundedRectangle(cornerRadius: 20))
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
+                    Button { sendGroupMessage(in: group) } label: {
+                        Group {
+                            if store.messageAttachmentUploadInProgress {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.system(size: 34))
+                            }
+                        }
+                        .foregroundStyle(canSendGroupMessage ? AnyShapeStyle(JC.hero) : AnyShapeStyle(Color.gray))
+                    }
+                    .disabled(!canSendGroupMessage || store.messageAttachmentUploadInProgress)
+                }
             }
             .padding()
             .background(.ultraThinMaterial)
+        }
+    }
+
+    private var canSendGroupMessage: Bool {
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || outgoingMessageAttachment != nil
+    }
+
+    private func sendGroupMessage(in group: GroupChat) {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty || outgoingMessageAttachment != nil else { return }
+        let attachment = outgoingMessageAttachment
+        draft = ""
+        outgoingMessageAttachment = nil
+        store.sendGroupMessage(text, attachment: attachment, in: group)
+    }
+
+    private func openMessageAttachment(_ attachment: MessageAttachment) {
+        guard downloadingMessageAttachmentID == nil else { return }
+        downloadingMessageAttachmentID = attachment.id
+        Task {
+            defer { downloadingMessageAttachmentID = nil }
+            if let url = await store.localURL(for: attachment) {
+                previewingMessageAttachment = MessageAttachmentPreview(
+                    title: attachment.fileName,
+                    url: url
+                )
+            }
         }
     }
 
@@ -1055,6 +1108,8 @@ struct ListenSheet: View {
 /// Bulle de message de groupe — le nom de l'expéditeur au-dessus.
 struct GroupMessageBubble: View {
     let message: GroupMessage
+    var isAttachmentLoading = false
+    var onOpenAttachment: ((MessageAttachment) -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -1066,19 +1121,28 @@ struct GroupMessageBubble: View {
                         .foregroundStyle(JC.bronze)
                         .padding(.leading, 6)
                 }
-                Text(message.text)
-                    .font(.subheadline)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        message.isFromMe ? AnyShapeStyle(JC.hero) : AnyShapeStyle(JC.card),
-                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
-                    )
-                    .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
+                VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 6) {
+                    if let attachment = message.attachment {
+                        MessageAttachmentCard(
+                            attachment: attachment,
+                            isLoading: isAttachmentLoading
+                        ) { onOpenAttachment?(attachment) }
+                    }
+                    if !message.text.isEmpty {
+                        Text(message.text).font(.subheadline)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    message.isFromMe ? AnyShapeStyle(JC.hero) : AnyShapeStyle(JC.card),
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
+                )
+                .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
                 Text(message.date.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -1590,7 +1654,10 @@ struct GroupEventSheet: View {
     @Environment(\.dismiss) private var dismiss
     let groupID: GroupChat.ID
     let eventID: GroupEvent.ID
-    let onPublishSOS: (GroupEvent) -> Void
+    /// En sheet, la vue fournit sa propre NavigationStack et un bouton OK.
+    /// Depuis Sessions ou l'accueil elle s'insère dans la pile existante :
+    /// on ne montre alors que le détail de cette date.
+    var presentedModally = true
     @State private var addingSong = false
     /// Série : on demande si on annule cette date ou toutes les suivantes.
     @State private var confirmingDelete = false
@@ -1598,6 +1665,8 @@ struct GroupEventSheet: View {
     @State private var editing = false
     /// Musicien en cours d'invitation (un tap).
     @State private var invitingName: String?
+    /// SOS pré-rempli depuis cette date précise.
+    @State private var sosEvent: GroupEvent?
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
@@ -1618,7 +1687,16 @@ struct GroupEventSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        Group {
+            if presentedModally {
+                NavigationStack { eventDetail }
+            } else {
+                eventDetail
+            }
+        }
+    }
+
+    private var eventDetail: some View {
             ZStack {
                 JCBackground()
                 if let group, let event {
@@ -1671,8 +1749,7 @@ struct GroupEventSheet: View {
                             // depuis l'onglet SOS.)
                             if isLeader {
                             Button {
-                                dismiss()
-                                onPublishSOS(event)
+                                sosEvent = event
                             } label: {
                                 Label("Un membre lâche ? Publier un SOS", systemImage: "bolt.fill")
                                     .font(.subheadline.weight(.bold))
@@ -1765,7 +1842,9 @@ struct GroupEventSheet: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { dismiss() }.font(.headline)
+                    if presentedModally {
+                        Button("OK") { dismiss() }.font(.headline)
+                    }
                 }
             }
             .sheet(isPresented: $editing) {
@@ -1776,6 +1855,16 @@ struct GroupEventSheet: View {
             .sheet(isPresented: $addingSong) {
                 AddSongSheet(groupID: groupID, eventID: eventID)
                     .presentationDetents([.medium])
+            }
+            .sheet(item: $sosEvent) { event in
+                CreateEventView(
+                    prefillTitle: event.title,
+                    prefillPlace: event.venue,
+                    prefillDate: event.date,
+                    prefillInstruments: group.map { store.missingRoles(event, in: $0) } ?? [],
+                    groupID: groupID,
+                    eventID: event.id
+                )
             }
             .confirmationDialog(
                 cancellationTitle,
@@ -1803,7 +1892,6 @@ struct GroupEventSheet: View {
             } message: {
                 Text("La session disparaîtra des agendas et les autres membres recevront une notification.")
             }
-        }
     }
 
     /// Musiciens hors du groupe qui ont déjà coché ce jour-là — invitation en

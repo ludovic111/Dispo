@@ -1,3 +1,5 @@
+import Foundation
+
 var failures = 0
 func check(_ label: String, _ got: String, _ want: String) {
     let ok = got == want
@@ -104,5 +106,23 @@ check("Titre présent dans le lien",
 check("Grille vide → pas de lien",
       IRealPro.link(title: "X", composer: "", style: "", key: nil, grid: "   ") == nil ? "nil" : "url",
       "nil")
+
+// Recherche documentée et échange HTML officiel.
+check("Recherche iReal Pro encodée",
+      IRealPro.searchURL("All The Things You Are")?.absoluteString ?? "nil",
+      "irealb://search?All%20The%20Things%20You%20Are")
+if let sample, let html = IRealPro.htmlDocument(title: "Blue & Bossa", chartURL: sample) {
+    check("HTML échappe le titre",
+          String(data: html, encoding: .utf8)?.contains("Blue &amp; Bossa") == true ? "oui" : "non",
+          "oui")
+    let imported = try? IRealPro.charts(fromHTML: html)
+    check("HTML réimporte une grille", "\(imported?.count ?? 0)", "1")
+    check("HTML conserve le lien", imported?.first?.url.absoluteString ?? "nil", sample.absoluteString)
+} else {
+    check("Document HTML généré", "nil", "document")
+}
+check("HTML sans grille refusé",
+      (try? IRealPro.charts(fromHTML: Data("<html></html>".utf8))) == nil ? "oui" : "non",
+      "oui")
 
 print(failures == 0 ? "\n✅ tout passe" : "\n❌ \(failures) échec(s)")

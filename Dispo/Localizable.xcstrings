@@ -5461,6 +5461,46 @@
         }
       }
     },
+    "Aucun lien irealb:// ou irealbook:// valide n'a été trouvé dans ce fichier HTML.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In dieser HTML-Datei wurde kein gültiger irealb://- oder irealbook://-Link gefunden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No valid irealb:// or irealbook:// link was found in this HTML file."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha encontrado ningún enlace irealb:// o irealbook:// válido en este archivo HTML."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In questo file HTML non è stato trovato alcun link irealb:// o irealbook:// valido."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このHTMLファイルには有効なirealb://またはirealbook://リンクがありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 HTML 文件中未找到有效的 irealb:// 或 irealbook:// 链接。"
+          }
+        }
+      }
+    },
     "Aucun morceau ne correspond.": {
       "localizations": {
         "de": {
@@ -5937,6 +5977,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无乐谱"
+          }
+        }
+      }
+    },
+    "Aucune session planifiée": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Session geplant"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No session scheduled"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay ninguna sesión programada"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna sessione programmata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定されているセッションはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无已安排的排练"
           }
         }
       }
@@ -8191,6 +8271,46 @@
         }
       }
     },
+    "Ce fichier contient plusieurs grilles iReal Pro.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Datei enthält mehrere iReal-Pro-Schemata."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file contains several iReal Pro charts."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este archivo contiene varias cuadrículas de iReal Pro."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo file contiene diverse griglie iReal Pro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルには複数のiReal Proコード譜が含まれています。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件包含多个 iReal Pro 曲谱。"
+          }
+        }
+      }
+    },
     "Ce lien ne vient pas d'iReal Pro — il doit commencer par irealb:// ou irealbook://.": {
       "localizations": {
         "de": {
@@ -9147,6 +9267,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜索曲目…"
+          }
+        }
+      }
+    },
+    "Choisir la grille à importer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu importierendes Schema wählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the chart to import"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige la cuadrícula que quieres importar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli la griglia da importare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込むコード譜を選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择要导入的曲谱"
           }
         }
       }
@@ -12087,6 +12247,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "DJ/打碟"
+          }
+        }
+      }
+    },
+    "Dans Sessions, un tap ouvre la date précise — plus l'écran entier du groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Sessions öffnet ein Tippen genau diesen Termin statt der gesamten Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Sessions, a tap opens that exact event instead of the whole group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En Sesiones, un toque abre esa fecha concreta en vez de todo el grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Sessioni, un tocco apre la data precisa invece dell'intero gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションでは、タップするとグループ全体ではなくその予定だけが開きます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在排练中，轻点会打开该场具体活动，而非整个乐队页面"
           }
         }
       }
@@ -15581,6 +15781,46 @@
         }
       }
     },
+    "Exporter le fichier iReal Pro (.html)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal-Pro-Datei (.html) exportieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export the iReal Pro file (.html)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportar el archivo de iReal Pro (.html)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta il file iReal Pro (.html)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proファイル（.html）を書き出す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出 iReal Pro 文件（.html）"
+          }
+        }
+      }
+    },
     "Feed de musiciens, profils et carte de Genève": {
       "localizations": {
         "de": {
@@ -15737,6 +15977,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "文件"
+          }
+        }
+      }
+    },
+    "Fichier iReal Pro illisible": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal-Pro-Datei nicht lesbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unreadable iReal Pro file"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo de iReal Pro no se puede leer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File iReal Pro illeggibile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proファイルを読み込めません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取 iReal Pro 文件"
+          }
+        }
+      }
+    },
+    "Fichier trop lourd — 20 Mo maximum.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei zu groß — maximal 20 MB."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File too large — 20 MB maximum."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo es demasiado grande — máximo 20 MB."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File troppo grande — massimo 20 MB."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが大きすぎます（最大20 MB）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件过大，最大 20 MB。"
+          }
+        }
+      }
+    },
+    "Fichier trop lourd — 4 Mo maximum pour une grille iReal Pro.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei zu groß — maximal 4 MB für ein iReal-Pro-Schema."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File too large — 4 MB maximum for an iReal Pro chart."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo es demasiado grande — máximo 4 MB para una cuadrícula de iReal Pro."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File troppo grande — massimo 4 MB per una griglia iReal Pro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが大きすぎます（iReal Proコード譜は最大4 MB）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件过大，iReal Pro 曲谱最大为 4 MB。"
           }
         }
       }
@@ -17561,6 +17921,46 @@
         }
       }
     },
+    "Importer un fichier iReal Pro (.html)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal-Pro-Datei (.html) importieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import an iReal Pro file (.html)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar un archivo de iReal Pro (.html)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa un file iReal Pro (.html)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proファイル（.html）を読み込む"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 iReal Pro 文件（.html）"
+          }
+        }
+      }
+    },
     "Impossible d'ouvrir la conversation.": {
       "localizations": {
         "de": {
@@ -18971,6 +19371,46 @@
         }
       }
     },
+    "Joindre un fichier": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei anhängen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attach a file"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjuntar un archivo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allega un file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを添付"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附加文件"
+          }
+        }
+      }
+    },
     "Jusqu'au %@": {
       "localizations": {
         "de": {
@@ -19047,6 +19487,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "开通Premium可上传6个视频"
+          }
+        }
+      }
+    },
+    "L'accueil affiche une seule tuile par groupe, avec sa prochaine session directement dedans": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf der Startseite erscheint jede Gruppe nur einmal, mit ihrer nächsten Session direkt in der Kachel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home shows one tile per group, with its next session right inside it"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicio muestra una sola tarjeta por grupo, con su próxima sesión dentro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La home mostra una sola scheda per gruppo, con la prossima sessione direttamente al suo interno"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームでは各グループを1枚のタイルにまとめ、次のセッションをその中に表示します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页中每个乐队仅显示一个卡片，并直接展示下一场排练"
           }
         }
       }
@@ -19741,6 +20221,86 @@
         }
       }
     },
+    "La grille iReal Pro est retirée pour tout le groupe. La grille d'accords lisible dans Dispo et la tonalité restent en place.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das iReal-Pro-Schema wird für die ganze Gruppe entfernt. Das in Dispo lesbare Akkordschema und die Tonart bleiben erhalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The iReal Pro chart will be removed for the whole group. The readable chord chart in Dispo and the key will remain."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La cuadrícula de iReal Pro se eliminará para todo el grupo. La cuadrícula de acordes legible en Dispo y la tonalidad se conservarán."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La griglia iReal Pro verrà rimossa per tutto il gruppo. La griglia di accordi leggibile in Dispo e la tonalità resteranno disponibili."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proのコード譜をグループ全体から削除します。Dispoで読めるコード譜とキーは残ります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将为整个乐队移除 iReal Pro 曲谱。Dispo 中可读的和弦谱与调性会保留。"
+          }
+        }
+      }
+    },
+    "La grille iReal Pro n'a pas pu être exportée.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das iReal-Pro-Schema konnte nicht exportiert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The iReal Pro chart could not be exported."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido exportar la cuadrícula de iReal Pro."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile esportare la griglia iReal Pro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proコード譜を書き出せませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法导出 iReal Pro 曲谱。"
+          }
+        }
+      }
+    },
     "La grille s'ouvre dans iReal Pro, l'app de play-along des musiciens. Sans elle, la grille reste lisible ici et se copie d'un tap.": {
       "localizations": {
         "de": {
@@ -19907,6 +20467,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "评分删除失败。"
+          }
+        }
+      }
+    },
+    "La nouvelle identité Nocturne & Brass mêle fond profond, or musical et cyan électrique": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der neue Nocturne-&-Brass-Look verbindet tiefes Schwarz, musikalisches Gold und elektrisches Cyan"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new Nocturne & Brass identity blends deep black, musical gold and electric cyan"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nueva identidad Nocturne & Brass combina negro profundo, oro musical y cian eléctrico"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nuova identità Nocturne & Brass unisce nero profondo, oro musicale e ciano elettrico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいNocturne & Brassデザインは、深い黒、音楽的なゴールド、鮮やかなシアンを融合しています"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全新 Nocturne & Brass 视觉融合深邃黑色、音乐金色与电光青色"
           }
         }
       }
@@ -20187,6 +20787,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "SOS 角标不再计算你发布的求援，只显示符合乐器和水平的新 SOS"
+          }
+        }
+      }
+    },
+    "La recherche s'ouvre dans ta bibliothèque iReal Pro. Pour trouver de nouvelles grilles gratuites, utilise ensuite les Forums intégrés à iReal Pro.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Suche öffnet sich in deiner iReal-Pro-Mediathek. Neue kostenlose Schemata findest du anschließend über die in iReal Pro integrierten Foren."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The search opens in your iReal Pro library. To find new free charts, use the Forums built into iReal Pro."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La búsqueda se abre en tu biblioteca de iReal Pro. Para encontrar nuevas cuadrículas gratuitas, usa después los Foros integrados en iReal Pro."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La ricerca si apre nella tua libreria iReal Pro. Per trovare nuove griglie gratuite, usa poi i Forum integrati in iReal Pro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索はiReal Proのライブラリで開きます。新しい無料コード譜は、iReal Pro内のフォーラムで探せます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索会在你的 iReal Pro 曲库中打开。如需查找新的免费曲谱，请使用 iReal Pro 内置论坛。"
           }
         }
       }
@@ -21297,6 +21937,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "SOS 信息流实时更新 — 无需重启应用"
+          }
+        }
+      }
+    },
+    "Le fichier iReal Pro n'a pas pu être exporté.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die iReal-Pro-Datei konnte nicht exportiert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The iReal Pro file could not be exported."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido exportar el archivo de iReal Pro."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile esportare il file iReal Pro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proファイルを書き出せませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法导出 iReal Pro 文件。"
+          }
+        }
+      }
+    },
+    "Le fichier n'a pas pu être envoyé.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei konnte nicht gesendet werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be sent."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido enviar el archivo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile inviare il file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを送信できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法发送文件。"
+          }
+        }
+      }
+    },
+    "Le fichier n'a pas pu être importé.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei konnte nicht importiert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be imported."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido importar el archivo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile importare il file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを読み込めませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法导入文件。"
+          }
+        }
+      }
+    },
+    "Le fichier n'a pas pu être ouvert — vérifie le réseau.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei konnte nicht geöffnet werden — überprüfe die Verbindung."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be opened — check your connection."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido abrir el archivo — comprueba la conexión."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile aprire il file — controlla la connessione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを開けませんでした。通信状況を確認してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法打开文件，请检查网络连接。"
           }
         }
       }
@@ -23167,6 +23967,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "已收到的应征将被删除。"
+          }
+        }
+      }
+    },
+    "Les conversations privées et de groupe acceptent maintenant partitions et fichiers jusqu'à 20 Mo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In privaten und Gruppen-Chats lassen sich jetzt Noten und Dateien bis 20 MB senden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private and group chats now accept sheet music and files up to 20 MB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los chats privados y de grupo ahora aceptan partituras y archivos de hasta 20 MB"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le chat private e di gruppo ora accettano spartiti e file fino a 20 MB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人・グループチャットで、20 MBまでの楽譜やファイルを送れるようになりました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私聊和群聊现可发送最大 20 MB 的乐谱与文件"
           }
         }
       }
@@ -27451,6 +28291,46 @@
         }
       }
     },
+    "Nocturne, groupes et partitions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nocturne, Gruppen und Noten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nocturne, groups and sheet music"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nocturne, grupos y partituras"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nocturne, gruppi e spartiti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nocturne、グループ、楽譜"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nocturne、乐队与乐谱"
+          }
+        }
+      }
+    },
     "Nom": {
       "localizations": {
         "de": {
@@ -29207,6 +30087,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开 iReal Pro"
+          }
+        }
+      }
+    },
+    "Ouvrir le fichier": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open file"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir el archivo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开文件"
           }
         }
       }
@@ -33501,6 +34421,46 @@
         }
       }
     },
+    "Rechercher dans iReal Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In iReal Pro suchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in iReal Pro"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar en iReal Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca in iReal Pro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proで検索"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iReal Pro 中搜索"
+          }
+        }
+      }
+    },
     "Recherche…": {
       "localizations": {
         "de": {
@@ -34257,6 +35217,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "撤回请求"
+          }
+        }
+      }
+    },
+    "Retirer le fichier": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei entfernen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove file"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar el archivo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi il file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除文件"
           }
         }
       }
@@ -43011,6 +44011,46 @@
         }
       }
     },
+    "Une grille iReal Pro supprimée ne réapparaît plus automatiquement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein gelöschtes iReal-Pro-Schema erscheint nicht mehr automatisch erneut"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A deleted iReal Pro chart no longer reappears automatically"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cuadrícula de iReal Pro eliminada ya no reaparece automáticamente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una griglia iReal Pro eliminata non ricompare più automaticamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除したiReal Proコード譜が自動で再表示されることはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除的 iReal Pro 曲谱不会再自动出现"
+          }
+        }
+      }
+    },
     "Une grille peut toujours s'écrire à la main — c'est juste rangé à part": {
       "localizations": {
         "de": {
@@ -45287,6 +46327,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "未安装 iReal Pro"
+          }
+        }
+      }
+    },
+    "iReal Pro recherche dans ta bibliothèque, importe et exporte ses vrais fichiers .html": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro durchsucht deine Mediathek und importiert sowie exportiert echte .html-Dateien"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro searches your library and imports and exports its real .html files"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro busca en tu biblioteca e importa y exporta sus archivos .html reales"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro cerca nella tua libreria e importa ed esporta i suoi veri file .html"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proのライブラリ検索と、正式な.htmlファイルの読み書きに対応しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro 可搜索你的曲库，并导入、导出其真实的 .html 文件"
           }
         }
       }

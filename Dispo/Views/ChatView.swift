@@ -1,9 +1,14 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @EnvironmentObject private var store: AppStore
     let conversationID: Conversation.ID
     @State private var draft = ""
+    @State private var outgoingAttachment: OutgoingMessageAttachment?
+    @State private var importingAttachment = false
+    @State private var previewingAttachment: MessageAttachmentPreview?
+    @State private var downloadingAttachmentID: String?
 
     private var conversation: Conversation? {
         store.conversations.first(where: { $0.id == conversationID })
@@ -33,7 +38,11 @@ struct ChatView: View {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(conversation?.messages ?? []) { message in
-                                MessageBubble(message: message)
+                                MessageBubble(
+                                    message: message,
+                                    isAttachmentLoading: downloadingAttachmentID == message.attachment?.id,
+                                    onOpenAttachment: openAttachment
+                                )
                                     .id(message.id)
                             }
                             if isContactTyping {
@@ -65,28 +74,46 @@ struct ChatView: View {
                     }
                 }
 
-                HStack(spacing: 10) {
-                    TextField("Ton message…", text: $draft, axis: .vertical)
-                        .onChange(of: draft) {
-                            if !draft.isEmpty { store.userIsTyping(in: conversationID) }
+                VStack(spacing: 8) {
+                    if let outgoingAttachment {
+                        MessageAttachmentDraftChip(attachment: outgoingAttachment) {
+                            self.outgoingAttachment = nil
                         }
-                        .lineLimit(1...4)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(JC.card, in: RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
-                    Button {
-                        send()
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 34))
-                            .foregroundStyle(
-                                draft.trimmingCharacters(in: .whitespaces).isEmpty
-                                    ? AnyShapeStyle(Color.gray)
-                                    : AnyShapeStyle(JC.hero)
-                            )
                     }
-                    .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                    HStack(spacing: 10) {
+                        Button { importingAttachment = true } label: {
+                            Image(systemName: "paperclip")
+                                .font(.body.weight(.bold))
+                                .foregroundStyle(JC.electric)
+                                .frame(width: 36, height: 36)
+                                .background(JC.card, in: Circle())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .disabled(store.messageAttachmentUploadInProgress)
+                        .accessibilityLabel(Text("Joindre un fichier"))
+
+                        TextField("Ton message…", text: $draft, axis: .vertical)
+                            .onChange(of: draft) {
+                                if !draft.isEmpty { store.userIsTyping(in: conversationID) }
+                            }
+                            .lineLimit(1...4)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(JC.card, in: RoundedRectangle(cornerRadius: 20))
+                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
+                        Button { send() } label: {
+                            Group {
+                                if store.messageAttachmentUploadInProgress {
+                                    ProgressView().controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                        .font(.system(size: 34))
+                                }
+                            }
+                            .foregroundStyle(canSend ? AnyShapeStyle(JC.hero) : AnyShapeStyle(Color.gray))
+                        }
+                        .disabled(!canSend || store.messageAttachmentUploadInProgress)
+                    }
                 }
                 .padding()
                 .background(.ultraThinMaterial)
@@ -120,39 +147,97 @@ struct ChatView: View {
         }
         .onAppear { store.chatOpened(conversationID) }
         .onDisappear { store.chatClosed(conversationID) }
+        .fileImporter(
+            isPresented: $importingAttachment,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            do {
+                outgoingAttachment = try OutgoingMessageAttachment.load(from: url)
+            } catch OutgoingMessageAttachment.ImportError.tooLarge {
+                store.backendError = store.tr("Fichier trop lourd — 20 Mo maximum.")
+            } catch {
+                store.backendError = store.tr("Le fichier n'a pas pu être importé.")
+            }
+        }
+        .sheet(item: $previewingAttachment) { preview in
+            NavigationStack {
+                DocPreview(url: preview.url)
+                    .ignoresSafeArea(edges: .bottom)
+                    .navigationTitle(preview.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("OK") { previewingAttachment = nil }.font(.headline)
+                        }
+                    }
+            }
+        }
+    }
+
+    private var canSend: Bool {
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || outgoingAttachment != nil
     }
 
     private func send() {
         guard let conversation else { return }
-        let text = draft.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty || outgoingAttachment != nil else { return }
+        let attachment = outgoingAttachment
         draft = ""
-        store.sendMessage(text, in: conversation)
+        outgoingAttachment = nil
+        store.sendMessage(text, attachment: attachment, in: conversation)
+    }
+
+    private func openAttachment(_ attachment: MessageAttachment) {
+        guard downloadingAttachmentID == nil else { return }
+        downloadingAttachmentID = attachment.id
+        Task {
+            defer { downloadingAttachmentID = nil }
+            if let url = await store.localURL(for: attachment) {
+                previewingAttachment = MessageAttachmentPreview(
+                    title: attachment.fileName,
+                    url: url
+                )
+            }
+        }
     }
 }
 
 struct MessageBubble: View {
     let message: Message
+    var isAttachmentLoading = false
+    var onOpenAttachment: ((MessageAttachment) -> Void)? = nil
 
     var body: some View {
         HStack {
             if message.isFromMe { Spacer(minLength: 56) }
             VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 3) {
-                Text(message.text)
-                    .font(.subheadline)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        message.isFromMe
-                            ? AnyShapeStyle(JC.hero)
-                            : AnyShapeStyle(JC.card),
-                        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
-                    )
-                    .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
+                VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 6) {
+                    if let attachment = message.attachment {
+                        MessageAttachmentCard(
+                            attachment: attachment,
+                            isLoading: isAttachmentLoading
+                        ) { onOpenAttachment?(attachment) }
+                    }
+                    if !message.text.isEmpty {
+                        Text(message.text).font(.subheadline)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    message.isFromMe
+                        ? AnyShapeStyle(JC.hero)
+                        : AnyShapeStyle(JC.card),
+                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
+                )
+                .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
                 HStack(spacing: 4) {
                     Text(message.date.formatted(date: .omitted, time: .shortened))
                         .font(.caption2)

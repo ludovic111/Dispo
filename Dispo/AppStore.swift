@@ -138,7 +138,7 @@ final class AppStore: ObservableObject {
         didSet { UserDefaults.standard.set(sosShowAll, forKey: Self.sosShowAllKey) }
     }
     /// Groupes (messagerie d'équipe Premium) — synchronisés serveur en live
-    /// (messages, événements, présence, membres) ; partitions locales.
+    /// (messages, pièces jointes, événements, présence, membres et partitions).
     @Published var groups: [GroupChat] = []
     /// Candidatures reçues par annonce (côté organisateur d'un SOS).
     @Published var applicantsByGig: [UUID: [GigApplicant]] = [:]
@@ -313,7 +313,7 @@ final class AppStore: ObservableObject {
         }
         sosShowAll = UserDefaults.standard.bool(forKey: Self.sosShowAllKey)
         if let saved: [GroupChat] = Self.load(key: Self.groupsKey) {
-            groups = saved
+            groups = Self.deduplicatedGroups(saved)
         }
         observePushNotifications()
         Task { await refreshNotificationAuthorization(registerIfAllowed: true) }
@@ -594,7 +594,7 @@ final class AppStore: ObservableObject {
             )
             // Messages ET partitions viennent du serveur (les partitions
             // sont hébergées depuis la 1.0 — visibles par tout le groupe).
-            groups = remoteGroups
+            groups = Self.deduplicatedGroups(remoteGroups)
             persistGroups()
             seedGroupLastSeenIfNeeded()
             await refreshGroupInvitations(nameByID: nameByID)
@@ -771,7 +771,9 @@ final class AppStore: ObservableObject {
                     acknowledgeDelivery()
                     pushLocal(
                         title: conversations[index].contactName,
-                        body: message.text
+                        body: message.text.isEmpty
+                            ? "📎 \(message.attachment?.fileName ?? tr("Fichier"))"
+                            : message.text
                     )
                 }
             }
@@ -1023,7 +1025,8 @@ final class AppStore: ObservableObject {
             sender: senderName,
             isFromMe: row.senderId == userID,
             text: row.text,
-            date: row.createdAt
+            date: row.createdAt,
+            attachment: row.attachment
         )
         withAnimation {
             groups[index].messages.append(message)
@@ -1032,7 +1035,7 @@ final class AppStore: ObservableObject {
         if !message.isFromMe {
             pushLocal(
                 title: "\(groups[index].emoji) \(groups[index].name)",
-                body: "\(message.sender) : \(message.text)"
+                body: "\(message.sender) : \(message.text.isEmpty ? "📎 \(message.attachment?.fileName ?? tr("Fichier"))" : message.text)"
             )
         }
     }
@@ -1064,7 +1067,7 @@ final class AppStore: ObservableObject {
             // avec la copie locale (sinon une partition reçue en realtime
             // disparaîtrait aussitôt).
             withAnimation {
-                groups = remoteGroups
+                groups = Self.deduplicatedGroups(remoteGroups)
             }
             persistGroups()
             rescheduleAllAttendanceNotifications()
@@ -1089,7 +1092,7 @@ final class AppStore: ObservableObject {
     private func backfillStreamingLinks() {
         guard isLive, !streamingBackfillActive else { return }
         var targets: [(groupID: GroupChat.ID, songID: UUID, appleURL: String)] = []
-        for group in groups {
+        for group in Self.deduplicatedGroups(groups) {
             for song in group.songs
             where song.platformLinks == nil && !streamingBackfillGaveUp.contains(song.id) {
                 if let track = song.trackURL, !track.isEmpty {
@@ -2091,6 +2094,14 @@ final class AppStore: ObservableObject {
         Self.save(groups, key: Self.groupsKey)
     }
 
+    /// Garde la première version (la plus fraîche dans les réponses serveur)
+    /// de chaque groupe. Sert aussi de filet de sécurité aux anciens caches
+    /// qui ont pu enregistrer deux fois la même identité pendant un realtime.
+    nonisolated private static func deduplicatedGroups(_ values: [GroupChat]) -> [GroupChat] {
+        var seen = Set<GroupChat.ID>()
+        return values.filter { seen.insert($0.id).inserted }
+    }
+
     /// Crée un groupe — création réservée aux Premium (l'appelant vérifie,
     /// paywall sinon). Le créateur devient leader — représenté par
     /// leaderName == nil (« moi »), robuste à un futur renommage du profil.
@@ -2951,24 +2962,55 @@ final class AppStore: ObservableObject {
         persistGroups()
     }
 
+    /// true pendant le téléversement d'un fichier de conversation.
+    @Published private(set) var messageAttachmentUploadInProgress = false
+
     /// Envoie un message dans le groupe. En live il part sur le serveur et
     /// arrive chez tous les membres en temps réel ; en démo, un membre répond
     /// pour rendre la conversation vivante. Jamais de réponse scriptée en
     /// live : les membres sont de vraies personnes et on ne fabrique pas de
     /// propos en leur nom.
-    func sendGroupMessage(_ text: String, in group: GroupChat) {
-        guard acceptsUserContent(text) else { return }
-        let message = GroupMessage(sender: profile.name, isFromMe: true, text: text, date: Date())
-        updateGroup(group.id) {
-            $0.messages.append(message)
-        }
+    func sendGroupMessage(
+        _ text: String,
+        attachment outgoing: OutgoingMessageAttachment? = nil,
+        in group: GroupChat
+    ) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard outgoing != nil || (!clean.isEmpty && acceptsUserContent(clean)) else { return }
         if let backend, let userID = liveUserID {
             let groupID = group.id
             Task { [weak self] in
+                var uploaded: MessageAttachment?
+                var optimisticMessageID: UUID?
+                if outgoing != nil { self?.messageAttachmentUploadInProgress = true }
+                defer { self?.messageAttachmentUploadInProgress = false }
                 do {
+                    if let outgoing {
+                        uploaded = try await backend.uploadGroupMessageAttachment(
+                            outgoing.data,
+                            fileName: outgoing.fileName,
+                            contentType: outgoing.contentType,
+                            ext: outgoing.fileExtension,
+                            groupID: groupID,
+                            senderID: userID
+                        )
+                        if let uploaded {
+                            try? outgoing.data.write(to: Self.messageAttachmentCacheURL(for: uploaded))
+                        }
+                    }
+                    let message = GroupMessage(
+                        sender: self?.profile.name ?? "",
+                        isFromMe: true,
+                        text: clean,
+                        date: Date(),
+                        attachment: uploaded
+                    )
+                    optimisticMessageID = message.id
+                    self?.updateGroup(groupID) { $0.messages.append(message) }
                     try await backend.sendGroupMessage(
                         id: message.id,
-                        text: text,
+                        text: clean,
+                        attachment: uploaded,
                         groupID: groupID,
                         senderID: userID
                     )
@@ -2979,13 +3021,43 @@ final class AppStore: ObservableObject {
                     // L'envoi a échoué : retirer le message optimiste pour ne
                     // pas laisser croire qu'il est parti.
                     self?.updateGroup(groupID) {
-                        $0.messages.removeAll { $0.id == message.id }
+                        guard let optimisticMessageID else { return }
+                        $0.messages.removeAll { $0.id == optimisticMessageID }
+                    }
+                    if let path = uploaded?.remotePath {
+                        try? await backend.deleteMessageAttachment(path: path)
                     }
                     self?.backendError = self?.tr("Le message n'a pas pu être envoyé.")
                 }
             }
+            return
         }
-        guard !isLive else { return }
+
+        var localAttachment: MessageAttachment?
+        if let outgoing {
+            let fileName = "message_\(UUID().uuidString.lowercased()).\(outgoing.fileExtension)"
+            let target = Self.mediaURL(for: fileName)
+            do {
+                try outgoing.data.write(to: target)
+                localAttachment = MessageAttachment(
+                    remotePath: "local:\(fileName)",
+                    fileName: outgoing.fileName,
+                    contentType: outgoing.contentType,
+                    byteCount: outgoing.byteCount
+                )
+            } catch {
+                backendError = tr("Le fichier n'a pas pu être envoyé.")
+                return
+            }
+        }
+        let message = GroupMessage(
+            sender: profile.name,
+            isFromMe: true,
+            text: clean,
+            date: Date(),
+            attachment: localAttachment
+        )
+        updateGroup(group.id) { $0.messages.append(message) }
         guard let replier = group.memberNames.randomElement() else { return }
         let reply = Self.scriptedGroupReplies.randomElement() ?? "Ça marche !"
         let groupID = group.id
@@ -3180,6 +3252,7 @@ final class AppStore: ObservableObject {
         key: String?,
         chords: String?,
         irealURL: String?,
+        irealDisabled: Bool? = nil,
         in group: GroupChat
     ) {
         guard canLead(group) else { return }
@@ -3187,6 +3260,7 @@ final class AppStore: ObservableObject {
         updated.key = key?.isEmpty == true ? nil : key
         updated.chords = chords?.isEmpty == true ? nil : chords
         updated.irealURL = irealURL?.isEmpty == true ? nil : irealURL
+        if let irealDisabled { updated.irealDisabled = irealDisabled }
         updateGroup(group.id) { chat in
             if let index = chat.repertoire?.firstIndex(where: { $0.id == song.id }) {
                 chat.repertoire?[index] = updated
@@ -3249,6 +3323,35 @@ final class AppStore: ObservableObject {
             return target
         } catch {
             backendError = tr("La partition n'a pas pu être ouverte — vérifie le réseau.")
+            return nil
+        }
+    }
+
+    /// Copie locale d'une pièce jointe. Le hash du chemin évite d'exposer le
+    /// nom saisi dans un chemin de fichier et garde une extension lisible par
+    /// Quick Look.
+    nonisolated static func messageAttachmentCacheURL(for attachment: MessageAttachment) -> URL {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let key = attachment.remotePath.unicodeScalars.reduce(UInt64(5381)) {
+            (($0 << 5) &+ $0) &+ UInt64($1.value)
+        }
+        return caches.appendingPathComponent("message_\(String(key, radix: 16)).\(attachment.fileExtension)")
+    }
+
+    /// URL locale prête pour Quick Look, depuis le cache ou le bucket privé.
+    func localURL(for attachment: MessageAttachment) async -> URL? {
+        if attachment.remotePath.hasPrefix("local:") {
+            return Self.mediaURL(for: String(attachment.remotePath.dropFirst("local:".count)))
+        }
+        let target = Self.messageAttachmentCacheURL(for: attachment)
+        if FileManager.default.fileExists(atPath: target.path) { return target }
+        guard let backend else { return nil }
+        do {
+            let data = try await backend.downloadMessageAttachment(path: attachment.remotePath)
+            try data.write(to: target, options: .atomic)
+            return target
+        } catch {
+            backendError = tr("Le fichier n'a pas pu être ouvert — vérifie le réseau.")
             return nil
         }
     }
@@ -4392,7 +4495,7 @@ final class AppStore: ObservableObject {
     /// candidatures en attente de réponse. C'est la page « Mes événements ».
     var agenda: [AgendaItem] {
         var items: [AgendaItem] = []
-        for group in groups {
+        for group in Self.deduplicatedGroups(groups) {
             for event in group.upcomingEvents {
                 items.append(
                     AgendaItem(
@@ -4534,15 +4637,41 @@ final class AppStore: ObservableObject {
 
     /// Envoie un message. En mode live il part sur le serveur (temps réel) ;
     /// en démo, une réponse scriptée rend la conversation vivante.
-    func sendMessage(_ text: String, in conversation: Conversation) {
-        guard acceptsUserContent(text) else { return }
+    func sendMessage(
+        _ text: String,
+        attachment outgoing: OutgoingMessageAttachment? = nil,
+        in conversation: Conversation
+    ) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard outgoing != nil || (!clean.isEmpty && acceptsUserContent(clean)) else { return }
         guard let index = conversations.firstIndex(where: { $0.id == conversation.id }) else { return }
 
         if let backend, let userID = liveUserID {
             let conversationID = conversation.id
             Task { [weak self] in
+                var uploaded: MessageAttachment?
+                if outgoing != nil { self?.messageAttachmentUploadInProgress = true }
+                defer { self?.messageAttachmentUploadInProgress = false }
                 do {
-                    let message = try await backend.sendMessage(text, conversationID: conversationID, senderID: userID)
+                    if let outgoing {
+                        uploaded = try await backend.uploadConversationAttachment(
+                            outgoing.data,
+                            fileName: outgoing.fileName,
+                            contentType: outgoing.contentType,
+                            ext: outgoing.fileExtension,
+                            conversationID: conversationID,
+                            senderID: userID
+                        )
+                        if let uploaded {
+                            try? outgoing.data.write(to: Self.messageAttachmentCacheURL(for: uploaded))
+                        }
+                    }
+                    let message = try await backend.sendMessage(
+                        clean,
+                        attachment: uploaded,
+                        conversationID: conversationID,
+                        senderID: userID
+                    )
                     await backend.deliverPendingPushNotifications()
                     guard let self,
                           let i = self.conversations.firstIndex(where: { $0.id == conversationID }),
@@ -4556,15 +4685,38 @@ final class AppStore: ObservableObject {
                         try? await backend.replyAsDemo(conversationID: conversationID)
                     }
                 } catch {
+                    if let path = uploaded?.remotePath {
+                        try? await backend.deleteMessageAttachment(path: path)
+                    }
                     self?.backendError = self?.tr("Le message n'a pas pu être envoyé.")
                 }
             }
             return
         }
 
-        conversations[index].messages.append(
-            Message(text: text, isFromMe: true, date: Date(), deliveredAt: Date())
-        )
+        var localAttachment: MessageAttachment?
+        if let outgoing {
+            let fileName = "message_\(UUID().uuidString.lowercased()).\(outgoing.fileExtension)"
+            do {
+                try outgoing.data.write(to: Self.mediaURL(for: fileName))
+                localAttachment = MessageAttachment(
+                    remotePath: "local:\(fileName)",
+                    fileName: outgoing.fileName,
+                    contentType: outgoing.contentType,
+                    byteCount: outgoing.byteCount
+                )
+            } catch {
+                backendError = tr("Le fichier n'a pas pu être envoyé.")
+                return
+            }
+        }
+        conversations[index].messages.append(Message(
+            text: clean,
+            isFromMe: true,
+            date: Date(),
+            deliveredAt: Date(),
+            attachment: localAttachment
+        ))
         persistConversations()
 
         let conversationID = conversation.id

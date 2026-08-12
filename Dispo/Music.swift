@@ -147,6 +147,114 @@ enum IRealPro {
         return URL(string: text.replacingOccurrences(of: " ", with: "%20"))
     }
 
+    // MARK: Recherche et fichiers HTML officiels
+
+    /// API locale documentée par iReal Pro : ouvre sa recherche interne sur
+    /// un titre (`irealb://search?<titre>`). C'est le seul moteur de recherche
+    /// public officiellement exposé par l'éditeur ; il interroge la
+    /// bibliothèque iReal Pro installée, sans scraper les Forums.
+    static func searchURL(_ query: String) -> URL? {
+        let clean = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return nil }
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+#?")
+        guard let encoded = clean.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
+        return URL(string: "irealb://search?\(encoded)")
+    }
+
+    struct HTMLChart: Identifiable, Hashable {
+        let url: URL
+        let title: String
+        var id: String { url.absoluteString }
+    }
+
+    enum HTMLError: Error {
+        case tooLarge
+        case unreadable
+        case noChart
+    }
+
+    /// iReal Pro exporte et importe des pages HTML dont les liens utilisent
+    /// `irealb://` (exports natifs) ou `irealbook://` (protocole public).
+    /// On accepte les deux, sans tenter de décoder le corps obfusqué irealb.
+    static func charts(fromHTML data: Data) throws -> [HTMLChart] {
+        guard data.count <= 4 * 1024 * 1024 else { throw HTMLError.tooLarge }
+        guard let html = String(data: data, encoding: .utf8)
+                ?? String(data: data, encoding: .isoLatin1) else {
+            throw HTMLError.unreadable
+        }
+        let pattern = #"(?i)href\s*=\s*([\"'])(ireal(?:b|book):\/\/.*?)\1"#
+        let regex = try NSRegularExpression(pattern: pattern)
+        let range = NSRange(html.startIndex..<html.endIndex, in: html)
+        var seen = Set<String>()
+        let charts = regex.matches(in: html, range: range).compactMap { match -> HTMLChart? in
+            guard let valueRange = Range(match.range(at: 2), in: html) else { return nil }
+            let raw = decodeHTMLEntities(String(html[valueRange]))
+            guard let url = appLink(raw), seen.insert(url.absoluteString).inserted else { return nil }
+            return HTMLChart(url: url, title: chartTitle(from: url))
+        }
+        guard !charts.isEmpty else { throw HTMLError.noChart }
+        return charts
+    }
+
+    /// Produit le format échangeable attendu par iReal Pro : une vraie page
+    /// `.html` avec un lien de chart, et non un fichier texte renommé.
+    static func htmlDocument(title: String, chartURL: URL) -> Data? {
+        guard appLink(chartURL.absoluteString) != nil else { return nil }
+        let safeTitle = escapeHTML(title.isEmpty ? "Grille iReal Pro" : title)
+        let safeURL = escapeHTML(chartURL.absoluteString)
+        let html = """
+        <!doctype html>
+        <html lang="fr">
+        <head><meta charset="utf-8"><title>\(safeTitle)</title></head>
+        <body><a href="\(safeURL)">\(safeTitle)</a></body>
+        </html>
+        """
+        return html.data(using: .utf8)
+    }
+
+    private static func chartTitle(from url: URL) -> String {
+        let raw = url.absoluteString
+        guard let delimiter = raw.range(of: "://") else { return "Grille iReal Pro" }
+        let payload = String(raw[delimiter.upperBound...]).removingPercentEncoding
+            ?? String(raw[delimiter.upperBound...])
+        let first = payload.split(separator: "=", maxSplits: 1).first.map(String.init) ?? ""
+        let clean = first.trimmingCharacters(in: .whitespacesAndNewlines)
+        return clean.isEmpty ? "Grille iReal Pro" : clean
+    }
+
+    private static func decodeHTMLEntities(_ text: String) -> String {
+        var value = text
+            .replacingOccurrences(of: "&amp;", with: "&", options: .caseInsensitive)
+            .replacingOccurrences(of: "&quot;", with: "\"", options: .caseInsensitive)
+            .replacingOccurrences(of: "&#39;", with: "'", options: .caseInsensitive)
+        let numeric = try? NSRegularExpression(pattern: #"&#(x?[0-9A-Fa-f]+);"#)
+        guard let numeric else { return value }
+        let matches = numeric.matches(
+            in: value,
+            range: NSRange(value.startIndex..<value.endIndex, in: value)
+        ).reversed()
+        for match in matches {
+            guard let full = Range(match.range(at: 0), in: value),
+                  let digits = Range(match.range(at: 1), in: value) else { continue }
+            let token = String(value[digits])
+            let radix = token.lowercased().hasPrefix("x") ? 16 : 10
+            let number = radix == 16 ? String(token.dropFirst()) : token
+            guard let scalarValue = UInt32(number, radix: radix),
+                  let scalar = UnicodeScalar(scalarValue) else { continue }
+            value.replaceSubrange(full, with: String(Character(scalar)))
+        }
+        return value
+    }
+
+    private static func escapeHTML(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+    }
+
     // MARK: Listes fermées de la doc officielle
     //
     // iReal Pro n'accepte que 24 tonalités et une liste finie de qualités

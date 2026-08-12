@@ -457,6 +457,10 @@ final class SupabaseBackend: Sendable {
         var createdAt: Date
         var deliveredAt: Date?
         var readAt: Date?
+        var attachmentPath: String?
+        var attachmentName: String?
+        var attachmentType: String?
+        var attachmentSize: Int64?
 
         enum CodingKeys: String, CodingKey {
             case id, text
@@ -465,12 +469,27 @@ final class SupabaseBackend: Sendable {
             case createdAt = "created_at"
             case deliveredAt = "delivered_at"
             case readAt = "read_at"
+            case attachmentPath = "attachment_path"
+            case attachmentName = "attachment_name"
+            case attachmentType = "attachment_type"
+            case attachmentSize = "attachment_size"
+        }
+
+        var attachment: MessageAttachment? {
+            guard let attachmentPath, let attachmentName,
+                  let attachmentType, let attachmentSize else { return nil }
+            return MessageAttachment(
+                remotePath: attachmentPath,
+                fileName: attachmentName,
+                contentType: attachmentType,
+                byteCount: attachmentSize
+            )
         }
 
         func asMessage(myID: UUID) -> Message {
             Message(
                 id: id, text: text, isFromMe: senderId == myID, date: createdAt,
-                deliveredAt: deliveredAt, readAt: readAt
+                deliveredAt: deliveredAt, readAt: readAt, attachment: attachment
             )
         }
     }
@@ -1041,13 +1060,31 @@ final class SupabaseBackend: Sendable {
     }
 
     @discardableResult
-    func sendMessage(_ text: String, conversationID: UUID, senderID: UUID) async throws -> Message {
+    func sendMessage(
+        _ text: String,
+        attachment: MessageAttachment?,
+        conversationID: UUID,
+        senderID: UUID
+    ) async throws -> Message {
+        struct Insert: Encodable {
+            let conversation_id: UUID
+            let sender_id: UUID
+            let text: String
+            let attachment_path: String?
+            let attachment_name: String?
+            let attachment_type: String?
+            let attachment_size: Int64?
+        }
         let row: MessageRow = try await client.from("messages")
-            .insert([
-                "conversation_id": conversationID.uuidString,
-                "sender_id": senderID.uuidString,
-                "text": text,
-            ])
+            .insert(Insert(
+                conversation_id: conversationID,
+                sender_id: senderID,
+                text: text,
+                attachment_path: attachment?.remotePath,
+                attachment_name: attachment?.fileName,
+                attachment_type: attachment?.contentType,
+                attachment_size: attachment?.byteCount
+            ))
             .select().single().execute().value
         return row.asMessage(myID: senderID)
     }
@@ -1216,12 +1253,31 @@ final class SupabaseBackend: Sendable {
         var senderId: UUID
         var text: String
         var createdAt: Date
+        var attachmentPath: String?
+        var attachmentName: String?
+        var attachmentType: String?
+        var attachmentSize: Int64?
 
         enum CodingKeys: String, CodingKey {
             case id, text
             case groupId = "group_id"
             case senderId = "sender_id"
             case createdAt = "created_at"
+            case attachmentPath = "attachment_path"
+            case attachmentName = "attachment_name"
+            case attachmentType = "attachment_type"
+            case attachmentSize = "attachment_size"
+        }
+
+        var attachment: MessageAttachment? {
+            guard let attachmentPath, let attachmentName,
+                  let attachmentType, let attachmentSize else { return nil }
+            return MessageAttachment(
+                remotePath: attachmentPath,
+                fileName: attachmentName,
+                contentType: attachmentType,
+                byteCount: attachmentSize
+            )
         }
 
         func asGroupMessage(myID: UUID, myName: String, nameByID: [UUID: String]) -> GroupMessage {
@@ -1230,7 +1286,8 @@ final class SupabaseBackend: Sendable {
                 sender: senderId == myID ? myName : (nameByID[senderId] ?? "Musicien"),
                 isFromMe: senderId == myID,
                 text: text,
-                date: createdAt
+                date: createdAt,
+                attachment: attachment
             )
         }
     }
@@ -1249,6 +1306,7 @@ final class SupabaseBackend: Sendable {
         var key: String?
         var chords: String?
         var irealURL: String?
+        var irealDisabled: Bool?
 
         enum CodingKeys: String, CodingKey {
             case id, title, artist, key, chords
@@ -1258,6 +1316,7 @@ final class SupabaseBackend: Sendable {
             case suggestedBy = "suggested_by"
             case isApproved = "is_approved"
             case irealURL = "ireal_url"
+            case irealDisabled = "ireal_disabled"
         }
 
         init(from song: Song) {
@@ -1272,6 +1331,7 @@ final class SupabaseBackend: Sendable {
             key = song.key
             chords = song.chords
             irealURL = song.irealURL
+            irealDisabled = song.irealDisabled
         }
 
         var asSong: Song {
@@ -1286,7 +1346,8 @@ final class SupabaseBackend: Sendable {
                 isApproved: isApproved,
                 key: key,
                 chords: chords,
-                irealURL: irealURL
+                irealURL: irealURL,
+                irealDisabled: irealDisabled
             )
         }
     }
@@ -2003,20 +2064,115 @@ final class SupabaseBackend: Sendable {
         try await client.storage.from(Self.groupDocsBucket).download(path: path)
     }
 
+    // MARK: - Pièces jointes de messages
+
+    /// Bucket privé commun aux conversations et groupes. Les policies lisent
+    /// le premier dossier du chemin pour appliquer la bonne appartenance.
+    static let messageFilesBucket = "message-files"
+
+    func uploadConversationAttachment(
+        _ data: Data,
+        fileName: String,
+        contentType: String,
+        ext: String,
+        conversationID: UUID,
+        senderID: UUID
+    ) async throws -> MessageAttachment {
+        try await uploadMessageAttachment(
+            data,
+            fileName: fileName,
+            contentType: contentType,
+            ext: ext,
+            prefix: "conversation/\(conversationID.uuidString.lowercased())",
+            senderID: senderID
+        )
+    }
+
+    func uploadGroupMessageAttachment(
+        _ data: Data,
+        fileName: String,
+        contentType: String,
+        ext: String,
+        groupID: UUID,
+        senderID: UUID
+    ) async throws -> MessageAttachment {
+        try await uploadMessageAttachment(
+            data,
+            fileName: fileName,
+            contentType: contentType,
+            ext: ext,
+            prefix: "group/\(groupID.uuidString.lowercased())",
+            senderID: senderID
+        )
+    }
+
+    private func uploadMessageAttachment(
+        _ data: Data,
+        fileName: String,
+        contentType: String,
+        ext: String,
+        prefix: String,
+        senderID: UUID
+    ) async throws -> MessageAttachment {
+        let safeExtension = ext
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber }
+        let suffix = safeExtension.isEmpty ? "dat" : String(safeExtension.prefix(12))
+        let path = "\(prefix)/\(senderID.uuidString.lowercased())/\(UUID().uuidString.lowercased()).\(suffix)"
+        try await client.storage.from(Self.messageFilesBucket).upload(
+            path,
+            data: data,
+            options: FileOptions(contentType: contentType)
+        )
+        return MessageAttachment(
+            remotePath: path,
+            fileName: String(fileName.prefix(255)),
+            contentType: contentType,
+            byteCount: Int64(data.count)
+        )
+    }
+
+    func downloadMessageAttachment(path: String) async throws -> Data {
+        try await client.storage.from(Self.messageFilesBucket).download(path: path)
+    }
+
+    func deleteMessageAttachment(path: String) async throws {
+        _ = try await client.storage.from(Self.messageFilesBucket).remove(paths: [path])
+    }
+
     // MARK: - Groupes : messages + temps réel
 
     /// Envoie un message de groupe. L'id est fourni par le client pour que
     /// l'écho realtime (notre propre INSERT revient aussi par le canal) se
     /// dédoublonne proprement.
-    func sendGroupMessage(id: UUID, text: String, groupID: UUID, senderID: UUID) async throws {
+    func sendGroupMessage(
+        id: UUID,
+        text: String,
+        attachment: MessageAttachment?,
+        groupID: UUID,
+        senderID: UUID
+    ) async throws {
         struct Insert: Encodable {
             let id: UUID
             let group_id: UUID
             let sender_id: UUID
             let text: String
+            let attachment_path: String?
+            let attachment_name: String?
+            let attachment_type: String?
+            let attachment_size: Int64?
         }
         try await client.from("group_messages")
-            .insert(Insert(id: id, group_id: groupID, sender_id: senderID, text: text))
+            .insert(Insert(
+                id: id,
+                group_id: groupID,
+                sender_id: senderID,
+                text: text,
+                attachment_path: attachment?.remotePath,
+                attachment_name: attachment?.fileName,
+                attachment_type: attachment?.contentType,
+                attachment_size: attachment?.byteCount
+            ))
             .execute()
     }
 
