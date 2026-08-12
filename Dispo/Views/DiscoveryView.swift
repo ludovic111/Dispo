@@ -80,6 +80,10 @@ struct HomeView: View {
     @State private var scope: AvailabilityScope = .today
     /// Le créneau d'ouverture n'est choisi qu'une fois, au premier chargement.
     @State private var scopePicked = false
+    /// Actions rapides du cockpit leader : elles restent des feuilles légères,
+    /// la page complète du groupe garde les fonctions avancées.
+    @State private var membersGroup: GroupChat?
+    @State private var newEventGroup: GroupChat?
 
     /// La vraie question d'un musicien qui ouvre l'app : qui peut jouer, et
     /// quand ? On répond avant de parler de distance — c'est ce qui distingue
@@ -181,14 +185,20 @@ struct HomeView: View {
         .map { $0 }
     }
 
-    /// Le prochain événement de CHAQUE groupe dont je fais partie — pas
-    /// seulement le plus proche : on joue rarement dans un seul groupe.
-    private var nextGroupEvents: [(group: GroupChat, event: GroupEvent)] {
-        store.groups
+    /// Groupes que je peux réellement diriger : leader ET Premium. Un membre
+    /// ordinaire n'a pas besoin d'un cockpit de gestion sur son accueil.
+    private var managedGroups: [GroupChat] {
+        store.groups.filter(store.canLead)
+    }
+
+    /// Une seule prochaine session, tous mes groupes dirigés confondus : la
+    /// plus proche. Les autres restent dans Sessions et dans chaque groupe.
+    private var nextManagedEvent: (group: GroupChat, event: GroupEvent)? {
+        managedGroups
             .compactMap { group in
                 group.upcomingEvents.first.map { (group: group, event: $0) }
             }
-            .sorted { $0.event.date < $1.event.date }
+            .min { $0.event.date < $1.event.date }
     }
 
     private var greeting: LocalizedStringKey {
@@ -205,7 +215,7 @@ struct HomeView: View {
                     VStack(spacing: 22) {
                         header
                         searchBar
-                        groupEventReminder
+                        leaderGroupDashboard
                         scopePicker
                         actionBar
                         feed
@@ -228,6 +238,13 @@ struct HomeView: View {
             .sheet(isPresented: $showFilters) {
                 FilterSheet(filters: $filters)
                     .presentationDetents([.medium, .large])
+            }
+            .sheet(item: $membersGroup) { group in
+                GroupMembersSheet(groupID: group.id)
+            }
+            .sheet(item: $newEventGroup) { group in
+                AddGroupEventSheet(group: group)
+                    .presentationDetents([.medium])
             }
         }
     }
@@ -292,27 +309,109 @@ struct HomeView: View {
         .buttonStyle(PressableStyle())
     }
 
-    /// Le prochain événement de chacun de mes groupes — le pont accueil ↔
-    /// groupes. Un musicien joue dans plusieurs formations : il les voit
-    /// toutes, la date la plus proche en premier.
+    /// Cockpit volontairement réduit : la prochaine session, puis trois
+    /// raccourcis par groupe. Répertoire, réglages, invitations et gestion
+    /// fine restent dans la vraie page du groupe.
+    ///
+    /// La section n'existe que pour un leader Premium (`managedGroups`) :
+    /// l'accueil des autres musiciens reste centré sur qui est disponible.
     @ViewBuilder
-    private var groupEventReminder: some View {
-        let events = nextGroupEvents
-        if !events.isEmpty {
-            VStack(spacing: 12) {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar.badge.clock")
+    private var leaderGroupDashboard: some View {
+        if !managedGroups.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 7) {
+                    Image(systemName: "crown.fill")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(JC.bronze)
-                    Text(events.count == 1 ? "Prochain événement" : "Prochains événements")
+                        .foregroundStyle(JC.premiumTint)
+                    Text("Mes groupes")
                         .font(.caption2.weight(.heavy))
                         .textCase(.uppercase)
-                        .foregroundStyle(JC.bronze)
+                        .foregroundStyle(JC.premiumTint)
+                    PremiumBadge()
                     Spacer(minLength: 0)
+                    Text("Gestion rapide")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
-                ForEach(events, id: \.event.id) { item in
-                    GroupEventReminderCard(group: item.group, event: item.event)
+
+                if let next = nextManagedEvent {
+                    GroupEventReminderCard(group: next.group, event: next.event)
+                } else {
+                    Text("Aucune session planifiée — crée la prochaine sans quitter l'accueil.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+
+                ForEach(managedGroups) { group in
+                    leaderGroupRow(group)
+                }
+            }
+            .padding(12)
+            .background(JC.premiumTint.opacity(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(JC.premiumTint.opacity(0.22), lineWidth: 1)
+            )
+        }
+    }
+
+    /// Une ligne de pilotage par groupe : ouvrir, créer une session ou gérer
+    /// les membres. Trois décisions utiles, pas une copie miniature des trois
+    /// onglets complets du groupe.
+    private func leaderGroupRow(_ group: GroupChat) -> some View {
+        JCCard(padding: 10) {
+            VStack(spacing: 9) {
+                NavigationLink {
+                    GroupChatView(groupID: group.id)
+                } label: {
+                    HStack(spacing: 9) {
+                        GroupAvatarView(group: group, size: 34)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: "\(group.emoji) \(group.name)")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(String(
+                                format: store.tr("%lld membres"),
+                                Int64(store.roster(of: group).count)
+                            ))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        if store.unreadCount(in: group) > 0 {
+                            Text(verbatim: "\(store.unreadCount(in: group))")
+                                .font(JCFont.monoBold(10))
+                                .foregroundStyle(JC.billetInk)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 4)
+                                .background(JC.laiton, in: Capsule())
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .buttonStyle(PressableStyle())
+
+                HStack(spacing: 8) {
+                    Button { newEventGroup = group } label: {
+                        Label("Session", systemImage: "calendar.badge.plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    Button { membersGroup = group } label: {
+                        Label("Membres", systemImage: "person.3.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    NavigationLink {
+                        GroupChatView(groupID: group.id, initialTab: .events)
+                    } label: {
+                        Label("Tout gérer", systemImage: "slider.horizontal.3")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .font(.caption2.weight(.bold))
+                .buttonStyle(LeaderQuickActionStyle())
             }
         }
     }
@@ -502,6 +601,23 @@ struct SocialLinkBadge: View {
     }
 }
 
+/// Bouton compact du cockpit leader. Le fond reste discret pour que la
+/// prochaine session garde le poids visuel principal.
+private struct LeaderQuickActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(JC.premiumTint)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 6)
+            .background(
+                JC.premiumTint.opacity(configuration.isPressed ? 0.18 : 0.10),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 // MARK: - Prochain événement d'un groupe
 
 /// Le prochain rendez-vous d'un de mes groupes, avec l'état de son line-up :
@@ -535,7 +651,7 @@ struct GroupEventReminderCard: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month())) · \(event.venue)")
+                        Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month().locale(store.language.locale))) · \(event.venue)")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)

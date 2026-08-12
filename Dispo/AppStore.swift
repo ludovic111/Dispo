@@ -2602,11 +2602,17 @@ final class AppStore: ObservableObject {
         }
     }
 
-    func removeEvent(_ event: GroupEvent, from group: GroupChat) {
+    /// Annule une session et prévient les autres membres côté serveur. Le
+    /// retrait local est immédiat ; le prochain refresh réconcilie si l'appel
+    /// échoue (et `syncLive` affiche déjà l'erreur).
+    func cancelEvent(_ event: GroupEvent, from group: GroupChat) {
         cancelAttendanceNotifications(for: event)
         updateGroup(group.id) { $0.events?.removeAll { $0.id == event.id } }
         if let backend, isLive {
-            syncLive { try await backend.deleteEvent(event.id) }
+            syncLive {
+                try await backend.cancelGroupEvents([event.id])
+                await backend.deliverPendingPushNotifications()
+            }
         }
     }
 
@@ -2637,11 +2643,12 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Supprime toutes les dates encore à venir d'une série (les occurrences
-    /// déjà passées restent : elles font partie de l'histoire du groupe).
-    func removeSeries(of event: GroupEvent, from group: GroupChat) {
+    /// Annule toutes les dates encore à venir d'une série et envoie une seule
+    /// notification récapitulative. Les occurrences passées restent : elles
+    /// font partie de l'histoire du groupe.
+    func cancelSeries(of event: GroupEvent, from group: GroupChat) {
         guard let seriesID = event.seriesID else {
-            removeEvent(event, from: group)
+            cancelEvent(event, from: group)
             return
         }
         let now = Date()
@@ -2649,9 +2656,13 @@ final class AppStore: ObservableObject {
         guard !doomed.isEmpty else { return }
         for event in doomed { cancelAttendanceNotifications(for: event) }
         let ids = Set(doomed.map(\.id))
+        let orderedIDs = doomed.sorted { $0.date < $1.date }.map(\.id)
         updateGroup(group.id) { $0.events?.removeAll { ids.contains($0.id) } }
         if let backend, isLive {
-            syncLive { try await backend.deleteEvents(Array(ids)) }
+            syncLive {
+                try await backend.cancelGroupEvents(orderedIDs)
+                await backend.deliverPendingPushNotifications()
+            }
         }
     }
 
@@ -4294,13 +4305,14 @@ final class AppStore: ObservableObject {
         showWhatsNew = false
     }
 
-    /// Candidats en attente sur mes annonces : la pastille de l'onglet SOS.
-    /// Les demandes qu'on m'adresse, elles, comptent pour Sessions — c'est là
-    /// qu'on y répond depuis la 1.7.
+    /// La pastille de l'onglet SOS ne compte QUE les nouvelles annonces qui
+    /// me correspondent (instrument + niveau), jamais mes propres annonces ni
+    /// leurs candidats. « J'ai créé deux SOS » n'est pas une notification.
+    ///
+    /// Le compteur ignore volontairement la bascule « Tout » : regarder les
+    /// annonces hors profil ne doit pas transformer le badge en bruit.
     var sosTodoCount: Int {
-        myGigs.reduce(0) { total, gig in
-            total + (applicantsByGig[gig.id]?.filter { $0.status == .pending }.count ?? 0)
-        }
+        feedGigs.filter(gigMatchesMe).filter(isUnseenGig).count
     }
 
     /// La pastille de l'onglet Sessions : tout ce qui attend un mot de moi —

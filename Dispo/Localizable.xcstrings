@@ -3981,6 +3981,46 @@
         }
       }
     },
+    "Ajouter à iReal Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu iReal Pro hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to iReal Pro"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir a iReal Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi a iReal Pro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proに追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加到 iReal Pro"
+          }
+        }
+      }
+    },
     "Ajouter à la setlist": {
       "localizations": {
         "de": {
@@ -4701,6 +4741,86 @@
         }
       }
     },
+    "Annuler cette session ?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Session absagen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel this session?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Cancelar esta sesión?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annullare questa sessione?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このセッションを中止しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消这场排练？"
+          }
+        }
+      }
+    },
+    "Annuler et prévenir les membres": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Absagen und Mitglieder informieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel and notify members"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar y avisar a los miembros"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla e avvisa i membri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中止してメンバーに通知"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消并通知成员"
+          }
+        }
+      }
+    },
     "Annuler l'invitation": {
       "localizations": {
         "de": {
@@ -4737,6 +4857,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消邀请"
+          }
+        }
+      }
+    },
+    "Annuler la session": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session absagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel session"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar la sesión"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla la sessione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを中止"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消排练"
           }
         }
       }
@@ -5777,6 +5937,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无乐谱"
+          }
+        }
+      }
+    },
+    "Aucune session planifiée — crée la prochaine sans quitter l'accueil.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Session geplant — erstelle die nächste direkt von der Startseite."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No session scheduled — create the next one without leaving Home."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay ninguna sesión prevista: crea la próxima sin salir de Inicio."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna sessione in programma: crea la prossima senza lasciare la Home."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定されているセッションはありません。ホームから次の予定を作成できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安排排练，可直接在首页创建下一场。"
           }
         }
       }
@@ -16071,6 +16271,46 @@
         }
       }
     },
+    "Gestion rapide": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellverwaltung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick management"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestión rápida"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestione rapida"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クイック管理"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速管理"
+          }
+        }
+      }
+    },
     "Gospel / Soul / R&B": {
       "localizations": {
         "de": {
@@ -19911,6 +20151,46 @@
         }
       }
     },
+    "La puce SOS ne compte plus tes propres annonces : seulement les nouveaux SOS qui correspondent à ton instrument et ton niveau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der SOS-Zähler zählt deine eigenen Anzeigen nicht mehr — nur neue SOS, die zu Instrument und Niveau passen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The SOS badge no longer counts your own posts — only new SOS requests matching your instrument and level"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La insignia SOS ya no cuenta tus anuncios: solo los nuevos SOS que coinciden con tu instrumento y nivel"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il badge SOS non conta più i tuoi annunci: solo i nuovi SOS adatti al tuo strumento e livello"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOSバッジは自分の募集を数えず、楽器とレベルに合う新しいSOSだけを表示します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS 角标不再计算你发布的求援，只显示符合乐器和水平的新 SOS"
+          }
+        }
+      }
+    },
     "La relation n'a pas pu etre synchronisee.": {
       "localizations": {
         "de": {
@@ -19997,6 +20277,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "回复发送失败。"
+          }
+        }
+      }
+    },
+    "La session disparaîtra des agendas et les autres membres recevront une notification.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Session verschwindet aus den Kalendern und die anderen Mitglieder werden benachrichtigt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The session will be removed from schedules and the other members will be notified."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La sesión desaparecerá de las agendas y los demás miembros recibirán una notificación."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La sessione scomparirà dai calendari e gli altri membri riceveranno una notifica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションは予定から削除され、ほかのメンバーに通知されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该排练将从日程中移除，其他成员会收到通知。"
           }
         }
       }
@@ -21457,6 +21777,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "队长还没有分享这首曲子的和弦谱。"
+          }
+        }
+      }
+    },
+    "Le leader peut annuler une session ou les dates à venir d'une série, et tous les membres sont prévenus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Leader kann eine Session oder kommende Serientermine absagen; alle Mitglieder werden informiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The leader can cancel a session or upcoming dates in a series, and every member is notified"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El líder puede cancelar una sesión o las próximas fechas de una serie y todos los miembros reciben un aviso"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il leader può annullare una sessione o le prossime date di una serie e tutti i membri vengono avvisati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダーはセッションまたはシリーズの今後の日程を中止でき、全メンバーに通知されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "队长可取消单场排练或系列中的后续日期，所有成员都会收到通知"
           }
         }
       }
@@ -23047,6 +23407,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "小组邀请需经接受：没有人会在未同意的情况下加入小组"
+          }
+        }
+      }
+    },
+    "Les leaders Premium pilotent leurs groupes depuis l'accueil : prochaine session, membres et création de date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium-Leader steuern ihre Gruppen direkt von der Startseite: nächste Session, Mitglieder und neue Termine"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium leaders manage their groups from Home: next session, members, and scheduling"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los líderes Premium gestionan sus grupos desde Inicio: próxima sesión, miembros y nuevas fechas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I leader Premium gestiscono i gruppi dalla Home: prossima sessione, membri e nuove date"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premiumリーダーはホームから次のセッション、メンバー、新しい日程を管理できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium 队长可从首页管理乐队：下一场排练、成员和新日程"
           }
         }
       }
@@ -36351,6 +36751,46 @@
         }
       }
     },
+    "Session": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesión"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排练"
+          }
+        }
+      }
+    },
     "Sessions": {
       "localizations": {
         "de": {
@@ -38971,6 +39411,46 @@
         }
       }
     },
+    "Tes groupes, sans perdre le fil": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Gruppen, immer im Blick"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your groups, without losing track"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus grupos, sin perder el hilo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi gruppi, senza perdere il filo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループを迷わず管理"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻松掌控你的乐队"
+          }
+        }
+      }
+    },
     "Tes liens Instagram, TikTok, YouTube et X cliquables sur ton profil": {
       "localizations": {
         "de": {
@@ -40407,6 +40887,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "测试期间全部开放：不出售任何内容，也不会扣款。这些功能已在你的账号上生效。"
+          }
+        }
+      }
+    },
+    "Tout gérer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles verwalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage all"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestionar todo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestisci tutto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて管理"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部管理"
           }
         }
       }
@@ -42451,6 +42971,46 @@
         }
       }
     },
+    "Une grille créée dans Dispo s'exporte au vrai format iReal Pro : valide l'import et elle rejoint ta bibliothèque": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein in Dispo erstelltes Leadsheet wird im echten iReal-Pro-Format exportiert: Import bestätigen und es erscheint in deiner Mediathek"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A chart created in Dispo exports in the real iReal Pro format: confirm the import and it joins your library"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cuadrícula creada en Dispo se exporta en el formato real de iReal Pro: confirma la importación y aparecerá en tu biblioteca"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una griglia creata in Dispo viene esportata nel vero formato iReal Pro: conferma l'importazione e comparirà nella libreria"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dispoで作ったコード譜を正式なiReal Pro形式で書き出せます。読み込みを確定するとライブラリに追加されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Dispo 创建的和弦谱会以真正的 iReal Pro 格式导出；确认导入后即可加入资料库"
+          }
+        }
+      }
+    },
     "Une grille peut toujours s'écrire à la main — c'est juste rangé à part": {
       "localizations": {
         "de": {
@@ -42647,6 +43207,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "即使整个系列都改期，也只发送一条通知。"
+          }
+        }
+      }
+    },
+    "Une seule prochaine session s'affiche sur l'accueil — la plus proche, tous tes groupes confondus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf der Startseite erscheint nur die nächste Session — die früheste aus all deinen Gruppen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home shows one upcoming session — the nearest one across all your groups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicio muestra una sola próxima sesión: la más cercana de todos tus grupos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Home mostra una sola prossima sessione: la più vicina tra tutti i tuoi gruppi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームには全グループの中で最も近いセッションを1件だけ表示します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页只显示一场最近的排练，汇总你的所有乐队"
           }
         }
       }
@@ -44447,6 +45047,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "iReal Pro：乐队的和弦谱直接在应用中打开，按你的调性，无需粘贴"
+          }
+        }
+      }
+    },
+    "iReal Pro affiche son aperçu d'import : valide-le et le morceau est ajouté à ta bibliothèque, dans « Derniers imports ».": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro zeigt eine Importvorschau: Bestätige sie, dann erscheint der Song in deiner Mediathek unter „Zuletzt importiert“."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro shows an import preview: confirm it and the song is added to your library under “Last imported”."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro muestra una vista previa de importación: confírmala y la canción se añadirá a tu biblioteca, en «Últimas importaciones»."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro mostra un'anteprima di importazione: confermala e il brano verrà aggiunto alla libreria, in «Ultime importazioni»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proで読み込みプレビューが表示されます。確定すると曲がライブラリの「最近読み込んだ項目」に追加されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro 会显示导入预览；确认后，曲目会添加到资料库的“最近导入”中。"
           }
         }
       }

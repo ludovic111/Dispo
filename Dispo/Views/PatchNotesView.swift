@@ -11,6 +11,17 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "1.8",
+            title: "Tes groupes, sans perdre le fil",
+            points: [
+                "Une grille créée dans Dispo s'exporte au vrai format iReal Pro : valide l'import et elle rejoint ta bibliothèque",
+                "Les leaders Premium pilotent leurs groupes depuis l'accueil : prochaine session, membres et création de date",
+                "Une seule prochaine session s'affiche sur l'accueil — la plus proche, tous tes groupes confondus",
+                "La puce SOS ne compte plus tes propres annonces : seulement les nouveaux SOS qui correspondent à ton instrument et ton niveau",
+                "Le leader peut annuler une session ou les dates à venir d'une série, et tous les membres sont prévenus"
+            ]
+        ),
+        PatchNote(
             version: "1.7",
             title: "Chaque chose à sa place",
             points: [

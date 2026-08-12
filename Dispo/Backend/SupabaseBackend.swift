@@ -1783,16 +1783,14 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
-    func deleteEvent(_ eventID: UUID) async throws {
-        try await client.from("group_events").delete().eq("id", value: eventID).execute()
-    }
-
-    /// Supprime plusieurs dates (toute une série) en un appel.
-    func deleteEvents(_ eventIDs: [UUID]) async throws {
+    /// Annule une date — ou plusieurs occurrences — dans une seule transaction
+    /// serveur. La RPC vérifie que l'appelant est le leader, prévient les
+    /// membres une fois, puis supprime les dates.
+    func cancelGroupEvents(_ eventIDs: [UUID]) async throws {
         guard !eventIDs.isEmpty else { return }
-        try await client.from("group_events")
-            .delete()
-            .in("id", values: eventIDs.map(\.uuidString))
+        struct Params: Encodable { let p_event_ids: [UUID] }
+        try await client
+            .rpc("cancel_group_events", params: Params(p_event_ids: eventIDs))
             .execute()
     }
 

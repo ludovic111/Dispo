@@ -1611,6 +1611,12 @@ struct GroupEventSheet: View {
         group.map { store.canLead($0) } ?? false
     }
 
+    private var cancellationTitle: LocalizedStringKey {
+        event?.isRecurring == true
+            ? "Cette date ou toute la série ?"
+            : "Annuler cette session ?"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -1737,18 +1743,9 @@ struct GroupEventSheet: View {
 
                             if isLeader {
                                 Button(role: .destructive) {
-                                    // Une date isolée part sans confirmation ;
-                                    // une série demande laquelle on annule.
-                                    if event.isRecurring {
-                                        confirmingDelete = true
-                                    } else {
-                                        store.removeEvent(event, from: group)
-                                        dismiss()
-                                    }
+                                    confirmingDelete = true
                                 } label: {
-                                    Text(event.isRecurring
-                                         ? LocalizedStringKey("Annuler cette répétition")
-                                         : "Supprimer l'événement")
+                                    Label("Annuler la session", systemImage: "calendar.badge.minus")
                                         .font(.caption.weight(.bold))
                                         .frame(maxWidth: .infinity)
                                 }
@@ -1781,21 +1778,30 @@ struct GroupEventSheet: View {
                     .presentationDetents([.medium])
             }
             .confirmationDialog(
-                "Cette date ou toute la série ?",
+                cancellationTitle,
                 isPresented: $confirmingDelete,
                 titleVisibility: .visible
             ) {
                 if let group, let event {
-                    Button("Annuler cette date seulement", role: .destructive) {
-                        store.removeEvent(event, from: group)
-                        dismiss()
-                    }
-                    Button("Annuler toutes les dates à venir", role: .destructive) {
-                        store.removeSeries(of: event, from: group)
-                        dismiss()
+                    if event.isRecurring {
+                        Button("Annuler cette date seulement", role: .destructive) {
+                            store.cancelEvent(event, from: group)
+                            dismiss()
+                        }
+                        Button("Annuler toutes les dates à venir", role: .destructive) {
+                            store.cancelSeries(of: event, from: group)
+                            dismiss()
+                        }
+                    } else {
+                        Button("Annuler et prévenir les membres", role: .destructive) {
+                            store.cancelEvent(event, from: group)
+                            dismiss()
+                        }
                     }
                 }
                 Button("Ne rien annuler", role: .cancel) {}
+            } message: {
+                Text("La session disparaîtra des agendas et les autres membres recevront une notification.")
             }
         }
     }

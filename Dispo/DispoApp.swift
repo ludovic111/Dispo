@@ -51,8 +51,9 @@ struct RootView: View {
                     .tag(AppTab.agenda)
                 EventsView()
                     .tabItem { Label("SOS", systemImage: "bolt.fill") }
-                    // Candidats à trancher + demandes de dépannage reçues :
-                    // ce sont des gens qui attendent une réponse.
+                    // Seulement les SOS externes, compatibles avec mon profil
+                    // et jamais ouverts. Mes propres annonces ne gonflent pas
+                    // une puce censée m'alerter.
                     .badge(store.sosTodoCount)
                     .tag(AppTab.sos)
                 ChatListView()
@@ -191,6 +192,29 @@ struct RootView: View {
         // Laisse la démo se charger et la TabView se poser.
         try? await Task.sleep(for: .milliseconds(800))
         switch route {
+        case "home-leader":
+            // État déterministe pour relire le cockpit Premium sans compte
+            // serveur ni gestes automatisés dans le simulateur.
+            if !store.groups.contains(where: { $0.name == "Blue Notes QA" }) {
+                store.createGroup(
+                    name: "Blue Notes QA",
+                    emoji: "🎷",
+                    members: store.musicians.prefix(3).map(\.name)
+                )
+                if let group = store.groups.first(where: { $0.name == "Blue Notes QA" }),
+                   let date = Calendar.current.date(byAdding: .day, value: 4, to: Date()) {
+                    store.addEvent(
+                        GroupEvent(
+                            kind: .repetition,
+                            title: "Répétition générale",
+                            venue: "Studio QA",
+                            date: date
+                        ),
+                        to: group
+                    )
+                }
+            }
+            store.selectedTab = .home
         case "agenda", "sessions": store.selectedTab = .agenda
         // Les nouveautés ne s'ouvrent qu'après une vraie mise à jour : sans
         // cette route, impossible de les relire en QA sans trafiquer les

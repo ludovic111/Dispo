@@ -312,11 +312,17 @@ struct SongDetailSheet: View {
                 )
             )
             : nil
+        let actionTitle: LocalizedStringKey = pasted == nil
+            ? "Ajouter à iReal Pro"
+            : "Ouvrir dans iReal Pro"
+        let actionSymbol = pasted == nil
+            ? "square.and.arrow.down.fill"
+            : "arrow.up.forward.app.fill"
 
         if let url = pasted ?? generated {
             VStack(spacing: 8) {
                 Button { openIReal(url) } label: {
-                    Label("Ouvrir iReal Pro", systemImage: "arrow.up.forward.app.fill")
+                    Label(actionTitle, systemImage: actionSymbol)
                         .font(.subheadline.weight(.bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -395,6 +401,9 @@ struct SongDetailSheet: View {
                              : "Dispo envoie la grille déjà transposée dans ta tonalité (\(store.tr(activeTransposition.rawValue))) — rien à recopier.")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
+                        Text("iReal Pro affiche son aperçu d'import : valide-le et le morceau est ajouté à ta bibliothèque, dans « Derniers imports ».")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(JC.premiumTint)
                     }
                     Text("Sans l'app installée, la grille reste lisible ici et se copie d'un tap.")
                         .font(.caption2)
