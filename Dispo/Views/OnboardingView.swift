@@ -95,7 +95,9 @@ struct OnboardingView: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Text(step < stepCount - 1 ? "Continuer" : "C'est parti")
+                Text(step < stepCount - 1
+                     ? LocalizedStringKey("Continuer")
+                     : LocalizedStringKey("C'est parti"))
                     .font(.headline)
                 if step == stepCount - 1 {
                     Image(systemName: "bolt.fill")

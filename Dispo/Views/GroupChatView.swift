@@ -931,21 +931,14 @@ struct SongRow: View {
         }
     }
 
-    /// Ce que la fiche du morceau contient déjà : tonalité, grille, nombre de
-    /// partitions, lien iReal Pro. Un coup d'œil suffit à savoir s'il y a
-    /// quelque chose à ouvrir.
+    /// Les partitions jointes au morceau. Les anciens indicateurs de tonalité,
+    /// grille et lien iReal Pro ont disparu avec le parcours simplifié : ils ne
+    /// doivent pas promettre un contenu qui n'est plus affiché dans la fiche.
     @ViewBuilder
     private var detailHints: some View {
-        let hasChords = !(song.chords ?? "").isEmpty
-        let hasIreal = !(song.irealURL ?? "").isEmpty
-        let hasKey = !(song.key ?? "").isEmpty
-        if hasKey || hasChords || hasIreal || attachedDocs > 0 {
+        if attachedDocs > 0 {
             HStack(spacing: 5) {
-                // iReal Pro en tête : c'est ce qu'on ouvre en premier.
-                if hasIreal { hint(icon: "arrow.up.forward.app.fill", label: nil) }
-                if let key = song.key, hasKey { hint(icon: "tuningfork", label: key) }
-                if hasChords { hint(icon: "square.grid.2x2", label: nil) }
-                if attachedDocs > 0 { hint(icon: "doc.richtext.fill", label: "\(attachedDocs)") }
+                hint(icon: "doc.richtext.fill", label: "\(attachedDocs)")
             }
         }
     }
@@ -2119,7 +2112,9 @@ struct GroupEventSheet: View {
                 Image(systemName: state == .complete ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
                     .font(.subheadline.weight(.bold))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(state == .complete ? "Line-up complet" : "Il manque du monde")
+                    Text(state == .complete
+                         ? LocalizedStringKey("Line-up complet")
+                         : LocalizedStringKey("Il manque du monde"))
                         .font(.caption.weight(.heavy))
                     Text(state == .complete
                          ? "Tout le monde est là — le concert peut se jouer."

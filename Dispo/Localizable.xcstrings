@@ -5981,6 +5981,46 @@
         }
       }
     },
+    "Aucune session": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Session"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No session"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ninguna sesión"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna sessione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションなし"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无场次"
+          }
+        }
+      }
+    },
     "Aucune session planifiée": {
       "localizations": {
         "de": {
@@ -9227,6 +9267,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "自由搜索任何内容"
+          }
+        }
+      }
+    },
+    "Chercher dans iReal Pro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In iReal Pro suchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in iReal Pro"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar en iReal Pro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca in iReal Pro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro で検索"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 iReal Pro 中搜索"
           }
         }
       }
@@ -18171,6 +18251,46 @@
         }
       }
     },
+    "Installe iReal Pro pour rechercher ce morceau dans ta bibliothèque.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiere iReal Pro, um in deiner Bibliothek nach diesem Stück zu suchen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install iReal Pro to search your library for this song."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instala iReal Pro para buscar este tema en tu biblioteca."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installa iReal Pro per cercare questo brano nella tua libreria."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリでこの曲を検索するには iReal Pro をインストールしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装 iReal Pro 后即可在你的曲库中搜索这首歌。"
+          }
+        }
+      }
+    },
     "Instrument": {
       "localizations": {
         "de": {
@@ -20507,6 +20627,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "全新 Nocturne & Brass 视觉融合深邃黑色、音乐金色与电光青色"
+          }
+        }
+      }
+    },
+    "La nouvelle palette bleu nuit et cyan s'applique sans déplacer les écrans ni changer les polices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die neue Palette in Nachtblau und Cyan gilt ohne verschobene Ansichten oder geänderte Schriften"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new midnight blue and cyan palette applies without moving screens or changing fonts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nueva paleta azul noche y cian se aplica sin mover pantallas ni cambiar tipografías"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nuova palette blu notte e ciano si applica senza spostare le schermate né cambiare i font"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面配置やフォントはそのままに、ミッドナイトブルーとシアンの新しいパレットを適用しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的深夜蓝与青色配色已应用，不移动界面，也不更换字体"
           }
         }
       }
@@ -24571,6 +24731,46 @@
         }
       }
     },
+    "Les petites phrases sous Aujourd'hui, Ce week-end et Près de chez toi ont disparu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die kleinen Erklärtexte unter Heute, Dieses Wochenende und In deiner Nähe sind verschwunden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The small explanatory lines under Today, This weekend and Near you are gone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Han desaparecido las pequeñas explicaciones bajo Hoy, Este fin de semana y Cerca de ti"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le brevi spiegazioni sotto Oggi, Questo weekend e Vicino a te sono state rimosse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日、今週末、近くの人の下にあった小さな説明文を削除しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“今天”、“本周末”和“附近”下方的简短说明已移除"
+          }
+        }
+      }
+    },
     "Les vidéos n'ont pas pu être synchronisées.": {
       "localizations": {
         "de": {
@@ -26167,6 +26367,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的乐队"
+          }
+        }
+      }
+    },
+    "Mes groupes montre maintenant tous les groupes dont tu fais partie, pas seulement ceux que tu diriges": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Gruppen zeigt jetzt alle Gruppen, in denen du Mitglied bist, nicht nur die, die du leitest"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My Groups now shows every group you belong to, not only the ones you lead"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis grupos muestra ahora todos los grupos a los que perteneces, no solo los que diriges"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I miei gruppi ora mostra tutti i gruppi di cui fai parte, non solo quelli che dirigi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイグループに、リーダーを務めるグループだけでなく、参加しているすべてのグループが表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“我的乐队”现在会显示你参加的所有乐队，而不只是你管理的乐队"
           }
         }
       }
@@ -31731,6 +31971,86 @@
         }
       }
     },
+    "Plus simple, plus clair": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einfacher und klarer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simpler and clearer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más simple y más claro"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più semplice e più chiaro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もっとシンプルでわかりやすく"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更简单，更清晰"
+          }
+        }
+      }
+    },
+    "Plusieurs libellés conditionnels sont désormais bien traduits dans les 7 langues": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrere zustandsabhängige Beschriftungen sind jetzt in allen 7 Sprachen korrekt übersetzt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Several state-dependent labels are now correctly translated in all 7 languages"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Varias etiquetas condicionales ya están bien traducidas en los 7 idiomas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diverse etichette condizionali ora sono tradotte correttamente in tutte e 7 le lingue"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状態によって変わる複数のラベルが、7言語すべてで正しく翻訳されるようになりました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "多个根据状态变化的标签现已在 7 种语言中正确翻译"
+          }
+        }
+      }
+    },
     "Ponctuel": {
       "localizations": {
         "de": {
@@ -32167,6 +32487,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "面向"
+          }
+        }
+      }
+    },
+    "Pour agir sur un groupe, ouvre-le : l'accueil ne duplique plus ses commandes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um etwas in einer Gruppe zu tun, öffne sie: Die Startseite dupliziert ihre Aktionen nicht mehr"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To do anything in a group, open it: Home no longer duplicates its controls"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para actuar en un grupo, ábrelo: Inicio ya no duplica sus controles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per agire su un gruppo, aprilo: la Home non ne duplica più i comandi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループで操作するときはグループを開きます。ホームに操作ボタンは重複表示されません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要操作乐队，请打开该乐队：首页不再重复显示操作项"
           }
         }
       }
@@ -39331,6 +39691,46 @@
         }
       }
     },
+    "Sur l'accueil, chaque groupe se résume à son nom et à la date de sa prochaine session": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf der Startseite zeigt jede Gruppe nur noch ihren Namen und das Datum der nächsten Session"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On Home, each group is reduced to its name and the date of its next session"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En Inicio, cada grupo se limita a su nombre y la fecha de su próxima sesión"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nella Home, ogni gruppo mostra solo il nome e la data della prossima sessione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホームの各グループには、名前と次回セッションの日付だけが表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首页上的每个乐队只显示名称和下次活动日期"
+          }
+        }
+      }
+    },
     "Sur une série : cette date seulement, ou toutes les suivantes. Une seule notification part, jamais cinquante": {
       "localizations": {
         "de": {
@@ -40767,6 +41167,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "标题"
+          }
+        }
+      }
+    },
+    "Titre du morceau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songtitel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Song title"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Título del tema"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titolo del brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲名"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲名称"
           }
         }
       }
@@ -46371,6 +46811,46 @@
         }
       }
     },
+    "iReal Pro va droit au but : saisis un titre et lance la recherche": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro kommt direkt auf den Punkt: Titel eingeben und Suche starten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro gets straight to the point: enter a title and start the search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro va al grano: escribe un título e inicia la búsqueda"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro va dritto al punto: inserisci un titolo e avvia la ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Proはシンプルに。タイトルを入力して検索するだけです"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iReal Pro 直接进入重点：输入曲名并开始搜索"
+          }
+        }
+      }
+    },
     "niveau": {
       "localizations": {
         "de": {
@@ -46538,6 +47018,36 @@
             "state": "translated",
             "value": "per year"
           }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pro Jahr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "al año"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "all'anno"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年額"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每年"
+          }
         }
       }
     },
@@ -46547,6 +47057,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "per month"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pro Monat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "al mes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "al mese"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月額"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每月"
           }
         }
       }

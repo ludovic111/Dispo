@@ -1353,7 +1353,7 @@ final class SupabaseBackend: Sendable {
     }
 
     /// Charge les groupes dont je suis membre (RLS), avec membres, événements,
-    /// présence et messages. Seules les partitions restent locales à l'appareil.
+    /// présence, messages, partitions et commentaires.
     func fetchGroups(myID: UUID, myName: String, nameByID: [UUID: String]) async throws -> [GroupChat] {
         let groupRows: [MusicGroupRow] = try await client.from("music_groups")
             .select()

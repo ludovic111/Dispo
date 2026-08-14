@@ -180,7 +180,9 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
                 Text(verbatim: store.displayPrice(for: plan))
                     .font(JCFont.monoBold(16))
-                Text(plan == .annual ? "par an" : "par mois")
+                Text(plan == .annual
+                     ? LocalizedStringKey("par an")
+                     : LocalizedStringKey("par mois"))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

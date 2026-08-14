@@ -159,6 +159,8 @@ struct RootView: View {
                 case .matching(let gig): SOSMatchView(gig: gig) {}
                 case .settings: SettingsSheet()
                 case .songs: DebugSongRowsPreview()
+                case .songDetail(let groupID, let songID):
+                    SongDetailSheet(groupID: groupID, songID: songID)
                 }
             }
         }
@@ -175,6 +177,7 @@ struct RootView: View {
         case matching(GigRequest)
         case settings
         case songs
+        case songDetail(GroupChat.ID, Song.ID)
         var id: String {
             switch self {
             case .chat: return "chat"
@@ -183,6 +186,7 @@ struct RootView: View {
             case .matching: return "matching"
             case .settings: return "settings"
             case .songs: return "songs"
+            case .songDetail: return "song-detail"
             }
         }
     }
@@ -214,6 +218,25 @@ struct RootView: View {
                     )
                 }
             }
+            if !store.groups.contains(where: { $0.name == "Les Satellites QA" }) {
+                let date = Calendar.current.date(byAdding: .day, value: 8, to: Date()) ?? Date()
+                store.groups.append(
+                    GroupChat(
+                        name: "Les Satellites QA",
+                        emoji: "🛰️",
+                        leaderName: "Nina Keller",
+                        memberNames: ["Nina Keller"],
+                        events: [
+                            GroupEvent(
+                                kind: .concert,
+                                title: "Concert",
+                                venue: "Le Groove",
+                                date: date
+                            )
+                        ]
+                    )
+                )
+            }
             store.selectedTab = .home
         case "agenda", "sessions": store.selectedTab = .agenda
         // Les nouveautés ne s'ouvrent qu'après une vraie mise à jour : sans
@@ -244,6 +267,22 @@ struct RootView: View {
             debugCover = .settings
         case "songs":
             debugCover = .songs
+        case "song-detail":
+            let song = Song(
+                title: "Autumn Leaves",
+                artist: "Bill Evans",
+                suggestedBy: "Léa Zbinden",
+                isApproved: true
+            )
+            let group = GroupChat(
+                name: "Blue Notes QA",
+                leaderName: nil,
+                memberNames: [],
+                repertoire: [song]
+            )
+            store.groups.removeAll { $0.id == group.id }
+            store.groups.insert(group, at: 0)
+            debugCover = .songDetail(group.id, song.id)
         default: break
         }
     }
@@ -297,7 +336,7 @@ struct DebugSongRowsPreview: View {
 }
 #endif
 
-// MARK: - Design system « Coulisses & Laiton »
+// MARK: - Design system « Nocturne cyan »
 
 extension Color {
     /// Couleur adaptative selon le mode clair / sombre.
@@ -319,53 +358,53 @@ extension AppTheme {
     }
 }
 
-/// Palette « Nocturne & Brass », issue de la référence visuelle : noir chaud,
-/// cartes brunes, or musical et cyan électrique pour l'interactif.
+/// Palette issue de la maquette Stitch fournie : bleu nuit, surfaces ardoise,
+/// cyan électrique, blanc froid et gris bleuté. La typographie et la mise en
+/// page existantes restent volontairement inchangées.
 enum JC {
     // Fonds
     static let bg = Color(
-        light: Color(red: 0.949, green: 0.918, blue: 0.851),
-        dark: Color(red: 22 / 255, green: 19 / 255, blue: 11 / 255) // #16130B
+        light: Color(red: 240 / 255, green: 244 / 255, blue: 1), // #F0F4FF
+        dark: Color(red: 5 / 255, green: 8 / 255, blue: 20 / 255) // #050814
     )
     static let card = Color(
-        light: Color(red: 0.984, green: 0.961, blue: 0.910),
-        dark: Color(red: 31 / 255, green: 27 / 255, blue: 19 / 255) // #1F1B13
+        light: .white,
+        dark: Color(red: 10 / 255, green: 17 / 255, blue: 40 / 255) // #0A1128
     )
     /// Surface interne (bulles, champs, encarts posés sur une carte).
     static let inset = Color(
-        light: Color(red: 0.929, green: 0.890, blue: 0.804),
-        dark: Color(red: 24 / 255, green: 21 / 255, blue: 15 / 255)
+        light: Color(red: 226 / 255, green: 232 / 255, blue: 240 / 255), // #E2E8F0
+        dark: Color(red: 14 / 255, green: 24 / 255, blue: 53 / 255) // #0E1835
     )
     static let cardStroke = Color(
-        light: Color(red: 0.090, green: 0.075, blue: 0.063).opacity(0.08),
-        dark: Color(red: 0, green: 209 / 255, blue: 1).opacity(0.13)
+        light: Color(red: 42 / 255, green: 58 / 255, blue: 102 / 255).opacity(0.18),
+        dark: Color(red: 42 / 255, green: 58 / 255, blue: 102 / 255).opacity(0.72)
     )
     /// Reflet interne des cartes — simule une légère épaisseur.
     static let cardHighlight = Color(
-        light: .white.opacity(0.7),
-        dark: Color(red: 0.965, green: 0.937, blue: 0.878).opacity(0.05)
+        light: .white.opacity(0.75),
+        dark: Color(red: 240 / 255, green: 244 / 255, blue: 1).opacity(0.06)
     )
     /// Ombre portée des cartes — douce en clair, inexistante en sombre.
     static let cardShadow = Color(
-        light: Color(red: 0.35, green: 0.26, blue: 0.10).opacity(0.13),
+        light: Color(red: 42 / 255, green: 58 / 255, blue: 102 / 255).opacity(0.14),
         dark: .clear
     )
 
     // Accents (plus profonds en clair pour rester lisibles sur papier)
-    /// L'accent unique : boutons, états actifs, lueurs, étoiles.
+    /// Accent principal. Le nom historique reste pour ne pas disperser un
+    /// changement purement visuel dans toutes les vues.
     static let laiton = Color(
-        light: Color(red: 0.663, green: 0.439, blue: 0.122),
-        dark: Color(red: 212 / 255, green: 175 / 255, blue: 55 / 255) // #D4AF37
+        light: Color(red: 0, green: 153 / 255, blue: 1), // #0099FF
+        dark: Color(red: 0, green: 210 / 255, blue: 1) // #00D2FF
     )
     /// Accent électrique de la référence : liens, import, recherche et
     /// couronne. En clair, une version assombrie garde le contraste.
     static let electric = Color(
-        light: Color(red: 0, green: 0.49, blue: 0.61),
-        dark: Color(red: 0, green: 209 / 255, blue: 1) // #00D1FF
+        light: Color(red: 0, green: 153 / 255, blue: 1),
+        dark: Color(red: 0, green: 210 / 255, blue: 1) // #00D2FF
     )
-    /// #3D392F demandé dans l'identité. Sur le fond sombre il ne satisfait
-    /// pas le contraste du texte : on le réserve aux séparateurs/surfaces.
-    static let warmMuted = Color(red: 61 / 255, green: 57 / 255, blue: 47 / 255)
+    static let warmMuted = Color(red: 30 / 255, green: 41 / 255, blue: 59 / 255) // #1E293B
     /// Réservé au SOS (urgence, erreurs) — à rien d'autre.
     static let signal = Color(
         light: Color(red: 0.720, green: 0.250, blue: 0.100),
@@ -373,32 +412,31 @@ enum JC {
     )
     /// Confirmations, présence, « dispo ».
     static let feutrine = Color(
-        light: Color(red: 0.240, green: 0.400, blue: 0.280),
-        dark: Color(red: 0.561, green: 0.725, blue: 0.588)
+        light: Color(red: 0, green: 153 / 255, blue: 1),
+        dark: Color(red: 0, green: 210 / 255, blue: 1)
     )
     /// Secondaire discret (badges neutres, chips de genre, méta).
     static let bronze = Color(
-        light: Color(red: 0.420, green: 0.360, blue: 0.280),
-        dark: Color(red: 0.655, green: 0.608, blue: 0.545)
+        light: Color(red: 71 / 255, green: 85 / 255, blue: 105 / 255), // #475569
+        dark: Color(red: 142 / 255, green: 154 / 255, blue: 175 / 255) // #8E9AAF
     )
 
     /// Papier et encre du billet — identiques dans les deux modes,
     /// comme un vrai billet de concert.
-    static let billetPaper = Color(red: 0.965, green: 0.937, blue: 0.878)
-    static let billetInk = Color(red: 0.090, green: 0.075, blue: 0.063)
+    static let billetPaper = Color(red: 240 / 255, green: 244 / 255, blue: 1)
+    static let billetInk = Color(red: 5 / 255, green: 8 / 255, blue: 20 / 255)
     // Encres d'accent imprimées sur le billet (fixes, jamais adaptatives —
     // les tokens adaptatifs s'éclairciraient en sombre sur le papier ivoire).
     static let billetSignal = Color(red: 0.700, green: 0.240, blue: 0.090)
-    static let billetBronze = Color(red: 0.420, green: 0.360, blue: 0.280)
-    static let billetFeutrine = Color(red: 0.220, green: 0.400, blue: 0.280)
-    static let billetLaiton = Color(red: 0.663, green: 0.439, blue: 0.122)
+    static let billetBronze = Color(red: 71 / 255, green: 85 / 255, blue: 105 / 255)
+    static let billetFeutrine = Color(red: 0, green: 153 / 255, blue: 1)
+    static let billetLaiton = Color(red: 0, green: 153 / 255, blue: 1)
 
-    /// CTA principal : rampe de laiton serrée — de la matière, pas un
-    /// arc-en-ciel. Texte sombre par-dessus.
+    /// CTA principal cyan, texte nuit par-dessus.
     static let hero = LinearGradient(
         colors: [
-            Color(red: 0.898, green: 0.714, blue: 0.337),
-            Color(red: 0.816, green: 0.596, blue: 0.216)
+            Color(red: 0, green: 210 / 255, blue: 1),
+            Color(red: 0, green: 153 / 255, blue: 1)
         ],
         startPoint: .top, endPoint: .bottom
     )
@@ -408,8 +446,8 @@ enum JC {
     /// Assez claire pour porter l'encre sombre du billet.
     static let serie = LinearGradient(
         colors: [
-            Color(red: 0.729, green: 0.792, blue: 0.690),
-            Color(red: 0.612, green: 0.694, blue: 0.588)
+            Color(red: 203 / 255, green: 213 / 255, blue: 225 / 255),
+            Color(red: 142 / 255, green: 154 / 255, blue: 175 / 255)
         ],
         startPoint: .top, endPoint: .bottom
     )
@@ -419,8 +457,8 @@ enum JC {
     /// Plus saturé que `serie` pour ne pas confondre routine et complet.
     static let complet = LinearGradient(
         colors: [
-            Color(red: 0.553, green: 0.812, blue: 0.612),
-            Color(red: 0.376, green: 0.678, blue: 0.463)
+            Color(red: 0, green: 210 / 255, blue: 1),
+            Color(red: 0, green: 153 / 255, blue: 1)
         ],
         startPoint: .top, endPoint: .bottom
     )
@@ -435,12 +473,12 @@ enum JC {
         startPoint: .top, endPoint: .bottom
     )
 
-    /// Pass backstage : cyan électrique plongé dans le fond nocturne.
+    /// Pass backstage : cyan électrique plongé dans le bleu nuit.
     static let premium = LinearGradient(
         colors: [
-            Color(red: 0, green: 0.64, blue: 0.78),
-            Color(red: 0, green: 0.32, blue: 0.42),
-            Color(red: 22 / 255, green: 19 / 255, blue: 11 / 255)
+            Color(red: 0, green: 210 / 255, blue: 1),
+            Color(red: 0, green: 153 / 255, blue: 1),
+            Color(red: 5 / 255, green: 8 / 255, blue: 20 / 255)
         ],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
@@ -453,7 +491,7 @@ enum JC {
         tab.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
         UITabBar.appearance().standardAppearance = tab
         UITabBar.appearance().scrollEdgeAppearance = tab
-        UITabBar.appearance().tintColor = UIColor(red: 0, green: 209 / 255, blue: 1, alpha: 1)
+        UITabBar.appearance().tintColor = UIColor(red: 0, green: 210 / 255, blue: 1, alpha: 1)
 
         let nav = UINavigationBarAppearance()
         nav.configureWithDefaultBackground()
@@ -481,12 +519,12 @@ enum JCFont {
     }
 }
 
-/// Fond signature : halo électrique en haut, reflet laiton au sol.
+/// Fond signature : halo cyan en haut, profondeur bleu nuit au sol.
 struct JCBackground: View {
-    /// Braise du bas de scène (sable chaud en clair, brun profond en sombre).
+    /// Profondeur du bas de scène.
     private static let braise = Color(
-        light: Color(red: 0.878, green: 0.804, blue: 0.635),
-        dark: Color(red: 0.310, green: 0.220, blue: 0.090)
+        light: Color(red: 203 / 255, green: 213 / 255, blue: 225 / 255),
+        dark: Color(red: 22 / 255, green: 32 / 255, blue: 61 / 255)
     )
 
     var body: some View {
@@ -679,11 +717,15 @@ struct LogoView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image("logo_mark")
-                .resizable()
-                .scaledToFit()
+            ZStack {
+                RoundedRectangle(cornerRadius: markSize * 0.235, style: .continuous)
+                    .fill(JC.hero)
+                Text(verbatim: "d")
+                    .font(JCFont.displayItalic(markSize * 0.78))
+                    .foregroundStyle(JC.billetInk)
+                    .offset(y: -markSize * 0.03)
+            }
                 .frame(width: markSize, height: markSize)
-                .clipShape(RoundedRectangle(cornerRadius: markSize * 0.235, style: .continuous))
             if showWordmark {
                 Text(verbatim: "dispo")
                     .font(JCFont.displayItalic(markSize * 0.72))

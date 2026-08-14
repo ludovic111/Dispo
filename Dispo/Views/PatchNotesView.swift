@@ -11,6 +11,19 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "2.0",
+            title: "Plus simple, plus clair",
+            points: [
+                "Mes groupes montre maintenant tous les groupes dont tu fais partie, pas seulement ceux que tu diriges",
+                "Sur l'accueil, chaque groupe se résume à son nom et à la date de sa prochaine session",
+                "Pour agir sur un groupe, ouvre-le : l'accueil ne duplique plus ses commandes",
+                "iReal Pro va droit au but : saisis un titre et lance la recherche",
+                "Les petites phrases sous Aujourd'hui, Ce week-end et Près de chez toi ont disparu",
+                "La nouvelle palette bleu nuit et cyan s'applique sans déplacer les écrans ni changer les polices",
+                "Plusieurs libellés conditionnels sont désormais bien traduits dans les 7 langues"
+            ]
+        ),
+        PatchNote(
             version: "1.9",
             title: "Nocturne, groupes et partitions",
             points: [

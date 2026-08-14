@@ -315,7 +315,9 @@ struct MusicianDetailView: View {
                 Button {
                     withAnimation(.snappy) { store.toggleFollow(musician) }
                 } label: {
-                    Text(store.isFollowing(musician) ? "Suivi" : "Suivre")
+                    Text(store.isFollowing(musician)
+                         ? LocalizedStringKey("Suivi")
+                         : LocalizedStringKey("Suivre"))
                         .font(.subheadline.weight(.bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)

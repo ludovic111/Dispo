@@ -80,10 +80,6 @@ struct HomeView: View {
     @State private var scope: AvailabilityScope = .today
     /// Le créneau d'ouverture n'est choisi qu'une fois, au premier chargement.
     @State private var scopePicked = false
-    /// Actions rapides du cockpit leader : elles restent des feuilles légères,
-    /// la page complète du groupe garde les fonctions avancées.
-    @State private var membersGroup: GroupChat?
-    @State private var newEventGroup: GroupChat?
 
     /// La vraie question d'un musicien qui ouvre l'app : qui peut jouer, et
     /// quand ? On répond avant de parler de distance — c'est ce qui distingue
@@ -112,13 +108,6 @@ struct HomeView: View {
             }
         }
 
-        var subtitle: LocalizedStringKey {
-            switch self {
-            case .today: return "Dispos aujourd'hui — appelle, ça peut jouer ce soir"
-            case .weekend: return "Dispos samedi ou dimanche"
-            case .nearby: return "Tes relations d'abord, puis les plus proches"
-            }
-        }
     }
 
     /// Les musiciens qui passent les filtres, classés comme d'habitude.
@@ -185,13 +174,13 @@ struct HomeView: View {
         .map { $0 }
     }
 
-    /// Groupes que je peux réellement diriger, dédoublonnés par identité.
+    /// Tous les groupes dont je fais partie, dédoublonnés par identité.
     /// Le cache local et un rafraîchissement realtime peuvent se chevaucher
     /// pendant une frame : la maison ne doit jamais afficher deux fois la
     /// même tuile.
-    private var managedGroups: [GroupChat] {
+    private var myGroups: [GroupChat] {
         var seen = Set<GroupChat.ID>()
-        return store.groups.filter { store.canLead($0) && seen.insert($0.id).inserted }
+        return store.groups.filter { seen.insert($0.id).inserted }
     }
 
     private var greeting: LocalizedStringKey {
@@ -208,7 +197,7 @@ struct HomeView: View {
                     VStack(spacing: 22) {
                         header
                         searchBar
-                        leaderGroupDashboard
+                        groupDashboard
                         scopePicker
                         actionBar
                         feed
@@ -228,23 +217,9 @@ struct HomeView: View {
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .navigationDestination(for: GigRequest.self) { EventDetailView(eventID: $0.id) }
             .navigationDestination(for: GroupChat.ID.self) { GroupChatView(groupID: $0) }
-            .navigationDestination(for: GroupEventRoute.self) { route in
-                GroupEventSheet(
-                    groupID: route.groupID,
-                    eventID: route.eventID,
-                    presentedModally: false
-                )
-            }
             .sheet(isPresented: $showFilters) {
                 FilterSheet(filters: $filters)
                     .presentationDetents([.medium, .large])
-            }
-            .sheet(item: $membersGroup) { group in
-                GroupMembersSheet(groupID: group.id)
-            }
-            .sheet(item: $newEventGroup) { group in
-                AddGroupEventSheet(group: group)
-                    .presentationDetents([.medium])
             }
         }
     }
@@ -309,115 +284,60 @@ struct HomeView: View {
         .buttonStyle(PressableStyle())
     }
 
-    /// Une tuile par groupe. Sa prochaine session vit DANS la tuile : aucune
-    /// carte événement autonome ne vient doubler le groupe sur l'accueil.
-    ///
-    /// La section n'existe que pour un leader Premium (`managedGroups`) :
-    /// l'accueil des autres musiciens reste centré sur qui est disponible.
+    /// Une ligne par groupe dont je suis membre. L'accueil ne pilote rien :
+    /// pour lire les messages, voir les membres ou gérer une session, on ouvre
+    /// simplement le groupe concerné.
     @ViewBuilder
-    private var leaderGroupDashboard: some View {
-        if !managedGroups.isEmpty {
+    private var groupDashboard: some View {
+        if !myGroups.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 7) {
-                    Image(systemName: "crown.fill")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(JC.premiumTint)
-                    Text("Mes groupes")
-                        .font(.caption2.weight(.heavy))
-                        .textCase(.uppercase)
-                        .foregroundStyle(.primary)
-                    Spacer(minLength: 0)
-                    Text("Gestion rapide")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Mes groupes")
+                    .font(.caption2.weight(.heavy))
+                    .textCase(.uppercase)
+                    .foregroundStyle(.primary)
 
-                ForEach(managedGroups) { group in
-                    leaderGroupRow(group)
+                ForEach(myGroups) { group in
+                    groupRow(group)
                 }
             }
-            .padding(12)
-            .background(JC.premiumTint.opacity(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(JC.premiumTint.opacity(0.22), lineWidth: 1)
-            )
         }
     }
 
-    /// Une ligne de pilotage par groupe : ouvrir, créer une session ou gérer
-    /// les membres. Trois décisions utiles, pas une copie miniature des trois
-    /// onglets complets du groupe.
-    private func leaderGroupRow(_ group: GroupChat) -> some View {
-        JCCard(padding: 10) {
-            VStack(spacing: 9) {
-                NavigationLink {
-                    GroupChatView(groupID: group.id)
-                } label: {
-                    HStack(spacing: 9) {
-                        GroupAvatarView(group: group, size: 34)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: "\(group.emoji) \(group.name)")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Text(String(
-                                format: store.tr("%lld membres"),
-                                Int64(store.roster(of: group).count)
+    /// Nom du groupe, puis uniquement la date de sa prochaine session.
+    private func groupRow(_ group: GroupChat) -> some View {
+        NavigationLink(value: group.id) {
+            JCCard(padding: 12) {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: group.name)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        if let event = group.upcomingEvents.first {
+                            Text(event.date.formatted(
+                                .dateTime
+                                    .weekday(.abbreviated)
+                                    .day()
+                                    .month(.abbreviated)
+                                    .locale(store.language.locale)
                             ))
-                                .font(.caption2)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        } else {
+                            Text("Aucune session")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        Spacer(minLength: 0)
-                        if store.unreadCount(in: group) > 0 {
-                            Text(verbatim: "\(store.unreadCount(in: group))")
-                                .font(JCFont.monoBold(10))
-                                .foregroundStyle(JC.billetInk)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 4)
-                                .background(JC.laiton, in: Capsule())
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.tertiary)
                     }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.tertiary)
                 }
-                .buttonStyle(PressableStyle())
-
-                if let event = group.upcomingEvents.first {
-                    GroupEventReminderCard(group: group, event: event)
-                } else {
-                    HStack(spacing: 7) {
-                        Image(systemName: "calendar.badge.plus")
-                            .foregroundStyle(JC.premiumTint)
-                        Text("Aucune session planifiée")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                HStack(spacing: 8) {
-                    Button { newEventGroup = group } label: {
-                        Label("Session", systemImage: "calendar.badge.plus")
-                            .frame(maxWidth: .infinity)
-                    }
-                    Button { membersGroup = group } label: {
-                        Label("Membres", systemImage: "person.3.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    NavigationLink {
-                        GroupChatView(groupID: group.id, initialTab: .events)
-                    } label: {
-                        Label("Tout gérer", systemImage: "slider.horizontal.3")
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .font(.caption2.weight(.bold))
-                .buttonStyle(LeaderQuickActionStyle())
             }
         }
+        .buttonStyle(PressableStyle())
     }
 
     /// Le créneau : ce soir, ce week-end, ou tout ce qu'il y a autour de moi.
@@ -480,9 +400,7 @@ struct HomeView: View {
         LazyVStack(spacing: 18) {
             SectionHeader(
                 title: LocalizedStringKey(scope.rawValue),
-                subtitle: scope == .nearby && store.isPremium
-                    ? "Tes relations d'abord, puis les meilleurs niveaux"
-                    : scope.subtitle
+                subtitle: nil
             )
             if visible.isEmpty {
                 emptyScopeState
@@ -601,180 +519,6 @@ struct SocialLinkBadge: View {
         case .following: TagView(text: "Suivi", color: JC.bronze)
         case .follower: TagView(text: "Te suit", color: JC.bronze)
         case .none: EmptyView()
-        }
-    }
-}
-
-/// Bouton compact du cockpit leader. Le fond reste discret pour que la
-/// prochaine session garde le poids visuel principal.
-private struct LeaderQuickActionStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(JC.premiumTint)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 6)
-            .background(
-                JC.premiumTint.opacity(configuration.isPressed ? 0.18 : 0.10),
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-            )
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
-// MARK: - Prochain événement d'un groupe
-
-/// Le prochain rendez-vous d'un de mes groupes, avec l'état de son line-up :
-/// vert quand tout le monde est là (ou remplacé), rouge quand la date limite
-/// de réponse est passée et qu'il manque encore du monde.
-struct GroupEventReminderCard: View {
-    @EnvironmentObject private var store: AppStore
-    let group: GroupChat
-    let event: GroupEvent
-
-    private var state: LineupState { store.lineupState(event, in: group) }
-    private var missing: [Instrument] { store.missingRoles(event, in: group) }
-    private var guests: [EventGuest] { store.guests(for: event) }
-
-    private var tint: Color {
-        switch state {
-        case .complete: return JC.feutrine
-        case .late: return JC.signal
-        case .forming: return JC.bronze
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 10) {
-            NavigationLink(value: GroupEventRoute(groupID: group.id, eventID: event.id)) {
-                HStack(spacing: 11) {
-                    Text(event.kind.emoji)
-                        .font(.title3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        // Le nom du groupe est déjà juste au-dessus : ici on
-                        // garde uniquement le rendez-vous, lisible sans troncature.
-                        Text(verbatim: event.title)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text(verbatim: "\(event.date.formatted(.dateTime.weekday(.wide).day().month().locale(store.language.locale))) · \(event.venue)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    if let left = store.countdown(to: event.date) {
-                        Text(String(format: store.tr("dans %@"), left))
-                            .font(.caption2.weight(.heavy))
-                            .foregroundStyle(JC.laiton)
-                    }
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .buttonStyle(PressableStyle())
-
-            lineupLine
-            if !guests.isEmpty { guestLine }
-            attendanceControls
-        }
-        .padding(12)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(tint.opacity(state == .forming ? 0.3 : 0.55), lineWidth: 1)
-        )
-    }
-
-    /// La ligne qui dit tout : line-up complet, ou ce qu'il manque encore.
-    @ViewBuilder
-    private var lineupLine: some View {
-        HStack(spacing: 6) {
-            switch state {
-            case .complete:
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(JC.feutrine)
-                Text("Line-up complet — tout le monde est là")
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(JC.feutrine)
-            case .late:
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(JC.signal)
-                Text(missing.isEmpty
-                     ? LocalizedStringKey("Il manque encore des réponses")
-                     : "Il manque : \(missing.map { store.tr($0.rawValue) }.joined(separator: ", "))")
-                    .font(.caption.weight(.heavy))
-                    .foregroundStyle(JC.signal)
-                    .lineLimit(2)
-            case .forming:
-                Image(systemName: "person.2.fill")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text("Présence : \(event.availableNames.count)/\(store.roster(of: group).count)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    /// Les invités d'un soir trouvés par SOS — ils ne sont pas du groupe.
-    private var guestLine: some View {
-        FlowLayout(spacing: 5) {
-            Text("Invités")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.secondary)
-            ForEach(guests) { guest in
-                TagView(
-                    text: guest.instrument.map { "\(guest.name) · \(store.tr($0.rawValue))" } ?? guest.name,
-                    color: JC.feutrine
-                )
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var attendanceControls: some View {
-        let myStatus = event.status(for: store.profile.name)
-        if myStatus == .pending {
-            HStack(spacing: 8) {
-                ConfirmCountdownBadge(event: event)
-                Spacer(minLength: 0)
-                Button {
-                    store.setAttendance(.available, eventID: event.id, in: group.id)
-                } label: {
-                    Text("Dispo")
-                        .font(.caption.weight(.heavy))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(JC.feutrine, in: Capsule())
-                }
-                .buttonStyle(PressableStyle())
-                Button {
-                    store.setAttendance(.unavailable, eventID: event.id, in: group.id)
-                } label: {
-                    Text("Indispo")
-                        .font(.caption.weight(.heavy))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(JC.signal, in: Capsule())
-                }
-                .buttonStyle(PressableStyle())
-            }
-        } else {
-            HStack(spacing: 6) {
-                Image(systemName: myStatus == .available ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(myStatus == .available ? JC.feutrine : JC.signal)
-                Text(myStatus == .available ? "Tu as confirmé ta présence" : "Tu as indiqué être indispo")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-            }
         }
     }
 }
