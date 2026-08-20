@@ -11,8 +11,8 @@ struct OnboardingView: View {
     @State private var instruments: Set<Instrument> = []
     @State private var level: Level = .intermediaire
     @State private var country: Country = .switzerland
-    @State private var city: City = Country.switzerland.cities[0]
-    @State private var citySearch = ""
+    @State private var postalCode = ""
+    @State private var city = ""
 
     private let stepCount = 4
 
@@ -50,9 +50,10 @@ struct OnboardingView: View {
             name = store.profile.name
             instruments = Set(store.profile.instruments)
             level = store.profile.level
-            country = store.profile.resolvedCountry
-            city = country.cities.first { $0.name == store.profile.resolvedCity }
-                ?? country.cities[0]
+            country = store.profile.country ?? store.preferredCountry
+            postalCode = store.profile.postalCode ?? ""
+            city = store.profile.city ?? ""
+            store.requestLocation()
         }
     }
 
@@ -110,6 +111,8 @@ struct OnboardingView: View {
             .foregroundStyle(JC.billetInk)
         }
         .buttonStyle(PressableStyle())
+        .disabled(step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete)
+        .opacity(step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete ? 0.55 : 1)
         .padding(.horizontal, 28)
         .padding(.bottom, 36)
     }
@@ -123,8 +126,12 @@ struct OnboardingView: View {
         }
         store.profile.level = level
         store.profile.country = country
-        store.profile.city = city.name
-        store.profile.postalCode = city.postalCode
+        if !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            store.profile.city = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if !postalCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            store.profile.postalCode = postalCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        }
         store.saveProfile()
         store.completeOnboarding()
     }
@@ -226,108 +233,26 @@ struct OnboardingView: View {
 
     // MARK: - Étape 3 : pays & ville
 
-    /// Villes du pays choisi, filtrées par la recherche (nom ou code postal).
-    private var filteredCities: [City] {
-        let trimmed = citySearch.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return country.cities }
-        return country.cities.filter {
-            $0.name.localizedCaseInsensitiveContains(trimmed)
-                || $0.postalCode.localizedCaseInsensitiveContains(trimmed)
-        }
-    }
-
     private var regionStep: some View {
         stepLayout(
             icon: "mappin.and.ellipse",
             title: Text("Où joues-tu ?"),
             subtitle: Text("On te montre les musiciens et les concerts autour de toi.")
         ) {
-            VStack(spacing: 12) {
-                // Pays — rangée défilante de drapeaux
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Country.allCases) { option in
-                            Button {
-                                withAnimation(.snappy) {
-                                    country = option
-                                    citySearch = ""
-                                    if !option.cities.contains(city) { city = option.cities[0] }
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Text(option.flag)
-                                    Text(LocalizedStringKey(option.nameKey))
-                                        .font(.caption.weight(.bold))
-                                        .lineLimit(1)
-                                }
-                                .foregroundStyle(.primary)
-                                .padding(.horizontal, 13)
-                                .padding(.vertical, 10)
-                                .background(
-                                    (country == option ? JC.laiton.opacity(0.22) : JC.card),
-                                    in: Capsule()
-                                )
-                                .overlay(
-                                    Capsule().stroke((country == option ? JC.laiton.opacity(0.6) : JC.cardStroke), lineWidth: 1)
-                                )
-                            }
-                            .buttonStyle(PressableStyle())
-                        }
-                    }
-                }
+            VStack(alignment: .leading, spacing: 12) {
+                CountryPostalField(
+                    country: $country,
+                    postalCode: $postalCode,
+                    city: $city,
+                    detectedCountry: store.detectedCountry
+                )
+                .padding(14)
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(JC.cardStroke))
 
-                // Recherche de ville (nom ou code postal)
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    TextField(
-                        "",
-                        text: $citySearch,
-                        prompt: Text("Ville ou code postal…").foregroundStyle(.secondary)
-                    )
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                }
-                .padding(.horizontal, 13)
-                .padding(.vertical, 10)
-                .background(JC.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                // Villes du pays choisi, avec code postal
-                ScrollView {
-                    VStack(spacing: 6) {
-                        ForEach(filteredCities) { option in
-                            Button {
-                                city = option
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Text(option.postalCode)
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 52, alignment: .leading)
-                                    Text(option.name)
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                    Spacer(minLength: 0)
-                                    if city == option {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption.weight(.bold))
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(
-                                    (city == option ? JC.laiton.opacity(0.22) : JC.card),
-                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                )
-                            }
-                            .buttonStyle(PressableStyle())
-                        }
-                    }
-                }
-                .frame(maxHeight: 250)
+                Label("Entre ton code postal, c'est tout.", systemImage: "sparkles")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(JC.secondaryText)
             }
         }
     }

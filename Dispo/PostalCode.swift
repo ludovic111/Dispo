@@ -2,6 +2,63 @@ import SwiftUI
 import CoreLocation
 import Contacts
 
+/// Valeur commune à tous les formulaires qui parlent d'un lieu.
+struct PlaceDraft: Equatable {
+    var country: Country
+    var postalCode: String
+    var city: String
+
+    var isComplete: Bool {
+        !postalCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Format compact également utilisable dans les anciens champs texte du
+    /// backend, sans migration destructrice de leurs données.
+    var label: String {
+        let postal = postalCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let locality = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        let place = [postal, locality].filter { !$0.isEmpty }.joined(separator: " ")
+        return place.isEmpty ? country.rawValue : "\(place) · \(country.rawValue)"
+    }
+}
+
+/// Compatibilité avec `group_events.venue`, qui reste un champ texte : les
+/// nouveaux événements y conservent salle, code postal, ville et pays sans
+/// casser les anciennes lignes ni le RPC d'édition de série.
+struct VenueDraft: Equatable {
+    var name: String
+    var place: PlaceDraft
+
+    var label: String {
+        let venue = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return venue.isEmpty ? place.label : "\(venue) · \(place.label)"
+    }
+
+    init(name: String, place: PlaceDraft) {
+        self.name = name
+        self.place = place
+    }
+
+    init(storageLabel: String, fallbackCountry: Country) {
+        let parts = storageLabel.components(separatedBy: " · ")
+        guard parts.count >= 3,
+              let parsedCountry = Country(isoCode: parts.last)
+        else {
+            name = storageLabel
+            place = PlaceDraft(country: fallbackCountry, postalCode: "", city: "")
+            return
+        }
+        let locality = parts[parts.count - 2].split(separator: " ", maxSplits: 1).map(String.init)
+        name = parts.dropLast(2).joined(separator: " · ")
+        place = PlaceDraft(
+            country: parsedCountry,
+            postalCode: locality.first ?? "",
+            city: locality.count > 1 ? locality[1] : ""
+        )
+    }
+}
+
 /// Trouver une ville à partir d'un code postal.
 ///
 /// Personne n'a envie de chercher « Chêne-Bougeries » dans une liste : on tape
@@ -147,7 +204,16 @@ struct PostalCodeField: View {
         }
         .onAppear {
             // Rouvrir le formulaire ne doit pas effacer ce qui est déjà saisi.
-            if !city.isEmpty { resolver.reset() }
+            if !city.isEmpty {
+                resolver.reset()
+            } else {
+                resolver.resolve(code: postalCode, country: country) { found in city = found }
+            }
+        }
+        .onChange(of: country) { _, newCountry in
+            guard PostalCodeResolver.isPlausible(postalCode, in: newCountry) else { return }
+            city = ""
+            resolver.resolve(code: postalCode, country: newCountry) { found in city = found }
         }
     }
 
@@ -188,5 +254,62 @@ struct PostalCodeField: View {
                 .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// Le parcours de lieu partagé par toute l'app : pays proposé, code postal,
+/// puis ville confirmée automatiquement. Le pays n'est jamais caché ni figé.
+struct CountryPostalField: View {
+    @Binding var country: Country
+    @Binding var postalCode: String
+    @Binding var city: String
+    var detectedCountry: Country?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "location.fill")
+                    .foregroundStyle(JC.primaryAccent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pays")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.secondary)
+                    Text(country.flag + " ") + Text(LocalizedStringKey(country.nameKey))
+                }
+                .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 0)
+                if detectedCountry == country {
+                    Label("Détecté", systemImage: "checkmark.circle.fill")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(JC.primaryAccent)
+                }
+                Menu("Modifier") {
+                    ForEach(Country.allCases) { option in
+                        Button {
+                            country = option
+                        } label: {
+                            Text(option.flag + " ") + Text(LocalizedStringKey(option.nameKey))
+                        }
+                    }
+                }
+                .font(.caption.weight(.bold))
+            }
+
+            PostalCodeField(
+                postalCode: $postalCode,
+                city: $city,
+                country: country
+            )
+        }
+        .onAppear { adoptDetectedCountryIfEmpty() }
+        .onChange(of: detectedCountry) { _, _ in adoptDetectedCountryIfEmpty() }
+    }
+
+    private func adoptDetectedCountryIfEmpty() {
+        guard postalCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let detectedCountry
+        else { return }
+        country = detectedCountry
     }
 }

@@ -683,6 +683,13 @@ enum Country: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Convertit le code ISO fourni par iOS ou le backend sans exposer les
+    /// écrans à la casse ni à une valeur non prise en charge.
+    init?(isoCode: String?) {
+        guard let isoCode else { return nil }
+        self.init(rawValue: isoCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
+    }
+
     var flag: String {
         switch self {
         case .switzerland: return "🇨🇭"
@@ -1121,6 +1128,9 @@ struct Song: Codable, Identifiable, Hashable {
 
     /// Tonalité relue, nil si non renseignée ou illisible.
     var musicalKey: MusicalKey? { key.flatMap(MusicalKey.init) }
+
+    /// Libellé court affiché directement sur la tuile du morceau.
+    var keyBadgeLabel: String? { musicalKey?.label }
 }
 
 /// Plateformes d'écoute proposées sur les morceaux (répertoire, setlists).
@@ -1197,6 +1207,16 @@ enum GroupEventKind: String, Codable, CaseIterable, Identifiable {
         case .jam: return "🔥"
         }
     }
+
+    /// Symbole stable utilisé partout dans l'interface. Le libellé reste
+    /// toujours visible : la forme aide à reconnaître, elle ne remplace pas.
+    var symbol: String {
+        switch self {
+        case .concert: return "music.mic"
+        case .repetition: return "repeat"
+        case .jam: return "person.3.fill"
+        }
+    }
 }
 
 /// « Je suis dispo, mais ailleurs » — un séjour daté avec son lieu. Un
@@ -1207,14 +1227,21 @@ struct AvailabilityPlace: Codable, Hashable, Identifiable {
     var from: Date
     var to: Date
     var country: Country?
+    var postalCode: String? = nil
     var city: String
 
-    enum CodingKeys: String, CodingKey { case id, from, to, country, city }
+    enum CodingKeys: String, CodingKey { case id, from, to, country, postalCode, city }
 
     /// « Lisbonne (PT) » — ce qu'on lit sur la carte du musicien.
     var label: String {
-        guard let country else { return city }
-        return city.isEmpty ? country.rawValue : "\(city) (\(country.rawValue))"
+        let parts = [postalCode?.trimmingCharacters(in: .whitespacesAndNewlines), city]
+            .compactMap { value -> String? in
+                guard let value, !value.isEmpty else { return nil }
+                return value
+            }
+        let place = parts.joined(separator: " ")
+        guard let country else { return place }
+        return place.isEmpty ? country.rawValue : "\(place) · \(country.rawValue)"
     }
 
     /// Ce séjour couvre-t-il ce jour-là ? (bornes incluses, à la journée)
@@ -1986,11 +2013,19 @@ struct MyProfile: Codable {
     var isAvailable: Bool { availability.isAvailable }
 
     var resolvedCountry: Country { country ?? .switzerland }
-    var resolvedCity: String { city ?? resolvedCountry.cities[0].name }
-    /// « 1200 Genève » si le code postal est connu, sinon juste la ville.
+    var resolvedCity: String {
+        guard let city = city?.trimmingCharacters(in: .whitespacesAndNewlines), !city.isEmpty else {
+            return resolvedCountry.cities[0].name
+        }
+        return city
+    }
+    /// « 1200 Genève · CH » : un seul format dans toute l'app.
     var cityLabel: String {
-        if let postalCode { return "\(postalCode) \(resolvedCity)" }
-        return resolvedCity
+        PlaceDraft(
+            country: resolvedCountry,
+            postalCode: postalCode ?? "",
+            city: resolvedCity
+        ).label
     }
     /// Identifiant @ de l'utilisateur (dérivé du nom).
     var handle: String { "@" + name.handleized }

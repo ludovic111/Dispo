@@ -10,6 +10,8 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     /// Appelé sur le main actor à chaque position obtenue (déjà arrondie).
     var onUpdate: (@MainActor (CLLocationCoordinate2D) -> Void)?
+    /// Pays de la position courante, quand Apple peut le déterminer.
+    var onCountryUpdate: (@MainActor (Country) -> Void)?
 
     override init() {
         super.init()
@@ -40,12 +42,17 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let coordinate = locations.last?.coordinate else { return }
+        guard let location = locations.last else { return }
+        let coordinate = location.coordinate
         let rounded = CLLocationCoordinate2D(
             latitude: (coordinate.latitude * 1000).rounded() / 1000,
             longitude: (coordinate.longitude * 1000).rounded() / 1000
         )
         Task { @MainActor [onUpdate] in onUpdate?(rounded) }
+        CLGeocoder().reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            guard let country = Country(isoCode: placemarks?.first?.isoCountryCode) else { return }
+            Task { @MainActor [weak self] in self?.onCountryUpdate?(country) }
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

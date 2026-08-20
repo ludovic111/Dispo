@@ -158,6 +158,7 @@ struct RootView: View {
                 case .search(let query): SearchView(initialQuery: query)
                 case .matching(let gig): SOSMatchView(gig: gig) {}
                 case .settings: SettingsSheet()
+                case .filters: DebugFilterPreview()
                 case .songs: DebugSongRowsPreview()
                 case .songDetail(let groupID, let songID):
                     SongDetailSheet(groupID: groupID, songID: songID)
@@ -176,6 +177,7 @@ struct RootView: View {
         case search(String)
         case matching(GigRequest)
         case settings
+        case filters
         case songs
         case songDetail(GroupChat.ID, Song.ID)
         var id: String {
@@ -185,6 +187,7 @@ struct RootView: View {
             case .search: return "search"
             case .matching: return "matching"
             case .settings: return "settings"
+            case .filters: return "filters"
             case .songs: return "songs"
             case .songDetail: return "song-detail"
             }
@@ -265,6 +268,8 @@ struct RootView: View {
             }
         case "settings":
             debugCover = .settings
+        case "filters":
+            debugCover = .filters
         case "songs":
             debugCover = .songs
         case "song-detail":
@@ -295,9 +300,9 @@ struct DebugSongRowsPreview: View {
     private let songs = [
         Song(title: "Oye Como Va", artist: "Santana",
              artworkURL: nil, trackURL: "https://music.apple.com/us/album/oye-como-va/1443839135",
-             suggestedBy: "Marco Fernández", isApproved: true),
+             suggestedBy: "Marco Fernández", isApproved: true, key: "A"),
         Song(title: "Autumn Leaves", artist: "Bill Evans",
-             artworkURL: nil, suggestedBy: "Léa Zbinden", isApproved: false)
+             artworkURL: nil, suggestedBy: "Léa Zbinden", isApproved: false, key: "Gm")
     ]
 
     var body: some View {
@@ -332,6 +337,16 @@ struct DebugSongRowsPreview: View {
             }
             .padding(18)
         }
+    }
+}
+
+/// Parcours complet pour relire les multisélections et la saisie du lieu
+/// sans dépendre d'un compte de test.
+struct DebugFilterPreview: View {
+    @State private var filters = DiscoveryFilters()
+
+    var body: some View {
+        FilterSheet(filters: $filters)
     }
 }
 #endif
@@ -421,6 +436,13 @@ enum JC {
         dark: Color(red: 142 / 255, green: 154 / 255, blue: 175 / 255) // #8E9AAF
     )
 
+    // Noms sémantiques à utiliser dans les nouveaux composants. Les alias
+    // historiques restent compatibles mais ne dictent plus l'intention.
+    static let primaryAccent = laiton
+    static let secondaryText = bronze
+    static let danger = signal
+    static let confirmation = feutrine
+
     /// Papier et encre du billet — identiques dans les deux modes,
     /// comme un vrai billet de concert.
     static let billetPaper = Color(red: 240 / 255, green: 244 / 255, blue: 1)
@@ -440,10 +462,8 @@ enum JC {
         ],
         startPoint: .top, endPoint: .bottom
     )
-    /// Rampe « série » — feutrine claire, pour les événements qui reviennent
-    /// (répétition hebdomadaire). Le laiton du `hero` reste réservé aux dates
-    /// exceptionnelles : d'un coup d'œil, on distingue la routine du concert.
-    /// Assez claire pour porter l'encre sombre du billet.
+    /// Rampe neutre des séries récurrentes. Les symboles et libellés portent
+    /// le type ; cette surface ardoise sépare seulement routine et exception.
     static let serie = LinearGradient(
         colors: [
             Color(red: 203 / 255, green: 213 / 255, blue: 225 / 255),
@@ -452,9 +472,8 @@ enum JC {
         startPoint: .top, endPoint: .bottom
     )
 
-    /// Talon « line-up complet » — vert franc : tous les postes sont tenus
-    /// (membres présents ou remplaçants trouvés), le concert peut se jouer.
-    /// Plus saturé que `serie` pour ne pas confondre routine et complet.
+    /// Talon « line-up complet » — cyan de confirmation, avec une coche dans
+    /// l'interface : la couleur n'est jamais l'unique information.
     static let complet = LinearGradient(
         colors: [
             Color(red: 0, green: 210 / 255, blue: 1),
@@ -647,14 +666,13 @@ struct AvatarView: View {
     var photo: String? = nil
 
     private var colors: [Color] {
-        // Variations chaudes de la scène — laiton, bronze, feutrine, braise.
+        // Variations limitées au système nuit / cyan / ardoise : les profils
+        // restent distincts sans réintroduire une palette arc-en-ciel.
         let palette: [[Color]] = [
-            [Color(red: 0.898, green: 0.714, blue: 0.337), Color(red: 0.663, green: 0.439, blue: 0.122)],
-            [Color(red: 0.655, green: 0.608, blue: 0.545), Color(red: 0.360, green: 0.310, blue: 0.250)],
-            [Color(red: 0.561, green: 0.725, blue: 0.588), Color(red: 0.240, green: 0.400, blue: 0.280)],
-            [Color(red: 0.851, green: 0.643, blue: 0.255), Color(red: 0.420, green: 0.360, blue: 0.280)],
-            [Color(red: 0.780, green: 0.560, blue: 0.310), Color(red: 0.480, green: 0.300, blue: 0.130)],
-            [Color(red: 0.500, green: 0.560, blue: 0.470), Color(red: 0.260, green: 0.330, blue: 0.270)]
+            [Color(red: 0, green: 210 / 255, blue: 1), Color(red: 0, green: 153 / 255, blue: 1)],
+            [Color(red: 0, green: 153 / 255, blue: 1), Color(red: 42 / 255, green: 58 / 255, blue: 102 / 255)],
+            [Color(red: 0, green: 210 / 255, blue: 1), Color(red: 14 / 255, green: 24 / 255, blue: 53 / 255)],
+            [Color(red: 142 / 255, green: 154 / 255, blue: 175 / 255), Color(red: 10 / 255, green: 17 / 255, blue: 40 / 255)]
         ]
         return palette[abs(name.stableHash) % palette.count]
     }
@@ -717,15 +735,12 @@ struct LogoView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: markSize * 0.235, style: .continuous)
-                    .fill(JC.hero)
-                Text(verbatim: "d")
-                    .font(JCFont.displayItalic(markSize * 0.78))
-                    .foregroundStyle(JC.billetInk)
-                    .offset(y: -markSize * 0.03)
-            }
+            Image("logo_mark")
+                .resizable()
+                .scaledToFit()
+                .clipShape(RoundedRectangle(cornerRadius: markSize * 0.235, style: .continuous))
                 .frame(width: markSize, height: markSize)
+                .accessibilityHidden(true)
             if showWordmark {
                 Text(verbatim: "dispo")
                     .font(JCFont.displayItalic(markSize * 0.72))

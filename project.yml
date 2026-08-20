@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "5.9"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
-    MARKETING_VERSION: "2.0"
-    CURRENT_PROJECT_VERSION: "25"
+    MARKETING_VERSION: "2.1"
+    CURRENT_PROJECT_VERSION: "26"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -32,6 +32,10 @@ schemes:
       storeKitConfiguration: Dispo/Products.storekit
     archive:
       config: Release
+    test:
+      config: Debug
+      targets:
+        - DispoTests
 targets:
   Dispo:
     type: application
@@ -92,3 +96,14 @@ targets:
         # Pas de UIUserInterfaceStyle forcé : il verrouillait UIKit en sombre
         # et le choix d'apparence des réglages ne s'appliquait pas en direct.
         GENERATE_INFOPLIST_FILE: false
+  DispoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DispoTests
+    dependencies:
+      - target: Dispo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.dispo.app.tests
+        GENERATE_INFOPLIST_FILE: true

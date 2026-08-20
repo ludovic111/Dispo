@@ -11,6 +11,19 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "2.1",
+            title: "Tout se comprend d'un coup d'œil",
+            points: [
+                "Nouveau logo Dispo, cohérent avec l'identité bleu nuit et cyan",
+                "Le pays est détecté automatiquement : entre ton code postal et la ville se remplit toute seule",
+                "Le même parcours de lieu s'applique au profil, aux séjours, aux SOS, aux filtres et aux événements",
+                "Les filtres instruments, styles et niveaux acceptent plusieurs choix à la fois",
+                "Concert, répétition et jam ont chacun un symbole clair et identique dans toute l'app",
+                "La tonalité est visible directement sur chaque tuile de morceau",
+                "Les actions, sélections, informations neutres et alertes utilisent enfin des couleurs au rôle constant"
+            ]
+        ),
+        PatchNote(
             version: "2.0",
             title: "Plus simple, plus clair",
             points: [

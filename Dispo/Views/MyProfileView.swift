@@ -860,7 +860,9 @@ struct EditProfileSheet: View {
 struct LanguageRegionSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
-    @State private var showCityPicker = false
+    @State private var country: Country = .switzerland
+    @State private var postalCode = ""
+    @State private var city = ""
 
     var body: some View {
         NavigationStack {
@@ -884,32 +886,12 @@ struct LanguageRegionSheet: View {
                 }
 
                 Section("Ville / région") {
-                    Picker("Pays", selection: Binding(
-                        get: { store.profile.resolvedCountry },
-                        set: { newCountry in
-                            store.profile.country = newCountry
-                            if !newCountry.cities.contains(where: { $0.name == store.profile.resolvedCity }) {
-                                store.profile.city = newCountry.cities[0].name
-                                store.profile.postalCode = newCountry.cities[0].postalCode
-                            }
-                            store.saveProfile()
-                        }
-                    )) {
-                        ForEach(Country.allCases) { country in
-                            Text(verbatim: "\(country.flag) \(store.tr(country.nameKey))").tag(country)
-                        }
-                    }
-                    Button {
-                        showCityPicker = true
-                    } label: {
-                        HStack {
-                            Text("Ville / région")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text(store.profile.cityLabel)
-                                .foregroundStyle(JC.bronze)
-                        }
-                    }
+                    CountryPostalField(
+                        country: $country,
+                        postalCode: $postalCode,
+                        city: $city,
+                        detectedCountry: store.detectedCountry
+                    )
                 }
             }
             .scrollContentBackground(.hidden)
@@ -918,20 +900,22 @@ struct LanguageRegionSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { dismiss() }.font(.headline)
+                    Button("OK") {
+                        store.profile.country = country
+                        store.profile.postalCode = postalCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                        store.profile.city = city.trimmingCharacters(in: .whitespacesAndNewlines)
+                        store.saveProfile()
+                        dismiss()
+                    }
+                    .font(.headline)
+                    .disabled(!PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete)
                 }
             }
-            .sheet(isPresented: $showCityPicker) {
-                CityPickerSheet(
-                    country: store.profile.resolvedCountry,
-                    selected: store.profile.resolvedCountry.cities.first {
-                        $0.name == store.profile.resolvedCity
-                    }
-                ) { city in
-                    store.profile.city = city.name
-                    store.profile.postalCode = city.postalCode
-                    store.saveProfile()
-                }
+            .onAppear {
+                country = store.profile.country ?? store.preferredCountry
+                postalCode = store.profile.postalCode ?? ""
+                city = store.profile.city ?? ""
+                store.requestLocation()
             }
         }
     }
@@ -949,11 +933,12 @@ struct AvailabilityPlaceSheet: View {
 
     @State private var from = Date()
     @State private var to = Date()
-    @State private var country: Country?
+    @State private var country: Country = .switzerland
+    @State private var postalCode = ""
     @State private var city = ""
 
     private var isValid: Bool {
-        !city.trimmingCharacters(in: .whitespaces).isEmpty || country != nil
+        PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete
     }
 
     var body: some View {
@@ -964,14 +949,12 @@ struct AvailabilityPlaceSheet: View {
                     DatePicker("Au", selection: $to, in: from..., displayedComponents: .date)
                 }
                 Section {
-                    Picker("Pays", selection: $country) {
-                        Text("Non précisé").tag(Country?.none)
-                        ForEach(Country.allCases) { option in
-                            Text(verbatim: "\(option.flag) \(store.tr(option.nameKey))")
-                                .tag(Country?.some(option))
-                        }
-                    }
-                    TextField("Ville — ex. Lisbonne", text: $city)
+                    CountryPostalField(
+                        country: $country,
+                        postalCode: $postalCode,
+                        city: $city,
+                        detectedCountry: store.detectedCountry
+                    )
                 } header: {
                     Text("Où")
                 } footer: {
@@ -992,6 +975,7 @@ struct AvailabilityPlaceSheet: View {
                         saved.from = from
                         saved.to = max(to, from)
                         saved.country = country
+                        saved.postalCode = postalCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
                         saved.city = city.trimmingCharacters(in: .whitespaces)
                         store.saveAvailabilityPlace(saved)
                         dismiss()
@@ -1003,8 +987,10 @@ struct AvailabilityPlaceSheet: View {
             .onAppear {
                 from = place.from
                 to = place.to
-                country = place.country
+                country = place.country ?? store.preferredCountry
+                postalCode = place.postalCode ?? ""
                 city = place.city
+                store.requestLocation()
             }
         }
     }

@@ -10,6 +10,7 @@ struct CreateEventView: View {
     /// Le lieu se saisit au code postal : la ville se trouve toute seule.
     @State private var postalCode = ""
     @State private var city = ""
+    @State private var country: Country = .switzerland
     @State private var date: Date
     @State private var genre: Genre = .latin
     @State private var wanted: Set<Instrument> = []
@@ -48,8 +49,12 @@ struct CreateEventView: View {
         groupID: UUID? = nil,
         eventID: UUID? = nil
     ) {
+        let parsedVenue = VenueDraft(storageLabel: prefillPlace, fallbackCountry: .switzerland)
         _title = State(initialValue: prefillTitle)
-        _place = State(initialValue: prefillPlace)
+        _place = State(initialValue: parsedVenue.name)
+        _country = State(initialValue: parsedVenue.place.country)
+        _postalCode = State(initialValue: parsedVenue.place.postalCode)
+        _city = State(initialValue: parsedVenue.place.city)
         _date = State(initialValue: prefillDate
             ?? Calendar.current.date(byAdding: .day, value: 2, to: Date())
             ?? Date())
@@ -61,37 +66,29 @@ struct CreateEventView: View {
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
         !place.trimmingCharacters(in: .whitespaces).isEmpty &&
+        PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete &&
         !wanted.isEmpty
     }
 
     /// Ce qu'on lit sous le nom de la salle : « 1227 Carouge », ou la ville
     /// seule si le code postal n'a rien donné.
     private var neighborhoodLabel: String {
-        let code = postalCode.trimmingCharacters(in: .whitespaces)
-        let town = city.trimmingCharacters(in: .whitespaces)
-        if !code.isEmpty && !town.isEmpty { return "\(code) \(town)" }
-        return town.isEmpty ? code : town
+        PlaceDraft(country: country, postalCode: postalCode, city: city).label
     }
 
     /// Pastille de niveau — `nil` = « Peu importe » (aucun niveau coché).
     private func levelChip(_ level: Level?) -> some View {
         let isOn = level.map { levels.contains($0) } ?? levels.isEmpty
-        return Button {
+        return ChoiceChip(
+            label: LocalizedStringKey(level?.label ?? "Peu importe"),
+            isSelected: isOn
+        ) {
             if let level {
                 if levels.contains(level) { levels.remove(level) } else { levels.insert(level) }
             } else {
                 levels.removeAll()
             }
-        } label: {
-            Text(LocalizedStringKey(level?.label ?? "Peu importe"))
-                .font(.caption.weight(.heavy))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(isOn ? JC.laiton.opacity(0.2) : JC.inset, in: Capsule())
-                .overlay(Capsule().stroke(isOn ? JC.laiton.opacity(0.5) : .clear, lineWidth: 1))
-                .foregroundStyle(isOn ? JC.laiton : .primary)
         }
-        .buttonStyle(.plain)
     }
 
     var body: some View {
@@ -124,10 +121,11 @@ struct CreateEventView: View {
 
                 Section {
                     TextField("Salle ou bar — ex. Le Chat Noir", text: $place)
-                    PostalCodeField(
+                    CountryPostalField(
+                        country: $country,
                         postalCode: $postalCode,
                         city: $city,
-                        country: store.profile.resolvedCountry
+                        detectedCountry: store.detectedCountry
                     )
                 } header: {
                     Text("Lieu")
@@ -168,7 +166,7 @@ struct CreateEventView: View {
                                     Spacer()
                                     if wanted.contains(instrument) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(JC.signal)
+                                            .foregroundStyle(JC.primaryAccent)
                                     }
                                 }
                             }
@@ -231,9 +229,11 @@ struct CreateEventView: View {
                 // Par défaut, le concert est chez moi : le cas le plus
                 // fréquent ne demande alors aucune saisie.
                 if postalCode.isEmpty && city.isEmpty {
+                    country = store.profile.country ?? store.preferredCountry
                     postalCode = store.profile.postalCode ?? ""
-                    city = store.profile.resolvedCity
+                    city = store.profile.city ?? ""
                 }
+                store.requestLocation()
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

@@ -254,7 +254,7 @@ struct AgendaRow: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(JC.bronze)
                 .lineLimit(1)
-            TagView(text: event.kind.rawValue, color: JC.bronze)
+            EventKindBadge(kind: event.kind)
             // Sans ça, une série hebdomadaire donne cinquante-deux lignes
             // rigoureusement identiques et rien ne dit que c'est la même.
             if let recurrence = event.recurrence, event.isRecurring {

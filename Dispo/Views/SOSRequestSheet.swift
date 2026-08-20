@@ -13,6 +13,7 @@ struct SOSRequestSheet: View {
     @State private var place: String = ""
     @State private var postalCode: String = ""
     @State private var city: String = ""
+    @State private var country: Country = .switzerland
     @State private var feeText: String = ""
     @State private var paymentMethod: PaymentMethod?
     @State private var customPayment = ""
@@ -32,6 +33,12 @@ struct SOSRequestSheet: View {
         return musician.availableDates
             .filter { Calendar.current.startOfDay(for: $0) >= today }
             .sorted()
+    }
+
+    private var isValid: Bool {
+        instrument != nil
+            && !place.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete
     }
 
     var body: some View {
@@ -86,10 +93,11 @@ struct SOSRequestSheet: View {
 
                 Section {
                     TextField("Salle, bar, adresse…", text: $place)
-                    PostalCodeField(
+                    CountryPostalField(
+                        country: $country,
                         postalCode: $postalCode,
                         city: $city,
-                        country: store.profile.resolvedCountry
+                        detectedCountry: store.detectedCountry
                     )
                 } header: {
                     Text("Lieu")
@@ -139,15 +147,17 @@ struct SOSRequestSheet: View {
                             Text("Envoyer").bold()
                         }
                     }
-                    .disabled(isSending || instrument == nil)
+                    .disabled(isSending || !isValid)
                 }
             }
             .onAppear {
                 if instrument == nil { instrument = musician.instruments.first }
                 if postalCode.isEmpty && city.isEmpty {
                     postalCode = store.profile.postalCode ?? ""
-                    city = store.profile.resolvedCity
+                    city = store.profile.city ?? ""
                 }
+                country = store.profile.country ?? store.preferredCountry
+                store.requestLocation()
             }
         }
     }
@@ -161,10 +171,7 @@ struct SOSRequestSheet: View {
             instrument: instrument,
             date: date,
             place: place,
-            neighborhood: [postalCode, city]
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-                .joined(separator: " "),
+            neighborhood: PlaceDraft(country: country, postalCode: postalCode, city: city).label,
             fee: fee,
             paymentMethod: PaymentMethodField.storedValue(
                 method: paymentMethod,

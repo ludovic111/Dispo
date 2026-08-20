@@ -159,6 +159,11 @@ final class SupabaseBackend: Sendable {
         var name: String
         var age: Int?
         var neighborhood: String
+        /// Lieu structuré du profil. Nullable pour les profils créés avant
+        /// Dispo 2.1 ; `neighborhood` reste le libellé public compatible.
+        var country: String?
+        var postalCode: String?
+        var city: String?
         var latitude: Double?
         var longitude: Double?
         var instruments: [String]
@@ -189,7 +194,8 @@ final class SupabaseBackend: Sendable {
         var availabilityPlaces: [AvailabilityPlacePayload]?
 
         enum CodingKeys: String, CodingKey {
-            case id, name, age, neighborhood, latitude, longitude
+            case id, name, age, neighborhood, latitude, longitude, country, city
+            case postalCode = "postal_code"
             case instruments, genres, level, bio, repertoire, socials
             case availableDates = "available_dates"
             case photoUrl = "photo_url"
@@ -218,11 +224,21 @@ final class SupabaseBackend: Sendable {
         func asMusician() -> Musician? {
             guard isComplete else { return nil }
             let dates = parsedDates
+            let publicPlace: String = {
+                guard let parsedCountry = Country(isoCode: self.country),
+                      let savedCity = self.city, !savedCity.isEmpty
+                else { return neighborhood }
+                return PlaceDraft(
+                    country: parsedCountry,
+                    postalCode: postalCode ?? "",
+                    city: savedCity
+                ).label
+            }()
             return Musician(
                 id: id,
                 name: name,
                 age: age ?? 0,
-                neighborhood: neighborhood,
+                neighborhood: publicPlace,
                 // Sans géoloc partagée, le profil est posé au centre de Genève
                 // pour rester visible sur la carte — mais `hasLocation: false`
                 // interdit d'afficher une distance ou de filtrer par rayon.
@@ -257,13 +273,20 @@ final class SupabaseBackend: Sendable {
         var from: String
         var to: String
         var country: String?
+        var postalCode: String?
         var city: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, from, to, country, city
+            case postalCode = "postal_code"
+        }
 
         init(from place: AvailabilityPlace) {
             id = place.id
             from = SupabaseBackend.dayFormatter.string(from: place.from)
             to = SupabaseBackend.dayFormatter.string(from: place.to)
             country = place.country?.rawValue
+            postalCode = place.postalCode
             city = place.city
         }
 
@@ -276,6 +299,7 @@ final class SupabaseBackend: Sendable {
                 from: start,
                 to: end,
                 country: country.flatMap(Country.init(rawValue:)),
+                postalCode: postalCode,
                 city: city
             )
         }
@@ -537,6 +561,9 @@ final class SupabaseBackend: Sendable {
             let available_dates: [String]
             let socials: [String: String]
             let neighborhood: String
+            let country: String
+            let postal_code: String?
+            let city: String
             let instrument_levels: [String: String]
             let availability_places: [AvailabilityPlacePayload]
         }
@@ -551,6 +578,9 @@ final class SupabaseBackend: Sendable {
             // La ville choisie (« 1200 Genève ») — c'est ce que les autres
             // voient sur ma fiche et mes cartes.
             neighborhood: profile.cityLabel,
+            country: profile.resolvedCountry.rawValue,
+            postal_code: profile.postalCode,
+            city: profile.resolvedCity,
             instrument_levels: profile.instrumentLevels ?? [:],
             availability_places: profile.trips.map(AvailabilityPlacePayload.init(from:))
         )

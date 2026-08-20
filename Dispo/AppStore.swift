@@ -23,7 +23,12 @@ final class AppStore: ObservableObject {
     @Published private(set) var myCoordinate: CLLocationCoordinate2D?
     /// Ce que les autres voient de ma position (ville par défaut).
     @Published private(set) var locationPrecision: LocationPrecision = .city
+    /// Pays déduit de la position, ou à défaut de la région de l'iPhone.
+    /// Les formulaires le proposent mais laissent toujours le modifier.
+    @Published private(set) var detectedCountry: Country? = Country(isoCode: Locale.current.region?.identifier)
     private let locationService = LocationService()
+
+    var preferredCountry: Country { detectedCountry ?? profile.country ?? .switzerland }
 
     /// Grille « niveau ville » (~5 km) appliquée avant toute publication.
     nonisolated static func cityRounded(_ coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
@@ -332,6 +337,9 @@ final class AppStore: ObservableObject {
         locationService.onUpdate = { [weak self] coordinate in
             self?.handleLocationUpdate(coordinate)
         }
+        locationService.onCountryUpdate = { [weak self] country in
+            self?.detectedCountry = country
+        }
         applyThemeToWindows()
     }
 
@@ -618,6 +626,9 @@ final class AppStore: ObservableObject {
         updated.level = Level(rawValue: mine.level) ?? .intermediaire
         updated.bio = mine.bio
         updated.availableDates = mine.parsedDates
+        updated.country = Country(isoCode: mine.country) ?? updated.country
+        if let city = mine.city, !city.isEmpty { updated.city = city }
+        if let postalCode = mine.postalCode, !postalCode.isEmpty { updated.postalCode = postalCode }
         updated.availabilityPlaces = (mine.availabilityPlaces ?? [])
             .compactMap(\.asAvailabilityPlace)
         if let socials = mine.socials, !socials.isEmpty {

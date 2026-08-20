@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Filtres de découverte.
 struct DiscoveryFilters {
-    var instrument: Instrument?
-    var genre: Genre?
-    var minLevel: Level?
+    var instruments: Set<Instrument> = []
+    var genres: Set<Genre> = []
+    var levels: Set<Level> = []
     /// nil = peu importe quand ; sinon uniquement les musiciens dispo ce
     /// jour-là (date cochée dans leur calendrier).
     var neededDate: Date?
@@ -19,26 +19,35 @@ struct DiscoveryFilters {
     /// les musiciens présents là-bas ce jour-là (séjour déclaré), sinon ceux
     /// qui y habitent.
     var place: String = ""
+    var placeCountry: Country?
+    var placePostalCode: String = ""
 
     var activeCount: Int {
         var count = 0
-        if instrument != nil { count += 1 }
-        if genre != nil { count += 1 }
-        if minLevel != nil { count += 1 }
+        if !instruments.isEmpty { count += 1 }
+        if !genres.isEmpty { count += 1 }
+        if !levels.isEmpty { count += 1 }
         if neededDate != nil { count += 1 }
         if radiusKm != 25 { count += 1 }
         if friendsOnly { count += 1 }
         if playedWithAFriend { count += 1 }
         if wellRated { count += 1 }
-        if !place.trimmingCharacters(in: .whitespaces).isEmpty { count += 1 }
+        if !place.trimmingCharacters(in: .whitespaces).isEmpty
+            || !placePostalCode.trimmingCharacters(in: .whitespaces).isEmpty { count += 1 }
         return count
     }
 
     @MainActor
     func matches(_ musician: Musician, store: AppStore) -> Bool {
-        if let instrument, !musician.instruments.contains(instrument) { return false }
-        if let genre, !musician.genres.contains(genre) { return false }
-        if let minLevel, musician.level < minLevel { return false }
+        let levelsByInstrument = Dictionary(uniqueKeysWithValues: musician.instruments.compactMap { instrument in
+            musician.level(for: instrument).map { (instrument, $0) }
+        })
+        guard matchesTaxonomy(
+            instruments: musician.instruments,
+            genres: musician.genres,
+            levelsByInstrument: levelsByInstrument,
+            fallbackLevel: musician.level
+        ) else { return false }
         if let neededDate, !musician.isAvailable(on: neededDate) { return false }
         if !matchesPlace(musician) { return false }
         // Rayon appliqué uniquement quand la distance est fiable (ma position
@@ -54,20 +63,48 @@ struct DiscoveryFilters {
         return true
     }
 
+    /// Dans une famille, plusieurs choix signifient « l'un ou l'autre ».
+    /// Entre familles, les contraintes s'additionnent : instrument ET style
+    /// ET niveau. Cette règle reste pure pour être testée sans interface.
+    func matchesTaxonomy(
+        instruments musicianInstruments: [Instrument],
+        genres musicianGenres: [Genre],
+        levelsByInstrument: [Instrument: Level],
+        fallbackLevel: Level
+    ) -> Bool {
+        let played = Set(musicianInstruments)
+        guard instruments.isEmpty || !instruments.isDisjoint(with: played) else { return false }
+        guard genres.isEmpty || !genres.isDisjoint(with: Set(musicianGenres)) else { return false }
+        guard !levels.isEmpty else { return true }
+
+        let relevant = instruments.isEmpty ? musicianInstruments : musicianInstruments.filter(instruments.contains)
+        let musicianLevels = Set(relevant.map { levelsByInstrument[$0] ?? fallbackLevel })
+        return !levels.isDisjoint(with: musicianLevels)
+    }
+
     /// Le musicien est-il au bon endroit ? Si une date est demandée, on
     /// regarde où il sera ce jour-là (séjour déclaré) ; sinon on accepte
     /// aussi bien son domicile qu'un de ses séjours à venir.
     private func matchesPlace(_ musician: Musician) -> Bool {
-        let needle = place.trimmingCharacters(in: .whitespaces)
-        guard !needle.isEmpty else { return true }
-        let home = musician.neighborhood
+        let requested = [place, placePostalCode]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !requested.isEmpty else { return true }
+        let needles = requested.map {
+            $0.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        }
+        let homeLabel = musician.neighborhood
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            .contains(needle.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current))
+        let home = needles.contains { homeLabel.contains($0) }
         if let neededDate {
-            if let trip = musician.place(on: neededDate) { return trip.matches(needle) }
+            if let trip = musician.place(on: neededDate) {
+                return requested.contains { trip.matches($0) }
+            }
             return home
         }
-        return home || musician.availabilityPlaces.contains { $0.matches(needle) }
+        return home || musician.availabilityPlaces.contains { trip in
+            requested.contains { trip.matches($0) }
+        }
     }
 }
 

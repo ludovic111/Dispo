@@ -523,8 +523,8 @@ struct GroupChatView: View {
                         JCCard(padding: 0) {
                             HStack(spacing: 0) {
                                 VStack(spacing: 2) {
-                                    Text(event.kind.emoji)
-                                        .font(.body)
+                                    Image(systemName: event.kind.symbol)
+                                        .font(.body.weight(.bold))
                                     Text(event.date.formatted(.dateTime.day()))
                                         .font(.title3.weight(.heavy))
                                     Text(event.date.formatted(.dateTime.month(.abbreviated)))
@@ -546,7 +546,7 @@ struct GroupChatView: View {
                                             .font(.subheadline.weight(.bold))
                                             .foregroundStyle(.primary)
                                             .lineLimit(1)
-                                        TagView(text: event.kind.rawValue, color: JC.bronze)
+                                        EventKindBadge(kind: event.kind)
                                         if let recurrence = event.recurrence, event.isRecurring {
                                             TagView(text: recurrence.shortLabel, color: JC.feutrine)
                                         }
@@ -879,7 +879,7 @@ struct SongRow: View {
                                     .foregroundStyle(JC.bronze)
                                     .lineLimit(1)
                             }
-                            if groupID != nil { detailHints }
+                            if song.keyBadgeLabel != nil || attachedDocs > 0 { detailHints }
                         }
                         Spacer(minLength: 0)
                         // Les trois petits points : ce morceau a une fiche
@@ -931,13 +931,16 @@ struct SongRow: View {
         }
     }
 
-    /// Les partitions jointes au morceau. Les anciens indicateurs de tonalité,
-    /// grille et lien iReal Pro ont disparu avec le parcours simplifié : ils ne
-    /// doivent pas promettre un contenu qui n'est plus affiché dans la fiche.
+    /// La tonalité est une information de jeu immédiate : elle reste visible
+    /// sur la tuile. Les partitions sont comptées sans promettre les autres
+    /// contenus éventuels de la fiche.
     @ViewBuilder
     private var detailHints: some View {
-        if attachedDocs > 0 {
-            HStack(spacing: 5) {
+        HStack(spacing: 5) {
+            if let key = song.keyBadgeLabel {
+                hint(icon: "tuningfork", label: key)
+            }
+            if attachedDocs > 0 {
                 hint(icon: "doc.richtext.fill", label: "\(attachedDocs)")
             }
         }
@@ -1698,11 +1701,13 @@ struct GroupEventSheet: View {
                             JCCard {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack(spacing: 8) {
-                                        Text(event.kind.emoji).font(.title3)
+                                        Image(systemName: event.kind.symbol)
+                                            .font(.title3.weight(.bold))
+                                            .foregroundStyle(JC.primaryAccent)
                                         Text(event.title)
                                             .font(.subheadline.weight(.heavy))
                                         Spacer()
-                                        TagView(text: event.kind.rawValue, color: JC.bronze)
+                                        EventKindBadge(kind: event.kind)
                                     }
                                     Label(event.date.formatted(date: .complete, time: .shortened), systemImage: "calendar")
                                         .font(.caption)
@@ -2294,6 +2299,9 @@ struct AddGroupEventSheet: View {
     @State private var kind: GroupEventKind = .concert
     @State private var title = ""
     @State private var venue = ""
+    @State private var country: Country = .switzerland
+    @State private var postalCode = ""
+    @State private var city = ""
     @State private var date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     /// Rythme : ponctuel, ou une série (répétition hebdomadaire…).
     @State private var recurrence: EventRecurrence = .once
@@ -2304,7 +2312,8 @@ struct AddGroupEventSheet: View {
 
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !venue.trimmingCharacters(in: .whitespaces).isEmpty
+        !venue.trimmingCharacters(in: .whitespaces).isEmpty &&
+        PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete
     }
 
     /// Les dates réellement créées — affichées avant validation, pour qu'on
@@ -2322,14 +2331,23 @@ struct AddGroupEventSheet: View {
         NavigationStack {
             Form {
                 Section("L'événement") {
-                    Picker("Type", selection: $kind) {
+                    FlowLayout(spacing: 8) {
                         ForEach(GroupEventKind.allCases) { kind in
-                            (Text(kind.emoji + " ") + Text(LocalizedStringKey(kind.rawValue))).tag(kind)
+                            ChoiceChip(
+                                label: LocalizedStringKey(kind.rawValue),
+                                symbol: kind.symbol,
+                                isSelected: self.kind == kind
+                            ) { self.kind = kind }
                         }
                     }
-                    .pickerStyle(.segmented)
                     TextField("Titre — ex. Soirée salsa", text: $title)
                     TextField("Salle ou bar — ex. Le Chat Noir", text: $venue)
+                    CountryPostalField(
+                        country: $country,
+                        postalCode: $postalCode,
+                        city: $city,
+                        detectedCountry: store.detectedCountry
+                    )
                     DatePicker("Date et heure", selection: $date, in: Date()...)
                 }
 
@@ -2413,7 +2431,10 @@ struct AddGroupEventSheet: View {
                         let template = GroupEvent(
                             kind: kind,
                             title: title.trimmingCharacters(in: .whitespaces),
-                            venue: venue.trimmingCharacters(in: .whitespaces),
+                            venue: VenueDraft(
+                                name: venue,
+                                place: PlaceDraft(country: country, postalCode: postalCode, city: city)
+                            ).label,
                             date: date,
                             reminderLeadDays: reminderLeadDays
                         )
@@ -2426,6 +2447,12 @@ struct AddGroupEventSheet: View {
                     .font(.headline)
                     .disabled(!isValid)
                 }
+            }
+            .onAppear {
+                country = store.profile.country ?? store.preferredCountry
+                postalCode = store.profile.postalCode ?? ""
+                city = store.profile.city ?? ""
+                store.requestLocation()
             }
         }
     }
@@ -2446,20 +2473,28 @@ struct EditGroupEventSheet: View {
 
     @State private var title: String
     @State private var venue: String
+    @State private var country: Country
+    @State private var postalCode: String
+    @State private var city: String
     @State private var date: Date
     @State private var scope: AppStore.EventEditScope = .thisDate
 
     init(group: GroupChat, event: GroupEvent) {
         self.group = group
         self.event = event
+        let parsedVenue = VenueDraft(storageLabel: event.venue, fallbackCountry: .switzerland)
         _title = State(initialValue: event.title)
-        _venue = State(initialValue: event.venue)
+        _venue = State(initialValue: parsedVenue.name)
+        _country = State(initialValue: parsedVenue.place.country)
+        _postalCode = State(initialValue: parsedVenue.place.postalCode)
+        _city = State(initialValue: parsedVenue.place.city)
         _date = State(initialValue: event.date)
     }
 
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !venue.trimmingCharacters(in: .whitespaces).isEmpty
+        !venue.trimmingCharacters(in: .whitespaces).isEmpty &&
+        PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete
     }
 
     /// Le jour change-t-il ? C'est ce qui décide si les réponses de présence
@@ -2481,6 +2516,12 @@ struct EditGroupEventSheet: View {
                     DatePicker("Date et heure", selection: $date)
                     TextField("Titre", text: $title)
                     TextField("Salle ou bar", text: $venue)
+                    CountryPostalField(
+                        country: $country,
+                        postalCode: $postalCode,
+                        city: $city,
+                        detectedCountry: store.detectedCountry
+                    )
                 }
 
                 if event.isRecurring {
@@ -2535,7 +2576,10 @@ struct EditGroupEventSheet: View {
                             in: group,
                             date: date,
                             title: title.trimmingCharacters(in: .whitespaces),
-                            venue: venue.trimmingCharacters(in: .whitespaces),
+                            venue: VenueDraft(
+                                name: venue,
+                                place: PlaceDraft(country: country, postalCode: postalCode, city: city)
+                            ).label,
                             scope: scope
                         )
                         dismiss()
@@ -2543,6 +2587,14 @@ struct EditGroupEventSheet: View {
                     .font(.headline)
                     .disabled(!isValid)
                 }
+            }
+            .onAppear {
+                if postalCode.isEmpty && city.isEmpty {
+                    country = store.profile.country ?? store.preferredCountry
+                    postalCode = store.profile.postalCode ?? ""
+                    city = store.profile.city ?? ""
+                }
+                store.requestLocation()
             }
         }
     }

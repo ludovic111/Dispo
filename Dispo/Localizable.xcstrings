@@ -9311,6 +9311,46 @@
         }
       }
     },
+    "Chercher partout": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überall suchen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search everywhere"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar en todas partes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca ovunque"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "場所を指定しない"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索所有地点"
+          }
+        }
+      }
+    },
     "Chercher un morceau…": {
       "localizations": {
         "de": {
@@ -9547,6 +9587,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择语言"
+          }
+        }
+      }
+    },
+    "Choisis-en plusieurs : un musicien qui joue au moins l'un d'eux reste affiché.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle mehrere aus: Wer mindestens eines davon spielt, bleibt sichtbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose several: musicians who play at least one of them stay visible."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige varios: se mostrarán los músicos que toquen al menos uno."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegline più di uno: resta visibile chi ne suona almeno uno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複数選べます。1つでも演奏できるミュージシャンが表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可多选：会演奏其中至少一种乐器的音乐人都会显示。"
           }
         }
       }
@@ -10607,6 +10687,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "演出、排练或即兴：每场活动都有setlist——成员放鸽子时一键预填SOS。"
+          }
+        }
+      }
+    },
+    "Concert, répétition et jam ont chacun un symbole clair et identique dans toute l'app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzert, Probe und Jam haben in der ganzen App jeweils ein klares Symbol"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerts, rehearsals, and jams each have one clear symbol throughout the app"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concierto, ensayo y jam tienen un símbolo claro y coherente en toda la app"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerto, prova e jam hanno ciascuno un simbolo chiaro in tutta l'app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンサート、リハーサル、ジャムをアプリ全体で同じ記号に統一"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐会、排练和即兴演奏在整个应用中都有清晰一致的符号"
           }
         }
       }
@@ -14501,6 +14621,46 @@
         }
       }
     },
+    "Détecté": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkannt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detected"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detectado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rilevato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検出済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已检测"
+          }
+        }
+      }
+    },
     "E-mail": {
       "localizations": {
         "de": {
@@ -14657,6 +14817,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除此设备上的示例数据。仅在未登录时可用。"
+          }
+        }
+      }
+    },
+    "Effacer les instruments": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instrumente löschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear instruments"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar instrumentos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella strumenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽器をクリア"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除乐器"
+          }
+        }
+      }
+    },
+    "Effacer les styles": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stile löschen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear styles"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar estilos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella stili"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ジャンルをクリア"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除风格"
           }
         }
       }
@@ -15137,6 +15377,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "C 调（实音）"
+          }
+        }
+      }
+    },
+    "Entre le code postal. Avec une date, Dispo cherche aussi les musiciens qui seront en séjour sur place.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib die Postleitzahl ein. Mit einem Datum findet Dispo auch Musiker, die dann vor Ort sind."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the postal code. With a date, Dispo also finds musicians staying there then."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introduce el código postal. Con una fecha, Dispo también busca músicos que estarán allí."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci il codice postale. Con una data, Dispo cerca anche chi sarà lì in quel periodo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "郵便番号を入力してください。日付を指定すると、その日に滞在しているミュージシャンも探します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入邮政编码。选择日期后，Dispo 也会寻找届时住在当地的音乐人。"
+          }
+        }
+      }
+    },
+    "Entre ton code postal, c'est tout.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einfach deine Postleitzahl ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Just enter your postal code."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo tienes que introducir tu código postal."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci il tuo codice postale, tutto qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "郵便番号を入力するだけです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只需输入邮政编码。"
           }
         }
       }
@@ -21211,6 +21531,46 @@
         }
       }
     },
+    "La tonalité est visible directement sur chaque tuile de morceau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Tonart ist direkt auf jeder Song-Kachel sichtbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key is now visible directly on every song tile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tonalidad aparece directamente en cada tarjeta de canción"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tonalità è visibile direttamente su ogni scheda del brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各曲のタイルにキーを直接表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个曲目卡片都会直接显示调性"
+          }
+        }
+      }
+    },
     "La veille": {
       "localizations": {
         "de": {
@@ -23191,6 +23551,46 @@
         }
       }
     },
+    "Le même parcours de lieu s'applique au profil, aux séjours, aux SOS, aux filtres et aux événements": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derselbe Ortsablauf gilt für Profil, Reisen, SOS, Filter und Events"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same location flow now works for profiles, trips, SOS posts, filters, and events"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El mismo flujo de ubicación se usa en el perfil, viajes, SOS, filtros y eventos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo stesso percorso per il luogo vale per profilo, soggiorni, SOS, filtri ed eventi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロフィール、滞在先、SOS、フィルター、イベントで同じ場所入力を使用"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料、出行、SOS、筛选和活动统一使用同一地点流程"
+          }
+        }
+      }
+    },
     "Le niveau « Professionnel » s'écrit désormais « Pro », partout": {
       "localizations": {
         "de": {
@@ -23347,6 +23747,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "新的时间、标题和地点会应用到后续日期。系列本身的星期不变。"
+          }
+        }
+      }
+    },
+    "Le pays est détecté automatiquement : entre ton code postal et la ville se remplit toute seule": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Land wird automatisch erkannt: Postleitzahl eingeben, die Stadt erscheint von selbst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your country is detected automatically: enter your postal code and the city fills itself in"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El país se detecta automáticamente: introduce el código postal y la ciudad se completa sola"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il Paese viene rilevato automaticamente: inserisci il CAP e la città si compila da sola"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "国を自動検出：郵便番号を入れるだけで市区町村が入力されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动检测国家：输入邮政编码后城市会自动填写"
           }
         }
       }
@@ -24051,6 +24491,46 @@
         }
       }
     },
+    "Les actions, sélections, informations neutres et alertes utilisent enfin des couleurs au rôle constant": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen, Auswahl, neutrale Infos und Warnungen nutzen jetzt Farben mit einer festen Bedeutung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions, selections, neutral information, and alerts now use colors with consistent roles"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acciones, selecciones, información neutra y alertas usan colores con funciones coherentes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Azioni, selezioni, informazioni neutre e avvisi usano ora colori con ruoli coerenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作、選択、中立情報、警告で色の役割を統一"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作、选择、中性信息和提醒现在使用含义一致的颜色"
+          }
+        }
+      }
+    },
     "Les autres te voient : %@ %@": {
       "localizations": {
         "de": {
@@ -24287,6 +24767,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "你演出过的日期会按月归档在这里。"
+          }
+        }
+      }
+    },
+    "Les filtres instruments, styles et niveaux acceptent plusieurs choix à la fois": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei Instrumenten, Stilen und Niveaus sind jetzt mehrere Filter gleichzeitig möglich"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instrument, style, and level filters now accept multiple choices"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los filtros de instrumentos, estilos y niveles permiten varias opciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I filtri per strumenti, stili e livelli accettano più scelte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "楽器、ジャンル、レベルのフィルターを複数選択可能に"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "乐器、风格和水平筛选现在支持多选"
           }
         }
       }
@@ -24767,6 +25287,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "“今天”、“本周末”和“附近”下方的简短说明已移除"
+          }
+        }
+      }
+    },
+    "Les profils sans position connue restent visibles.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile ohne bekannten Standort bleiben sichtbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profiles without a known location stay visible."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los perfiles sin ubicación conocida siguen visibles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I profili senza posizione nota restano visibili."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置情報がないプロフィールも表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知位置的个人资料仍会显示。"
           }
         }
       }
@@ -29411,6 +29971,46 @@
         }
       }
     },
+    "Nouveau logo Dispo, cohérent avec l'identité bleu nuit et cyan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Dispo-Logo passend zur nachtblauen und cyanfarbenen Identität"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new Dispo logo aligned with the midnight-blue and cyan identity"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo logo de Dispo, coherente con la identidad azul noche y cian"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuovo logo Dispo, coerente con l'identità blu notte e ciano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミッドナイトブルーとシアンの世界観に合う新しいDispoロゴ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全新 Dispo 标志，与深夜蓝和青色品牌风格一致"
+          }
+        }
+      }
+    },
     "Nouveau réglage de position : ne pas apparaître sur la carte du tout": {
       "localizations": {
         "de": {
@@ -32047,6 +32647,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "多个根据状态变化的标签现已在 7 种语言中正确翻译"
+          }
+        }
+      }
+    },
+    "Plusieurs niveaux sont possibles : l'un d'eux suffit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrere Niveaus sind möglich: Eines davon genügt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can choose several levels: any one of them is enough."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes elegir varios niveles: basta con uno de ellos."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puoi scegliere più livelli: ne basta uno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複数のレベルを選べます。どれか1つに合えば表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以选择多个水平：符合其中任一即可。"
           }
         }
       }
@@ -38431,6 +39071,46 @@
         }
       }
     },
+    "Seuls les musiciens qui ont coché ce jour restent affichés.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Musiker, die diesen Tag markiert haben, bleiben sichtbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only musicians who selected that day stay visible."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se muestran los músicos que marcaron ese día."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restano visibili solo i musicisti che hanno selezionato quel giorno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その日を選択したミュージシャンだけが表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只显示选择了当天的音乐人。"
+          }
+        }
+      }
+    },
     "Shuffle": {
       "localizations": {
         "de": {
@@ -42491,6 +43171,46 @@
         }
       }
     },
+    "Tout se comprend d'un coup d'œil": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles auf einen Blick"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything at a glance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo se entiende de un vistazo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto chiaro a colpo d'occhio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ひと目でわかる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一目了然"
+          }
+        }
+      }
+    },
     "Toutes les 2 semaines": {
       "localizations": {
         "de": {
@@ -45807,6 +46527,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "查看资料"
+          }
+        }
+      }
+    },
+    "Voir les résultats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnisse anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See results"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver resultados"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vedi risultati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果を見る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看结果"
           }
         }
       }
