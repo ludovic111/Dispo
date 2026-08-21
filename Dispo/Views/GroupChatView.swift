@@ -65,6 +65,8 @@ struct GroupChatView: View {
     @State private var draft = ""
     @State private var outgoingMessageAttachment: OutgoingMessageAttachment?
     @State private var importingMessageAttachment = false
+    @State private var messageMediaItem: PhotosPickerItem?
+    @State private var preparingMessageMedia = false
     @State private var previewingMessageAttachment: MessageAttachmentPreview?
     @State private var downloadingMessageAttachmentID: String?
     /// Recherche dans le répertoire (apparaît au-delà de 8 morceaux).
@@ -220,6 +222,25 @@ struct GroupChatView: View {
                 store.backendError = store.tr("Le fichier n'a pas pu être importé.")
             }
         }
+        .onChange(of: messageMediaItem) { _, item in
+            guard let item else { return }
+            preparingMessageMedia = true
+            Task {
+                defer {
+                    preparingMessageMedia = false
+                    messageMediaItem = nil
+                }
+                do {
+                    outgoingMessageAttachment = try await item.compressedMessageAttachment()
+                } catch AppStore.VideoImportError.tooLong {
+                    store.backendError = store.tr("Vidéo trop longue — 2 minutes maximum.")
+                } catch OutgoingMessageAttachment.ImportError.tooLarge {
+                    store.backendError = store.tr("Photo ou vidéo trop lourde — 20 Mo maximum.")
+                } catch {
+                    store.backendError = store.tr("La photo ou la vidéo n'a pas pu être importée.")
+                }
+            }
+        }
         // Le groupe est ouvert : ses messages sont lus (la puce s'éteint).
         .onAppear { store.markGroupSeen(groupID) }
         .onDisappear { store.markGroupSeen(groupID) }
@@ -306,6 +327,23 @@ struct GroupChatView: View {
                     }
                 }
                 HStack(spacing: 10) {
+                    PhotosPicker(selection: $messageMediaItem, matching: .any(of: [.images, .videos])) {
+                        Group {
+                            if preparingMessageMedia {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.body.weight(.bold))
+                            }
+                        }
+                        .foregroundStyle(JC.electric)
+                        .frame(width: 36, height: 36)
+                        .background(JC.card, in: Circle())
+                    }
+                    .buttonStyle(PressableStyle())
+                    .disabled(preparingMessageMedia || store.messageAttachmentUploadInProgress)
+                    .accessibilityLabel(Text("Joindre une photo ou une vidéo"))
+
                     Button { importingMessageAttachment = true } label: {
                         Image(systemName: "paperclip")
                             .font(.body.weight(.bold))
@@ -314,7 +352,7 @@ struct GroupChatView: View {
                             .background(JC.card, in: Circle())
                     }
                     .buttonStyle(PressableStyle())
-                    .disabled(store.messageAttachmentUploadInProgress)
+                    .disabled(preparingMessageMedia || store.messageAttachmentUploadInProgress)
                     .accessibilityLabel(Text("Joindre un fichier"))
 
                     TextField("Message au groupe…", text: $draft, axis: .vertical)
@@ -467,7 +505,7 @@ struct GroupChatView: View {
         switch lineup {
         case .complete: return JC.complet
         case .late: return JC.alerte
-        case .forming: return event.isRecurring ? JC.serie : JC.hero
+        case .forming: return event.kind.ticketGradient
         }
     }
 
@@ -865,10 +903,15 @@ struct SongRow: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                         }
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(song.title)
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                Text(song.title)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                if let key = song.keyBadgeLabel {
+                                    hint(icon: "tuningfork", label: key)
+                                }
+                            }
                             Text(song.artist)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -879,7 +922,7 @@ struct SongRow: View {
                                     .foregroundStyle(JC.bronze)
                                     .lineLimit(1)
                             }
-                            if song.keyBadgeLabel != nil || attachedDocs > 0 { detailHints }
+                            if attachedDocs > 0 { detailHints }
                         }
                         Spacer(minLength: 0)
                         // Les trois petits points : ce morceau a une fiche
@@ -937,9 +980,6 @@ struct SongRow: View {
     @ViewBuilder
     private var detailHints: some View {
         HStack(spacing: 5) {
-            if let key = song.keyBadgeLabel {
-                hint(icon: "tuningfork", label: key)
-            }
             if attachedDocs > 0 {
                 hint(icon: "doc.richtext.fill", label: "\(attachedDocs)")
             }
@@ -2248,6 +2288,7 @@ struct AddSongSheet: View {
 
     @State private var title = ""
     @State private var artist = ""
+    @State private var key = ""
 
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty
@@ -2259,8 +2300,14 @@ struct AddSongSheet: View {
                 Section {
                     TextField("Titre — ex. Oye Como Va", text: $title)
                     TextField("Artiste — ex. Santana", text: $artist)
+                    Picker("Tonalité", selection: $key) {
+                        Text("Non renseignée").tag("")
+                        ForEach(MusicalKey.allKeys, id: \.self) { musicalKey in
+                            Text(verbatim: musicalKey.label).tag(musicalKey.label)
+                        }
+                    }
                 } footer: {
-                    Text("La pochette est récupérée automatiquement si le morceau est trouvé.")
+                    Text("La tonalité s'affiche à côté du titre. La pochette est récupérée automatiquement si le morceau est trouvé.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -2276,8 +2323,79 @@ struct AddSongSheet: View {
                         store.addSong(
                             title: title.trimmingCharacters(in: .whitespaces),
                             artist: artist.trimmingCharacters(in: .whitespaces),
+                            key: key.isEmpty ? nil : key,
                             to: groupID,
                             eventID: eventID
+                        )
+                        dismiss()
+                    }
+                    .font(.headline)
+                    .disabled(!isValid)
+                }
+            }
+        }
+    }
+}
+
+/// Édition d'un morceau existant. Réservée au leader : le changement est
+/// propagé au répertoire et à toutes les setlists qui utilisent ce morceau.
+struct EditSongSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let groupID: GroupChat.ID
+    let song: Song
+
+    @State private var title: String
+    @State private var artist: String
+    @State private var key: String
+
+    init(groupID: GroupChat.ID, song: Song) {
+        self.groupID = groupID
+        self.song = song
+        _title = State(initialValue: song.title)
+        _artist = State(initialValue: song.artist)
+        _key = State(initialValue: song.keyBadgeLabel ?? "")
+    }
+
+    private var isValid: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Titre", text: $title)
+                    TextField("Artiste", text: $artist)
+                    Picker("Tonalité", selection: $key) {
+                        Text("Non renseignée").tag("")
+                        ForEach(MusicalKey.allKeys, id: \.self) { musicalKey in
+                            Text(verbatim: musicalKey.label).tag(musicalKey.label)
+                        }
+                    }
+                } header: {
+                    Text("Morceau")
+                } footer: {
+                    Text("Le changement apparaît aussi dans les setlists où ce morceau est déjà prévu.")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(JC.bg)
+            .navigationTitle("Modifier le morceau")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Enregistrer") {
+                        guard let group = store.groups.first(where: { $0.id == groupID }) else { return }
+                        store.editSong(
+                            song,
+                            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+                            artist: artist.trimmingCharacters(in: .whitespacesAndNewlines),
+                            key: key.isEmpty ? nil : key,
+                            in: group
                         )
                         dismiss()
                     }

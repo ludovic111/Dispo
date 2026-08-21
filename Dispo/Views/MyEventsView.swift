@@ -59,6 +59,8 @@ struct MyEventsView: View {
                         if scope == .upcoming {
                             toConfirmSection
                             nextDateSection
+                        } else if !items.isEmpty {
+                            pastSummary
                         }
 
                         if items.isEmpty {
@@ -103,6 +105,63 @@ struct MyEventsView: View {
         let waiting = store.sessionsTodoCount
         if waiting > 0 { return "\(waiting) réponse·s attendue·s" }
         return "\(store.agenda.count) date·s à venir"
+    }
+
+    /// Le coin « Passés » est un vrai historique exploitable : volume de
+    /// dates, morceaux joués, groupes et répartition par type.
+    private var pastSummary: some View {
+        let events: [GroupEvent] = items.compactMap { item in
+            guard case .group(_, _, _, let event) = item.source else { return nil }
+            return event
+        }
+        let songCount = events.reduce(0) { $0 + $1.setlist.filter(\.isApproved).count }
+        let groupCount = Set(items.compactMap { item -> UUID? in
+            guard case .group(let groupID, _, _, _) = item.source else { return nil }
+            return groupID
+        }).count
+
+        return JCCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Historique de jeu", systemImage: "clock.arrow.circlepath")
+                    .font(.headline)
+                    .foregroundStyle(JC.laiton)
+                HStack(spacing: 8) {
+                    historyMetric(value: events.count, label: "dates")
+                    historyMetric(value: songCount, label: "morceaux")
+                    historyMetric(value: groupCount, label: "groupes")
+                }
+                FlowLayout(spacing: 7) {
+                    ForEach(GroupEventKind.allCases) { kind in
+                        let count = events.filter { $0.kind == kind }.count
+                        if count > 0 {
+                            HStack(spacing: 5) {
+                                Image(systemName: kind.symbol)
+                                Text(verbatim: "\(count) \(store.tr(kind.rawValue).lowercased())")
+                            }
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(kind.tint)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(kind.tint.opacity(0.11), in: Capsule())
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func historyMetric(value: Int, label: LocalizedStringKey) -> some View {
+        VStack(spacing: 2) {
+            Text(verbatim: "\(value)")
+                .font(JCFont.display(22))
+                .foregroundStyle(.primary)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(JC.inset, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
 
     // MARK: Ce qui attend une réponse
@@ -233,7 +292,7 @@ struct AgendaRow: View {
             switch store.lineupState(event, in: group) {
             case .complete: return AnyShapeStyle(JC.complet)
             case .late: return AnyShapeStyle(JC.alerte)
-            case .forming: return AnyShapeStyle(JC.serie)
+            case .forming: return AnyShapeStyle(event.kind.ticketGradient)
             }
         case .playing: return AnyShapeStyle(JC.serie)
         case .hosting: return AnyShapeStyle(JC.hero)
@@ -263,6 +322,15 @@ struct AgendaRow: View {
             if let group = store.groups.first(where: { $0.id == groupID }),
                let role = group.role(for: store.profile.name) {
                 TagView(text: role.rawValue, color: JC.laiton)
+            }
+            if isPast {
+                let songs = event.setlist.filter(\.isApproved).count
+                if songs > 0 {
+                    TagView(text: "\(songs) morceaux", color: JC.bronze)
+                }
+                if !event.availableNames.isEmpty {
+                    TagView(text: "\(event.availableNames.count) présent·es", color: JC.feutrine)
+                }
             }
         case .playing(let gig):
             TagView(text: "Je dépanne", color: JC.feutrine)
@@ -348,7 +416,7 @@ struct NextDateCard: View {
                     .foregroundStyle(JC.billetInk)
                     .frame(width: 62)
                     .padding(.vertical, 12)
-                    .background(JC.hero)
+                    .background(nextDateStubStyle)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -379,6 +447,13 @@ struct NextDateCard: View {
                 }
             }
         }
+    }
+
+    private var nextDateStubStyle: AnyShapeStyle {
+        if case .group(_, _, _, let event) = item.source {
+            return AnyShapeStyle(event.kind.ticketGradient)
+        }
+        return AnyShapeStyle(JC.hero)
     }
 
     /// L'état du line-up, dit en une ligne (complet, en retard, en cours).

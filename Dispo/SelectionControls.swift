@@ -39,11 +39,31 @@ struct EventKindBadge: View {
             if !compact { Text(LocalizedStringKey(kind.rawValue)) }
         }
         .font(.caption2.weight(.heavy))
-        .foregroundStyle(JC.primaryAccent)
+        .foregroundStyle(kind.tint)
         .padding(.horizontal, compact ? 7 : 9)
         .padding(.vertical, 5)
-        .background(JC.primaryAccent.opacity(0.12), in: Capsule())
-        .overlay(Capsule().stroke(JC.primaryAccent.opacity(0.35), lineWidth: 1))
+        .background(kind.tint.opacity(0.12), in: Capsule())
+        .overlay(Capsule().stroke(kind.tint.opacity(0.35), lineWidth: 1))
         .accessibilityLabel(Text(LocalizedStringKey(kind.rawValue)))
+    }
+}
+
+extension GroupEventKind {
+    var tint: Color {
+        switch self {
+        case .concert: return JC.eventConcert
+        case .repetition: return JC.eventRehearsal
+        case .jam: return JC.eventJam
+        }
+    }
+
+    /// Talon de billet suffisamment coloré pour être reconnu, mais moins
+    /// saturé qu'un état d'alerte ou de confirmation.
+    var ticketGradient: LinearGradient {
+        LinearGradient(
+            colors: [tint.opacity(0.70), tint.opacity(0.92)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 }

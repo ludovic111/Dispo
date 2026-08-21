@@ -46,7 +46,7 @@ struct NotificationsSettingsView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Ne rate plus une occasion de jouer")
                         .font(.headline)
-                    Text("Choisis seulement les alertes utiles. Un appui sur une notification ouvre directement la bonne conversation ou le bon SOS.")
+                    Text("Choisis seulement les alertes utiles. Elles arrivent sur l'iPhone, dans la cloche de l'app et dans la puce de l'icône.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -109,18 +109,21 @@ struct NotificationsSettingsView: View {
                 categoryToggle(
                     .messages,
                     title: "Messages et candidatures",
-                    detail: "Une réponse ou une nouvelle candidature",
+                    detail: "Message, photo, vidéo ou nouvelle candidature",
                     icon: "bubble.left.and.bubble.right.fill",
                     color: JC.bronze
                 )
                 Divider()
                 categoryToggle(
                     .groups,
-                    title: "Événements de groupe",
-                    detail: "Concerts, répétitions et jams ajoutés",
+                    title: "Groupes et événements",
+                    detail: "Message de groupe, concert, répétition ou jam",
                     icon: "person.3.fill",
                     color: JC.laiton
                 )
+                Text("Chaque choix contrôle à la fois les bannières, le centre dans l'app et la puce rouge.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
     }

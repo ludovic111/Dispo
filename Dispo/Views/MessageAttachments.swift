@@ -1,5 +1,7 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
+import PhotosUI
 
 /// Fichier sélectionné dans Fichiers, gardé en mémoire jusqu'à l'envoi.
 struct OutgoingMessageAttachment: Identifiable, Sendable {
@@ -41,6 +43,23 @@ struct OutgoingMessageAttachment: Identifiable, Sendable {
         )
     }
 
+    /// Les photos de la photothèque partent en JPEG 2 048 px : assez nettes
+    /// pour une affiche ou une partition, sans envoyer le fichier caméra.
+    static func compressedPhoto(from data: Data) throws -> OutgoingMessageAttachment {
+        guard let image = UIImage(data: data),
+              let jpeg = image.resizedJPEG(maxSide: 2_048, quality: 0.72),
+              !jpeg.isEmpty else {
+            throw ImportError.unreadable
+        }
+        guard jpeg.count <= maxBytes else { throw ImportError.tooLarge }
+        return OutgoingMessageAttachment(
+            data: jpeg,
+            fileName: "Photo.jpg",
+            contentType: "image/jpeg",
+            fileExtension: "jpg"
+        )
+    }
+
     enum ImportError: Error {
         case tooLarge
         case empty
@@ -53,6 +72,24 @@ struct MessageAttachmentPreview: Identifiable {
     let id = UUID()
     let title: String
     let url: URL
+}
+
+extension PhotosPickerItem {
+    /// Charge puis compresse une photo ou une vidéo sélectionnée dans la
+    /// photothèque avant qu'elle ne touche le réseau.
+    func compressedMessageAttachment() async throws -> OutgoingMessageAttachment {
+        if supportedContentTypes.contains(where: { $0.conforms(to: .image) }) {
+            guard let data = try await loadTransferable(type: Data.self) else {
+                throw OutgoingMessageAttachment.ImportError.unreadable
+            }
+            return try OutgoingMessageAttachment.compressedPhoto(from: data)
+        }
+        guard let video = try await loadTransferable(type: PickedVideo.self) else {
+            throw OutgoingMessageAttachment.ImportError.unreadable
+        }
+        defer { try? FileManager.default.removeItem(at: video.url) }
+        return try await AppStore.compressedMessageVideo(from: video.url)
+    }
 }
 
 /// Fichier choisi, juste au-dessus du champ de saisie.
@@ -93,6 +130,7 @@ struct MessageAttachmentDraftChip: View {
 
     private var iconName: String {
         if attachment.contentType.hasPrefix("image/") { return "photo.fill" }
+        if attachment.contentType.hasPrefix("video/") { return "video.fill" }
         switch attachment.fileExtension {
         case "pdf": return "doc.richtext.fill"
         case "html", "htm": return "music.note.list"

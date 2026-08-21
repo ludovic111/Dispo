@@ -98,3 +98,28 @@ struct PushPreferences: Codable, Equatable {
         }
     }
 }
+
+/// Une alerte persistée côté serveur : elle alimente le centre dans l'app et
+/// le nombre exact affiché sur l'icône, même après un changement d'iPhone.
+struct AppNotification: Codable, Identifiable, Hashable {
+    var id: UUID
+    var userID: UUID
+    var actorID: UUID?
+    var category: String
+    var title: String
+    var body: String
+    var data: [String: String]
+    var createdAt: Date
+    var readAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, category, title, body, data
+        case userID = "user_id"
+        case actorID = "actor_id"
+        case createdAt = "created_at"
+        case readAt = "read_at"
+    }
+
+    var pushCategory: PushCategory? { PushCategory(rawValue: category) }
+    var isUnread: Bool { readAt == nil }
+}

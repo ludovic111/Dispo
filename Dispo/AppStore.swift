@@ -128,6 +128,7 @@ final class AppStore: ObservableObject {
     @Published var notificationsEnabled: Bool = false
     @Published private(set) var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
     @Published var pushPreferences = PushPreferences()
+    @Published private(set) var notifications: [AppNotification] = []
     @Published private(set) var pushRegistrationError: String?
     private var pushDeviceToken: String?
     private var notificationObservers: [NSObjectProtocol] = []
@@ -171,6 +172,8 @@ final class AppStore: ObservableObject {
     private var messageTask: Task<Void, Never>?
     private var groupChannel: RealtimeChannelV2?
     private var groupTask: Task<Void, Never>?
+    private var notificationChannel: RealtimeChannelV2?
+    private var notificationTask: Task<Void, Never>?
     /// Conversation affichée à l'écran (ChatView) — sert à marquer « lu » en
     /// direct et à couper la notification locale du message qu'on regarde.
     private var visibleConversationID: UUID?
@@ -216,10 +219,7 @@ final class AppStore: ObservableObject {
     private static let playedWithKey = "jamconnect.playedWith"
     private static let notificationsKey = "jamconnect.notifications"
     private static let pushPreferencesKey = "dispo.pushPreferences"
-    /// Amis de démo (suivent déjà l'utilisateur) — rend le badge « a joué avec » visible.
-    private static let demoFollowing: Set<String> = [
-        "Marco Fernández", "Yann Broillet", "Léa Zbinden"
-    ]
+    private static let demoAccountsRemovedKey = "dispo.demoAccountsRemoved.v22"
     private static let seenGigsKey = "jamconnect.seenGigs"
     private static let openedGigsKey = "dispo.openedGigs"
     private static let sosShowAllKey = "dispo.sosShowAll"
@@ -237,6 +237,13 @@ final class AppStore: ObservableObject {
             revenueCatEnabled = false
         }
         backend = BackendConfig.load().map(SupabaseBackend.init)
+        // Une seule fois après la 2.2 : purge les comptes et conversations
+        // fictifs qui pouvaient encore survivre dans UserDefaults.
+        if !UserDefaults.standard.bool(forKey: Self.demoAccountsRemovedKey) {
+            [Self.eventsKey, Self.conversationsKey, Self.followingKey, Self.playedWithKey, Self.groupsKey]
+                .forEach(UserDefaults.standard.removeObject(forKey:))
+            UserDefaults.standard.set(true, forKey: Self.demoAccountsRemovedKey)
+        }
         let seed = Self.loadSeed()
         musicians = seed.musicians
 
@@ -298,8 +305,7 @@ final class AppStore: ObservableObject {
         if let saved: Set<String> = Self.load(key: Self.followingKey) {
             following = saved
         } else {
-            // Démo : quelques amis mutuels pour le réseau « a joué avec ».
-            following = Self.demoFollowing
+            following = []
             Self.save(following, key: Self.followingKey)
         }
         // TODO phase 2b: sync playedWith to Supabase
@@ -521,6 +527,7 @@ final class AppStore: ObservableObject {
         await startMessageStream()
         await startGroupStream()
         await startGigStream()
+        await startNotificationStream()
         await refreshNotificationAuthorization(registerIfAllowed: true)
         backfillVideoThumbnails()
     }
@@ -538,11 +545,14 @@ final class AppStore: ObservableObject {
             async let collaborationsTask = backend.fetchCollaborations()
             async let blocksTask = backend.fetchBlockedUsers(me: userID)
             async let exactLocationsTask = backend.fetchExactLocations()
+            async let notificationsTask = backend.fetchNotifications()
             let (allMusicians, g, allConversations, profiles, follows, myRatingRows, collaborations, blocks) = try await (
                 musiciansTask, gigsTask, conversationsTask, profilesTask,
                 followsTask, ratingsTask, collaborationsTask, blocksTask
             )
             blockedUserIDs = blocks
+            notifications = (try? await notificationsTask) ?? notifications
+            syncApplicationBadge()
             // Positions exactes partagées avec moi (RLS) : elles remplacent
             // la position ville des profils concernés.
             let exactByID = Dictionary(
@@ -707,6 +717,14 @@ final class AppStore: ObservableObject {
             await backend.client.removeChannel(channel)
             gigChannel = nil
         }
+        notificationTask?.cancel()
+        notificationTask = nil
+        if let channel = notificationChannel {
+            await backend.client.removeChannel(channel)
+            notificationChannel = nil
+        }
+        notifications = []
+        syncApplicationBadge()
         myGroupInvitations = []
         pendingInvitesByGroup = [:]
         stopTypingChannel()
@@ -783,8 +801,9 @@ final class AppStore: ObservableObject {
                     pushLocal(
                         title: conversations[index].contactName,
                         body: message.text.isEmpty
-                            ? "📎 \(message.attachment?.fileName ?? tr("Fichier"))"
-                            : message.text
+                            ? (message.attachment?.notificationLabel ?? tr("Fichier"))
+                            : message.text,
+                        category: .messages
                     )
                 }
             }
@@ -997,6 +1016,30 @@ final class AppStore: ObservableObject {
         }
     }
 
+    /// Le centre dans l'app suit la même file que les pushes APNs. Chaque
+    /// insertion met immédiatement à jour la cloche et la puce de l'icône.
+    private func startNotificationStream() async {
+        guard let backend, notificationTask == nil else { return }
+        let channel: RealtimeChannelV2
+        let stream: AsyncStream<AppNotification>
+        do {
+            (channel, stream) = try await backend.notificationStream()
+        } catch {
+            // Le retour au premier plan recharge aussi le centre.
+            return
+        }
+        notificationChannel = channel
+        notificationTask = Task { [weak self] in
+            for await notification in stream {
+                guard let self, notification.userID == self.liveUserID else { continue }
+                if !self.notifications.contains(where: { $0.id == notification.id }) {
+                    withAnimation { self.notifications.insert(notification, at: 0) }
+                    self.syncApplicationBadge()
+                }
+            }
+        }
+    }
+
     /// Coalesce les rafales d'événements SOS en un seul rechargement.
     private func scheduleGigRefresh() {
         guard pendingGigRefresh == nil else { return }
@@ -1046,7 +1089,8 @@ final class AppStore: ObservableObject {
         if !message.isFromMe {
             pushLocal(
                 title: "\(groups[index].emoji) \(groups[index].name)",
-                body: "\(message.sender) : \(message.text.isEmpty ? "📎 \(message.attachment?.fileName ?? tr("Fichier"))" : message.text)"
+                body: "\(message.sender) : \(message.text.isEmpty ? (message.attachment?.notificationLabel ?? tr("Fichier")) : message.text)",
+                category: .groups
             )
         }
     }
@@ -1522,7 +1566,8 @@ final class AppStore: ObservableObject {
             body: String(
                 format: tr("SOS publié automatiquement pour remplacer %@ (%@)."),
                 member, tr(instrument.rawValue)
-            )
+            ),
+            category: .groups
         )
     }
 
@@ -1877,6 +1922,45 @@ final class AppStore: ObservableObject {
 
     // MARK: - Notifications
 
+    var unreadNotificationCount: Int {
+        notifications.lazy.filter(\.isUnread).count
+    }
+
+    func markNotificationRead(_ notification: AppNotification) {
+        guard notification.isUnread else { return }
+        if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
+            notifications[index].readAt = Date()
+        }
+        syncApplicationBadge()
+        guard let backend, isLive else { return }
+        Task { try? await backend.markNotificationRead(notification.id) }
+    }
+
+    func markAllNotificationsRead() {
+        let now = Date()
+        for index in notifications.indices where notifications[index].readAt == nil {
+            notifications[index].readAt = now
+        }
+        syncApplicationBadge()
+        guard let backend, isLive else { return }
+        Task { try? await backend.markAllNotificationsRead() }
+    }
+
+    func openNotification(_ notification: AppNotification) {
+        markNotificationRead(notification)
+        var payload: [AnyHashable: Any] = Dictionary(
+            uniqueKeysWithValues: notification.data.map { (AnyHashable($0.key), $0.value as Any) }
+        )
+        payload["category"] = notification.category
+        payload["notification_id"] = notification.id.uuidString
+        openPushDestination(payload)
+    }
+
+    private func syncApplicationBadge() {
+        let count = notificationsEnabled ? unreadNotificationCount : 0
+        Task { try? await UNUserNotificationCenter.current().setBadgeCount(count) }
+    }
+
     var notificationStatusLabel: String {
         if notificationAuthorizationStatus == .denied {
             return tr("Bloquées dans Réglages")
@@ -1924,6 +2008,11 @@ final class AppStore: ObservableObject {
     }
 
     private func openPushDestination(_ userInfo: [AnyHashable: Any]) {
+        if let rawID = userInfo["notification_id"] as? String,
+           let id = UUID(uuidString: rawID),
+           let notification = notifications.first(where: { $0.id == id }) {
+            markNotificationRead(notification)
+        }
         let rawTab = (userInfo["target_tab"] as? String)
             ?? (userInfo["category"] as? String)
         switch rawTab {
@@ -1934,7 +2023,7 @@ final class AppStore: ObservableObject {
         case "agenda", "sessions": selectedTab = .agenda
         default: selectedTab = .home
         }
-        Task { try? await UNUserNotificationCenter.current().setBadgeCount(0) }
+        syncApplicationBadge()
     }
 
     func refreshNotificationAuthorization(registerIfAllowed: Bool = false) async {
@@ -1969,6 +2058,7 @@ final class AppStore: ObservableObject {
             if let backend, let token = pushDeviceToken {
                 try? await backend.deletePushDevice(token: token)
             }
+            syncApplicationBadge()
         }
         UserDefaults.standard.set(notificationsEnabled, forKey: Self.notificationsKey)
         await refreshNotificationAuthorization()
@@ -1977,6 +2067,7 @@ final class AppStore: ObservableObject {
     func setPushPreference(_ category: PushCategory, enabled: Bool) {
         pushPreferences.set(enabled, for: category)
         Self.save(pushPreferences, key: Self.pushPreferencesKey)
+        if category == .groups { rescheduleAllAttendanceNotifications() }
         guard let token = pushDeviceToken else { return }
         Task { await syncPushDevice(token: token) }
     }
@@ -2025,13 +2116,16 @@ final class AppStore: ObservableObject {
         title: String,
         body: String,
         identifier: String = UUID().uuidString,
-        at date: Date? = nil
+        at date: Date? = nil,
+        category: PushCategory? = nil
     ) {
         guard notificationsEnabled else { return }
+        if let category, !pushPreferences.isEnabled(category) { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
+        content.badge = NSNumber(value: max(1, unreadNotificationCount + 1))
         let trigger: UNNotificationTrigger?
         if let date {
             // Déjà passé : on n'envoie pas (évite une rafale au lancement).
@@ -2071,7 +2165,8 @@ final class AppStore: ObservableObject {
             guard !isFirstScan, !gig.isMine, gigMatchesMe(gig) else { continue }
             pushLocal(
                 title: tr("🚨 Nouveau SOS pour toi"),
-                body: "\(gig.title) · \(tr(gig.feeLabel))"
+                body: "\(gig.title) · \(tr(gig.feeLabel))",
+                category: .sos
             )
         }
         if changed {
@@ -2334,7 +2429,13 @@ final class AppStore: ObservableObject {
 
     /// Ajoute un morceau au répertoire du groupe. Le leader ajoute
     /// directement (validé) ; un membre crée une suggestion à valider.
-    func addSong(title: String, artist: String, to groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
+    func addSong(
+        title: String,
+        artist: String,
+        key: String? = nil,
+        to groupID: GroupChat.ID,
+        eventID: GroupEvent.ID? = nil
+    ) {
         // Le leader valide d'office ; sinon c'est une suggestion en attente.
         let approved = groups.first(where: { $0.id == groupID }).map(canLead) ?? true
         let song = Song(
@@ -2342,7 +2443,8 @@ final class AppStore: ObservableObject {
             artist: artist,
             artworkURL: nil,
             suggestedBy: profile.name,
-            isApproved: approved
+            isApproved: approved,
+            key: key?.isEmpty == true ? nil : key
         )
         insertSong(song, in: groupID, eventID: eventID)
         // Pochette + lien d'écoute arrivent en différé (iTunes Search) — le
@@ -2356,6 +2458,66 @@ final class AppStore: ObservableObject {
                     $0.trackURL = info.trackURL
                     $0.platformLinks = info.platformLinks
                 }
+            }
+        }
+    }
+
+    /// Modifie l'identité et la tonalité d'un morceau déjà ajouté. Toutes ses
+    /// copies (répertoire et setlists) restent strictement identiques.
+    func editSong(
+        _ song: Song,
+        title: String,
+        artist: String,
+        key: String?,
+        in group: GroupChat
+    ) {
+        guard canLead(group) else { return }
+        var updated = song
+        updated.title = title
+        updated.artist = artist
+        updated.key = key?.isEmpty == true ? nil : key
+        replaceSongEverywhere(updated, in: group.id)
+        syncSongEverywhere(updated.id, in: group.id)
+
+        guard title != song.title || artist != song.artist else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            let info = await Self.fetchTrackInfo(title: title, artist: artist)
+            guard let currentGroup = self.groups.first(where: { $0.id == group.id }),
+                  var refreshed = currentGroup.songs.first(where: { $0.id == song.id })
+                    ?? currentGroup.allEvents.flatMap(\.setlist).first(where: { $0.id == song.id })
+            else { return }
+            refreshed.artworkURL = info.artworkURL
+            refreshed.trackURL = info.trackURL
+            refreshed.platformLinks = info.platformLinks
+            self.replaceSongEverywhere(refreshed, in: group.id)
+            self.syncSongEverywhere(refreshed.id, in: group.id)
+        }
+    }
+
+    private func replaceSongEverywhere(_ song: Song, in groupID: GroupChat.ID) {
+        updateGroup(groupID) { chat in
+            if let index = chat.repertoire?.firstIndex(where: { $0.id == song.id }) {
+                chat.repertoire?[index] = song
+            }
+            for eventIndex in (chat.events ?? []).indices {
+                if let songIndex = chat.events?[eventIndex].setlist.firstIndex(where: { $0.id == song.id }) {
+                    chat.events?[eventIndex].setlist[songIndex] = song
+                }
+            }
+        }
+    }
+
+    private func syncSongEverywhere(_ songID: Song.ID, in groupID: GroupChat.ID) {
+        guard let backend, isLive, let fresh = groups.first(where: { $0.id == groupID }) else { return }
+        let repertoire = fresh.songs
+        let touchedEvents = fresh.allEvents.filter { event in
+            event.setlist.contains { $0.id == songID }
+        }
+        syncLive {
+            try await backend.updateGroupRepertoire(repertoire, groupID: groupID)
+            for event in touchedEvents {
+                try await backend.updateEventSetlist(event.setlist, eventID: event.id)
             }
         }
     }
@@ -2770,7 +2932,8 @@ final class AppStore: ObservableObject {
         sendMessage(text, in: conversation)
         pushLocal(
             title: "\(group.emoji) \(group.name)",
-            body: String(format: tr("%@ invité·e pour %@"), musician.name, event.title)
+            body: String(format: tr("%@ invité·e pour %@"), musician.name, event.title),
+            category: .groups
         )
     }
 
@@ -2815,7 +2978,8 @@ final class AppStore: ObservableObject {
             title: "\(group.emoji) \(group.name)",
             body: body,
             identifier: id,
-            at: when
+            at: when,
+            category: .groups
         )
     }
 
@@ -2838,7 +3002,8 @@ final class AppStore: ObservableObject {
                 member, event.title
             ),
             identifier: id,
-            at: when
+            at: when,
+            category: .groups
         )
     }
 
@@ -2868,8 +3033,8 @@ final class AppStore: ObservableObject {
     /// stable, une nouvelle planification remplace l'ancienne. Tout ce qui
     /// dépasse l'horizon est retiré du centre de notifications.
     private func rescheduleAllAttendanceNotifications() {
-        guard notificationsEnabled else {
-            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        guard notificationsEnabled, pushPreferences.groups else {
+            pruneEventNotifications(keeping: [])
             return
         }
         let upcoming = groups
@@ -2926,7 +3091,8 @@ final class AppStore: ObservableObject {
             self.insertSong(song, in: groupID, eventID: eventID)
             self.pushLocal(
                 title: "\(group.emoji) \(group.name)",
-                body: "\(member) : \(pick.0) — \(pick.1) ?"
+                body: "\(member) : \(pick.0) — \(pick.1) ?",
+                category: .groups
             )
         }
     }
@@ -3272,30 +3438,10 @@ final class AppStore: ObservableObject {
         updated.chords = chords?.isEmpty == true ? nil : chords
         updated.irealURL = irealURL?.isEmpty == true ? nil : irealURL
         if let irealDisabled { updated.irealDisabled = irealDisabled }
-        updateGroup(group.id) { chat in
-            if let index = chat.repertoire?.firstIndex(where: { $0.id == song.id }) {
-                chat.repertoire?[index] = updated
-            }
-            // Le morceau peut aussi figurer dans des setlists d'événements.
-            for eventIndex in (chat.events ?? []).indices {
-                if let songIndex = chat.events?[eventIndex].setlist.firstIndex(where: { $0.id == song.id }) {
-                    chat.events?[eventIndex].setlist[songIndex] = updated
-                }
-            }
-        }
-        guard let backend, isLive, let fresh = groups.first(where: { $0.id == group.id }) else { return }
-        let repertoire = fresh.songs
-        // Le morceau vit aussi dans les setlists : on republie celles qui
-        // le contiennent, sinon la version transposée n'y arriverait jamais.
-        let touchedEvents = fresh.allEvents.filter { event in
-            event.setlist.contains { $0.id == song.id }
-        }
-        syncLive {
-            try await backend.updateGroupRepertoire(repertoire, groupID: group.id)
-            for event in touchedEvents {
-                try await backend.updateEventSetlist(event.setlist, eventID: event.id)
-            }
-        }
+        replaceSongEverywhere(updated, in: group.id)
+        // Le morceau vit aussi dans les setlists : on republie celles qui le
+        // contiennent, sinon la version transposée n'y arriverait jamais.
+        syncSongEverywhere(song.id, in: group.id)
     }
 
     func removeDoc(_ doc: GroupDoc, from group: GroupChat) {
@@ -3605,15 +3751,19 @@ final class AppStore: ObservableObject {
     /// H.264) et piste audio copiée TELLE QUELLE — le son n'est jamais
     /// recompressé. Une démo de 3 minutes pèse ainsi ~45 Mo au lieu du
     /// fichier caméra brut. Repli ultime : préréglage 720p système.
-    nonisolated private static func compressVideoForUpload(_ sourceURL: URL) async throws -> URL {
+    nonisolated private static func compressVideoForUpload(
+        _ sourceURL: URL,
+        maxDuration: Double = 181,
+        bitRate: Int = 2_000_000
+    ) async throws -> URL {
         let asset = AVURLAsset(url: sourceURL)
         let duration = try await asset.load(.duration)
-        guard duration.seconds <= 181 else { throw VideoImportError.tooLong }
+        guard duration.seconds <= maxDuration else { throw VideoImportError.tooLong }
         // HEVC d'abord (meilleure qualité au même poids), H.264 sinon.
-        if let output = try? await exportDownscaled(asset, codec: .hevc) {
+        if let output = try? await exportDownscaled(asset, codec: .hevc, bitRate: bitRate) {
             return output
         }
-        if let output = try? await exportDownscaled(asset, codec: .h264) {
+        if let output = try? await exportDownscaled(asset, codec: .h264, bitRate: bitRate) {
             return output
         }
         if #available(iOS 18.0, *) {
@@ -3633,7 +3783,8 @@ final class AppStore: ObservableObject {
     /// disponible sur toutes les versions d'iOS supportées.
     nonisolated private static func exportDownscaled(
         _ asset: AVURLAsset,
-        codec: AVVideoCodecType
+        codec: AVVideoCodecType,
+        bitRate: Int
     ) async throws -> URL {
         guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {
             throw VideoImportError.exportFailed
@@ -3697,7 +3848,7 @@ final class AppStore: ObservableObject {
         writer.shouldOptimizeForNetworkUse = true
 
         var compression: [String: Any] = [
-            AVVideoAverageBitRateKey: 2_000_000,
+            AVVideoAverageBitRateKey: bitRate,
             AVVideoMaxKeyFrameIntervalKey: 60,
             AVVideoExpectedSourceFrameRateKey: Int(fps.rounded())
         ]
@@ -3752,6 +3903,31 @@ final class AppStore: ObservableObject {
         await writer.finishWriting()
         guard writer.status == .completed else { throw VideoImportError.exportFailed }
         return outputURL
+    }
+
+    /// Prépare une vidéo de message : 720p, environ 1 Mbit/s, 2 minutes au
+    /// maximum. Même avec l'audio, le résultat reste sous la limite privée de
+    /// 20 Mo du bucket `message-files`.
+    nonisolated static func compressedMessageVideo(
+        from sourceURL: URL
+    ) async throws -> OutgoingMessageAttachment {
+        let compressed = try await compressVideoForUpload(
+            sourceURL,
+            maxDuration: 120,
+            bitRate: 1_000_000
+        )
+        defer { try? FileManager.default.removeItem(at: compressed) }
+        let data = try Data(contentsOf: compressed, options: .mappedIfSafe)
+        guard !data.isEmpty else { throw OutgoingMessageAttachment.ImportError.empty }
+        guard data.count <= OutgoingMessageAttachment.maxBytes else {
+            throw OutgoingMessageAttachment.ImportError.tooLarge
+        }
+        return OutgoingMessageAttachment(
+            data: data,
+            fileName: "Vidéo.mp4",
+            contentType: "video/mp4",
+            fileExtension: "mp4"
+        )
     }
 
     /// Reader + writer d'une piste pendant l'export — tout l'accès se fait
@@ -4647,7 +4823,7 @@ final class AppStore: ObservableObject {
     }
 
     /// Envoie un message. En mode live il part sur le serveur (temps réel) ;
-    /// en démo, une réponse scriptée rend la conversation vivante.
+    /// sans backend, il reste uniquement dans le cache local de développement.
     func sendMessage(
         _ text: String,
         attachment outgoing: OutgoingMessageAttachment? = nil,
@@ -4689,12 +4865,6 @@ final class AppStore: ObservableObject {
                           !self.conversations[i].messages.contains(where: { $0.id == message.id })
                     else { return }
                     withAnimation { self.conversations[i].messages.append(message) }
-                    if self.isDemoContact(conversation.contactName) {
-                        // Petit théâtre : le compte démo « écrit » avant de répondre.
-                        self.setTyping(true, in: conversationID)
-                        try? await Task.sleep(for: .seconds(1.2))
-                        try? await backend.replyAsDemo(conversationID: conversationID)
-                    }
                 } catch {
                     if let path = uploaded?.remotePath {
                         try? await backend.deleteMessageAttachment(path: path)
@@ -4729,26 +4899,6 @@ final class AppStore: ObservableObject {
             attachment: localAttachment
         ))
         persistConversations()
-
-        let conversationID = conversation.id
-        let reply = Self.scriptedReplies.randomElement() ?? "Super, à bientôt !"
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(0.6))
-            self?.setTyping(true, in: conversationID)
-            try? await Task.sleep(for: .seconds(Double.random(in: 0.8...1.8)))
-            guard let self, let i = self.conversations.firstIndex(where: { $0.id == conversationID }) else { return }
-            self.setTyping(false, in: conversationID)
-            withAnimation {
-                // Le contact démo répond : il a forcément lu mes messages.
-                for m in self.conversations[i].messages.indices where self.conversations[i].messages[m].isFromMe {
-                    if self.conversations[i].messages[m].readAt == nil {
-                        self.conversations[i].messages[m].readAt = Date()
-                    }
-                }
-                self.conversations[i].messages.append(Message(text: reply, isFromMe: false, date: Date()))
-            }
-            self.persistConversations()
-        }
     }
 
     /// Ouvre (ou retrouve) une conversation avec un musicien depuis sa fiche.
@@ -4785,34 +4935,6 @@ final class AppStore: ObservableObject {
         conversations.insert(new, at: 0)
         persistConversations()
         return new
-    }
-
-    /// Réinitialise la démo (utile pour les présentations).
-    /// Jamais en mode live : le reset écraserait l'état d'un vrai compte.
-    func resetDemo() {
-        guard !isLive else { return }
-        UserDefaults.standard.removeObject(forKey: Self.eventsKey)
-        UserDefaults.standard.removeObject(forKey: Self.conversationsKey)
-        UserDefaults.standard.removeObject(forKey: Self.profileKey)
-        UserDefaults.standard.removeObject(forKey: Self.starRatingsKey)
-        UserDefaults.standard.removeObject(forKey: Self.premiumKey)
-        UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
-        UserDefaults.standard.removeObject(forKey: Self.followingKey)
-        UserDefaults.standard.removeObject(forKey: Self.playedWithKey)
-        UserDefaults.standard.removeObject(forKey: Self.groupsKey)
-        following = Self.demoFollowing
-        Self.save(following, key: Self.followingKey)
-        playedWith = []
-        groups = []
-        myStarRatings = [:]
-        isPremium = Self.isBeta
-        premiumPlan = nil
-        let seed = Self.loadSeed()
-        musicians = seed.musicians
-        events = Self.projectedSeedEvents(seed.events).sorted { $0.date < $1.date }
-        conversations = seed.conversations
-        profile = Self.defaultProfile
-        armEarlyAccessTeaser()
     }
 
     // MARK: - Persistance
@@ -4864,14 +4986,6 @@ final class AppStore: ObservableObject {
         }
     }
 
-    private static let scriptedReplies: [String] = [
-        "Parfait, tu me sauves ! Je t'envoie la setlist tout de suite.",
-        "Top. Balance à 18h30, concert à 20h30 — ça joue pour toi ?",
-        "Génial 🙏 Le cachet c'est CHF 150, payé le soir même.",
-        "Super ! Tu as besoin d'un ampli sur place ou tu amènes le tien ?",
-        "Merci mille fois. Je te briefe sur le répertoire par téléphone ?",
-        "Nickel. Je te mets sur la liste des musiciens, entrée par les artistes."
-    ]
 }
 
 // MARK: - Cadence des appels Odesli (liens d'écoute directs)

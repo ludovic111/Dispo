@@ -10,7 +10,6 @@ struct SettingsSheet: View {
     @State private var showNotifications = false
     @State private var showLanguageRegion = false
     @State private var showPatchNotes = false
-    @State private var showResetConfirmation = false
     @State private var showLinkApple = false
 
     /// Pages d'assistance du site, dans la langue de l'interface.
@@ -35,7 +34,6 @@ struct SettingsSheet: View {
                 locationSection
                 premiumSection
                 helpSection
-                if !store.isLive { demoSection }
                 footerSection
             }
             .scrollContentBackground(.hidden)
@@ -54,13 +52,6 @@ struct SettingsSheet: View {
             .sheet(isPresented: $showLinkApple) {
                 LinkAppleSheet()
                     .presentationDetents([.medium])
-            }
-            .confirmationDialog(
-                "Réinitialiser toutes les données de la démo ?",
-                isPresented: $showResetConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Réinitialiser", role: .destructive) { store.resetDemo() }
             }
         }
     }
@@ -361,23 +352,6 @@ struct SettingsSheet: View {
                     chevron
                 }
             }
-        }
-    }
-
-    // MARK: - Démo (bac à sable local uniquement)
-
-    private var demoSection: some View {
-        Section {
-            Button(role: .destructive) {
-                showResetConfirmation = true
-            } label: {
-                HStack(spacing: 12) {
-                    settingsIcon("arrow.counterclockwise", JC.signal)
-                    Text("Réinitialiser la démo")
-                }
-            }
-        } footer: {
-            Text("Efface les données d'exemple de cet appareil. Disponible uniquement hors connexion.")
         }
     }
 

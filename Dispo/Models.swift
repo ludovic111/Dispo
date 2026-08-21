@@ -1030,6 +1030,7 @@ struct MessageAttachment: Codable, Identifiable, Hashable {
 
     var iconName: String {
         if contentType.hasPrefix("image/") { return "photo.fill" }
+        if contentType.hasPrefix("video/") { return "video.fill" }
         switch fileExtension {
         case "pdf": return "doc.richtext.fill"
         case "html", "htm": return "music.note.list"
@@ -1041,6 +1042,13 @@ struct MessageAttachment: Codable, Identifiable, Hashable {
 
     var sizeLabel: String {
         ByteCountFormatter.string(fromByteCount: byteCount, countStyle: .file)
+    }
+
+    /// Texte court pour les bannières locales et les pushes sans message.
+    var notificationLabel: String {
+        if contentType.hasPrefix("image/") { return "📷 Photo" }
+        if contentType.hasPrefix("video/") { return "🎥 Vidéo" }
+        return "📎 \(fileName)"
     }
 }
 

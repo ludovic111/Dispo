@@ -52,4 +52,42 @@ final class SelectionPresentationTests: XCTestCase {
 
         XCTAssertEqual(song.keyBadgeLabel, "B♭")
     }
+
+    func testAllSelectableKeysRoundTripThroughSongStorage() {
+        let labels = MusicalKey.allKeys.map(\.label)
+
+        XCTAssertEqual(labels.count, 24)
+        XCTAssertEqual(Set(labels).count, 24)
+        XCTAssertTrue(labels.allSatisfy { MusicalKey($0)?.label == $0 })
+    }
+
+    func testMessageMediaUsesExplicitNotificationLabels() {
+        let photo = MessageAttachment(
+            remotePath: "photo",
+            fileName: "IMG.jpg",
+            contentType: "image/jpeg",
+            byteCount: 42
+        )
+        let video = MessageAttachment(
+            remotePath: "video",
+            fileName: "clip.mp4",
+            contentType: "video/mp4",
+            byteCount: 84
+        )
+
+        XCTAssertEqual(photo.notificationLabel, "📷 Photo")
+        XCTAssertEqual(video.notificationLabel, "🎥 Vidéo")
+        XCTAssertEqual(video.iconName, "video.fill")
+    }
+
+    func testPushPreferencesApplyToEveryCategory() {
+        var preferences = PushPreferences()
+
+        for category in PushCategory.allCases {
+            preferences.set(false, for: category)
+            XCTAssertFalse(preferences.isEnabled(category))
+            preferences.set(true, for: category)
+            XCTAssertTrue(preferences.isEnabled(category))
+        }
+    }
 }

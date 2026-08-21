@@ -53,6 +53,7 @@
 		E129DB6ADC05561B67C8650C /* SplineSansMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F8A91EBF7C4EC255652D99B6 /* SplineSansMono-Medium.ttf */; };
 		E890AEA9164880D8D280E60A /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BACE4F239852EC03210322 /* EventsView.swift */; };
 		EF7D0276B64BAF6134B9DFBA /* Locations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8137A13EBE04B692A857CF97 /* Locations.swift */; };
+		F6CA87DABA8FEC20010FA79B /* NotificationsCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */; };
 		F981CE7D7D0A4E6A70F00E1B /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44466866F267B8632340A4B3 /* DiscoveryView.swift */; };
 		FC46796225E74812DD8D86F9 /* Secrets.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */; };
 /* End PBXBuildFile section */
@@ -115,6 +116,7 @@
 		D28AF59E7DDA753B03F53947 /* SeedData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SeedData.json; sourceTree = "<group>"; };
 		D29B18D3DD55BFEDCE6D109D /* BackendConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendConfig.swift; sourceTree = "<group>"; };
 		D3464C170F8FAE9B2A6C8F07 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsCenterView.swift; sourceTree = "<group>"; };
 		E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSheet.swift; sourceTree = "<group>"; };
 		F5533270AA3C516AC1B6E955 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F8A91EBF7C4EC255652D99B6 /* SplineSansMono-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SplineSansMono-Medium.ttf"; sourceTree = "<group>"; };
@@ -176,6 +178,7 @@
 				6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */,
 				30520EB8A6E15D9BD250814A /* MyEventsView.swift */,
 				8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */,
+				E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */,
 				047421D42EA7C1DBEFE4FA2E /* NotificationsSettingsView.swift */,
 				F5533270AA3C516AC1B6E955 /* OnboardingView.swift */,
 				998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */,
@@ -382,6 +385,7 @@
 				D7DE32D1745AF72A345DF15B /* MusicianDetailView.swift in Sources */,
 				C8BB5275D442027AF380E0DB /* MyEventsView.swift in Sources */,
 				BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */,
+				F6CA87DABA8FEC20010FA79B /* NotificationsCenterView.swift in Sources */,
 				684AAD0BDF544BFCA23723C5 /* NotificationsSettingsView.swift in Sources */,
 				2F07596B9A0B43477E677D98 /* OnboardingView.swift in Sources */,
 				62DA359C3C872606E6F85770 /* PatchNotesView.swift in Sources */,
@@ -464,7 +468,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 27;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -478,7 +482,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -524,7 +528,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 26;
+				CURRENT_PROJECT_VERSION = 27;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -544,7 +548,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

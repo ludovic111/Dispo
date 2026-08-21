@@ -1401,6 +1401,46 @@
         }
       }
     },
+    "%lld non lues": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ungelesen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld unread"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sin leer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld non lette"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未読%lld件"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 条未读"
+          }
+        }
+      }
+    },
     "%lld notes": {
       "localizations": {
         "de": {
@@ -1597,6 +1637,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "本周有%lld位专业人士看过你的档案"
+          }
+        }
+      }
+    },
+    "%lld présent·es": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld anwesend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld attending"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld presentes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld presenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld人参加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 人出席"
           }
         }
       }
@@ -3461,6 +3541,46 @@
         }
       }
     },
+    "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la juste à côté du titre": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tonart beim Hinzufügen angeben, später ändern und direkt neben dem Titel sehen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a song's key, edit it later, and see it right next to the title"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade la tonalidad de una canción, edítala después y mírala junto al título"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la tonalità di un brano, modificala in seguito e vedila accanto al titolo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲の追加時にキーを設定し、後から編集して曲名の横で確認できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加歌曲时设置调性，之后可编辑，并显示在标题旁"
+          }
+        }
+      }
+    },
     "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": {
       "localizations": {
         "de": {
@@ -5181,6 +5301,46 @@
         }
       }
     },
+    "Artiste": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Künstler"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artista"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artista"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーティスト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "艺人"
+          }
+        }
+      }
+    },
     "Artiste — ex. Santana": {
       "localizations": {
         "de": {
@@ -5937,6 +6097,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "不显示距离 — 仍可按姓名和乐器找到"
+          }
+        }
+      }
+    },
+    "Aucune notification": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Benachrichtigungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No notifications"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay notificaciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna notifica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知はありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无通知"
           }
         }
       }
@@ -8911,6 +9111,46 @@
         }
       }
     },
+    "Chaque choix contrôle à la fois les bannières, le centre dans l'app et la puce rouge.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Auswahl steuert Banner, die Mitteilungszentrale in der App und das rote Badge."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each choice controls banners, the in-app notification center, and the red badge."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada opción controla los banners, el centro de notificaciones de la app y la insignia roja."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni scelta controlla i banner, il centro notifiche nell'app e il badge rosso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各設定は、バナー、アプリ内通知センター、赤いバッジのすべてに反映されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个选项都会同时控制横幅、应用内通知中心和红色角标。"
+          }
+        }
+      }
+    },
     "Chaque chose à sa place": {
       "localizations": {
         "de": {
@@ -9507,6 +9747,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择你需要音乐人的日期——只显示在日历中勾选了该日期的人。"
+          }
+        }
+      }
+    },
+    "Choisis seulement les alertes utiles. Elles arrivent sur l'iPhone, dans la cloche de l'app et dans la puce de l'icône.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle nur die wichtigen Hinweise. Sie erscheinen auf dem iPhone, in der App-Glocke und auf dem App-Symbol."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose only the alerts you need. They appear on your iPhone, under the in-app bell, and on the app icon."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige solo las alertas útiles. Aparecen en el iPhone, en la campana de la app y en el icono."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli solo gli avvisi utili. Arrivano sull'iPhone, nella campana dell'app e sull'icona."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必要な通知だけを選べます。iPhone、アプリ内のベル、アプリアイコンに表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只选择需要的提醒。它们会显示在 iPhone、应用内铃铛和应用图标上。"
           }
         }
       }
@@ -10767,6 +11047,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "演出"
+          }
+        }
+      }
+    },
+    "Concerts, répétitions et jams ont des couleurs distinctes, discrètes et cohérentes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konzerte, Proben und Jams haben dezente, einheitliche eigene Farben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerts, rehearsals, and jams use distinct, subtle, consistent colors"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conciertos, ensayos y jams tienen colores distintos, discretos y coherentes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concerti, prove e jam hanno colori distinti, discreti e coerenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ、リハーサル、ジャムを控えめで統一感のある色で区別できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演出、排练和即兴演奏使用不同且低调统一的颜色"
           }
         }
       }
@@ -15381,6 +15701,46 @@
         }
       }
     },
+    "Enregistrer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
     "Entre le code postal. Avec une date, Dispo cherche aussi les musiciens qui seront en séjour sur place.": {
       "localizations": {
         "de": {
@@ -15537,6 +15897,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法发送——请检查地址和网络。"
+          }
+        }
+      }
+    },
+    "Envoie des photos et des vidéos compressées dans les conversations privées et de groupe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komprimierte Fotos und Videos in privaten und Gruppen-Chats senden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send compressed photos and videos in private and group conversations"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía fotos y vídeos comprimidos en conversaciones privadas y de grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia foto e video compressi nelle conversazioni private e di gruppo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "個人チャットとグループチャットで圧縮した写真や動画を送信できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在私聊和群聊中发送压缩后的照片和视频"
           }
         }
       }
@@ -17591,6 +17991,46 @@
         }
       }
     },
+    "Groupes et événements": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen und Termine"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups and events"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos y eventos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppi ed eventi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループとイベント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组和活动"
+          }
+        }
+      }
+    },
     "Groupes, réseaux sociaux & grand ménage": {
       "localizations": {
         "de": {
@@ -17997,6 +18437,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "嘻哈/说唱"
+          }
+        }
+      }
+    },
+    "Historique de jeu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spielverlauf"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing history"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historial de actuaciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cronologia musicale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演奏履歴"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "演出记录"
           }
         }
       }
@@ -19851,6 +20331,46 @@
         }
       }
     },
+    "Joindre une photo ou une vidéo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto oder Video anhängen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attach a photo or video"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjuntar una foto o un vídeo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allega una foto o un video"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写真または動画を添付"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加照片或视频"
+          }
+        }
+      }
+    },
     "Jusqu'au %@": {
       "localizations": {
         "de": {
@@ -20457,6 +20977,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "地图让位给“我的日程”：所有日期集中一处，按月排列"
+          }
+        }
+      }
+    },
+    "La cloche dans l'app et la puce de l'icône affichent le nombre exact de notifications non lues": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App-Glocke und Symbol-Badge zeigen die genaue Zahl ungelesener Hinweise"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The in-app bell and icon badge show the exact number of unread notifications"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La campana de la app y la insignia del icono muestran el número exacto de notificaciones no leídas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La campana nell'app e il badge dell'icona mostrano il numero esatto di notifiche non lette"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリ内のベルとアイコンバッジに未読通知の正確な件数が表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用内铃铛和图标角标会显示准确的未读通知数量"
           }
         }
       }
@@ -21191,6 +21751,46 @@
         }
       }
     },
+    "La photo ou la vidéo n'a pas pu être importée.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Foto oder Video konnte nicht importiert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The photo or video could not be imported."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha podido importar la foto o el vídeo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile importare la foto o il video."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写真または動画を読み込めませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法导入照片或视频。"
+          }
+        }
+      }
+    },
     "La pochette est récupérée automatiquement si le morceau est trouvé.": {
       "localizations": {
         "de": {
@@ -21567,6 +22167,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "每个曲目卡片都会直接显示调性"
+          }
+        }
+      }
+    },
+    "La tonalité s'affiche à côté du titre. La pochette est récupérée automatiquement si le morceau est trouvé.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Tonart erscheint neben dem Titel. Das Cover wird automatisch geladen, wenn der Song gefunden wird."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The key appears next to the title. Artwork is fetched automatically when the song is found."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tonalidad aparece junto al título. La portada se obtiene automáticamente si se encuentra la canción."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tonalità appare accanto al titolo. La copertina viene recuperata automaticamente se il brano viene trovato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーは曲名の横に表示されます。曲が見つかるとジャケットが自動で取得されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调性会显示在标题旁。找到歌曲后会自动获取封面。"
           }
         }
       }
@@ -22257,6 +22897,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法婉拒该候选人。"
+          }
+        }
+      }
+    },
+    "Le changement apparaît aussi dans les setlists où ce morceau est déjà prévu.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Änderung erscheint auch in allen Setlists, in denen der Song bereits eingeplant ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The change also appears in setlists where this song is already scheduled."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El cambio también aparece en las listas donde esta canción ya está programada."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La modifica appare anche nelle scalette in cui il brano è già previsto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この曲がすでに入っているセットリストにも変更が反映されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改也会同步到已安排此歌曲的曲目单中。"
           }
         }
       }
@@ -24401,6 +25081,46 @@
         }
       }
     },
+    "Les SOS, messages et événements de groupe apparaîtront ici.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS, Nachrichten und Gruppentermine erscheinen hier."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS requests, messages, and group events will appear here."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los SOS, mensajes y eventos de grupo aparecerán aquí."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS, messaggi ed eventi di gruppo appariranno qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS、メッセージ、グループイベントがここに表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SOS、消息和群组活动会显示在这里。"
+          }
+        }
+      }
+    },
     "Les abonnements App Store sont momentanement indisponibles.": {
       "localizations": {
         "en": {
@@ -24527,6 +25247,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "操作、选择、中性信息和提醒现在使用含义一致的颜色"
+          }
+        }
+      }
+    },
+    "Les anciens comptes de démonstration ont été supprimés définitivement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die alten Demo-Konten wurden endgültig entfernt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The old demo accounts have been permanently removed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las antiguas cuentas de demostración se han eliminado definitivamente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I vecchi account demo sono stati eliminati definitivamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前のデモアカウントを完全に削除しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧演示账号已永久删除"
           }
         }
       }
@@ -24767,6 +25527,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "你演出过的日期会按月归档在这里。"
+          }
+        }
+      }
+    },
+    "Les dates terminées quittent l'agenda et rejoignent un historique avec morceaux et présences": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergangene Termine wandern aus der Agenda in einen Verlauf mit Songs und Anwesenheiten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finished events leave the agenda and move to a history with songs and attendance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los eventos terminados salen de la agenda y pasan a un historial con canciones y asistencia"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli eventi conclusi lasciano l'agenda e passano a una cronologia con brani e presenze"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了したイベントは予定から移動し、曲と出欠を含む履歴に保存されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已结束的活动会移出日程，并进入包含歌曲和出席信息的历史记录"
           }
         }
       }
@@ -27291,6 +28091,86 @@
         }
       }
     },
+    "Message de groupe, concert, répétition ou jam": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppennachricht, Konzert, Probe oder Jam"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group message, concert, rehearsal, or jam"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensaje de grupo, concierto, ensayo o jam"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaggio di gruppo, concerto, prova o jam"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループメッセージ、ライブ、リハーサル、ジャム"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组消息、演出、排练或即兴演奏"
+          }
+        }
+      }
+    },
+    "Message, photo, vidéo ou nouvelle candidature": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht, Foto, Video oder neue Bewerbung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message, photo, video, or new application"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensaje, foto, vídeo o nueva candidatura"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaggio, foto, video o nuova candidatura"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージ、写真、動画、新しい応募"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消息、照片、视频或新申请"
+          }
+        }
+      }
+    },
     "Messages": {
       "localizations": {
         "de": {
@@ -27647,6 +28527,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "在线模式——服务器数据"
+          }
+        }
+      }
+    },
+    "Modifie le titre et l'artiste d'un morceau déjà présent, y compris dans ses setlists": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel und Künstler vorhandener Songs ändern, auch in ihren Setlists"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit the title and artist of an existing song, including in its setlists"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edita el título y el artista de una canción existente, también en sus repertorios"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica titolo e artista di un brano esistente, anche nelle sue scalette"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加済みの曲名とアーティストをセットリストも含めて編集できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑已有歌曲的标题和艺人，并同步到曲目单"
           }
         }
       }
@@ -28127,6 +29047,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "展示多种风格——免费版只有1个片段。"
+          }
+        }
+      }
+    },
+    "Morceau": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Song"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Song"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canción"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲"
           }
         }
       }
@@ -32487,6 +33447,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "乐队照片"
+          }
+        }
+      }
+    },
+    "Photo ou vidéo trop lourde — 20 Mo maximum.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto oder Video zu groß — maximal 20 MB."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo or video too large — 20 MB maximum."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto o vídeo demasiado grande: 20 MB como máximo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto o video troppo grande — massimo 20 MB."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "写真または動画が大きすぎます（最大20 MB）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片或视频过大，最大 20 MB。"
           }
         }
       }
@@ -42611,6 +43611,46 @@
         }
       }
     },
+    "Ton répertoire et tes alertes, enfin complets": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertoire und Hinweise, jetzt komplett"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your repertoire and alerts, now complete"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu repertorio y tus alertas, por fin completos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repertorio e avvisi, finalmente completi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レパートリーと通知がさらに充実"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲库和提醒现已更加完整"
+          }
+        }
+      }
+    },
     "Ton réseau d'abord": {
       "localizations": {
         "de": {
@@ -43167,6 +44207,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有人都能被找到——即使没有定位、乐器或空闲时间"
+          }
+        }
+      }
+    },
+    "Tout lire": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle lesen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark all as read"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leer todo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segna tutto come letto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて既読にする"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部标为已读"
           }
         }
       }
@@ -45771,6 +46851,46 @@
         }
       }
     },
+    "Vidéo trop longue — 2 minutes maximum.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video zu lang — maximal 2 Minuten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video too long — 2 minutes maximum."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vídeo demasiado largo: 2 minutos como máximo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video troppo lungo — massimo 2 minuti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画が長すぎます（最大2分）。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频过长，最长 2 分钟。"
+          }
+        }
+      }
+    },
     "Vidéo trop longue — 3 minutes maximum.": {
       "localizations": {
         "de": {
@@ -47171,6 +48291,46 @@
         }
       }
     },
+    "dates": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "events"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fechas"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "date"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日程"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "场活动"
+          }
+        }
+      }
+    },
     "démos": {
       "localizations": {
         "de": {
@@ -47207,6 +48367,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "作品"
+          }
+        }
+      }
+    },
+    "groupes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "groups"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grupos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gruppi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个群组"
           }
         }
       }
@@ -47607,6 +48807,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "iReal Pro 直接进入重点：输入曲名并开始搜索"
+          }
+        }
+      }
+    },
+    "morceaux": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Songs"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "songs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "canciones"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "brani"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首歌曲"
           }
         }
       }

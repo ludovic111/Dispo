@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import PhotosUI
 
 struct ChatView: View {
     @EnvironmentObject private var store: AppStore
@@ -7,6 +8,8 @@ struct ChatView: View {
     @State private var draft = ""
     @State private var outgoingAttachment: OutgoingMessageAttachment?
     @State private var importingAttachment = false
+    @State private var mediaItem: PhotosPickerItem?
+    @State private var preparingMedia = false
     @State private var previewingAttachment: MessageAttachmentPreview?
     @State private var downloadingAttachmentID: String?
 
@@ -81,6 +84,23 @@ struct ChatView: View {
                         }
                     }
                     HStack(spacing: 10) {
+                        PhotosPicker(selection: $mediaItem, matching: .any(of: [.images, .videos])) {
+                            Group {
+                                if preparingMedia {
+                                    ProgressView().controlSize(.small)
+                                } else {
+                                    Image(systemName: "photo.on.rectangle.angled")
+                                        .font(.body.weight(.bold))
+                                }
+                            }
+                            .foregroundStyle(JC.electric)
+                            .frame(width: 36, height: 36)
+                            .background(JC.card, in: Circle())
+                        }
+                        .buttonStyle(PressableStyle())
+                        .disabled(preparingMedia || store.messageAttachmentUploadInProgress)
+                        .accessibilityLabel(Text("Joindre une photo ou une vidéo"))
+
                         Button { importingAttachment = true } label: {
                             Image(systemName: "paperclip")
                                 .font(.body.weight(.bold))
@@ -89,7 +109,7 @@ struct ChatView: View {
                                 .background(JC.card, in: Circle())
                         }
                         .buttonStyle(PressableStyle())
-                        .disabled(store.messageAttachmentUploadInProgress)
+                        .disabled(preparingMedia || store.messageAttachmentUploadInProgress)
                         .accessibilityLabel(Text("Joindre un fichier"))
 
                         TextField("Ton message…", text: $draft, axis: .vertical)
@@ -159,6 +179,25 @@ struct ChatView: View {
                 store.backendError = store.tr("Fichier trop lourd — 20 Mo maximum.")
             } catch {
                 store.backendError = store.tr("Le fichier n'a pas pu être importé.")
+            }
+        }
+        .onChange(of: mediaItem) { _, item in
+            guard let item else { return }
+            preparingMedia = true
+            Task {
+                defer {
+                    preparingMedia = false
+                    mediaItem = nil
+                }
+                do {
+                    outgoingAttachment = try await item.compressedMessageAttachment()
+                } catch AppStore.VideoImportError.tooLong {
+                    store.backendError = store.tr("Vidéo trop longue — 2 minutes maximum.")
+                } catch OutgoingMessageAttachment.ImportError.tooLarge {
+                    store.backendError = store.tr("Photo ou vidéo trop lourde — 20 Mo maximum.")
+                } catch {
+                    store.backendError = store.tr("La photo ou la vidéo n'a pas pu être importée.")
+                }
             }
         }
         .sheet(item: $previewingAttachment) { preview in

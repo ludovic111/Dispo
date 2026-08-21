@@ -98,6 +98,57 @@ final class SupabaseBackend: Sendable {
         )
     }
 
+    /// Centre de notifications, de la plus récente à la plus ancienne.
+    func fetchNotifications() async throws -> [AppNotification] {
+        try await client.from("push_notifications")
+            .select("id,user_id,actor_id,category,title,body,data,created_at,read_at")
+            .order("created_at", ascending: false)
+            .execute().value
+    }
+
+    func markNotificationRead(_ id: UUID) async throws {
+        try await client.from("push_notifications")
+            .update(["read_at": ISO8601DateFormatter().string(from: Date())])
+            .eq("id", value: id)
+            .execute()
+    }
+
+    func markAllNotificationsRead() async throws {
+        try await client.from("push_notifications")
+            .update(["read_at": ISO8601DateFormatter().string(from: Date())])
+            .is("read_at", value: nil)
+            .execute()
+    }
+
+    /// INSERT en temps réel : l'alerte apparaît dans l'app sans attendre un
+    /// retour au premier plan. La RLS ne livre que celles du compte courant.
+    func notificationStream() async throws -> (
+        channel: RealtimeChannelV2,
+        stream: AsyncStream<AppNotification>
+    ) {
+        let channel = client.channel("notifications-live")
+        let inserts = channel.postgresChange(
+            InsertAction.self,
+            schema: "public",
+            table: "push_notifications"
+        )
+        try await channel.subscribeWithError()
+        let stream = AsyncStream<AppNotification> { continuation in
+            let task = Task {
+                for await insert in inserts {
+                    if let notification = try? insert.decodeRecord(
+                        as: AppNotification.self,
+                        decoder: Self.realtimeDecoder
+                    ) {
+                        continuation.yield(notification)
+                    }
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+        return (channel, stream)
+    }
+
     /// URL de retour des liens d'auth (réinitialisation de mot de passe…).
     static let authCallbackURL = URL(string: "dispo://login-callback")
 
@@ -526,17 +577,13 @@ final class SupabaseBackend: Sendable {
 
     /// Musiciens du feed (profils complets, sauf moi). La note étoilée
     /// arrive agrégée sur le profil (moyenne + nombre, jamais le détail).
-    /// Les musiciens du réseau. Les comptes d'exemple (`is_demo`) restent
-    /// écartés — un utilisateur ne doit pas croire qu'un profil fabriqué est
-    /// un vrai musicien — SAUF la poignée marquée `is_showcase` : elle donne
-    /// un réseau habité à celui qui vient de s'inscrire, et l'app la badge
-    /// « Démo » partout où elle apparaît.
+    /// Les musiciens du réseau. La base refuse désormais tout `is_demo=true`;
+    /// le filtre reste une défense compatible avec un ancien environnement.
     func fetchMusicians(excluding myID: UUID) async throws -> [Musician] {
         let profiles = try await fetchProfiles()
-        let iAmDemo = profiles.first { $0.id == myID }?.isDemo == true
         return profiles
             .filter { $0.id != myID }
-            .filter { iAmDemo || $0.isDemo != true || $0.isShowcase == true }
+            .filter { $0.isDemo != true }
             .compactMap { $0.asMusician() }
     }
 
@@ -817,10 +864,6 @@ final class SupabaseBackend: Sendable {
 
     func deleteMyAccount() async throws {
         try await client.rpc("delete_my_account").execute()
-    }
-
-    func replyAsDemo(conversationID: UUID) async throws {
-        try await client.rpc("reply_as_demo", params: ["conv_id": conversationID.uuidString]).execute()
     }
 
     // MARK: - Annonces SOS

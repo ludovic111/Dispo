@@ -114,6 +114,7 @@ struct HomeView: View {
     @EnvironmentObject private var store: AppStore
     @State private var filters = DiscoveryFilters()
     @State private var showFilters = false
+    @State private var showNotifications = false
     @State private var scope: AvailabilityScope = .today
     /// Le créneau d'ouverture n'est choisi qu'une fois, au premier chargement.
     @State private var scopePicked = false
@@ -277,6 +278,31 @@ struct HomeView: View {
                 }
             }
             Spacer(minLength: 0)
+            Button { showNotifications = true } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: store.unreadNotificationCount > 0 ? "bell.fill" : "bell")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(JC.laiton)
+                        .frame(width: 42, height: 42)
+                        .background(JC.card, in: Circle())
+                        .overlay(Circle().stroke(JC.cardStroke, lineWidth: 1))
+                    if store.unreadNotificationCount > 0 {
+                        Text(verbatim: store.unreadNotificationCount > 99 ? "99+" : "\(store.unreadNotificationCount)")
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 17, minHeight: 17)
+                            .background(JC.signal, in: Capsule())
+                            .offset(x: 5, y: -4)
+                    }
+                }
+            }
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel(Text("Notifications"))
+            .accessibilityValue(Text("\(store.unreadNotificationCount) non lues"))
+            .sheet(isPresented: $showNotifications) {
+                NotificationsCenterView()
+            }
             Button {
                 store.selectedTab = .profile
             } label: {

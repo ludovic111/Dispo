@@ -24,6 +24,7 @@ struct SongDetailSheet: View {
 
     @State private var tab: Tab = .ireal
     @State private var showListen = false
+    @State private var showEdit = false
     @State private var newComment = ""
     @State private var photoItem: PhotosPickerItem?
     @State private var importingFile = false
@@ -71,6 +72,13 @@ struct SongDetailSheet: View {
             .navigationTitle(song?.title ?? "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if isLeader {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { showEdit = true } label: {
+                            Label("Modifier", systemImage: "pencil")
+                        }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") { dismiss() }.font(.headline)
                 }
@@ -84,6 +92,12 @@ struct SongDetailSheet: View {
             .sheet(isPresented: $showListen) {
                 if let song {
                     ListenSheet(song: song).presentationDetents([.height(380)])
+                }
+            }
+            .sheet(isPresented: $showEdit) {
+                if let song {
+                    EditSongSheet(groupID: groupID, song: song)
+                        .presentationDetents([.medium])
                 }
             }
             .sheet(item: $previewURL) { doc in
@@ -155,9 +169,19 @@ struct SongDetailSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(song.title)
-                        .font(JCFont.display(19))
-                        .lineLimit(2)
+                    HStack(spacing: 7) {
+                        Text(song.title)
+                            .font(JCFont.display(19))
+                            .lineLimit(2)
+                        if let key = song.keyBadgeLabel {
+                            Label(key, systemImage: "tuningfork")
+                                .font(.caption2.weight(.heavy))
+                                .foregroundStyle(JC.bronze)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 4)
+                                .background(JC.bronze.opacity(0.12), in: Capsule())
+                        }
+                    }
                     Text(song.artist)
                         .font(.caption)
                         .foregroundStyle(.secondary)

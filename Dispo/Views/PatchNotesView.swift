@@ -11,6 +11,19 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "2.2",
+            title: "Ton répertoire et tes alertes, enfin complets",
+            points: [
+                "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la juste à côté du titre",
+                "Modifie le titre et l'artiste d'un morceau déjà présent, y compris dans ses setlists",
+                "Concerts, répétitions et jams ont des couleurs distinctes, discrètes et cohérentes",
+                "Les dates terminées quittent l'agenda et rejoignent un historique avec morceaux et présences",
+                "Envoie des photos et des vidéos compressées dans les conversations privées et de groupe",
+                "La cloche dans l'app et la puce de l'icône affichent le nombre exact de notifications non lues",
+                "Les anciens comptes de démonstration ont été supprimés définitivement"
+            ]
+        ),
+        PatchNote(
             version: "2.1",
             title: "Tout se comprend d'un coup d'œil",
             points: [

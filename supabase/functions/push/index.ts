@@ -50,7 +50,11 @@ async function providerToken() {
   return value;
 }
 
-async function sendToAPNs(device: PushDevice, notification: PushNotification) {
+async function sendToAPNs(
+  device: PushDevice,
+  notification: PushNotification,
+  badgeCount: number,
+) {
   const host = device.environment === "production"
     ? "https://api.push.apple.com"
     : "https://api.sandbox.push.apple.com";
@@ -62,16 +66,17 @@ async function sendToAPNs(device: PushDevice, notification: PushNotification) {
       "apns-topic": Deno.env.get("APNS_BUNDLE_ID") ?? "ch.dispo.app",
       "apns-push-type": "alert",
       "apns-priority": "10",
-      "apns-expiration": "0",
+      "apns-expiration": String(Math.floor(Date.now() / 1_000) + 86_400),
     },
     body: JSON.stringify({
       aps: {
         alert: { title: notification.title, body: notification.body },
         sound: "default",
-        badge: 1,
+        badge: Math.min(999, Math.max(0, badgeCount)),
         category: notification.category,
       },
       ...notification.data,
+      notification_id: notification.id,
     }),
   });
   const details = response.ok ? "" : await response.text();
@@ -127,6 +132,17 @@ Deno.serve(async (request) => {
     .returns<PushDevice[]>();
   if (deviceError) return json({ error: "device_read_failed" }, 500);
 
+  const { data: unreadRows, error: unreadError } = await admin
+    .from("push_notifications")
+    .select("user_id")
+    .in("user_id", userIDs)
+    .is("read_at", null);
+  if (unreadError) return json({ error: "badge_count_failed" }, 500);
+  const unreadByUser = new Map<string, number>();
+  for (const row of unreadRows ?? []) {
+    unreadByUser.set(row.user_id, (unreadByUser.get(row.user_id) ?? 0) + 1);
+  }
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -143,7 +159,11 @@ Deno.serve(async (request) => {
     let lastError = "";
     for (const device of recipients) {
       try {
-        const result = await sendToAPNs(device, notification);
+        const result = await sendToAPNs(
+          device,
+          notification,
+          unreadByUser.get(notification.user_id) ?? 1,
+        );
         if (result.ok) {
           delivered = true;
         } else {

@@ -443,6 +443,21 @@ enum JC {
     static let danger = signal
     static let confirmation = feutrine
 
+    /// Codes événementiels sobres : le libellé et le symbole restent
+    /// toujours présents, la couleur ne sert qu'à accélérer le balayage.
+    static let eventConcert = Color(
+        light: Color(red: 0.02, green: 0.45, blue: 0.82),
+        dark: Color(red: 0.18, green: 0.72, blue: 1)
+    )
+    static let eventRehearsal = Color(
+        light: Color(red: 0.38, green: 0.31, blue: 0.72),
+        dark: Color(red: 0.64, green: 0.57, blue: 0.96)
+    )
+    static let eventJam = Color(
+        light: Color(red: 0.02, green: 0.52, blue: 0.43),
+        dark: Color(red: 0.22, green: 0.78, blue: 0.65)
+    )
+
     /// Papier et encre du billet — identiques dans les deux modes,
     /// comme un vrai billet de concert.
     static let billetPaper = Color(red: 240 / 255, green: 244 / 255, blue: 1)
