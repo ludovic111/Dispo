@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import ImageIO
 import UniformTypeIdentifiers
 import PhotosUI
 
@@ -46,8 +47,18 @@ struct OutgoingMessageAttachment: Identifiable, Sendable {
     /// Les photos de la photothèque partent en JPEG 2 048 px : assez nettes
     /// pour une affiche ou une partition, sans envoyer le fichier caméra.
     static func compressedPhoto(from data: Data) throws -> OutgoingMessageAttachment {
-        guard let image = UIImage(data: data),
-              let jpeg = image.resizedJPEG(maxSide: 2_048, quality: 0.72),
+        // ImageIO décode directement une miniature : une photo 48 MP ne passe
+        // plus brièvement par un bitmap pleine définition de plusieurs
+        // centaines de Mo en mémoire.
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 2_048,
+            kCGImageSourceShouldCache: false
+        ]
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary),
+              let jpeg = UIImage(cgImage: thumbnail).jpegData(compressionQuality: 0.72),
               !jpeg.isEmpty else {
             throw ImportError.unreadable
         }

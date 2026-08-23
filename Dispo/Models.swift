@@ -1052,6 +1052,18 @@ struct MessageAttachment: Codable, Identifiable, Hashable {
     }
 }
 
+/// Réaction agrégée affichée sous une bulle. Une personne ne peut choisir
+/// qu'un emoji par message, mais peut le remplacer d'un geste.
+struct MessageReaction: Codable, Identifiable, Hashable {
+    var emoji: String
+    var count: Int
+    var isMine: Bool
+
+    var id: String { emoji }
+
+    static let choices = ["👍", "❤️", "😂", "😮", "😢", "🙌"]
+}
+
 /// Un message dans un groupe.
 struct GroupMessage: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
@@ -1060,6 +1072,13 @@ struct GroupMessage: Codable, Identifiable, Hashable {
     var text: String
     var date: Date
     var attachment: MessageAttachment? = nil
+    var editedAt: Date? = nil
+    var deletedAt: Date? = nil
+    /// Optionnel pour continuer à décoder les conversations mises en cache
+    /// avant la 2.3. L'UI passe toujours par `reactionSummaries`.
+    var reactions: [MessageReaction]? = nil
+
+    var reactionSummaries: [MessageReaction] { reactions ?? [] }
 }
 
 /// Une partition (ou tout document) partagée dans un groupe. En mode live
@@ -1943,10 +1962,16 @@ struct Message: Codable, Identifiable, Hashable {
     var deliveredAt: Date?
     var readAt: Date?
     var attachment: MessageAttachment? = nil
+    var editedAt: Date? = nil
+    var deletedAt: Date? = nil
+    /// Optionnel pour la rétrocompatibilité des caches pré-2.3.
+    var reactions: [MessageReaction]? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id, text, isFromMe, date, deliveredAt, readAt, attachment
+        case id, text, isFromMe, date, deliveredAt, readAt, attachment, editedAt, deletedAt, reactions
     }
+
+    var reactionSummaries: [MessageReaction] { reactions ?? [] }
 
     /// État de la coche affichée sous mes messages.
     enum Receipt { case sent, delivered, read }

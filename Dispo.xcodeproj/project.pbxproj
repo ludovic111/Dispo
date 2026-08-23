@@ -18,7 +18,6 @@
 		271F0846BCAEB87F906E3A45 /* PushNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DD095B72FFD09E7389249C /* PushNotifications.swift */; };
 		28095D0A929D08F4FCFF6982 /* LocationUXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 077D264F558B81E6720C79C5 /* LocationUXTests.swift */; };
 		28667B59FEA0218FA34C8302 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F66A53149AFFBB1CABA9601 /* CreateEventView.swift */; };
-		2A295B2FFFD3982F05A2469E /* SeedData.json in Resources */ = {isa = PBXBuildFile; fileRef = D28AF59E7DDA753B03F53947 /* SeedData.json */; };
 		2F07596B9A0B43477E677D98 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5533270AA3C516AC1B6E955 /* OnboardingView.swift */; };
 		30BEB710A59C858335EAF601 /* Brands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7F31B74378504314D50904 /* Brands.swift */; };
 		31F84DDE0AE254845CA85880 /* SOSRequestSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */; };
@@ -33,6 +32,7 @@
 		5F68902EA546C88E91CDCA9E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1CF4EDC24A0E508B590C65E7 /* Supabase */; };
 		62DA359C3C872606E6F85770 /* PatchNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */; };
 		684AAD0BDF544BFCA23723C5 /* NotificationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 047421D42EA7C1DBEFE4FA2E /* NotificationsSettingsView.swift */; };
+		6927EB0344A7E7F17D260458 /* MessageControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64946B92A861F1AF7608755A /* MessageControls.swift */; };
 		6CD84C029B2FFD26FA112EA4 /* MessageAttachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC58C1AA319C707515F059D7 /* MessageAttachments.swift */; };
 		77906F0491C295B70667B651 /* GroupChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B25DEE5FD8CA4F02312D54 /* GroupChatView.swift */; };
 		7AF0430FCB7DB66B78E0D64C /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D128C9A5713A4BEA6CB5CDF1 /* Models.swift */; };
@@ -87,6 +87,7 @@
 		5328FC0F5EB7E966E24D66EB /* SOSRequestSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SOSRequestSheet.swift; sourceTree = "<group>"; };
 		5A16E3CB4050DB245D44B20D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		608FA9B8A3CF88C4AD82387D /* Fraunces-Display.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-Display.ttf"; sourceTree = "<group>"; };
+		64946B92A861F1AF7608755A /* MessageControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageControls.swift; sourceTree = "<group>"; };
 		6CEE8CF8E49314AC43A8F44F /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
 		6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
 		6F9726C6D699E4D63934DBB1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -113,7 +114,6 @@
 		CD6EB48244B9DD72FB2FFDF2 /* SelectionPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionPresentationTests.swift; sourceTree = "<group>"; };
 		D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DispoApp.swift; sourceTree = "<group>"; };
 		D128C9A5713A4BEA6CB5CDF1 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		D28AF59E7DDA753B03F53947 /* SeedData.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = SeedData.json; sourceTree = "<group>"; };
 		D29B18D3DD55BFEDCE6D109D /* BackendConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendConfig.swift; sourceTree = "<group>"; };
 		D3464C170F8FAE9B2A6C8F07 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsCenterView.swift; sourceTree = "<group>"; };
@@ -175,6 +175,7 @@
 				E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */,
 				76B25DEE5FD8CA4F02312D54 /* GroupChatView.swift */,
 				AC58C1AA319C707515F059D7 /* MessageAttachments.swift */,
+				64946B92A861F1AF7608755A /* MessageControls.swift */,
 				6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */,
 				30520EB8A6E15D9BD250814A /* MyEventsView.swift */,
 				8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */,
@@ -230,7 +231,6 @@
 				04DD095B72FFD09E7389249C /* PushNotifications.swift */,
 				C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */,
 				6CEE8CF8E49314AC43A8F44F /* Secrets.plist */,
-				D28AF59E7DDA753B03F53947 /* SeedData.json */,
 				77246C87C767CBDC463705FA /* SelectionControls.swift */,
 				407C891F432197F3EDFFC826 /* SVGPath.swift */,
 				368375EE1B1F91410E86F7F5 /* Backend */,
@@ -342,7 +342,6 @@
 				129CB47FDC4AF657C12ED767 /* Localizable.xcstrings in Resources */,
 				FC46796225E74812DD8D86F9 /* Secrets.example.plist in Resources */,
 				A21CFD4B8CD824BD4EA45150 /* Secrets.plist in Resources */,
-				2A295B2FFFD3982F05A2469E /* SeedData.json in Resources */,
 				E129DB6ADC05561B67C8650C /* SplineSansMono-Medium.ttf in Resources */,
 				1A1AD3BDA47F8E9793045BA9 /* SplineSansMono-SemiBold.ttf in Resources */,
 			);
@@ -380,6 +379,7 @@
 				048EC7F8C6151CB7386307E0 /* LocationService.swift in Sources */,
 				EF7D0276B64BAF6134B9DFBA /* Locations.swift in Sources */,
 				6CD84C029B2FFD26FA112EA4 /* MessageAttachments.swift in Sources */,
+				6927EB0344A7E7F17D260458 /* MessageControls.swift in Sources */,
 				7AF0430FCB7DB66B78E0D64C /* Models.swift in Sources */,
 				19B8469D6C8B9EE2D45F61AE /* Music.swift in Sources */,
 				D7DE32D1745AF72A345DF15B /* MusicianDetailView.swift in Sources */,
@@ -468,7 +468,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 28;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -482,7 +482,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -528,7 +528,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 28;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -548,7 +548,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.2;
+				MARKETING_VERSION = 2.3;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

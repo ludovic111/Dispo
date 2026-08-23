@@ -7,9 +7,8 @@ import AVFoundation
 import StoreKit
 import RevenueCat
 
-/// État global de la démo. Charge les données fictives depuis SeedData.json
-/// et persiste les actions de l'utilisateur (événements créés, messages,
-/// profil, participations) dans UserDefaults.
+/// État global de Dispo. Les données de compte viennent de Supabase ; seules
+/// les préférences strictement locales restent dans UserDefaults.
 @MainActor
 final class AppStore: ObservableObject {
 
@@ -105,7 +104,7 @@ final class AppStore: ObservableObject {
     /// jour. Piloté par `markWhatsNewSeen()` — jamais au premier lancement.
     @Published var showWhatsNew: Bool = false
     /// Préférence d'apparence (système / clair / sombre).
-    @Published var theme: AppTheme = .system
+    @Published var theme: AppTheme = .dark
     /// Langue de l'interface, choisie dans l'onboarding ou le profil.
     @Published var language: AppLanguage = .systemDefault
     /// Musiciens que je suis (par nom, comme les favoris).
@@ -170,6 +169,9 @@ final class AppStore: ObservableObject {
     var isLive: Bool { liveUserID != nil }
     private var messageChannel: RealtimeChannelV2?
     private var messageTask: Task<Void, Never>?
+    /// Les rafales Realtime/refresh ne doivent produire qu'un seul appel
+    /// d'accusé de livraison, pas une requête REST par message.
+    private var deliveryAcknowledgementTask: Task<Void, Never>?
     private var groupChannel: RealtimeChannelV2?
     private var groupTask: Task<Void, Never>?
     private var notificationChannel: RealtimeChannelV2?
@@ -244,29 +246,11 @@ final class AppStore: ObservableObject {
                 .forEach(UserDefaults.standard.removeObject(forKey:))
             UserDefaults.standard.set(true, forKey: Self.demoAccountsRemovedKey)
         }
-        let seed = Self.loadSeed()
-        musicians = seed.musicians
-
-        // Un concert passé n'a plus besoin de dépannage : on ne garde que l'avenir.
-        let savedEvents: [GigRequest]? = Self.load(key: Self.eventsKey)
-        if let upcoming = savedEvents?.filter({ $0.date > Date() }), !upcoming.isEmpty {
-            events = upcoming
-        } else {
-            events = Self.projectedSeedEvents(seed.events)
-        }
-        // Une conversation ouverte sans message envoyé ne doit pas encombrer la liste.
-        if let saved: [Conversation] = Self.load(key: Self.conversationsKey) {
-            conversations = saved.filter { !$0.messages.isEmpty }
-        } else {
-            conversations = seed.conversations
-        }
         if let saved: MyProfile = Self.load(key: Self.profileKey) {
             profile = saved
         } else {
             profile = Self.defaultProfile
         }
-        events.sort { $0.date < $1.date }
-        armEarlyAccessTeaser()
 
         // Reprend la session backend si l'utilisateur était déjà connecté.
         Task {
@@ -300,7 +284,7 @@ final class AppStore: ObservableObject {
         premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
         prepareWhatsNew()
-        theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .system
+        theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .dark
         language = UserDefaults.standard.string(forKey: Self.languageKey).flatMap(AppLanguage.init) ?? .systemDefault
         if let saved: Set<String> = Self.load(key: Self.followingKey) {
             following = saved
@@ -323,9 +307,7 @@ final class AppStore: ObservableObject {
             openedGigIDs = saved
         }
         sosShowAll = UserDefaults.standard.bool(forKey: Self.sosShowAllKey)
-        if let saved: [GroupChat] = Self.load(key: Self.groupsKey) {
-            groups = Self.deduplicatedGroups(saved)
-        }
+        UserDefaults.standard.removeObject(forKey: Self.groupsKey)
         observePushNotifications()
         Task { await refreshNotificationAuthorization(registerIfAllowed: true) }
         // Reprogramme les rappels de présence au lancement (les triggers
@@ -367,6 +349,12 @@ final class AppStore: ObservableObject {
     func appBecameActive() {
         guard isLive else { return }
         requestLocation()
+        Task {
+            await startMessageStream()
+            await startGroupStream()
+            await startGigStream()
+            await startNotificationStream()
+        }
         guard Date().timeIntervalSince(lastForegroundRefresh) > 60 else { return }
         lastForegroundRefresh = Date()
         Task { await refreshLiveData() }
@@ -449,25 +437,6 @@ final class AppStore: ObservableObject {
         )
     }
 
-    /// Les dates du seed sont relatives : on les projette sur les prochains jours.
-    private static func projectedSeedEvents(_ seedEvents: [GigRequest]) -> [GigRequest] {
-        seedEvents.enumerated().map { index, event -> GigRequest in
-            var e = event
-            e.date = Calendar.current.date(byAdding: .day, value: index + 1, to: Date().addingTimeInterval(3600 * 4)) ?? e.date
-            return e
-        }
-    }
-
-    /// Garantit qu'une annonce est en avant-première Premium — la killer
-    /// feature reste ainsi visible à chaque lancement de la démo.
-    private func armEarlyAccessTeaser() {
-        let now = Date()
-        guard !events.contains(where: { $0.isEarlyAccess(now: now) }) else { return }
-        guard let index = events.firstIndex(where: { !$0.isMine && $0.date > now }) else { return }
-        events[index].postedAt = now.addingTimeInterval(-7 * 60) // publiée il y a 7 min
-        persistEvents()
-    }
-
     // MARK: - Mode live (backend Supabase)
 
     /// Restaure la session au lancement et charge les données serveur.
@@ -490,6 +459,14 @@ final class AppStore: ObservableObject {
     /// À appeler après une connexion réussie (AccountSheet).
     func didSignIn(userID: UUID) async {
         guard let backend else { return }
+        // État strictement lié au compte : ne jamais montrer ni rendre
+        // ouvrable le cache de la session précédente pendant l'hydratation.
+        musicians = []
+        events = []
+        conversations = []
+        groups = []
+        notifications = []
+        Self.purgeCachedMessageAttachments()
         liveUserID = userID
         liveEmail = await backend.currentUserEmail()
         appleLinked = await backend.isAppleLinked()
@@ -509,8 +486,8 @@ final class AppStore: ObservableObject {
         // Premier passage : si le profil serveur est vide, on pousse le
         // profil local ; sinon le serveur fait foi. Premium et admin
         // viennent toujours du serveur.
-        if let rows = try? await backend.fetchProfiles(),
-           let mine = rows.first(where: { $0.id == userID }) {
+        let initialProfiles = try? await backend.fetchProfiles()
+        if let mine = initialProfiles?.first(where: { $0.id == userID }) {
             if mine.name.isEmpty {
                 try? await backend.saveProfile(profile, userID: userID)
             } else {
@@ -523,31 +500,46 @@ final class AppStore: ObservableObject {
                 UserDefaults.standard.set(precision.rawValue, forKey: Self.locationPrecisionKey)
             }
         }
-        await refreshLiveData()
+        // Realtime d'abord, snapshot ensuite : aucun message n'est perdu
+        // entre le SELECT initial et l'ouverture du canal.
         await startMessageStream()
         await startGroupStream()
         await startGigStream()
         await startNotificationStream()
+        await refreshLiveData(prefetchedProfiles: initialProfiles)
+        await backend.cleanupPendingMessageFiles()
         await refreshNotificationAuthorization(registerIfAllowed: true)
         backfillVideoThumbnails()
     }
 
     /// Recharge musiciens, annonces, conversations et groupes depuis le serveur.
-    func refreshLiveData() async {
+    func refreshLiveData(
+        prefetchedProfiles: [SupabaseBackend.ProfileRow]? = nil
+    ) async {
         guard let backend, let userID = liveUserID else { return }
         do {
-            async let musiciansTask = backend.fetchMusicians(excluding: userID)
+            let profiles: [SupabaseBackend.ProfileRow]
+            if let prefetchedProfiles {
+                profiles = prefetchedProfiles
+            } else {
+                profiles = try await backend.fetchProfiles()
+            }
+            let allMusicians = profiles
+                .filter { $0.id != userID && $0.isDemo != true }
+                .compactMap { $0.asMusician() }
             async let gigsTask = backend.fetchGigs(myID: userID)
-            async let conversationsTask = backend.fetchConversations(myID: userID)
-            async let profilesTask = backend.fetchProfiles()
+            async let conversationsTask = backend.fetchConversations(
+                myID: userID,
+                profiles: profiles
+            )
             async let followsTask = backend.fetchFollows()
             async let ratingsTask = backend.fetchMyRatings(me: userID)
             async let collaborationsTask = backend.fetchCollaborations()
             async let blocksTask = backend.fetchBlockedUsers(me: userID)
             async let exactLocationsTask = backend.fetchExactLocations()
             async let notificationsTask = backend.fetchNotifications()
-            let (allMusicians, g, allConversations, profiles, follows, myRatingRows, collaborations, blocks) = try await (
-                musiciansTask, gigsTask, conversationsTask, profilesTask,
+            let (g, allConversations, follows, myRatingRows, collaborations, blocks) = try await (
+                gigsTask, conversationsTask,
                 followsTask, ratingsTask, collaborationsTask, blocksTask
             )
             blockedUserIDs = blocks
@@ -572,7 +564,10 @@ final class AppStore: ObservableObject {
             events = g.sorted { $0.date < $1.date }
             notifyNewGigs(g)
             let blockedNames = Set(profiles.filter { blocks.contains($0.id) }.map(\.name))
-            conversations = allConversations.filter { !blockedNames.contains($0.contactName) }.sorted {
+            conversations = Self.mergedConversations(
+                remote: allConversations.filter { !blockedNames.contains($0.contactName) },
+                local: conversations
+            ).sorted {
                 ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
             // Tout ce qui vient d'être chargé est arrivé jusqu'à moi : les
@@ -612,7 +607,8 @@ final class AppStore: ObservableObject {
             )
             // Messages ET partitions viennent du serveur (les partitions
             // sont hébergées depuis la 1.0 — visibles par tout le groupe).
-            groups = Self.deduplicatedGroups(remoteGroups)
+            groups = Self.mergedGroups(remote: remoteGroups, local: groups)
+                .sorted(by: Self.groupHasNewerActivity)
             persistGroups()
             seedGroupLastSeenIfNeeded()
             await refreshGroupInvitations(nameByID: nameByID)
@@ -697,6 +693,8 @@ final class AppStore: ObservableObject {
         blockedUserIDs = []
         messageTask?.cancel()
         messageTask = nil
+        deliveryAcknowledgementTask?.cancel()
+        deliveryAcknowledgementTask = nil
         if let channel = messageChannel {
             await backend.client.removeChannel(channel)
             messageChannel = nil
@@ -733,35 +731,28 @@ final class AppStore: ObservableObject {
         typingConversationIDs = []
         visibleConversationID = nil
         publicGroupsByProfile = [:]
-        reloadDemoData()
-    }
-
-    /// Recharge la démo locale (seed + actions sauvegardées) après déconnexion.
-    private func reloadDemoData() {
-        let seed = Self.loadSeed()
-        musicians = seed.musicians
-        let savedEvents: [GigRequest]? = Self.load(key: Self.eventsKey)
-        if let upcoming = savedEvents?.filter({ $0.date > Date() }), !upcoming.isEmpty {
-            events = upcoming.sorted { $0.date < $1.date }
-        } else {
-            events = Self.projectedSeedEvents(seed.events).sorted { $0.date < $1.date }
-        }
-        if let saved: [Conversation] = Self.load(key: Self.conversationsKey) {
-            conversations = saved.filter { !$0.messages.isEmpty }
-        } else {
-            conversations = seed.conversations
-        }
-        if let saved: MyProfile = Self.load(key: Self.profileKey) {
-            profile = saved
-        }
+        musicians = []
+        events = []
+        conversations = []
+        groups = []
+        profile = Self.defaultProfile
+        following = []
+        playedWith = []
+        liveMyRatings = [:]
+        myRatingSummary = nil
+        [
+            Self.eventsKey, Self.conversationsKey, Self.groupsKey, Self.profileKey,
+            Self.followingKey, Self.playedWithKey, Self.starRatingsKey,
+            Self.groupLastSeenKey
+        ].forEach(UserDefaults.standard.removeObject(forKey:))
+        Self.purgeCachedMessageAttachments()
         isPremium = Self.isBeta || UserDefaults.standard.bool(forKey: Self.premiumKey)
-        armEarlyAccessTeaser()
     }
 
     /// Écoute les nouveaux messages en temps réel et les range dans la bonne
     /// conversation (dédoublonnés — notre propre envoi arrive aussi par ici).
     private func startMessageStream() async {
-        guard let backend, messageTask == nil else { return }
+        guard let backend, isLive, messageTask == nil else { return }
         let channel: RealtimeChannelV2
         let stream: AsyncStream<SupabaseBackend.MessageEvent>
         do {
@@ -776,8 +767,19 @@ final class AppStore: ObservableObject {
                 switch event {
                 case .inserted(let row): await self?.handleIncomingMessage(row)
                 case .updated(let row): self?.handleMessageUpdate(row)
+                case .reactionsChanged(let messageID):
+                    await self?.refreshMessageReactions(messageID)
                 }
             }
+            guard !Task.isCancelled, let self, self.isLive else { return }
+            self.messageTask = nil
+            if let channel = self.messageChannel {
+                await backend.client.removeChannel(channel)
+                self.messageChannel = nil
+            }
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            await self.startMessageStream()
         }
     }
 
@@ -798,14 +800,10 @@ final class AppStore: ObservableObject {
                     markLocalRead(row.conversationId)
                 } else {
                     acknowledgeDelivery()
-                    pushLocal(
-                        title: conversations[index].contactName,
-                        body: message.text.isEmpty
-                            ? (message.attachment?.notificationLabel ?? tr("Fichier"))
-                            : message.text,
-                        category: .messages
-                    )
                 }
+            }
+            conversations.sort {
+                ($0.lastMessage?.date ?? .distantPast) > ($1.lastMessage?.date ?? .distantPast)
             }
         } else {
             // Conversation inconnue : quelqu'un vient de m'écrire pour la première fois.
@@ -819,18 +817,43 @@ final class AppStore: ObservableObject {
               let c = conversations.firstIndex(where: { $0.id == row.conversationId }),
               let m = conversations[c].messages.firstIndex(where: { $0.id == row.id })
         else { return }
-        var message = row.asMessage(myID: userID)
-        // Le texte ne change jamais côté serveur ; seuls les accusés bougent.
-        message.text = conversations[c].messages[m].text
+        let previous = conversations[c].messages[m]
+        let message = row.asMessage(
+            myID: userID,
+            reactions: row.deletedAt == nil ? previous.reactionSummaries : []
+        )
+        if row.deletedAt != nil, let attachment = previous.attachment {
+            Self.removeCachedMessageAttachment(attachment)
+        }
         conversations[c].messages[m] = message
+    }
+
+    private func refreshMessageReactions(_ messageID: UUID) async {
+        guard let backend, let userID = liveUserID,
+              let c = conversations.firstIndex(where: {
+                  $0.messages.contains { $0.id == messageID }
+              }),
+              let m = conversations[c].messages.firstIndex(where: { $0.id == messageID }),
+              conversations[c].messages[m].deletedAt == nil
+        else { return }
+        guard let reactions = try? await backend.fetchMessageReactionSummaries(
+            messageID: messageID,
+            myID: userID
+        ) else { return }
+        conversations[c].messages[m].reactions = reactions
     }
 
     // MARK: - Accusés de réception
 
     /// Préviens le serveur que tout ce qui m'était destiné est arrivé ici.
     private func acknowledgeDelivery() {
-        guard let backend, isLive else { return }
-        Task { try? await backend.markMessagesDelivered() }
+        guard let backend, isLive, deliveryAcknowledgementTask == nil else { return }
+        deliveryAcknowledgementTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            try? await backend.markMessagesDelivered()
+            self?.deliveryAcknowledgementTask = nil
+        }
     }
 
     /// Marque « lu » côté serveur et reflète l'état en local.
@@ -853,13 +876,17 @@ final class AppStore: ObservableObject {
     /// a pas d'accusés : rien n'est « non lu ».
     func unreadCount(in conversation: Conversation) -> Int {
         guard isLive else { return 0 }
-        return conversation.messages.filter { !$0.isFromMe && $0.readAt == nil }.count
+        return conversation.messages.filter {
+            !$0.isFromMe && $0.readAt == nil && $0.deletedAt == nil
+        }.count
     }
 
     /// Messages de groupe arrivés depuis ma dernière visite.
     func unreadCount(in group: GroupChat) -> Int {
         guard let seen = groupLastSeen[group.id.uuidString] else { return 0 }
-        return group.messages.filter { !$0.isFromMe && $0.date > seen }.count
+        return group.messages.filter {
+            !$0.isFromMe && $0.date > seen && $0.deletedAt == nil
+        }.count
     }
 
     /// La pastille de l'onglet Messages.
@@ -974,7 +1001,7 @@ final class AppStore: ObservableObject {
     /// incrémental, les autres changements (événement créé, présence,
     /// membres, répertoire) déclenchent un rechargement des groupes.
     private func startGroupStream() async {
-        guard let backend, groupTask == nil else { return }
+        guard let backend, isLive, groupTask == nil else { return }
         let channel: RealtimeChannelV2
         let stream: AsyncStream<SupabaseBackend.GroupRealtimeEvent>
         do {
@@ -989,10 +1016,23 @@ final class AppStore: ObservableObject {
                 switch event {
                 case .message(let row):
                     await self?.handleIncomingGroupMessage(row)
+                case .messageUpdated(let row):
+                    self?.handleGroupMessageUpdate(row)
+                case .reactionsChanged(let messageID):
+                    await self?.refreshGroupMessageReactions(messageID)
                 case .groupsChanged:
                     self?.scheduleGroupRefresh()
                 }
             }
+            guard !Task.isCancelled, let self, self.isLive else { return }
+            self.groupTask = nil
+            if let channel = self.groupChannel {
+                await backend.client.removeChannel(channel)
+                self.groupChannel = nil
+            }
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            await self.startGroupStream()
         }
     }
 
@@ -1070,29 +1110,61 @@ final class AppStore: ObservableObject {
             await refreshGroups()
             return
         }
-        guard !groups[index].messages.contains(where: { $0.id == row.id }) else { return }
+        if groups[index].messages.contains(where: { $0.id == row.id }) {
+            handleGroupMessageUpdate(row)
+            return
+        }
         let senderName = row.senderId == userID
             ? profile.name
             : (musicians.first(where: { $0.id == row.senderId })?.name ?? "Musicien")
-        let message = GroupMessage(
-            id: row.id,
-            sender: senderName,
-            isFromMe: row.senderId == userID,
-            text: row.text,
-            date: row.createdAt,
-            attachment: row.attachment
+        let message = row.asGroupMessage(
+            myID: userID,
+            myName: profile.name,
+            nameByID: [row.senderId: senderName]
         )
         withAnimation {
             groups[index].messages.append(message)
+            groups.sort(by: Self.groupHasNewerActivity)
         }
         persistGroups()
-        if !message.isFromMe {
-            pushLocal(
-                title: "\(groups[index].emoji) \(groups[index].name)",
-                body: "\(message.sender) : \(message.text.isEmpty ? (message.attachment?.notificationLabel ?? tr("Fichier")) : message.text)",
-                category: .groups
-            )
+    }
+
+    private func handleGroupMessageUpdate(_ row: SupabaseBackend.GroupMessageRow) {
+        guard let userID = liveUserID,
+              let g = groups.firstIndex(where: { $0.id == row.groupId }),
+              let m = groups[g].messages.firstIndex(where: { $0.id == row.id })
+        else { return }
+        let previous = groups[g].messages[m]
+        let senderName = row.senderId == userID
+            ? profile.name
+            : (musicians.first(where: { $0.id == row.senderId })?.name ?? previous.sender)
+        groups[g].messages[m] = row.asGroupMessage(
+            myID: userID,
+            myName: profile.name,
+            nameByID: [row.senderId: senderName],
+            reactions: row.deletedAt == nil ? previous.reactionSummaries : []
+        )
+        if row.deletedAt != nil, let attachment = previous.attachment {
+            Self.removeCachedMessageAttachment(attachment)
         }
+        groups.sort(by: Self.groupHasNewerActivity)
+        persistGroups()
+    }
+
+    private func refreshGroupMessageReactions(_ messageID: UUID) async {
+        guard let backend, let userID = liveUserID,
+              let g = groups.firstIndex(where: {
+                  $0.messages.contains { $0.id == messageID }
+              }),
+              let m = groups[g].messages.firstIndex(where: { $0.id == messageID }),
+              groups[g].messages[m].deletedAt == nil
+        else { return }
+        guard let reactions = try? await backend.fetchGroupMessageReactionSummaries(
+            messageID: messageID,
+            myID: userID
+        ) else { return }
+        groups[g].messages[m].reactions = reactions
+        persistGroups()
     }
 
     /// Coalesce les rafales d'événements realtime en un seul rechargement.
@@ -1122,7 +1194,8 @@ final class AppStore: ObservableObject {
             // avec la copie locale (sinon une partition reçue en realtime
             // disparaîtrait aussitôt).
             withAnimation {
-                groups = Self.deduplicatedGroups(remoteGroups)
+                groups = Self.mergedGroups(remote: remoteGroups, local: groups)
+                    .sorted(by: Self.groupHasNewerActivity)
             }
             persistGroups()
             rescheduleAllAttendanceNotifications()
@@ -2195,8 +2268,7 @@ final class AppStore: ObservableObject {
     // MARK: - Groupes (Premium)
 
     private func persistGroups() {
-        // En live, le serveur fait foi ; on garde une copie locale pour
-        // messages / partitions et pour le mode hors-ligne.
+        guard !isLive else { return }
         Self.save(groups, key: Self.groupsKey)
     }
 
@@ -2206,6 +2278,93 @@ final class AppStore: ObservableObject {
     nonisolated private static func deduplicatedGroups(_ values: [GroupChat]) -> [GroupChat] {
         var seen = Set<GroupChat.ID>()
         return values.filter { seen.insert($0.id).inserted }
+    }
+
+    /// Fusionne un snapshot avec les deltas Realtime reçus pendant son
+    /// chargement. Un refresh lent ne peut ainsi plus effacer un message,
+    /// une édition ou une tombstone arrivée entre-temps.
+    nonisolated private static func mergedConversations(
+        remote: [Conversation],
+        local: [Conversation]
+    ) -> [Conversation] {
+        let localByID = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
+        return remote.map { remoteConversation in
+            guard let localConversation = localByID[remoteConversation.id] else {
+                return remoteConversation
+            }
+            var merged = remoteConversation
+            var byID = Dictionary(uniqueKeysWithValues: merged.messages.map { ($0.id, $0) })
+            for localMessage in localConversation.messages {
+                guard let remoteMessage = byID[localMessage.id] else {
+                    byID[localMessage.id] = localMessage
+                    continue
+                }
+                let localRevision = [
+                    localMessage.editedAt, localMessage.deletedAt,
+                    localMessage.deliveredAt, localMessage.readAt
+                ].compactMap { $0 }.max() ?? localMessage.date
+                let remoteRevision = [
+                    remoteMessage.editedAt, remoteMessage.deletedAt,
+                    remoteMessage.deliveredAt, remoteMessage.readAt
+                ].compactMap { $0 }.max() ?? remoteMessage.date
+                if localRevision > remoteRevision {
+                    byID[localMessage.id] = localMessage
+                } else if localMessage.reactions != nil {
+                    var value = remoteMessage
+                    value.reactions = localMessage.reactions
+                    byID[localMessage.id] = value
+                }
+            }
+            merged.messages = byID.values.sorted {
+                ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString)
+            }
+            return merged
+        }
+    }
+
+    nonisolated private static func mergedGroups(
+        remote: [GroupChat],
+        local: [GroupChat]
+    ) -> [GroupChat] {
+        let localByID = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
+        return deduplicatedGroups(remote).map { remoteGroup in
+            guard let localGroup = localByID[remoteGroup.id] else { return remoteGroup }
+            var merged = remoteGroup
+            var byID = Dictionary(uniqueKeysWithValues: merged.messages.map { ($0.id, $0) })
+            for localMessage in localGroup.messages {
+                guard let remoteMessage = byID[localMessage.id] else {
+                    byID[localMessage.id] = localMessage
+                    continue
+                }
+                let localRevision = [localMessage.editedAt, localMessage.deletedAt]
+                    .compactMap { $0 }.max() ?? localMessage.date
+                let remoteRevision = [remoteMessage.editedAt, remoteMessage.deletedAt]
+                    .compactMap { $0 }.max() ?? remoteMessage.date
+                if localRevision > remoteRevision {
+                    byID[localMessage.id] = localMessage
+                } else if localMessage.reactions != nil {
+                    var value = remoteMessage
+                    value.reactions = localMessage.reactions
+                    byID[localMessage.id] = value
+                }
+            }
+            merged.messages = byID.values.sorted {
+                ($0.date, $0.id.uuidString) < ($1.date, $1.id.uuidString)
+            }
+            return merged
+        }
+    }
+
+    /// La liste des groupes suit l'activité de messagerie, comme une inbox.
+    /// Le nom stabilise l'ordre des groupes encore vides.
+    nonisolated private static func groupHasNewerActivity(
+        _ lhs: GroupChat,
+        _ rhs: GroupChat
+    ) -> Bool {
+        let left = lhs.lastMessage?.date ?? .distantPast
+        let right = rhs.lastMessage?.date ?? .distantPast
+        if left != right { return left > right }
+        return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
     }
 
     /// Crée un groupe — création réservée aux Premium (l'appelant vérifie,
@@ -2258,7 +2417,6 @@ final class AppStore: ObservableObject {
         )
         groups.insert(group, at: 0)
         persistGroups()
-        scheduleDemoSuggestion(for: group.id)
     }
 
     /// Suis-je le leader de ce groupe ? leaderName == nil ⇒ moi (le titre ne
@@ -2680,8 +2838,6 @@ final class AppStore: ObservableObject {
                 try await backend.createEvents(prepared, groupID: group.id)
                 await backend.deliverPendingPushNotifications()
             }
-        } else if let first = prepared.first {
-            scheduleDemoSuggestion(for: group.id, eventID: first.id)
         }
     }
 
@@ -3066,49 +3222,6 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Vie de démo : peu après une création (groupe ou événement), un membre
-    /// suggère un morceau — le flux « suggestion → validation leader »
-    /// devient concret. Temps réel serveur en phase 2b.
-    private func scheduleDemoSuggestion(for groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Double.random(in: 8...15)))
-            guard let self,
-                  let group = self.groups.first(where: { $0.id == groupID }),
-                  let member = group.memberNames.randomElement(),
-                  let pick = Self.demoSongPool.randomElement()
-            else { return }
-            var song = Song(
-                title: pick.0,
-                artist: pick.1,
-                artworkURL: nil,
-                suggestedBy: member,
-                isApproved: false
-            )
-            let info = await Self.fetchTrackInfo(title: pick.0, artist: pick.1)
-            song.artworkURL = info.artworkURL
-            song.trackURL = info.trackURL
-            song.platformLinks = info.platformLinks
-            self.insertSong(song, in: groupID, eventID: eventID)
-            self.pushLocal(
-                title: "\(group.emoji) \(group.name)",
-                body: "\(member) : \(pick.0) — \(pick.1) ?",
-                category: .groups
-            )
-        }
-    }
-
-    /// Standards que « suggèrent » les membres en démo (pochettes réelles).
-    nonisolated private static let demoSongPool: [(String, String)] = [
-        ("Oye Como Va", "Santana"),
-        ("Chan Chan", "Buena Vista Social Club"),
-        ("Autumn Leaves", "Bill Evans"),
-        ("Watermelon Man", "Herbie Hancock"),
-        ("Vivir Mi Vida", "Marc Anthony"),
-        ("So What", "Miles Davis"),
-        ("La Vida Es Un Carnaval", "Celia Cruz"),
-        ("Take Five", "Dave Brubeck")
-    ]
-
     func deleteGroup(_ group: GroupChat) {
         for doc in group.docs {
             if !doc.fileName.isEmpty {
@@ -3150,10 +3263,14 @@ final class AppStore: ObservableObject {
     func sendGroupMessage(
         _ text: String,
         attachment outgoing: OutgoingMessageAttachment? = nil,
-        in group: GroupChat
+        in group: GroupChat,
+        completion: ((Bool) -> Void)? = nil
     ) {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard outgoing != nil || (!clean.isEmpty && acceptsUserContent(clean)) else { return }
+        guard outgoing != nil || (!clean.isEmpty && acceptsUserContent(clean)) else {
+            completion?(false)
+            return
+        }
         if let backend, let userID = liveUserID {
             let groupID = group.id
             Task { [weak self] in
@@ -3184,16 +3301,18 @@ final class AppStore: ObservableObject {
                     )
                     optimisticMessageID = message.id
                     self?.updateGroup(groupID) { $0.messages.append(message) }
-                    try await backend.sendGroupMessage(
+                    let authoritative = try await backend.sendGroupMessage(
                         id: message.id,
                         text: clean,
                         attachment: uploaded,
                         groupID: groupID,
                         senderID: userID
                     )
+                    self?.handleGroupMessageUpdate(authoritative)
                     // Livre les notifications que le trigger vient de mettre
                     // en file pour les autres membres du groupe.
                     await backend.deliverPendingPushNotifications()
+                    completion?(true)
                 } catch {
                     // L'envoi a échoué : retirer le message optimiste pour ne
                     // pas laisser croire qu'il est parti.
@@ -3205,6 +3324,7 @@ final class AppStore: ObservableObject {
                         try? await backend.deleteMessageAttachment(path: path)
                     }
                     self?.backendError = self?.tr("Le message n'a pas pu être envoyé.")
+                    completion?(false)
                 }
             }
             return
@@ -3224,6 +3344,7 @@ final class AppStore: ObservableObject {
                 )
             } catch {
                 backendError = tr("Le fichier n'a pas pu être envoyé.")
+                completion?(false)
                 return
             }
         }
@@ -3235,18 +3356,7 @@ final class AppStore: ObservableObject {
             attachment: localAttachment
         )
         updateGroup(group.id) { $0.messages.append(message) }
-        guard let replier = group.memberNames.randomElement() else { return }
-        let reply = Self.scriptedGroupReplies.randomElement() ?? "Ça marche !"
-        let groupID = group.id
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(Double.random(in: 1.5...3)))
-            guard let self else { return }
-            withAnimation {
-                self.updateGroup(groupID) {
-                    $0.messages.append(GroupMessage(sender: replier, isFromMe: false, text: reply, date: Date()))
-                }
-            }
-        }
+        completion?(true)
     }
 
     /// true pendant l'envoi d'une partition au serveur.
@@ -3495,6 +3605,22 @@ final class AppStore: ObservableObject {
         return caches.appendingPathComponent("message_\(String(key, radix: 16)).\(attachment.fileExtension)")
     }
 
+    nonisolated private static func removeCachedMessageAttachment(_ attachment: MessageAttachment) {
+        let target = messageAttachmentCacheURL(for: attachment)
+        try? FileManager.default.removeItem(at: target)
+    }
+
+    nonisolated private static func purgeCachedMessageAttachments() {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: caches,
+            includingPropertiesForKeys: nil
+        ) else { return }
+        for url in urls where url.lastPathComponent.hasPrefix("message_") {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
     /// URL locale prête pour Quick Look, depuis le cache ou le bucket privé.
     func localURL(for attachment: MessageAttachment) async -> URL? {
         if attachment.remotePath.hasPrefix("local:") {
@@ -3512,15 +3638,6 @@ final class AppStore: ObservableObject {
             return nil
         }
     }
-
-    private static let scriptedGroupReplies: [String] = [
-        "Ça marche pour moi 👍",
-        "Reçu ! Je bosse la partition ce soir.",
-        "Parfait, je note la date.",
-        "On cale une répé avant ?",
-        "Top. Balance l'heure du soundcheck quand tu l'as.",
-        "Je peux amener la sono si besoin."
-    ]
 
     // MARK: - Invitation à un SOS
 
@@ -4827,11 +4944,18 @@ final class AppStore: ObservableObject {
     func sendMessage(
         _ text: String,
         attachment outgoing: OutgoingMessageAttachment? = nil,
-        in conversation: Conversation
+        in conversation: Conversation,
+        completion: ((Bool) -> Void)? = nil
     ) {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard outgoing != nil || (!clean.isEmpty && acceptsUserContent(clean)) else { return }
-        guard let index = conversations.firstIndex(where: { $0.id == conversation.id }) else { return }
+        guard outgoing != nil || (!clean.isEmpty && acceptsUserContent(clean)) else {
+            completion?(false)
+            return
+        }
+        guard let index = conversations.firstIndex(where: { $0.id == conversation.id }) else {
+            completion?(false)
+            return
+        }
 
         if let backend, let userID = liveUserID {
             let conversationID = conversation.id
@@ -4863,13 +4987,18 @@ final class AppStore: ObservableObject {
                     guard let self,
                           let i = self.conversations.firstIndex(where: { $0.id == conversationID }),
                           !self.conversations[i].messages.contains(where: { $0.id == message.id })
-                    else { return }
+                    else {
+                        completion?(true)
+                        return
+                    }
                     withAnimation { self.conversations[i].messages.append(message) }
+                    completion?(true)
                 } catch {
                     if let path = uploaded?.remotePath {
                         try? await backend.deleteMessageAttachment(path: path)
                     }
                     self?.backendError = self?.tr("Le message n'a pas pu être envoyé.")
+                    completion?(false)
                 }
             }
             return
@@ -4888,6 +5017,7 @@ final class AppStore: ObservableObject {
                 )
             } catch {
                 backendError = tr("Le fichier n'a pas pu être envoyé.")
+                completion?(false)
                 return
             }
         }
@@ -4899,6 +5029,192 @@ final class AppStore: ObservableObject {
             attachment: localAttachment
         ))
         persistConversations()
+        completion?(true)
+    }
+
+    func editMessage(_ message: Message, text: String, in conversationID: UUID) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, clean.count <= 4000, acceptsUserContent(clean),
+              message.isFromMe, message.deletedAt == nil,
+              let backend,
+              let c = conversations.firstIndex(where: { $0.id == conversationID }),
+              let m = conversations[c].messages.firstIndex(where: { $0.id == message.id })
+        else { return }
+        let previous = conversations[c].messages[m]
+        conversations[c].messages[m].text = clean
+        conversations[c].messages[m].editedAt = Date()
+        Task { [weak self] in
+            do {
+                try await backend.updateMessage(message.id, text: clean)
+            } catch {
+                guard let self,
+                      let c = self.conversations.firstIndex(where: { $0.id == conversationID }),
+                      let m = self.conversations[c].messages.firstIndex(where: { $0.id == message.id })
+                else { return }
+                self.conversations[c].messages[m] = previous
+                self.backendError = self.tr("Le message n'a pas pu être modifié.")
+            }
+        }
+    }
+
+    func deleteMessage(_ message: Message, in conversationID: UUID) {
+        guard message.isFromMe, message.deletedAt == nil, let backend,
+              let c = conversations.firstIndex(where: { $0.id == conversationID }),
+              let m = conversations[c].messages.firstIndex(where: { $0.id == message.id })
+        else { return }
+        let previous = conversations[c].messages[m]
+        conversations[c].messages[m].text = ""
+        conversations[c].messages[m].attachment = nil
+        conversations[c].messages[m].deletedAt = Date()
+        conversations[c].messages[m].reactions = []
+        Task { [weak self] in
+            do {
+                try await backend.deleteMessage(message.id)
+                if let attachment = previous.attachment {
+                    Self.removeCachedMessageAttachment(attachment)
+                }
+            } catch {
+                guard let self,
+                      let c = self.conversations.firstIndex(where: { $0.id == conversationID }),
+                      let m = self.conversations[c].messages.firstIndex(where: { $0.id == message.id })
+                else { return }
+                self.conversations[c].messages[m] = previous
+                self.backendError = self.tr("Le message n'a pas pu être supprimé.")
+            }
+        }
+    }
+
+    func toggleReaction(_ emoji: String, on message: Message, in conversationID: UUID) {
+        guard MessageReaction.choices.contains(emoji), message.deletedAt == nil,
+              let backend, liveUserID != nil,
+              let c = conversations.firstIndex(where: { $0.id == conversationID }),
+              let m = conversations[c].messages.firstIndex(where: { $0.id == message.id })
+        else { return }
+        let previous = conversations[c].messages[m].reactionSummaries
+        let removing = previous.contains { $0.emoji == emoji && $0.isMine }
+        conversations[c].messages[m].reactions = Self.toggledReactions(previous, emoji: emoji)
+        Task { [weak self] in
+            do {
+                try await backend.setMessageReaction(
+                    messageID: message.id,
+                    emoji: removing ? nil : emoji
+                )
+            } catch {
+                guard let self,
+                      let c = self.conversations.firstIndex(where: { $0.id == conversationID }),
+                      let m = self.conversations[c].messages.firstIndex(where: { $0.id == message.id })
+                else { return }
+                self.conversations[c].messages[m].reactions = previous
+                self.backendError = self.tr("La réaction n'a pas pu être envoyée.")
+            }
+        }
+    }
+
+    func editGroupMessage(_ message: GroupMessage, text: String, groupID: UUID) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, clean.count <= 4000, acceptsUserContent(clean),
+              message.isFromMe, message.deletedAt == nil, let backend,
+              let g = groups.firstIndex(where: { $0.id == groupID }),
+              let m = groups[g].messages.firstIndex(where: { $0.id == message.id })
+        else { return }
+        let previous = groups[g].messages[m]
+        groups[g].messages[m].text = clean
+        groups[g].messages[m].editedAt = Date()
+        Task { [weak self] in
+            do {
+                try await backend.updateGroupMessage(message.id, text: clean)
+            } catch {
+                guard let self,
+                      let g = self.groups.firstIndex(where: { $0.id == groupID }),
+                      let m = self.groups[g].messages.firstIndex(where: { $0.id == message.id })
+                else { return }
+                self.groups[g].messages[m] = previous
+                self.backendError = self.tr("Le message n'a pas pu être modifié.")
+            }
+        }
+    }
+
+    func deleteGroupMessage(_ message: GroupMessage, groupID: UUID) {
+        guard message.isFromMe, message.deletedAt == nil, let backend,
+              let g = groups.firstIndex(where: { $0.id == groupID }),
+              let m = groups[g].messages.firstIndex(where: { $0.id == message.id })
+        else { return }
+        let previous = groups[g].messages[m]
+        groups[g].messages[m].text = ""
+        groups[g].messages[m].attachment = nil
+        groups[g].messages[m].deletedAt = Date()
+        groups[g].messages[m].reactions = []
+        Task { [weak self] in
+            do {
+                try await backend.deleteGroupMessage(message.id)
+                if let attachment = previous.attachment {
+                    Self.removeCachedMessageAttachment(attachment)
+                }
+            } catch {
+                guard let self,
+                      let g = self.groups.firstIndex(where: { $0.id == groupID }),
+                      let m = self.groups[g].messages.firstIndex(where: { $0.id == message.id })
+                else { return }
+                self.groups[g].messages[m] = previous
+                self.backendError = self.tr("Le message n'a pas pu être supprimé.")
+            }
+        }
+    }
+
+    func toggleGroupReaction(_ emoji: String, on message: GroupMessage, groupID: UUID) {
+        guard MessageReaction.choices.contains(emoji), message.deletedAt == nil,
+              let backend, liveUserID != nil,
+              let g = groups.firstIndex(where: { $0.id == groupID }),
+              let m = groups[g].messages.firstIndex(where: { $0.id == message.id })
+        else { return }
+        let previous = groups[g].messages[m].reactionSummaries
+        let removing = previous.contains { $0.emoji == emoji && $0.isMine }
+        groups[g].messages[m].reactions = Self.toggledReactions(previous, emoji: emoji)
+        Task { [weak self] in
+            do {
+                try await backend.setGroupMessageReaction(
+                    messageID: message.id,
+                    emoji: removing ? nil : emoji
+                )
+            } catch {
+                guard let self,
+                      let g = self.groups.firstIndex(where: { $0.id == groupID }),
+                      let m = self.groups[g].messages.firstIndex(where: { $0.id == message.id })
+                else { return }
+                self.groups[g].messages[m].reactions = previous
+                self.backendError = self.tr("La réaction n'a pas pu être envoyée.")
+            }
+        }
+    }
+
+    nonisolated private static func toggledReactions(
+        _ current: [MessageReaction],
+        emoji: String
+    ) -> [MessageReaction] {
+        var result = current
+        if let previousMine = result.firstIndex(where: \.isMine) {
+            if result[previousMine].emoji == emoji {
+                result[previousMine].count -= 1
+                result[previousMine].isMine = false
+            } else {
+                result[previousMine].count -= 1
+                result[previousMine].isMine = false
+                if let target = result.firstIndex(where: { $0.emoji == emoji }) {
+                    result[target].count += 1
+                    result[target].isMine = true
+                } else {
+                    result.append(MessageReaction(emoji: emoji, count: 1, isMine: true))
+                }
+            }
+        } else if let target = result.firstIndex(where: { $0.emoji == emoji }) {
+            result[target].count += 1
+            result[target].isMine = true
+        } else {
+            result.append(MessageReaction(emoji: emoji, count: 1, isMine: true))
+        }
+        return MessageReaction.choices.compactMap { choice in
+            result.first(where: { $0.emoji == choice && $0.count > 0 })
+        }
     }
 
     /// Ouvre (ou retrouve) une conversation avec un musicien depuis sa fiche.
@@ -4959,31 +5275,6 @@ final class AppStore: ObservableObject {
     private static func load<T: Decodable>(key: String) -> T? {
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(T.self, from: data)
-    }
-
-    // MARK: - Seed
-
-    private struct Seed: Decodable {
-        var musicians: [Musician]
-        var events: [GigRequest]
-        var conversations: [Conversation]
-    }
-
-    private static func loadSeed() -> (musicians: [Musician], events: [GigRequest], conversations: [Conversation]) {
-        guard let url = Bundle.main.url(forResource: "SeedData", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
-            assertionFailure("SeedData.json introuvable dans le bundle")
-            return ([], [], [])
-        }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        do {
-            let seed = try decoder.decode(Seed.self, from: data)
-            return (seed.musicians, seed.events, seed.conversations)
-        } catch {
-            assertionFailure("SeedData.json invalide : \(error)")
-            return ([], [], [])
-        }
     }
 
 }

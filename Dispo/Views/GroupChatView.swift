@@ -69,6 +69,9 @@ struct GroupChatView: View {
     @State private var preparingMessageMedia = false
     @State private var previewingMessageAttachment: MessageAttachmentPreview?
     @State private var downloadingMessageAttachmentID: String?
+    @State private var editingGroupMessage: GroupMessage?
+    @State private var deletingGroupMessage: GroupMessage?
+    @State private var sendingGroupMessage = false
     /// Recherche dans le répertoire (apparaît au-delà de 8 morceaux).
     @State private var songQuery = ""
     /// Document prêt à être affiché (fichier local ou copie téléchargée).
@@ -241,9 +244,44 @@ struct GroupChatView: View {
                 }
             }
         }
+        .sheet(item: $editingGroupMessage) { message in
+            MessageEditSheet(text: message.text) {
+                store.editGroupMessage(message, text: $0, groupID: groupID)
+            }
+        }
+        .alert(
+            groupMessageDeleteTitle,
+            isPresented: Binding(
+                get: { deletingGroupMessage != nil },
+                set: { if !$0 { deletingGroupMessage = nil } }
+            )
+        ) {
+            Button("Annuler", role: .cancel) { deletingGroupMessage = nil }
+            Button("Supprimer", role: .destructive) {
+                if let deletingGroupMessage {
+                    store.deleteGroupMessage(deletingGroupMessage, groupID: groupID)
+                }
+                deletingGroupMessage = nil
+            }
+        } message: {
+            Text("Le contenu disparaîtra chez tous les membres.")
+        }
         // Le groupe est ouvert : ses messages sont lus (la puce s'éteint).
         .onAppear { store.markGroupSeen(groupID) }
         .onDisappear { store.markGroupSeen(groupID) }
+    }
+
+    private var groupMessageDeleteTitle: String {
+        guard let attachment = deletingGroupMessage?.attachment else {
+            return store.tr("Supprimer ce message ?")
+        }
+        if attachment.contentType.hasPrefix("video/") {
+            return store.tr("Supprimer cette vidéo ?")
+        }
+        if attachment.contentType.hasPrefix("image/") {
+            return store.tr("Supprimer cette photo ?")
+        }
+        return store.tr("Supprimer ce fichier ?")
     }
 
     /// Bandeau d'identité : photo, leader + membres, en un coup d'œil.
@@ -302,11 +340,22 @@ struct GroupChatView: View {
                             )
                             .padding(.top, 20)
                         }
-                        ForEach(group.messages) { message in
+                        ForEach(Array(group.messages.enumerated()), id: \.element.id) { index, message in
+                            if index == 0 || !Calendar.autoupdatingCurrent.isDate(
+                                message.date,
+                                inSameDayAs: group.messages[index - 1].date
+                            ) {
+                                MessageDayDivider(date: message.date)
+                            }
                             GroupMessageBubble(
                                 message: message,
                                 isAttachmentLoading: downloadingMessageAttachmentID == message.attachment?.id,
-                                onOpenAttachment: openMessageAttachment
+                                onOpenAttachment: openMessageAttachment,
+                                onReact: {
+                                    store.toggleGroupReaction($0, on: message, groupID: group.id)
+                                },
+                                onEdit: { editingGroupMessage = message },
+                                onDelete: { deletingGroupMessage = message }
                             )
                                 .id(message.id)
                         }
@@ -316,6 +365,13 @@ struct GroupChatView: View {
                 .onChange(of: group.messages.count) {
                     if let lastID = group.messages.last?.id {
                         withAnimation { proxy.scrollTo(lastID, anchor: .bottom) }
+                    }
+                }
+                .onAppear {
+                    DispatchQueue.main.async {
+                        if let lastID = group.messages.last?.id {
+                            proxy.scrollTo(lastID, anchor: .bottom)
+                        }
                     }
                 }
             }
@@ -363,7 +419,7 @@ struct GroupChatView: View {
                         .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
                     Button { sendGroupMessage(in: group) } label: {
                         Group {
-                            if store.messageAttachmentUploadInProgress {
+                            if store.messageAttachmentUploadInProgress || sendingGroupMessage {
                                 ProgressView().controlSize(.small)
                             } else {
                                 Image(systemName: "arrow.up.circle.fill")
@@ -372,7 +428,11 @@ struct GroupChatView: View {
                         }
                         .foregroundStyle(canSendGroupMessage ? AnyShapeStyle(JC.hero) : AnyShapeStyle(Color.gray))
                     }
-                    .disabled(!canSendGroupMessage || store.messageAttachmentUploadInProgress)
+                    .disabled(
+                        !canSendGroupMessage
+                            || store.messageAttachmentUploadInProgress
+                            || sendingGroupMessage
+                    )
                 }
             }
             .padding()
@@ -389,9 +449,17 @@ struct GroupChatView: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || outgoingMessageAttachment != nil else { return }
         let attachment = outgoingMessageAttachment
-        draft = ""
-        outgoingMessageAttachment = nil
-        store.sendGroupMessage(text, attachment: attachment, in: group)
+        sendingGroupMessage = true
+        store.sendGroupMessage(text, attachment: attachment, in: group) { sent in
+            sendingGroupMessage = false
+            guard sent else { return }
+            if draft.trimmingCharacters(in: .whitespacesAndNewlines) == text {
+                draft = ""
+            }
+            if outgoingMessageAttachment?.id == attachment?.id {
+                outgoingMessageAttachment = nil
+            }
+        }
     }
 
     private func openMessageAttachment(_ attachment: MessageAttachment) {
@@ -1143,9 +1211,13 @@ struct ListenSheet: View {
 
 /// Bulle de message de groupe — le nom de l'expéditeur au-dessus.
 struct GroupMessageBubble: View {
+    @EnvironmentObject private var store: AppStore
     let message: GroupMessage
     var isAttachmentLoading = false
     var onOpenAttachment: ((MessageAttachment) -> Void)? = nil
+    var onReact: ((String) -> Void)? = nil
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -1158,7 +1230,11 @@ struct GroupMessageBubble: View {
                         .padding(.leading, 6)
                 }
                 VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 6) {
-                    if let attachment = message.attachment {
+                    if message.deletedAt != nil {
+                        Label("Message supprimé", systemImage: "nosign")
+                            .font(.subheadline.italic())
+                            .foregroundStyle(.secondary)
+                    } else if let attachment = message.attachment {
                         MessageAttachmentCard(
                             attachment: attachment,
                             isLoading: isAttachmentLoading
@@ -1179,9 +1255,33 @@ struct GroupMessageBubble: View {
                         .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
                 )
                 .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
-                Text(message.date.formatted(date: .omitted, time: .shortened))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                .contextMenu {
+                    if message.deletedAt == nil {
+                        MessageActionsMenu(
+                            isMine: message.isFromMe,
+                            canEdit: message.isFromMe && !message.text.isEmpty,
+                            onReact: { onReact?($0) },
+                            onEdit: { onEdit?() },
+                            onDelete: { onDelete?() }
+                        )
+                    }
+                }
+                MessageReactionBar(reactions: message.reactionSummaries) {
+                    onReact?($0)
+                }
+                HStack(spacing: 4) {
+                    if message.editedAt != nil, message.deletedAt == nil {
+                        Text("Modifié")
+                    }
+                    Text(
+                        message.date.formatted(
+                            Date.FormatStyle(date: .omitted, time: .shortened)
+                                .locale(store.language.locale)
+                        )
+                    )
+                }
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
             }
             if !message.isFromMe { Spacer(minLength: 56) }
         }

@@ -6,6 +6,11 @@ import Supabase
 /// Toute la sécurité (RLS, avant-première Premium) est appliquée côté serveur.
 final class SupabaseBackend: Sendable {
 
+    private enum AccountDeletionFailure: Error {
+        case unauthenticated
+        case pendingFiles
+    }
+
     let client: SupabaseClient
 
     init(config: BackendConfig) {
@@ -532,6 +537,8 @@ final class SupabaseBackend: Sendable {
         var createdAt: Date
         var deliveredAt: Date?
         var readAt: Date?
+        var editedAt: Date?
+        var deletedAt: Date?
         var attachmentPath: String?
         var attachmentName: String?
         var attachmentType: String?
@@ -544,6 +551,8 @@ final class SupabaseBackend: Sendable {
             case createdAt = "created_at"
             case deliveredAt = "delivered_at"
             case readAt = "read_at"
+            case editedAt = "edited_at"
+            case deletedAt = "deleted_at"
             case attachmentPath = "attachment_path"
             case attachmentName = "attachment_name"
             case attachmentType = "attachment_type"
@@ -561,10 +570,41 @@ final class SupabaseBackend: Sendable {
             )
         }
 
-        func asMessage(myID: UUID) -> Message {
+        func asMessage(myID: UUID, reactions: [MessageReaction] = []) -> Message {
             Message(
                 id: id, text: text, isFromMe: senderId == myID, date: createdAt,
-                deliveredAt: deliveredAt, readAt: readAt, attachment: attachment
+                deliveredAt: deliveredAt, readAt: readAt, attachment: attachment,
+                editedAt: editedAt, deletedAt: deletedAt, reactions: reactions
+            )
+        }
+    }
+
+    struct MessageReactionRow: Codable {
+        var messageId: UUID
+        var profileId: UUID
+        var emoji: String
+        var removedAt: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case emoji
+            case messageId = "message_id"
+            case profileId = "profile_id"
+            case removedAt = "removed_at"
+        }
+    }
+
+    nonisolated private static func reactionSummaries(
+        _ rows: [MessageReactionRow],
+        myID: UUID
+    ) -> [MessageReaction] {
+        let activeRows = rows.filter { $0.removedAt == nil }
+        return MessageReaction.choices.compactMap { emoji in
+            let matching = activeRows.filter { $0.emoji == emoji }
+            guard !matching.isEmpty else { return nil }
+            return MessageReaction(
+                emoji: emoji,
+                count: matching.count,
+                isMine: matching.contains { $0.profileId == myID }
             )
         }
     }
@@ -863,7 +903,103 @@ final class SupabaseBackend: Sendable {
     }
 
     func deleteMyAccount() async throws {
+        guard let userID = await currentUserID() else {
+            throw AccountDeletionFailure.unauthenticated
+        }
+
+        // Détache et supprime d'abord tous les fichiers tant que la session
+        // possède encore les droits Storage. L'identité n'est jamais effacée
+        // si un objet n'a pas pu être nettoyé : le prochain essai peut alors
+        // reprendre sans laisser de contenu inaccessible au service role seul.
+        try await client.rpc("prepare_my_message_file_cleanup").execute()
+        try await cleanupPendingMessageFilesOrThrow()
+        try await cleanupOwnedAccountStorage(userID: userID)
+
+        let pending: [MessageFileCleanupRow] = try await client
+            .from("message_file_cleanup")
+            .select("path")
+            .execute().value
+        guard pending.isEmpty else {
+            throw AccountDeletionFailure.pendingFiles
+        }
         try await client.rpc("delete_my_account").execute()
+    }
+
+    /// Supprime les autres objets Storage propres au compte avant l'identité :
+    /// avatar + photos de groupes menés, vidéos de profil, partitions
+    /// ajoutées par l'utilisateur et documents de ses groupes dirigés.
+    private func cleanupOwnedAccountStorage(userID: UUID) async throws {
+        let prefix = userID.uuidString.lowercased()
+        try await removeAllFiles(in: Self.avatarsBucket, under: prefix)
+        try await removeAllFiles(in: Self.demoVideosBucket, under: prefix)
+
+        struct LedGroup: Decodable { let id: UUID }
+        struct OwnedGroupDoc: Decodable {
+            let id: UUID
+            let path: String
+        }
+        async let uploadedDocumentsTask: [OwnedGroupDoc] = client
+            .from("group_docs")
+            .select("id,path")
+            .eq("added_by", value: userID)
+            .execute().value
+        async let ledGroupsTask: [LedGroup] = client
+            .from("music_groups")
+            .select("id")
+            .eq("leader_id", value: userID)
+            .execute().value
+        let (uploadedDocuments, ledGroups) = try await (
+            uploadedDocumentsTask,
+            ledGroupsTask
+        )
+        let ledGroupDocuments: [OwnedGroupDoc]
+        if ledGroups.isEmpty {
+            ledGroupDocuments = []
+        } else {
+            ledGroupDocuments = try await client
+                .from("group_docs")
+                .select("id,path")
+                .in("group_id", values: ledGroups.map(\.id.uuidString))
+                .execute().value
+        }
+        // Un leader peut supprimer les fichiers de ses groupes, même quand
+        // ils ont été ajoutés par un autre membre. Sans cette union, la
+        // cascade du groupe effacerait la ligne SQL mais laisserait le blob.
+        let documents = Array(
+            Dictionary(
+                (uploadedDocuments + ledGroupDocuments).map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            ).values
+        )
+        if !documents.isEmpty {
+            _ = try await client.storage
+                .from(Self.groupDocsBucket)
+                .remove(paths: documents.map(\.path))
+            try await client.from("group_docs")
+                .delete()
+                .in("id", values: documents.map(\.id.uuidString))
+                .execute()
+        }
+    }
+
+    /// Pagination explicite : un compte actif peut dépasser les 100 objets,
+    /// limite par défaut de l'API Storage.
+    private func removeAllFiles(in bucket: String, under prefix: String) async throws {
+        var paths: [String] = []
+        var offset = 0
+        while true {
+            let files = try await client.storage.from(bucket).list(
+                path: prefix,
+                options: SearchOptions(limit: 100, offset: offset)
+            )
+            paths.append(contentsOf: files.compactMap { file in
+                file.id == nil ? nil : "\(prefix)/\(file.name)"
+            })
+            guard files.count == 100 else { break }
+            offset += files.count
+        }
+        guard !paths.isEmpty else { return }
+        _ = try await client.storage.from(bucket).remove(paths: paths)
     }
 
     // MARK: - Annonces SOS
@@ -1089,20 +1225,50 @@ final class SupabaseBackend: Sendable {
     }
 
     /// Toutes mes conversations, mappées vers le modèle de l'app.
-    func fetchConversations(myID: UUID) async throws -> [Conversation] {
+    func fetchConversations(
+        myID: UUID,
+        profiles suppliedProfiles: [ProfileRow]? = nil
+    ) async throws -> [Conversation] {
         let rows: [ConversationRow] = try await client.from("conversations").select().execute().value
         guard !rows.isEmpty else { return [] }
 
-        async let profilesTask = fetchProfiles()
-        async let messagesTask: [MessageRow] = client.from("messages")
-            .select()
-            .in("conversation_id", values: rows.map(\.id.uuidString))
-            .order("created_at")
-            .execute().value
-        let (profiles, messages) = try await (profilesTask, messagesTask)
+        let profiles: [ProfileRow]
+        if let suppliedProfiles {
+            profiles = suppliedProfiles
+        } else {
+            profiles = try await fetchProfiles()
+        }
+        struct RecentParams: Encodable { let p_limit: Int }
+        let messages: [MessageRow]
+        do {
+            messages = try await client.rpc(
+                "recent_messages",
+                params: RecentParams(p_limit: 60)
+            ).execute().value
+        } catch {
+            // Compatibilité pendant les quelques secondes entre l'upload de
+            // l'app et la migration.
+            messages = try await client.from("messages")
+                .select()
+                .in("conversation_id", values: rows.map(\.id.uuidString))
+                .order("created_at")
+                .execute().value
+        }
+        let messageIDs = messages.map(\.id.uuidString)
+        let reactions: [MessageReactionRow]
+        if messageIDs.isEmpty {
+            reactions = []
+        } else {
+            reactions = (try? await client.from("message_reactions")
+                .select()
+                .in("message_id", values: messageIDs)
+                .is("removed_at", value: nil)
+                .execute().value) ?? []
+        }
 
         let profileByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
         let messagesByConversation = Dictionary(grouping: messages, by: \.conversationId)
+        let reactionsByMessage = Dictionary(grouping: reactions, by: \.messageId)
 
         return rows.map { row in
             let otherID = row.other(than: myID)
@@ -1111,7 +1277,12 @@ final class SupabaseBackend: Sendable {
                 id: row.id,
                 contactName: other?.name ?? "Musicien",
                 contactInstrument: other?.instruments.first.flatMap(Instrument.init(rawValue:)) ?? .voix,
-                messages: (messagesByConversation[row.id] ?? []).map { $0.asMessage(myID: myID) },
+                messages: (messagesByConversation[row.id] ?? []).map {
+                    $0.asMessage(
+                        myID: myID,
+                        reactions: Self.reactionSummaries(reactionsByMessage[$0.id] ?? [], myID: myID)
+                    )
+                },
                 contactID: otherID
             )
         }
@@ -1162,10 +1333,54 @@ final class SupabaseBackend: Sendable {
         return row.asMessage(myID: senderID)
     }
 
+    func updateMessage(_ id: UUID, text: String) async throws {
+        struct Params: Encodable {
+            let p_message: UUID
+            let p_text: String
+        }
+        try await client.rpc(
+            "edit_message",
+            params: Params(p_message: id, p_text: text)
+        ).execute()
+    }
+
+    func deleteMessage(_ id: UUID) async throws {
+        struct Params: Encodable { let p_message: UUID }
+        let path: String? = try await client.rpc(
+            "delete_message",
+            params: Params(p_message: id)
+        ).execute().value
+        if let path { try? await completeMessageFileRemoval(path: path) }
+    }
+
+    func setMessageReaction(messageID: UUID, emoji: String?) async throws {
+        struct Params: Encodable {
+            let p_message: UUID
+            let p_emoji: String?
+        }
+        try await client.rpc(
+            "set_message_reaction",
+            params: Params(p_message: messageID, p_emoji: emoji)
+        ).execute()
+    }
+
+    func fetchMessageReactionSummaries(
+        messageID: UUID,
+        myID: UUID
+    ) async throws -> [MessageReaction] {
+        let rows: [MessageReactionRow] = try await client.from("message_reactions")
+            .select()
+            .eq("message_id", value: messageID.uuidString)
+            .is("removed_at", value: nil)
+            .execute().value
+        return Self.reactionSummaries(rows, myID: myID)
+    }
+
     /// Évènement du flux messages : nouveau message, ou accusés mis à jour.
     enum MessageEvent {
         case inserted(MessageRow)
         case updated(MessageRow)
+        case reactionsChanged(UUID)
     }
 
     /// Flux temps réel des messages (le serveur ne pousse que ceux de mes
@@ -1175,6 +1390,12 @@ final class SupabaseBackend: Sendable {
         let channel = client.channel("messages-live")
         let inserts = channel.postgresChange(InsertAction.self, schema: "public", table: "messages")
         let updates = channel.postgresChange(UpdateAction.self, schema: "public", table: "messages")
+        let reactionInserts = channel.postgresChange(
+            InsertAction.self, schema: "public", table: "message_reactions"
+        )
+        let reactionUpdates = channel.postgresChange(
+            UpdateAction.self, schema: "public", table: "message_reactions"
+        )
         try await channel.subscribeWithError()
         let stream = AsyncStream<MessageEvent> { continuation in
             let insertTask = Task {
@@ -1191,9 +1412,34 @@ final class SupabaseBackend: Sendable {
                     }
                 }
             }
+            let reactionsTask = Task {
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        for await insert in reactionInserts {
+                            if let row = try? insert.decodeRecord(
+                                as: MessageReactionRow.self,
+                                decoder: Self.realtimeDecoder
+                            ) {
+                                continuation.yield(.reactionsChanged(row.messageId))
+                            }
+                        }
+                    }
+                    group.addTask {
+                        for await update in reactionUpdates {
+                            if let row = try? update.decodeRecord(
+                                as: MessageReactionRow.self,
+                                decoder: Self.realtimeDecoder
+                            ) {
+                                continuation.yield(.reactionsChanged(row.messageId))
+                            }
+                        }
+                    }
+                }
+            }
             continuation.onTermination = { _ in
                 insertTask.cancel()
                 updateTask.cancel()
+                reactionsTask.cancel()
             }
         }
         return (channel, stream)
@@ -1326,6 +1572,8 @@ final class SupabaseBackend: Sendable {
         var senderId: UUID
         var text: String
         var createdAt: Date
+        var editedAt: Date?
+        var deletedAt: Date?
         var attachmentPath: String?
         var attachmentName: String?
         var attachmentType: String?
@@ -1336,6 +1584,8 @@ final class SupabaseBackend: Sendable {
             case groupId = "group_id"
             case senderId = "sender_id"
             case createdAt = "created_at"
+            case editedAt = "edited_at"
+            case deletedAt = "deleted_at"
             case attachmentPath = "attachment_path"
             case attachmentName = "attachment_name"
             case attachmentType = "attachment_type"
@@ -1353,14 +1603,22 @@ final class SupabaseBackend: Sendable {
             )
         }
 
-        func asGroupMessage(myID: UUID, myName: String, nameByID: [UUID: String]) -> GroupMessage {
+        func asGroupMessage(
+            myID: UUID,
+            myName: String,
+            nameByID: [UUID: String],
+            reactions: [MessageReaction] = []
+        ) -> GroupMessage {
             GroupMessage(
                 id: id,
                 sender: senderId == myID ? myName : (nameByID[senderId] ?? "Musicien"),
                 isFromMe: senderId == myID,
                 text: text,
                 date: createdAt,
-                attachment: attachment
+                attachment: attachment,
+                editedAt: editedAt,
+                deletedAt: deletedAt,
+                reactions: reactions
             )
         }
     }
@@ -1447,11 +1705,31 @@ final class SupabaseBackend: Sendable {
         let (members, events) = try await (membersTask, eventsTask)
         // Tolérant si la migration group_messages n'est pas encore appliquée :
         // les groupes restent utilisables, juste sans historique de messages.
-        let groupMessages: [GroupMessageRow] = (try? await client.from("group_messages")
-            .select()
-            .in("group_id", values: groupIDs)
-            .order("created_at")
-            .execute().value) ?? []
+        struct RecentGroupParams: Encodable { let p_limit: Int }
+        let groupMessages: [GroupMessageRow]
+        if let recent: [GroupMessageRow] = try? await client.rpc(
+            "recent_group_messages",
+            params: RecentGroupParams(p_limit: 60)
+        ).execute().value {
+            groupMessages = recent
+        } else {
+            groupMessages = (try? await client.from("group_messages")
+                .select()
+                .in("group_id", values: groupIDs)
+                .order("created_at")
+                .execute().value) ?? []
+        }
+        let groupMessageIDs = groupMessages.map(\.id.uuidString)
+        let groupReactions: [MessageReactionRow]
+        if groupMessageIDs.isEmpty {
+            groupReactions = []
+        } else {
+            groupReactions = (try? await client.from("group_message_reactions")
+                .select()
+                .in("message_id", values: groupMessageIDs)
+                .is("removed_at", value: nil)
+                .execute().value) ?? []
+        }
         // Partitions hébergées — même tolérance le temps de la migration.
         let groupDocs: [GroupDocRow] = (try? await client.from("group_docs")
             .select()
@@ -1480,6 +1758,7 @@ final class SupabaseBackend: Sendable {
         let eventsByGroup = Dictionary(grouping: events, by: \.groupId)
         let attendanceByEvent = Dictionary(grouping: attendance, by: \.eventId)
         let messagesByGroup = Dictionary(grouping: groupMessages, by: \.groupId)
+        let reactionsByGroupMessage = Dictionary(grouping: groupReactions, by: \.messageId)
         let docsByGroup = Dictionary(grouping: groupDocs, by: \.groupId)
         let commentsByGroup = Dictionary(grouping: comments, by: \.groupId)
 
@@ -1531,7 +1810,15 @@ final class SupabaseBackend: Sendable {
                 autoSOSEnabled: row.autoSosEnabled,
                 autoSOSMinLevel: row.autoSosMinLevel,
                 messages: (messagesByGroup[row.id] ?? []).map {
-                    $0.asGroupMessage(myID: myID, myName: myName, nameByID: nameByID)
+                    $0.asGroupMessage(
+                        myID: myID,
+                        myName: myName,
+                        nameByID: nameByID,
+                        reactions: Self.reactionSummaries(
+                            reactionsByGroupMessage[$0.id] ?? [],
+                            myID: myID
+                        )
+                    )
                 },
                 docs: (docsByGroup[row.id] ?? []).map {
                     $0.asGroupDoc(myID: myID, myName: myName, nameByID: nameByID)
@@ -2210,7 +2497,44 @@ final class SupabaseBackend: Sendable {
     }
 
     func deleteMessageAttachment(path: String) async throws {
+        struct Params: Encodable { let p_path: String }
+        try await client.rpc(
+            "queue_message_file_cleanup",
+            params: Params(p_path: path)
+        ).execute()
+        try await completeMessageFileRemoval(path: path)
+    }
+
+    private func removeMessageAttachmentObject(path: String) async throws {
         _ = try await client.storage.from(Self.messageFilesBucket).remove(paths: [path])
+    }
+
+    private func completeMessageFileRemoval(path: String) async throws {
+        try await removeMessageAttachmentObject(path: path)
+        struct Params: Encodable { let p_path: String }
+        try await client.rpc(
+            "complete_message_file_cleanup",
+            params: Params(p_path: path)
+        ).execute()
+    }
+
+    private struct MessageFileCleanupRow: Decodable { let path: String }
+
+    /// Reprend les suppressions Storage interrompues (réseau coupé, app tuée).
+    /// Le chemin courant est best-effort ; la suppression de compte utilise
+    /// la variante stricte afin de ne jamais perdre l'identité avant le blob.
+    func cleanupPendingMessageFiles() async {
+        try? await cleanupPendingMessageFilesOrThrow()
+    }
+
+    private func cleanupPendingMessageFilesOrThrow() async throws {
+        let rows: [MessageFileCleanupRow] = try await client
+            .from("message_file_cleanup")
+            .select("path")
+            .execute().value
+        for row in rows {
+            try await completeMessageFileRemoval(path: row.path)
+        }
     }
 
     // MARK: - Groupes : messages + temps réel
@@ -2218,13 +2542,14 @@ final class SupabaseBackend: Sendable {
     /// Envoie un message de groupe. L'id est fourni par le client pour que
     /// l'écho realtime (notre propre INSERT revient aussi par le canal) se
     /// dédoublonne proprement.
+    @discardableResult
     func sendGroupMessage(
         id: UUID,
         text: String,
         attachment: MessageAttachment?,
         groupID: UUID,
         senderID: UUID
-    ) async throws {
+    ) async throws -> GroupMessageRow {
         struct Insert: Encodable {
             let id: UUID
             let group_id: UUID
@@ -2235,7 +2560,7 @@ final class SupabaseBackend: Sendable {
             let attachment_type: String?
             let attachment_size: Int64?
         }
-        try await client.from("group_messages")
+        return try await client.from("group_messages")
             .insert(Insert(
                 id: id,
                 group_id: groupID,
@@ -2246,7 +2571,52 @@ final class SupabaseBackend: Sendable {
                 attachment_type: attachment?.contentType,
                 attachment_size: attachment?.byteCount
             ))
-            .execute()
+            .select()
+            .single()
+            .execute().value
+    }
+
+    func updateGroupMessage(_ id: UUID, text: String) async throws {
+        struct Params: Encodable {
+            let p_message: UUID
+            let p_text: String
+        }
+        try await client.rpc(
+            "edit_group_message",
+            params: Params(p_message: id, p_text: text)
+        ).execute()
+    }
+
+    func deleteGroupMessage(_ id: UUID) async throws {
+        struct Params: Encodable { let p_message: UUID }
+        let path: String? = try await client.rpc(
+            "delete_group_message",
+            params: Params(p_message: id)
+        ).execute().value
+        if let path { try? await completeMessageFileRemoval(path: path) }
+    }
+
+    func setGroupMessageReaction(messageID: UUID, emoji: String?) async throws {
+        struct Params: Encodable {
+            let p_message: UUID
+            let p_emoji: String?
+        }
+        try await client.rpc(
+            "set_group_message_reaction",
+            params: Params(p_message: messageID, p_emoji: emoji)
+        ).execute()
+    }
+
+    func fetchGroupMessageReactionSummaries(
+        messageID: UUID,
+        myID: UUID
+    ) async throws -> [MessageReaction] {
+        let rows: [MessageReactionRow] = try await client.from("group_message_reactions")
+            .select()
+            .eq("message_id", value: messageID.uuidString)
+            .is("removed_at", value: nil)
+            .execute().value
+        return Self.reactionSummaries(rows, myID: myID)
     }
 
     /// Événement temps réel côté groupes : un message arrive en incrémental,
@@ -2254,6 +2624,8 @@ final class SupabaseBackend: Sendable {
     /// rechargement des groupes.
     enum GroupRealtimeEvent {
         case message(GroupMessageRow)
+        case messageUpdated(GroupMessageRow)
+        case reactionsChanged(UUID)
         case groupsChanged
     }
 
@@ -2262,6 +2634,13 @@ final class SupabaseBackend: Sendable {
     func groupStream() async throws -> (channel: RealtimeChannelV2, stream: AsyncStream<GroupRealtimeEvent>) {
         let channel = client.channel("groups-live")
         let messageInserts = channel.postgresChange(InsertAction.self, schema: "public", table: "group_messages")
+        let messageUpdates = channel.postgresChange(UpdateAction.self, schema: "public", table: "group_messages")
+        let reactionInserts = channel.postgresChange(
+            InsertAction.self, schema: "public", table: "group_message_reactions"
+        )
+        let reactionUpdates = channel.postgresChange(
+            UpdateAction.self, schema: "public", table: "group_message_reactions"
+        )
         let eventChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_events")
         let attendanceChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "event_attendance")
         let memberChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "group_members")
@@ -2277,6 +2656,40 @@ final class SupabaseBackend: Sendable {
                     }
                 }
             }
+            let messageUpdateTask = Task {
+                for await update in messageUpdates {
+                    if let row = try? update.decodeRecord(
+                        as: GroupMessageRow.self,
+                        decoder: Self.realtimeDecoder
+                    ) {
+                        continuation.yield(.messageUpdated(row))
+                    }
+                }
+            }
+            let reactionTask = Task {
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask {
+                        for await insert in reactionInserts {
+                            if let row = try? insert.decodeRecord(
+                                as: MessageReactionRow.self,
+                                decoder: Self.realtimeDecoder
+                            ) {
+                                continuation.yield(.reactionsChanged(row.messageId))
+                            }
+                        }
+                    }
+                    group.addTask {
+                        for await update in reactionUpdates {
+                            if let row = try? update.decodeRecord(
+                                as: MessageReactionRow.self,
+                                decoder: Self.realtimeDecoder
+                            ) {
+                                continuation.yield(.reactionsChanged(row.messageId))
+                            }
+                        }
+                    }
+                }
+            }
             let changeTasks = [eventChanges, attendanceChanges, memberChanges, groupChanges, docChanges, invitationChanges].map { changes in
                 Task {
                     for await _ in changes {
@@ -2286,6 +2699,8 @@ final class SupabaseBackend: Sendable {
             }
             continuation.onTermination = { _ in
                 messageTask.cancel()
+                messageUpdateTask.cancel()
+                reactionTask.cancel()
                 changeTasks.forEach { $0.cancel() }
             }
         }

@@ -16,7 +16,7 @@
 -- Helpers
 -- ---------------------------------------------------------------------------
 
-/// Le compte connecté est-il un musicien professionnel ?
+-- Le compte connecté est-il un musicien professionnel ?
 create or replace function public.viewer_is_pro()
 returns boolean
 language sql
@@ -30,7 +30,7 @@ as $$
   );
 $$;
 
-/// Le compte connecté est-il un compte de démonstration ?
+-- Le compte connecté est-il un compte de démonstration ?
 create or replace function public.viewer_is_demo()
 returns boolean
 language sql

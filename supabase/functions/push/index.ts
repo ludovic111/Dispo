@@ -1,5 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { importPKCS8, SignJWT } from "npm:jose@5.9.6";
+import {
+  MAX_DELIVERY_ATTEMPTS,
+  noEligibleDeviceFailureUpdate,
+} from "./queue_state.ts";
 
 type PushNotification = {
   id: string;
@@ -20,12 +24,16 @@ type PushDevice = {
   groups_enabled: boolean;
 };
 
-const json = (body: Record<string, unknown>, status = 200) => new Response(
-  JSON.stringify(body),
-  { status, headers: { "content-type": "application/json" } },
-);
+const json = (body: Record<string, unknown>, status = 200) =>
+  new Response(
+    JSON.stringify(body),
+    { status, headers: { "content-type": "application/json" } },
+  );
 
-const preferenceAllows = (device: PushDevice, category: PushNotification["category"]) => {
+const preferenceAllows = (
+  device: PushDevice,
+  category: PushNotification["category"],
+) => {
   if (category === "sos") return device.sos_enabled;
   if (category === "messages") return device.messages_enabled;
   return device.groups_enabled;
@@ -34,7 +42,10 @@ const preferenceAllows = (device: PushDevice, category: PushNotification["catego
 let cachedProviderToken: { value: string; createdAt: number } | undefined;
 
 async function providerToken() {
-  if (cachedProviderToken && Date.now() - cachedProviderToken.createdAt < 45 * 60 * 1_000) {
+  if (
+    cachedProviderToken &&
+    Date.now() - cachedProviderToken.createdAt < 45 * 60 * 1_000
+  ) {
     return cachedProviderToken.value;
   }
   const teamID = Deno.env.get("APNS_TEAM_ID")!;
@@ -84,15 +95,17 @@ async function sendToAPNs(
 }
 
 Deno.serve(async (request) => {
-  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  if (request.method !== "POST") {
+    return json({ error: "method_not_allowed" }, 405);
+  }
 
   const authorization = request.headers.get("authorization");
   if (!authorization) return json({ error: "missing_authorization" }, 401);
 
   const supabaseURL = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-    ?? Deno.env.get("SUPABASE_SECRET_KEYS.default");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+    Deno.env.get("SUPABASE_SECRET_KEYS.default");
   if (!supabaseURL || !anonKey || !serviceKey) {
     return json({ error: "supabase_configuration_missing" }, 503);
   }
@@ -104,18 +117,23 @@ Deno.serve(async (request) => {
   const { data: { user }, error: authError } = await authClient.auth.getUser();
   if (authError || !user) return json({ error: "invalid_session" }, 401);
 
-  if (!Deno.env.get("APNS_TEAM_ID") || !Deno.env.get("APNS_KEY_ID") || !Deno.env.get("APNS_PRIVATE_KEY")) {
+  if (
+    !Deno.env.get("APNS_TEAM_ID") || !Deno.env.get("APNS_KEY_ID") ||
+    !Deno.env.get("APNS_PRIVATE_KEY")
+  ) {
     return json({ error: "apns_configuration_missing" }, 503);
   }
 
-  const admin = createClient(supabaseURL, serviceKey, { auth: { persistSession: false } });
+  const admin = createClient(supabaseURL, serviceKey, {
+    auth: { persistSession: false },
+  });
   const since = new Date(Date.now() - 10 * 60 * 1_000).toISOString();
   const { data: pending, error: pendingError } = await admin
     .from("push_notifications")
     .select("id,user_id,category,title,body,data,attempts")
     .eq("actor_id", user.id)
     .is("sent_at", null)
-    .lt("attempts", 3)
+    .lt("attempts", MAX_DELIVERY_ATTEMPTS)
     .gte("created_at", since)
     .order("created_at", { ascending: true })
     .limit(100)
@@ -126,7 +144,9 @@ Deno.serve(async (request) => {
   const userIDs = [...new Set(pending.map((item) => item.user_id))];
   const { data: devices, error: deviceError } = await admin
     .from("push_devices")
-    .select("token,user_id,environment,sos_enabled,messages_enabled,groups_enabled")
+    .select(
+      "token,user_id,environment,sos_enabled,messages_enabled,groups_enabled",
+    )
     .in("user_id", userIDs)
     .eq("notifications_enabled", true)
     .returns<PushDevice[]>();
@@ -148,9 +168,22 @@ Deno.serve(async (request) => {
   let skipped = 0;
   for (const notification of pending) {
     const recipients = (devices ?? []).filter(
-      (device) => device.user_id === notification.user_id && preferenceAllows(device, notification.category),
+      (device) =>
+        device.user_id === notification.user_id &&
+        preferenceAllows(device, notification.category),
     );
     if (!recipients.length) {
+      // Aucun appareil ne peut recevoir cette alerte (notifications coupées,
+      // catégorie désactivée ou token absent). C'est un échec terminal :
+      // la ligne reste disponible dans le centre in-app, mais ne doit plus
+      // revenir indéfiniment dans la file APNs.
+      const { error: terminalUpdateError } = await admin
+        .from("push_notifications")
+        .update(noEligibleDeviceFailureUpdate(new Date().toISOString()))
+        .eq("id", notification.id);
+      if (terminalUpdateError) {
+        return json({ error: "queue_update_failed" }, 500);
+      }
       skipped += 1;
       continue;
     }
@@ -168,7 +201,11 @@ Deno.serve(async (request) => {
           delivered = true;
         } else {
           lastError = `APNs ${result.status}: ${result.details}`.slice(0, 500);
-          if (result.status === 410 || result.details.includes("BadDeviceToken") || result.details.includes("Unregistered")) {
+          if (
+            result.status === 410 ||
+            result.details.includes("BadDeviceToken") ||
+            result.details.includes("Unregistered")
+          ) {
             await admin.from("push_devices").delete().eq("token", device.token);
           }
         }

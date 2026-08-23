@@ -11,6 +11,18 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "2.3",
+            title: "Tes échanges, vraiment sous contrôle",
+            points: [
+                "Un appui long permet de réagir, modifier ton texte ou supprimer ton message pour tout le monde",
+                "Photos, vidéos et fichiers envoyés peuvent aussi être supprimés, avec nettoyage sécurisé du stockage",
+                "Aujourd'hui, Hier et la date complète séparent clairement chaque journée de discussion",
+                "Les messages modifiés sont signalés discrètement et les suppressions restent synchronisées en direct",
+                "Le mode sombre est maintenant le choix par défaut, sans écraser ta préférence existante",
+                "La messagerie charge un historique borné, évite les notifications en double et ne mélange plus les caches entre comptes"
+            ]
+        ),
+        PatchNote(
             version: "2.2",
             title: "Ton répertoire et tes alertes, enfin complets",
             points: [

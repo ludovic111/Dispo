@@ -12,6 +12,9 @@ struct ChatView: View {
     @State private var preparingMedia = false
     @State private var previewingAttachment: MessageAttachmentPreview?
     @State private var downloadingAttachmentID: String?
+    @State private var editingMessage: Message?
+    @State private var deletingMessage: Message?
+    @State private var sendingMessage = false
 
     private var conversation: Conversation? {
         store.conversations.first(where: { $0.id == conversationID })
@@ -40,11 +43,23 @@ struct ChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            ForEach(conversation?.messages ?? []) { message in
+                            let messages = conversation?.messages ?? []
+                            ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                                if index == 0 || !Calendar.autoupdatingCurrent.isDate(
+                                    message.date,
+                                    inSameDayAs: messages[index - 1].date
+                                ) {
+                                    MessageDayDivider(date: message.date)
+                                }
                                 MessageBubble(
                                     message: message,
                                     isAttachmentLoading: downloadingAttachmentID == message.attachment?.id,
-                                    onOpenAttachment: openAttachment
+                                    onOpenAttachment: openAttachment,
+                                    onReact: {
+                                        store.toggleReaction($0, on: message, in: conversationID)
+                                    },
+                                    onEdit: { editingMessage = message },
+                                    onDelete: { deletingMessage = message }
                                 )
                                     .id(message.id)
                             }
@@ -123,7 +138,7 @@ struct ChatView: View {
                             .overlay(RoundedRectangle(cornerRadius: 20).stroke(JC.cardStroke, lineWidth: 1))
                         Button { send() } label: {
                             Group {
-                                if store.messageAttachmentUploadInProgress {
+                                if store.messageAttachmentUploadInProgress || sendingMessage {
                                     ProgressView().controlSize(.small)
                                 } else {
                                     Image(systemName: "arrow.up.circle.fill")
@@ -132,7 +147,7 @@ struct ChatView: View {
                             }
                             .foregroundStyle(canSend ? AnyShapeStyle(JC.hero) : AnyShapeStyle(Color.gray))
                         }
-                        .disabled(!canSend || store.messageAttachmentUploadInProgress)
+                        .disabled(!canSend || store.messageAttachmentUploadInProgress || sendingMessage)
                     }
                 }
                 .padding()
@@ -213,6 +228,41 @@ struct ChatView: View {
                     }
             }
         }
+        .sheet(item: $editingMessage) { message in
+            MessageEditSheet(text: message.text) {
+                store.editMessage(message, text: $0, in: conversationID)
+            }
+        }
+        .alert(
+            deleteTitle,
+            isPresented: Binding(
+                get: { deletingMessage != nil },
+                set: { if !$0 { deletingMessage = nil } }
+            )
+        ) {
+            Button("Annuler", role: .cancel) { deletingMessage = nil }
+            Button("Supprimer", role: .destructive) {
+                if let deletingMessage {
+                    store.deleteMessage(deletingMessage, in: conversationID)
+                }
+                deletingMessage = nil
+            }
+        } message: {
+            Text("Le contenu disparaîtra chez tous les participants.")
+        }
+    }
+
+    private var deleteTitle: String {
+        guard let attachment = deletingMessage?.attachment else {
+            return store.tr("Supprimer ce message ?")
+        }
+        if attachment.contentType.hasPrefix("video/") {
+            return store.tr("Supprimer cette vidéo ?")
+        }
+        if attachment.contentType.hasPrefix("image/") {
+            return store.tr("Supprimer cette photo ?")
+        }
+        return store.tr("Supprimer ce fichier ?")
     }
 
     private var canSend: Bool {
@@ -224,9 +274,17 @@ struct ChatView: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || outgoingAttachment != nil else { return }
         let attachment = outgoingAttachment
-        draft = ""
-        outgoingAttachment = nil
-        store.sendMessage(text, attachment: attachment, in: conversation)
+        sendingMessage = true
+        store.sendMessage(text, attachment: attachment, in: conversation) { sent in
+            sendingMessage = false
+            guard sent else { return }
+            if draft.trimmingCharacters(in: .whitespacesAndNewlines) == text {
+                draft = ""
+            }
+            if outgoingAttachment?.id == attachment?.id {
+                outgoingAttachment = nil
+            }
+        }
     }
 
     private func openAttachment(_ attachment: MessageAttachment) {
@@ -245,16 +303,24 @@ struct ChatView: View {
 }
 
 struct MessageBubble: View {
+    @EnvironmentObject private var store: AppStore
     let message: Message
     var isAttachmentLoading = false
     var onOpenAttachment: ((MessageAttachment) -> Void)? = nil
+    var onReact: ((String) -> Void)? = nil
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         HStack {
             if message.isFromMe { Spacer(minLength: 56) }
             VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 3) {
                 VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 6) {
-                    if let attachment = message.attachment {
+                    if message.deletedAt != nil {
+                        Label("Message supprimé", systemImage: "nosign")
+                            .font(.subheadline.italic())
+                            .foregroundStyle(.secondary)
+                    } else if let attachment = message.attachment {
                         MessageAttachmentCard(
                             attachment: attachment,
                             isLoading: isAttachmentLoading
@@ -277,8 +343,30 @@ struct MessageBubble: View {
                         .stroke(message.isFromMe ? .clear : JC.cardStroke, lineWidth: 1)
                 )
                 .foregroundStyle(message.isFromMe ? JC.billetInk : Color.primary)
+                .contextMenu {
+                    if message.deletedAt == nil {
+                        MessageActionsMenu(
+                            isMine: message.isFromMe,
+                            canEdit: message.isFromMe && !message.text.isEmpty,
+                            onReact: { onReact?($0) },
+                            onEdit: { onEdit?() },
+                            onDelete: { onDelete?() }
+                        )
+                    }
+                }
+                MessageReactionBar(reactions: message.reactionSummaries) {
+                    onReact?($0)
+                }
                 HStack(spacing: 4) {
-                    Text(message.date.formatted(date: .omitted, time: .shortened))
+                    if message.editedAt != nil, message.deletedAt == nil {
+                        Text("Modifié")
+                    }
+                    Text(
+                        message.date.formatted(
+                            Date.FormatStyle(date: .omitted, time: .shortened)
+                                .locale(store.language.locale)
+                        )
+                    )
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                     if message.isFromMe {

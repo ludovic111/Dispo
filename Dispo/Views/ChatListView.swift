@@ -118,7 +118,12 @@ struct ChatListView: View {
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(JC.laiton)
                             if let last = conversation.lastMessage {
-                                Text((last.isFromMe ? store.tr("Toi : ") : "") + last.text)
+                                let preview = last.deletedAt != nil
+                                    ? store.tr("Message supprimé")
+                                    : (!last.text.isEmpty
+                                        ? last.text
+                                        : (last.attachment?.notificationLabel ?? store.tr("Fichier")))
+                                Text((last.isFromMe ? store.tr("Toi : ") : "") + preview)
                                     .font(.caption.weight(unread > 0 ? .semibold : .regular))
                                     .foregroundStyle(unread > 0 ? .primary : .secondary)
                                     .lineLimit(1)
@@ -185,7 +190,12 @@ struct ChatListView: View {
                                 .foregroundStyle(JC.bronze)
                                 .lineLimit(1)
                             if let last = group.lastMessage {
-                                Text((last.isFromMe ? store.tr("Toi : ") : "\(last.sender) : ") + last.text)
+                                let preview = last.deletedAt != nil
+                                    ? store.tr("Message supprimé")
+                                    : (!last.text.isEmpty
+                                        ? last.text
+                                        : (last.attachment?.notificationLabel ?? store.tr("Fichier")))
+                                Text((last.isFromMe ? store.tr("Toi : ") : "\(last.sender) : ") + preview)
                                     .font(.caption.weight(unread > 0 ? .semibold : .regular))
                                     .foregroundStyle(unread > 0 ? .primary : .secondary)
                                     .lineLimit(1)
