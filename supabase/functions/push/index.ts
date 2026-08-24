@@ -1,9 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { importPKCS8, SignJWT } from "npm:jose@5.9.6";
 import {
   MAX_DELIVERY_ATTEMPTS,
   noEligibleDeviceFailureUpdate,
 } from "./queue_state.ts";
+import {
+  ProviderResult,
+  PushPlatform,
+  sendToPushProvider,
+} from "./providers.ts";
 
 type PushNotification = {
   id: string;
@@ -11,13 +15,14 @@ type PushNotification = {
   category: "sos" | "messages" | "groups";
   title: string;
   body: string;
-  data: Record<string, string>;
+  data: Record<string, unknown>;
   attempts: number;
 };
 
 type PushDevice = {
   token: string;
   user_id: string;
+  platform: PushPlatform;
   environment: "development" | "production";
   sos_enabled: boolean;
   messages_enabled: boolean;
@@ -38,61 +43,6 @@ const preferenceAllows = (
   if (category === "messages") return device.messages_enabled;
   return device.groups_enabled;
 };
-
-let cachedProviderToken: { value: string; createdAt: number } | undefined;
-
-async function providerToken() {
-  if (
-    cachedProviderToken &&
-    Date.now() - cachedProviderToken.createdAt < 45 * 60 * 1_000
-  ) {
-    return cachedProviderToken.value;
-  }
-  const teamID = Deno.env.get("APNS_TEAM_ID")!;
-  const keyID = Deno.env.get("APNS_KEY_ID")!;
-  const rawKey = Deno.env.get("APNS_PRIVATE_KEY")!.replaceAll("\\n", "\n");
-  const key = await importPKCS8(rawKey, "ES256");
-  const value = await new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: keyID })
-    .setIssuer(teamID)
-    .setIssuedAt()
-    .sign(key);
-  cachedProviderToken = { value, createdAt: Date.now() };
-  return value;
-}
-
-async function sendToAPNs(
-  device: PushDevice,
-  notification: PushNotification,
-  badgeCount: number,
-) {
-  const host = device.environment === "production"
-    ? "https://api.push.apple.com"
-    : "https://api.sandbox.push.apple.com";
-  const token = await providerToken();
-  const response = await fetch(`${host}/3/device/${device.token}`, {
-    method: "POST",
-    headers: {
-      authorization: `bearer ${token}`,
-      "apns-topic": Deno.env.get("APNS_BUNDLE_ID") ?? "ch.dispo.app",
-      "apns-push-type": "alert",
-      "apns-priority": "10",
-      "apns-expiration": String(Math.floor(Date.now() / 1_000) + 86_400),
-    },
-    body: JSON.stringify({
-      aps: {
-        alert: { title: notification.title, body: notification.body },
-        sound: "default",
-        badge: Math.min(999, Math.max(0, badgeCount)),
-        category: notification.category,
-      },
-      ...notification.data,
-      notification_id: notification.id,
-    }),
-  });
-  const details = response.ok ? "" : await response.text();
-  return { ok: response.ok, status: response.status, details };
-}
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") {
@@ -117,13 +67,6 @@ Deno.serve(async (request) => {
   const { data: { user }, error: authError } = await authClient.auth.getUser();
   if (authError || !user) return json({ error: "invalid_session" }, 401);
 
-  if (
-    !Deno.env.get("APNS_TEAM_ID") || !Deno.env.get("APNS_KEY_ID") ||
-    !Deno.env.get("APNS_PRIVATE_KEY")
-  ) {
-    return json({ error: "apns_configuration_missing" }, 503);
-  }
-
   const admin = createClient(supabaseURL, serviceKey, {
     auth: { persistSession: false },
   });
@@ -145,7 +88,7 @@ Deno.serve(async (request) => {
   const { data: devices, error: deviceError } = await admin
     .from("push_devices")
     .select(
-      "token,user_id,environment,sos_enabled,messages_enabled,groups_enabled",
+      "token,user_id,platform,environment,sos_enabled,messages_enabled,groups_enabled",
     )
     .in("user_id", userIDs)
     .eq("notifications_enabled", true)
@@ -166,6 +109,7 @@ Deno.serve(async (request) => {
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  const sentByProvider = { ios: 0, android: 0 };
   for (const notification of pending) {
     const recipients = (devices ?? []).filter(
       (device) =>
@@ -176,7 +120,7 @@ Deno.serve(async (request) => {
       // Aucun appareil ne peut recevoir cette alerte (notifications coupées,
       // catégorie désactivée ou token absent). C'est un échec terminal :
       // la ligne reste disponible dans le centre in-app, mais ne doit plus
-      // revenir indéfiniment dans la file APNs.
+      // revenir indéfiniment dans la file de livraison.
       const { error: terminalUpdateError } = await admin
         .from("push_notifications")
         .update(noEligibleDeviceFailureUpdate(new Date().toISOString()))
@@ -192,20 +136,18 @@ Deno.serve(async (request) => {
     let lastError = "";
     for (const device of recipients) {
       try {
-        const result = await sendToAPNs(
+        const result: ProviderResult = await sendToPushProvider(
           device,
           notification,
           unreadByUser.get(notification.user_id) ?? 1,
         );
         if (result.ok) {
           delivered = true;
+          sentByProvider[device.platform] += 1;
         } else {
-          lastError = `APNs ${result.status}: ${result.details}`.slice(0, 500);
-          if (
-            result.status === 410 ||
-            result.details.includes("BadDeviceToken") ||
-            result.details.includes("Unregistered")
-          ) {
+          lastError = `${result.provider} ${result.status}: ${result.details}`
+            .slice(0, 500);
+          if (result.invalidToken) {
             await admin.from("push_devices").delete().eq("token", device.token);
           }
         }
@@ -216,20 +158,25 @@ Deno.serve(async (request) => {
 
     if (delivered) {
       sent += 1;
-      await admin.from("push_notifications").update({
-        sent_at: new Date().toISOString(),
-        attempts: notification.attempts + 1,
-        last_error: null,
-      }).eq("id", notification.id);
+      const { error: sentUpdateError } = await admin.from("push_notifications")
+        .update({
+          sent_at: new Date().toISOString(),
+          attempts: notification.attempts + 1,
+          last_error: null,
+        }).eq("id", notification.id);
+      if (sentUpdateError) return json({ error: "queue_update_failed" }, 500);
     } else {
       failed += 1;
-      await admin.from("push_notifications").update({
+      const { error: failedUpdateError } = await admin.from(
+        "push_notifications",
+      ).update({
         failed_at: new Date().toISOString(),
         attempts: notification.attempts + 1,
         last_error: lastError.slice(0, 500),
       }).eq("id", notification.id);
+      if (failedUpdateError) return json({ error: "queue_update_failed" }, 500);
     }
   }
 
-  return json({ sent, failed, skipped });
+  return json({ sent, failed, skipped, sent_by_provider: sentByProvider });
 });
