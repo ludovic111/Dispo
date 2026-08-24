@@ -1152,12 +1152,28 @@ struct Song: Codable, Identifiable, Hashable {
     /// Le leader a volontairement retiré la grille iReal Pro. On conserve la
     /// grille texte pour les membres sans iReal, sans la régénérer aussitôt.
     var irealDisabled: Bool? = nil
+    /// Ordre de passage des solos, stocké avec le morceau dans le JSON du
+    /// répertoire / de la setlist. Les UUID sont ceux des profils du groupe :
+    /// iOS et Android partagent ainsi une donnée stable, jamais un nom mutable.
+    /// Optionnel pour décoder les morceaux enregistrés avant cette fonction.
+    var solos: [UUID]? = nil
 
     /// Tonalité relue, nil si non renseignée ou illisible.
     var musicalKey: MusicalKey? { key.flatMap(MusicalKey.init) }
 
     /// Libellé court affiché directement sur la tuile du morceau.
     var keyBadgeLabel: String? { musicalKey?.label }
+
+    /// Vue non optionnelle utilisée par l'interface. Une ancienne ligne sans
+    /// clé `solos` équivaut simplement à un ordre vide.
+    var soloProfileIDs: [UUID] { solos ?? [] }
+}
+
+/// Membre proposé dans l'ordre des solos. Le nom est résolu à partir du groupe
+/// courant tandis que l'UUID reste la seule valeur persistée.
+struct SoloistOption: Codable, Identifiable, Hashable {
+    let id: UUID
+    let name: String
 }
 
 /// Plateformes d'écoute proposées sur les morceaux (répertoire, setlists).
@@ -1607,6 +1623,11 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var leaderName: String?
     /// Membres (par nom) — moi en plus, implicitement.
     var memberNames: [String]
+    /// Identités stables du roster live, leader inclus. Optionnel pour rester
+    /// compatible avec la démo et les caches créés avant l'ordre des solos.
+    /// Contrairement aux dictionnaires historiques indexés par nom, ce champ
+    /// conserve correctement deux membres homonymes.
+    var rosterProfiles: [SoloistOption]? = nil
     /// Permanent vs occasionnel, par nom. Absent = permanent (noyau par défaut).
     var memberKinds: [String: GroupMemberKind]?
     /// Rôle (instrument) de chaque membre dans le groupe, par nom.
@@ -1918,6 +1939,32 @@ struct AgendaItem: Identifiable, Hashable {
     /// Le mois d'appartenance, pour grouper la liste.
     func monthKey(calendar: Calendar = .current) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+
+    /// La carte « Prochaine date » est déjà une représentation complète de
+    /// l'élément vedette. On la retire donc de la liste mensuelle par identité
+    /// stricte, sans fusionner deux vraies sessions simplement parce qu'elles
+    /// ont lieu le même jour ou à la même heure.
+    static func listItems(
+        from items: [AgendaItem],
+        excludingFeatured featured: AgendaItem?,
+        excludingIDs: Set<AgendaItem.ID> = []
+    ) -> [AgendaItem] {
+        items.filter { item in
+            !excludingIDs.contains(item.id) && item.id != featured?.id
+        }
+    }
+
+    /// Un SOS rattaché à une date de groupe n'est qu'un moyen de compléter
+    /// son line-up : si cette date est déjà visible dans l'agenda du membre,
+    /// afficher aussi le SOS créerait une fausse deuxième session. Pour un
+    /// non-membre qui ne voit pas l'événement de groupe, le SOS reste visible.
+    static func shouldIncludeGig(
+        linkedEventID: GroupEvent.ID?,
+        visibleGroupEventIDs: Set<GroupEvent.ID>
+    ) -> Bool {
+        guard let linkedEventID else { return true }
+        return !visibleGroupEventIDs.contains(linkedEventID)
     }
 }
 

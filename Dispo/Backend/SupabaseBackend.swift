@@ -1554,6 +1554,14 @@ final class SupabaseBackend: Sendable {
         }
     }
 
+    /// État serveur minimal des collections de morceaux d'un groupe. Il est
+    /// relu dans la file de mutations juste avant chaque fusion afin de ne pas
+    /// reconstruire un JSON à partir d'un cache local potentiellement ancien.
+    struct GroupSongCollections {
+        var repertoire: [Song]
+        var eventSetlists: [UUID: [Song]]
+    }
+
     struct EventAttendanceRow: Codable {
         var eventId: UUID
         var profileId: UUID
@@ -1638,9 +1646,13 @@ final class SupabaseBackend: Sendable {
         var chords: String?
         var irealURL: String?
         var irealDisabled: Bool?
+        /// UUID de profils dans l'ordre des solos, encodés en minuscules :
+        /// Foundation produit sinon des UUID majuscules, tandis qu'Android
+        /// utilise la forme minuscule. Optionnel pour les anciens JSONB.
+        var solos: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case id, title, artist, key, chords
+            case id, title, artist, key, chords, solos
             case artworkURL = "artwork_url"
             case trackURL = "track_url"
             case platformLinks = "platform_links"
@@ -1663,6 +1675,7 @@ final class SupabaseBackend: Sendable {
             chords = song.chords
             irealURL = song.irealURL
             irealDisabled = song.irealDisabled
+            solos = song.solos?.map { $0.uuidString.lowercased() }
         }
 
         var asSong: Song {
@@ -1678,7 +1691,8 @@ final class SupabaseBackend: Sendable {
                 key: key,
                 chords: chords,
                 irealURL: irealURL,
-                irealDisabled: irealDisabled
+                irealDisabled: irealDisabled,
+                solos: solos?.compactMap(UUID.init(uuidString:))
             )
         }
     }
@@ -1766,7 +1780,23 @@ final class SupabaseBackend: Sendable {
             let leaderName = row.leaderId == myID ? nil : nameByID[row.leaderId]
             let memberRows = (membersByGroup[row.id] ?? [])
                 .filter { $0.profileId != row.leaderId }
-            let memberNames = memberRows.compactMap { nameByID[$0.profileId] }.sorted()
+            let memberProfiles = memberRows.compactMap { member -> SoloistOption? in
+                let name = member.profileId == myID ? myName : nameByID[member.profileId]
+                guard let name, !name.isEmpty else { return nil }
+                return SoloistOption(id: member.profileId, name: name)
+            }
+            .sorted {
+                let comparison = $0.name.localizedCaseInsensitiveCompare($1.name)
+                return comparison == .orderedSame
+                    ? $0.id.uuidString < $1.id.uuidString
+                    : comparison == .orderedAscending
+            }
+            let memberNames = memberProfiles.map(\.name)
+            let leaderProfileName = row.leaderId == myID ? myName : nameByID[row.leaderId]
+            let rosterProfiles = leaderProfileName.flatMap { name -> [SoloistOption]? in
+                guard !name.isEmpty else { return nil }
+                return [SoloistOption(id: row.leaderId, name: name)] + memberProfiles
+            } ?? memberProfiles
             var kinds: [String: GroupMemberKind] = [:]
             var roles: [String: String] = [:]
             for member in memberRows {
@@ -1805,6 +1835,7 @@ final class SupabaseBackend: Sendable {
                 isPublic: row.isPublic ?? false,
                 leaderName: leaderName,
                 memberNames: memberNames,
+                rosterProfiles: rosterProfiles,
                 memberKinds: kinds,
                 memberRoles: roles,
                 autoSOSEnabled: row.autoSosEnabled,
@@ -2234,20 +2265,133 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
-    func updateGroupRepertoire(_ songs: [Song], groupID: UUID) async throws {
-        struct Update: Encodable { let repertoire: [SongPayload] }
-        try await client.from("music_groups")
-            .update(Update(repertoire: songs.map(SongPayload.init(from:))))
+    /// Relit uniquement les deux colonnes JSON nécessaires aux mutations de
+    /// morceaux. Les autres données lourdes d'un groupe (messages, documents,
+    /// présence...) ne sont volontairement pas chargées.
+    func fetchGroupSongCollections(groupID: UUID) async throws -> GroupSongCollections {
+        struct RepertoireRow: Decodable {
+            let repertoire: [SongPayload]
+        }
+        struct EventSetlistRow: Decodable {
+            let id: UUID
+            let setlist: [SongPayload]
+        }
+
+        async let repertoireRow: RepertoireRow = client.from("music_groups")
+            .select("repertoire")
             .eq("id", value: groupID)
-            .execute()
+            .single()
+            .execute().value
+        async let eventRows: [EventSetlistRow] = client.from("group_events")
+            .select("id,setlist")
+            .eq("group_id", value: groupID)
+            .execute().value
+
+        let (group, events) = try await (repertoireRow, eventRows)
+        return GroupSongCollections(
+            repertoire: group.repertoire.map(\.asSong),
+            eventSetlists: Dictionary(
+                uniqueKeysWithValues: events.map { ($0.id, $0.setlist.map(\.asSong)) }
+            )
+        )
     }
 
-    func updateEventSetlist(_ songs: [Song], eventID: UUID) async throws {
-        struct Update: Encodable { let setlist: [SongPayload] }
-        try await client.from("group_events")
-            .update(Update(setlist: songs.map(SongPayload.init(from:))))
-            .eq("id", value: eventID)
-            .execute()
+    /// Fusionne une mutation locale avec le répertoire courant sous verrou.
+    /// Le RPC compare `original` et `desired` clé par clé : ordre et champs
+    /// modifiés à distance après la lecture restent donc intacts.
+    func mergeGroupRepertoireSnapshot(
+        originalSongs: [Song],
+        desiredSongs: [Song],
+        groupID: UUID
+    ) async throws {
+        struct Params: Encodable {
+            let p_group_id: UUID
+            let p_original_songs: [SongPayload]
+            let p_desired_songs: [SongPayload]
+        }
+        try await client.rpc(
+            "merge_group_repertoire_snapshot",
+            params: Params(
+                p_group_id: groupID,
+                p_original_songs: originalSongs.map(SongPayload.init(from:)),
+                p_desired_songs: desiredSongs.map(SongPayload.init(from:))
+            )
+        ).execute()
+    }
+
+    /// Même fusion atomique pour la setlist d'une session précise.
+    func mergeEventSetlistSnapshot(
+        originalSongs: [Song],
+        desiredSongs: [Song],
+        eventID: UUID
+    ) async throws {
+        struct Params: Encodable {
+            let p_event_id: UUID
+            let p_original_songs: [SongPayload]
+            let p_desired_songs: [SongPayload]
+        }
+        try await client.rpc(
+            "merge_event_setlist_snapshot",
+            params: Params(
+                p_event_id: eventID,
+                p_original_songs: originalSongs.map(SongPayload.init(from:)),
+                p_desired_songs: desiredSongs.map(SongPayload.init(from:))
+            )
+        ).execute()
+    }
+
+    /// Réordonne atomiquement les morceaux d'un répertoire. Le RPC ne
+    /// remplace jamais le JSON complet : une suggestion ajoutée pendant le
+    /// geste ne peut donc pas être perdue.
+    func reorderGroupRepertoire(_ songIDs: [UUID], groupID: UUID) async throws {
+        struct Params: Encodable {
+            let p_group_id: UUID
+            let p_song_ids: [String]
+        }
+        try await client.rpc(
+            "reorder_group_repertoire",
+            params: Params(
+                p_group_id: groupID,
+                p_song_ids: songIDs.map(\.uuidString)
+            )
+        ).execute()
+    }
+
+    /// Variante atomique pour la setlist d'une date précise.
+    func reorderEventSetlist(_ songIDs: [UUID], eventID: UUID) async throws {
+        struct Params: Encodable {
+            let p_event_id: UUID
+            let p_song_ids: [String]
+        }
+        try await client.rpc(
+            "reorder_event_setlist",
+            params: Params(
+                p_event_id: eventID,
+                p_song_ids: songIDs.map(\.uuidString)
+            )
+        ).execute()
+    }
+
+    /// Modifie uniquement `solos` pour ce morceau, dans le répertoire et ses
+    /// copies de setlist, sans écraser les autres changements JSON.
+    func setGroupSongSolos(
+        _ profileIDs: [UUID],
+        songID: UUID,
+        groupID: UUID
+    ) async throws {
+        struct Params: Encodable {
+            let p_group_id: UUID
+            let p_song_id: UUID
+            let p_profile_ids: [UUID]
+        }
+        try await client.rpc(
+            "set_group_song_solos",
+            params: Params(
+                p_group_id: groupID,
+                p_song_id: songID,
+                p_profile_ids: profileIDs
+            )
+        ).execute()
     }
 
     // MARK: - Groupes : partitions hébergées

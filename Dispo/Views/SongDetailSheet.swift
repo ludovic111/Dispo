@@ -18,6 +18,7 @@ struct SongDetailSheet: View {
     private enum Tab: String, CaseIterable, Identifiable {
         case ireal = "iReal Pro"
         case scores = "Partitions"
+        case solos = "Solos"
         case comments = "Commentaires"
         var id: String { rawValue }
     }
@@ -35,6 +36,10 @@ struct SongDetailSheet: View {
     @State private var missingIReal = false
     /// Recherche officielle dans la bibliothèque iReal Pro installée.
     @State private var irealSearch = ""
+    /// Ordre local pendant le glisser-déposer ; les UUID, pas les noms, sont
+    /// persistés avec le morceau au lâcher du doigt.
+    @State private var soloOrder: [UUID] = []
+    @State private var soloDragSession = OrderedUUIDDragSession()
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -62,6 +67,7 @@ struct SongDetailSheet: View {
                             switch tab {
                             case .ireal: irealTab(song)
                             case .scores: scoresTab(song, group: group)
+                            case .solos: solosTab(song, group: group)
                             case .comments: commentsTab(song, group: group)
                             }
                         }
@@ -144,8 +150,175 @@ struct SongDetailSheet: View {
             }
             .onAppear {
                 if irealSearch.isEmpty { irealSearch = song?.title ?? "" }
+                soloOrder = song?.soloProfileIDs ?? []
+                #if DEBUG
+                if UserDefaults.standard.string(forKey: "screenshotRoute") == "song-detail-solos" {
+                    tab = .solos
+                }
+                #endif
+            }
+            .onChange(of: song?.soloProfileIDs ?? []) { _, ids in
+                guard soloDragSession.draggingID == nil else { return }
+                soloOrder = ids
             }
         }
+    }
+
+    // MARK: - Ordre des solos
+
+    @ViewBuilder
+    private func solosTab(_ song: Song, group: GroupChat) -> some View {
+        let candidates = store.soloistOptions(for: group)
+        let available = candidates.filter { !soloOrder.contains($0.id) }
+
+        JCCard {
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.wave.2.fill")
+                        .foregroundStyle(JC.bronze)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Ordre des solos")
+                            .font(.subheadline.weight(.bold))
+                        Text("Les noms apparaissent dans l'ordre de passage.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                if isLeader {
+                    Menu {
+                        ForEach(available) { soloist in
+                            Button {
+                                addSoloist(soloist.id, to: song)
+                            } label: {
+                                Label {
+                                    Text(verbatim: soloist.name)
+                                } icon: {
+                                    Image(systemName: "person.badge.plus")
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Ajouter un solo", systemImage: "plus.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .foregroundStyle(JC.bronze)
+                    }
+                    .disabled(available.isEmpty)
+
+                    if soloOrder.count > 1 {
+                        Label("Maintiens la poignée puis glisse pour changer l'ordre.", systemImage: "hand.draw")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+
+        if soloOrder.isEmpty {
+            JCEmptyState(
+                icon: "person.wave.2",
+                title: "Aucun solo prévu",
+                message: "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste."
+            )
+        }
+
+        ForEach(Array(soloOrder.enumerated()), id: \.element) { index, profileID in
+            let name = store.soloistName(for: profileID, in: group)
+            JCCard(padding: 10) {
+                HStack(spacing: 10) {
+                    Text(verbatim: "\(index + 1).")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 22, alignment: .trailing)
+                    AvatarView(name: name, size: 34, photo: store.photo(forName: name))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: name)
+                            .font(.subheadline.weight(.bold))
+                            .lineLimit(1)
+                        if let role = group.role(for: name) {
+                            Text(LocalizedStringKey(role.rawValue))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    if isLeader {
+                        Button(role: .destructive) {
+                            removeSoloist(profileID, from: song)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                                .padding(5)
+                        }
+                        .buttonStyle(PressableStyle())
+                        .accessibilityLabel(Text("Retirer ce solo"))
+
+                        Image(systemName: "line.3.horizontal")
+                            .font(.body.weight(.heavy))
+                            .foregroundStyle(JC.bronze)
+                            .frame(width: 28, height: 44)
+                            .contentShape(Rectangle())
+                            .accessibilityLabel(Text("Déplacer le solo"))
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityAction(named: Text("Déplacer avant")) {
+                                moveSoloist(profileID, by: -1, in: song)
+                            }
+                            .accessibilityAction(named: Text("Déplacer après")) {
+                                moveSoloist(profileID, by: 1, in: song)
+                            }
+                            .onDrag {
+                                soloDragSession = OrderedUUIDDragSession(
+                                    draggingID: profileID,
+                                    initialOrder: soloOrder
+                                )
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                return NSItemProvider(object: profileID.uuidString as NSString)
+                            }
+                    }
+                }
+            }
+            .opacity(soloDragSession.draggingID == profileID ? 0.58 : 1)
+            .scaleEffect(soloDragSession.draggingID == profileID ? 0.985 : 1)
+            .animation(.snappy(duration: 0.18), value: soloDragSession.draggingID)
+            .onDrop(
+                of: [UTType.text],
+                delegate: OrderedUUIDDropDelegate(
+                    targetID: profileID,
+                    orderedIDs: $soloOrder,
+                    session: $soloDragSession,
+                    onCommit: { ids in
+                        store.setSongSolos(ids, songID: song.id, in: groupID)
+                    }
+                )
+            )
+        }
+    }
+
+    private func addSoloist(_ profileID: UUID, to song: Song) {
+        guard !soloOrder.contains(profileID) else { return }
+        soloOrder.append(profileID)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        store.setSongSolos(soloOrder, songID: song.id, in: groupID)
+    }
+
+    private func removeSoloist(_ profileID: UUID, from song: Song) {
+        soloOrder.removeAll { $0 == profileID }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        store.setSongSolos(soloOrder, songID: song.id, in: groupID)
+    }
+
+    private func moveSoloist(_ profileID: UUID, by offset: Int, in song: Song) {
+        guard let source = soloOrder.firstIndex(of: profileID) else { return }
+        let destination = source + offset
+        guard soloOrder.indices.contains(destination) else { return }
+        soloOrder.swapAt(source, destination)
+        UISelectionFeedbackGenerator().selectionChanged()
+        store.setSongSolos(soloOrder, songID: song.id, in: groupID)
     }
 
     /// « Autumn Leaves — Saxophone » ou juste le titre si c'est pour tous.

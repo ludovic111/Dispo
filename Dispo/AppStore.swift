@@ -156,6 +156,10 @@ final class AppStore: ObservableObject {
     let backend: SupabaseBackend?
     /// Identifiant de l'utilisateur connecté au backend, nil hors ligne.
     @Published var liveUserID: UUID?
+    /// Jeton monotone de session. L'UUID seul ne suffit pas : une requête
+    /// lancée avant déconnexion ne doit pas réinjecter son snapshot après une
+    /// reconnexion rapide du même compte.
+    private var liveSessionGeneration: UInt64 = 0
     @Published var liveEmail: String?
     /// true si le compte connecté a une identité Apple liée (connexion en
     /// un tap avec « Se connecter avec Apple »).
@@ -188,6 +192,18 @@ final class AppStore: ObservableObject {
     /// Rafraîchissement des groupes en attente (déclenché par le realtime) —
     /// coalesce les rafales d'événements en un seul rechargement.
     private var pendingGroupRefresh: Task<Void, Never>?
+    /// Toutes les mutations de morceaux d'un groupe passent dans la même
+    /// file. Deux drops rapides ne peuvent donc pas terminer dans l'ordre
+    /// inverse, et seul le dernier refresh autorisé touche l'interface.
+    private var songMutationTasks: [GroupChat.ID: Task<Void, Never>] = [:]
+    private var songMutationGenerations: [GroupChat.ID: Int] = [:]
+    /// Révision globale des morceaux, tous groupes confondus. Un snapshot
+    /// commencé avant une mutation d'un autre groupe devient lui aussi caduc.
+    private var songMutationRevision: UInt64 = 0
+    /// Génération globale de lecture des groupes, partagée par le refresh
+    /// complet et celui déclenché par Realtime. Seule la dernière requête
+    /// démarrée peut appliquer son résultat, même sans mutation locale.
+    private var groupSnapshotRequestGeneration: UInt64 = 0
     /// Temps réel des annonces SOS (publication, retrait, candidatures).
     private var gigChannel: RealtimeChannelV2?
     private var gigTask: Task<Void, Never>?
@@ -459,6 +475,8 @@ final class AppStore: ObservableObject {
     /// À appeler après une connexion réussie (AccountSheet).
     func didSignIn(userID: UUID) async {
         guard let backend else { return }
+        liveSessionGeneration &+= 1
+        invalidateGroupWorkForSessionChange()
         // État strictement lié au compte : ne jamais montrer ni rendre
         // ouvrable le cache de la session précédente pendant l'hydratation.
         musicians = []
@@ -517,6 +535,7 @@ final class AppStore: ObservableObject {
         prefetchedProfiles: [SupabaseBackend.ProfileRow]? = nil
     ) async {
         guard let backend, let userID = liveUserID else { return }
+        let snapshotSessionGeneration = liveSessionGeneration
         do {
             let profiles: [SupabaseBackend.ProfileRow]
             if let prefetchedProfiles {
@@ -542,13 +561,24 @@ final class AppStore: ObservableObject {
                 gigsTask, conversationsTask,
                 followsTask, ratingsTask, collaborationsTask, blocksTask
             )
+            let fetchedNotifications = try? await notificationsTask
+            let exactLocations = (try? await exactLocationsTask) ?? []
+            guard Self.isMatchingLiveSession(
+                expectedUserID: userID,
+                currentUserID: liveUserID,
+                expectedGeneration: snapshotSessionGeneration,
+                currentGeneration: liveSessionGeneration
+            ) else { return }
+
+            // Aucun état de compte n'est muté avant ce garde : un refresh
+            // parti sous A ne peut pas repeupler la session B après ses awaits.
             blockedUserIDs = blocks
-            notifications = (try? await notificationsTask) ?? notifications
+            notifications = fetchedNotifications ?? notifications
             syncApplicationBadge()
             // Positions exactes partagées avec moi (RLS) : elles remplacent
             // la position ville des profils concernés.
             let exactByID = Dictionary(
-                uniqueKeysWithValues: ((try? await exactLocationsTask) ?? []).map { ($0.userId, $0) }
+                uniqueKeysWithValues: exactLocations.map { ($0.userId, $0) }
             )
             musicians = allMusicians
                 .filter { !blocks.contains($0.id) }
@@ -600,24 +630,63 @@ final class AppStore: ObservableObject {
                 profile.photoURL = mine.photoUrl
             }
             healProfilePhotoIfNeeded()
+            let groupSnapshotRevision = songMutationRevision
+            groupSnapshotRequestGeneration &+= 1
+            let groupSnapshotRequest = groupSnapshotRequestGeneration
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
                 nameByID: nameByID
             )
-            // Messages ET partitions viennent du serveur (les partitions
-            // sont hébergées depuis la 1.0 — visibles par tout le groupe).
-            groups = Self.mergedGroups(remote: remoteGroups, local: groups)
-                .sorted(by: Self.groupHasNewerActivity)
-            persistGroups()
-            seedGroupLastSeenIfNeeded()
+            guard Self.isMatchingLiveSession(
+                expectedUserID: userID,
+                currentUserID: liveUserID,
+                expectedGeneration: snapshotSessionGeneration,
+                currentGeneration: liveSessionGeneration
+            ) else { return }
+            if Self.canApplyGroupSnapshot(
+                snapshotUserID: userID,
+                currentUserID: liveUserID,
+                snapshotSessionGeneration: snapshotSessionGeneration,
+                currentSessionGeneration: liveSessionGeneration,
+                snapshotRevision: groupSnapshotRevision,
+                currentRevision: songMutationRevision,
+                hasPendingMutations: !songMutationTasks.isEmpty,
+                snapshotRequestGeneration: groupSnapshotRequest,
+                currentRequestGeneration: groupSnapshotRequestGeneration
+            ) {
+                // Messages ET partitions viennent du serveur (les partitions
+                // sont hébergées depuis la 1.0 — visibles par tout le groupe).
+                groups = Self.mergedGroups(remote: remoteGroups, local: groups)
+                    .sorted(by: Self.groupHasNewerActivity)
+                persistGroups()
+                seedGroupLastSeenIfNeeded()
+            }
             await refreshGroupInvitations(nameByID: nameByID)
+            guard Self.isMatchingLiveSession(
+                expectedUserID: userID,
+                currentUserID: liveUserID,
+                expectedGeneration: snapshotSessionGeneration,
+                currentGeneration: liveSessionGeneration
+            ) else { return }
             await refreshEventGuests()
+            guard Self.isMatchingLiveSession(
+                expectedUserID: userID,
+                currentUserID: liveUserID,
+                expectedGeneration: snapshotSessionGeneration,
+                currentGeneration: liveSessionGeneration
+            ) else { return }
             loadAllApplicants()
             rescheduleAllAttendanceNotifications()
             runAutoSOSIfNeeded()
             backendError = nil
         } catch {
+            guard Self.isMatchingLiveSession(
+                expectedUserID: userID,
+                currentUserID: liveUserID,
+                expectedGeneration: snapshotSessionGeneration,
+                currentGeneration: liveSessionGeneration
+            ) else { return }
             backendError = tr("Connexion au serveur impossible — vérifie le réseau.")
         }
     }
@@ -674,6 +743,10 @@ final class AppStore: ObservableObject {
 
     func signOutLive() async {
         guard let backend else { return }
+        // Invalide immédiatement les lectures et écritures démarrées sous la
+        // session sortante, avant les awaits de nettoyage réseau.
+        liveSessionGeneration &+= 1
+        invalidateGroupWorkForSessionChange()
         if let token = pushDeviceToken {
             try? await backend.deletePushDevice(token: token)
         }
@@ -701,8 +774,6 @@ final class AppStore: ObservableObject {
         }
         groupTask?.cancel()
         groupTask = nil
-        pendingGroupRefresh?.cancel()
-        pendingGroupRefresh = nil
         if let channel = groupChannel {
             await backend.client.removeChannel(channel)
             groupChannel = nil
@@ -1094,7 +1165,14 @@ final class AppStore: ObservableObject {
     /// Recharge uniquement le feed SOS (plus léger que refreshLiveData).
     private func refreshGigs() async {
         guard let backend, let userID = liveUserID else { return }
+        let sessionGeneration = liveSessionGeneration
         guard let fresh = try? await backend.fetchGigs(myID: userID) else { return }
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: sessionGeneration,
+            currentGeneration: liveSessionGeneration
+        ) else { return }
         withAnimation {
             events = fresh.sorted { $0.date < $1.date }
         }
@@ -1180,16 +1258,47 @@ final class AppStore: ObservableObject {
 
     /// Recharge uniquement les groupes depuis le serveur (plus léger que
     /// refreshLiveData — utilisé par le temps réel).
-    private func refreshGroups() async {
+    private func refreshGroups(
+        expectedSongMutationRevision: UInt64? = nil
+    ) async {
         guard let backend, let userID = liveUserID else { return }
+        let snapshotSessionGeneration = liveSessionGeneration
+        let snapshotRevision = expectedSongMutationRevision ?? songMutationRevision
+        let preflightRequestGeneration = groupSnapshotRequestGeneration
+        // Un refresh realtime arrivé pendant un drop pourrait relire l'ancien
+        // ordre. La dernière mutation en file fera un unique refresh global.
+        guard Self.canApplyGroupSnapshot(
+            snapshotUserID: userID,
+            currentUserID: liveUserID,
+            snapshotSessionGeneration: snapshotSessionGeneration,
+            currentSessionGeneration: liveSessionGeneration,
+            snapshotRevision: snapshotRevision,
+            currentRevision: songMutationRevision,
+            hasPendingMutations: !songMutationTasks.isEmpty,
+            snapshotRequestGeneration: preflightRequestGeneration,
+            currentRequestGeneration: groupSnapshotRequestGeneration
+        ) else { return }
         do {
             let profiles = try await backend.fetchProfiles()
             let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
+            groupSnapshotRequestGeneration &+= 1
+            let groupSnapshotRequest = groupSnapshotRequestGeneration
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
                 nameByID: nameByID
             )
+            guard Self.canApplyGroupSnapshot(
+                snapshotUserID: userID,
+                currentUserID: liveUserID,
+                snapshotSessionGeneration: snapshotSessionGeneration,
+                currentSessionGeneration: liveSessionGeneration,
+                snapshotRevision: snapshotRevision,
+                currentRevision: songMutationRevision,
+                hasPendingMutations: !songMutationTasks.isEmpty,
+                snapshotRequestGeneration: groupSnapshotRequest,
+                currentRequestGeneration: groupSnapshotRequestGeneration
+            ) else { return }
             // Messages ET partitions viennent du serveur — ne rien écraser
             // avec la copie locale (sinon une partition reçue en realtime
             // disparaîtrait aussitôt).
@@ -1205,6 +1314,52 @@ final class AppStore: ObservableObject {
         } catch {
             // Silencieux : le prochain événement ou refreshLiveData rattrapera.
         }
+    }
+
+    /// Décision pure et testable : aucun snapshot de groupes n'est appliqué
+    /// tant qu'une mutation est en vol, ni s'il a commencé avant une mutation
+    /// d'un autre groupe ou sous une autre session.
+    nonisolated static func canApplyGroupSnapshot(
+        snapshotUserID: UUID,
+        currentUserID: UUID?,
+        snapshotSessionGeneration: UInt64,
+        currentSessionGeneration: UInt64,
+        snapshotRevision: UInt64,
+        currentRevision: UInt64,
+        hasPendingMutations: Bool,
+        snapshotRequestGeneration: UInt64,
+        currentRequestGeneration: UInt64
+    ) -> Bool {
+        Self.isMatchingLiveSession(
+            expectedUserID: snapshotUserID,
+            currentUserID: currentUserID,
+            expectedGeneration: snapshotSessionGeneration,
+            currentGeneration: currentSessionGeneration
+        )
+            && !hasPendingMutations
+            && snapshotRevision == currentRevision
+            && snapshotRequestGeneration == currentRequestGeneration
+    }
+
+    nonisolated private static func isMatchingLiveSession(
+        expectedUserID: UUID,
+        currentUserID: UUID?,
+        expectedGeneration: UInt64,
+        currentGeneration: UInt64
+    ) -> Bool {
+        expectedUserID == currentUserID && expectedGeneration == currentGeneration
+    }
+
+    /// Annule immédiatement tout travail de groupes appartenant à la session
+    /// précédente. La révision reste monotone afin qu'une ancienne valeur ne
+    /// redevienne jamais valide après déconnexion.
+    private func invalidateGroupWorkForSessionChange() {
+        pendingGroupRefresh?.cancel()
+        pendingGroupRefresh = nil
+        songMutationTasks.values.forEach { $0.cancel() }
+        songMutationTasks = [:]
+        songMutationGenerations = [:]
+        songMutationRevision &+= 1
     }
 
     /// Flag anti-chevauchement du backfill Odesli.
@@ -1236,7 +1391,15 @@ final class AppStore: ObservableObject {
             defer { self.streamingBackfillActive = false }
             for t in batch {
                 if let links = await Self.fetchStreamingLinks(appleMusicURL: t.appleURL) {
-                    self.updateSong(t.songID, in: t.groupID, eventID: nil) { $0.platformLinks = links }
+                    guard var song = self.localSong(t.songID, in: t.groupID, eventID: nil) else {
+                        continue
+                    }
+                    song.platformLinks = links
+                    self.updateSong(
+                        .update(song, fields: [.platformLinks]),
+                        in: t.groupID,
+                        eventID: nil
+                    )
                 } else {
                     self.streamingBackfillGaveUp.insert(t.songID)
                 }
@@ -1247,9 +1410,17 @@ final class AppStore: ObservableObject {
     /// Recharge mes invitations reçues + les invités en attente de mes
     /// groupes (accepter / refuser / annuler).
     private func refreshGroupInvitations(nameByID: [UUID: String]) async {
-        guard let backend, isLive else { return }
+        guard let backend, let userID = liveUserID else { return }
+        let sessionGeneration = liveSessionGeneration
+        let groupIDs = groups.map(\.id)
         let mine = (try? await backend.fetchMyGroupInvitations()) ?? []
-        let pendingRows = (try? await backend.fetchPendingInvites(groupIDs: groups.map(\.id))) ?? []
+        let pendingRows = (try? await backend.fetchPendingInvites(groupIDs: groupIDs)) ?? []
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: sessionGeneration,
+            currentGeneration: liveSessionGeneration
+        ) else { return }
         withAnimation {
             myGroupInvitations = mine
             pendingInvitesByGroup = Dictionary(grouping: pendingRows, by: \.groupId)
@@ -2456,6 +2627,33 @@ final class AppStore: ObservableObject {
             .filter { !$0.isEmpty }
     }
 
+    /// Membres utilisables dans l'ordre des solos. L'interface affiche les
+    /// noms, mais seule l'identité Supabase est conservée dans le morceau.
+    /// Les anciens caches de démo sans UUID restent simplement non éditables
+    /// pour le membre concerné, sans inventer d'identité durable.
+    func soloistOptions(for group: GroupChat) -> [SoloistOption] {
+        if let profiles = group.rosterProfiles {
+            var seen = Set<UUID>()
+            return profiles.filter { !$0.name.isEmpty && seen.insert($0.id).inserted }
+        }
+
+        // Repli réservé à la démo et aux anciens caches : les groupes chargés
+        // du serveur possèdent `rosterProfiles`, donc deux homonymes ne sont
+        // jamais réassociés au hasard par leur nom d'affichage.
+        var seen = Set<UUID>()
+        return roster(of: group).compactMap { name in
+            guard let id = profileID(for: name), seen.insert(id).inserted else { return nil }
+            return SoloistOption(id: id, name: name)
+        }
+    }
+
+    /// Nom courant d'un UUID de solo, résolu exclusivement dans les membres
+    /// du groupe. Un membre depuis retiré reste visible avec un repli honnête.
+    func soloistName(for profileID: UUID, in group: GroupChat) -> String {
+        soloistOptions(for: group).first(where: { $0.id == profileID })?.name
+            ?? tr("Membre retiré")
+    }
+
     /// Invite un musicien. En live, une INVITATION part — il n'apparaît
     /// dans le groupe qu'après avoir accepté. En démo, ajout direct pour
     /// garder le bac à sable vivant.
@@ -2552,20 +2750,34 @@ final class AppStore: ObservableObject {
     }
 
     func kickMember(_ name: String, from group: GroupChat) {
+        let removedProfileID = group.rosterProfiles?.first(where: { $0.name == name })?.id
+            ?? profileID(for: name)
         updateGroup(group.id) {
             $0.memberNames.removeAll { $0 == name }
             $0.memberKinds?[name] = nil
             // Un membre viré ne laisse pas de suggestions orphelines — ni dans
             // le répertoire, ni dans les setlists des événements.
-            $0.repertoire = $0.songs.filter { $0.isApproved || $0.suggestedBy != name }
+            $0.repertoire = $0.songs.filter { song in
+                let matchesStableID = removedProfileID.map {
+                    UUID(uuidString: song.suggestedBy) == $0
+                } ?? false
+                return song.isApproved
+                    || (song.suggestedBy != name && !matchesStableID)
+            }
             $0.events = $0.events?.map { event in
                 var event = event
-                event.setlist.removeAll { !$0.isApproved && $0.suggestedBy == name }
+                event.setlist.removeAll { song in
+                    let matchesStableID = removedProfileID.map {
+                        UUID(uuidString: song.suggestedBy) == $0
+                    } ?? false
+                    return !song.isApproved
+                        && (song.suggestedBy == name || matchesStableID)
+                }
                 event.attendance?[name] = nil
                 return event
             }
         }
-        if let backend, let profileID = profileID(for: name) {
+        if let backend, let profileID = removedProfileID {
             syncLive { try await backend.kickMember(profileID, from: group.id) }
         }
     }
@@ -2585,6 +2797,43 @@ final class AppStore: ObservableObject {
 
     // MARK: Répertoire (leader valide, membres suggèrent)
 
+    /// Résout l'identité stable enregistrée par iOS/Android vers le nom du
+    /// profil courant. Les anciennes suggestions stockées directement avec un
+    /// nom restent lisibles telles quelles.
+    func suggesterName(for song: Song, in groupID: GroupChat.ID?) -> String {
+        var candidates = groupID
+            .flatMap { id in groups.first(where: { $0.id == id })?.rosterProfiles }
+            ?? []
+        if let liveUserID {
+            candidates.append(SoloistOption(id: liveUserID, name: profile.name))
+        }
+        candidates.append(contentsOf: musicians.map { SoloistOption(id: $0.id, name: $0.name) })
+        return Self.resolvedSuggesterName(
+            storedValue: song.suggestedBy,
+            candidates: candidates,
+            unknownUUIDFallback: tr("Membre retiré")
+        )
+    }
+
+    nonisolated static func resolvedSuggesterName(
+        storedValue: String,
+        candidates: [SoloistOption],
+        unknownUUIDFallback: String
+    ) -> String {
+        guard let profileID = UUID(uuidString: storedValue) else {
+            return storedValue
+        }
+        return candidates.first(where: { $0.id == profileID })?.name
+            ?? unknownUUIDFallback
+    }
+
+    nonisolated static func suggestionAuthorStorageValue(
+        userID: UUID?,
+        legacyProfileName: String
+    ) -> String {
+        userID?.uuidString.lowercased() ?? legacyProfileName
+    }
+
     /// Ajoute un morceau au répertoire du groupe. Le leader ajoute
     /// directement (validé) ; un membre crée une suggestion à valider.
     func addSong(
@@ -2600,7 +2849,10 @@ final class AppStore: ObservableObject {
             title: title,
             artist: artist,
             artworkURL: nil,
-            suggestedBy: profile.name,
+            suggestedBy: Self.suggestionAuthorStorageValue(
+                userID: liveUserID,
+                legacyProfileName: profile.name
+            ),
             isApproved: approved,
             key: key?.isEmpty == true ? nil : key
         )
@@ -2611,11 +2863,17 @@ final class AppStore: ObservableObject {
             guard let self else { return }
             let info = await Self.fetchTrackInfo(title: title, artist: artist)
             if info.artworkURL != nil || info.trackURL != nil || info.platformLinks != nil {
-                self.updateSong(song.id, in: groupID, eventID: eventID) {
-                    $0.artworkURL = info.artworkURL
-                    $0.trackURL = info.trackURL
-                    $0.platformLinks = info.platformLinks
+                guard var refreshed = self.localSong(song.id, in: groupID, eventID: eventID) else {
+                    return
                 }
+                refreshed.artworkURL = info.artworkURL
+                refreshed.trackURL = info.trackURL
+                refreshed.platformLinks = info.platformLinks
+                self.updateSong(
+                    .update(refreshed, fields: [.artworkURL, .trackURL, .platformLinks]),
+                    in: groupID,
+                    eventID: eventID
+                )
             }
         }
     }
@@ -2634,8 +2892,15 @@ final class AppStore: ObservableObject {
         updated.title = title
         updated.artist = artist
         updated.key = key?.isEmpty == true ? nil : key
-        replaceSongEverywhere(updated, in: group.id)
-        syncSongEverywhere(updated.id, in: group.id)
+        let fields = Self.changedSongFields(
+            from: song,
+            to: updated,
+            candidates: [.title, .artist, .key]
+        )
+        guard !fields.isEmpty else { return }
+        let mutation = SongCollectionMutation.update(updated, fields: fields)
+        applySongMutationEverywhere(mutation, in: group.id)
+        syncSongEverywhere(mutation, in: group.id)
 
         guard title != song.title || artist != song.artist else { return }
         Task { [weak self] in
@@ -2648,93 +2913,411 @@ final class AppStore: ObservableObject {
             refreshed.artworkURL = info.artworkURL
             refreshed.trackURL = info.trackURL
             refreshed.platformLinks = info.platformLinks
-            self.replaceSongEverywhere(refreshed, in: group.id)
-            self.syncSongEverywhere(refreshed.id, in: group.id)
+            let mutation = SongCollectionMutation.update(
+                refreshed,
+                fields: [.artworkURL, .trackURL, .platformLinks]
+            )
+            self.applySongMutationEverywhere(mutation, in: group.id)
+            self.syncSongEverywhere(mutation, in: group.id)
         }
     }
 
-    private func replaceSongEverywhere(_ song: Song, in groupID: GroupChat.ID) {
-        updateGroup(groupID) { chat in
-            if let index = chat.repertoire?.firstIndex(where: { $0.id == song.id }) {
-                chat.repertoire?[index] = song
+    /// Champs qu'une action iOS a réellement le droit de modifier. La fusion
+    /// repart d'un snapshot serveur frais et laisse tous les autres champs
+    /// (validation, solos, auteur...) tels qu'ils sont à distance.
+    struct SongMutationFields: OptionSet {
+        let rawValue: Int
+
+        init(rawValue: Int) { self.rawValue = rawValue }
+
+        static let title = Self(rawValue: 1 << 0)
+        static let artist = Self(rawValue: 1 << 1)
+        static let artworkURL = Self(rawValue: 1 << 2)
+        static let trackURL = Self(rawValue: 1 << 3)
+        static let platformLinks = Self(rawValue: 1 << 4)
+        static let isApproved = Self(rawValue: 1 << 5)
+        static let key = Self(rawValue: 1 << 6)
+        static let chords = Self(rawValue: 1 << 7)
+        static let irealURL = Self(rawValue: 1 << 8)
+        static let irealDisabled = Self(rawValue: 1 << 9)
+    }
+
+    enum SongCollectionMutation {
+        case add(Song)
+        case remove(Song.ID)
+        case update(Song, fields: SongMutationFields)
+
+        var songID: Song.ID {
+            switch self {
+            case let .add(song), let .update(song, _): return song.id
+            case let .remove(songID): return songID
             }
+        }
+    }
+
+    /// Applique uniquement l'intention explicite à une collection serveur
+    /// fraîche. L'ordre n'est jamais reconstruit depuis le cache iOS, et une
+    /// suppression distante n'est jamais ressuscitée par un simple edit.
+    nonisolated static func applyingSongMutation(
+        _ mutation: SongCollectionMutation,
+        to freshSongs: [Song]
+    ) -> [Song] {
+        switch mutation {
+        case let .add(song):
+            guard !freshSongs.contains(where: { $0.id == song.id }) else { return freshSongs }
+            return freshSongs + [song]
+        case let .remove(songID):
+            return freshSongs.filter { $0.id != songID }
+        case let .update(desired, fields):
+            return freshSongs.map { current in
+                guard current.id == desired.id else { return current }
+                var merged = current
+                if fields.contains(.title) { merged.title = desired.title }
+                if fields.contains(.artist) { merged.artist = desired.artist }
+                if fields.contains(.artworkURL) { merged.artworkURL = desired.artworkURL }
+                if fields.contains(.trackURL) { merged.trackURL = desired.trackURL }
+                if fields.contains(.platformLinks) { merged.platformLinks = desired.platformLinks }
+                if fields.contains(.isApproved) { merged.isApproved = desired.isApproved }
+                if fields.contains(.key) { merged.key = desired.key }
+                if fields.contains(.chords) { merged.chords = desired.chords }
+                if fields.contains(.irealURL) { merged.irealURL = desired.irealURL }
+                if fields.contains(.irealDisabled) { merged.irealDisabled = desired.irealDisabled }
+                return merged
+            }
+        }
+    }
+
+    /// Calcule l'intention d'un formulaire à partir de sa valeur d'ouverture.
+    /// Un champ resté intact n'entre pas dans le diff, même si sa valeur locale
+    /// est devenue périmée pendant que la feuille était affichée.
+    nonisolated static func changedSongFields(
+        from baseline: Song,
+        to desired: Song,
+        candidates: SongMutationFields
+    ) -> SongMutationFields {
+        var changed: SongMutationFields = []
+        if candidates.contains(.title), baseline.title != desired.title { changed.insert(.title) }
+        if candidates.contains(.artist), baseline.artist != desired.artist { changed.insert(.artist) }
+        if candidates.contains(.artworkURL), baseline.artworkURL != desired.artworkURL {
+            changed.insert(.artworkURL)
+        }
+        if candidates.contains(.trackURL), baseline.trackURL != desired.trackURL {
+            changed.insert(.trackURL)
+        }
+        if candidates.contains(.platformLinks), baseline.platformLinks != desired.platformLinks {
+            changed.insert(.platformLinks)
+        }
+        if candidates.contains(.isApproved), baseline.isApproved != desired.isApproved {
+            changed.insert(.isApproved)
+        }
+        if candidates.contains(.key), baseline.key != desired.key { changed.insert(.key) }
+        if candidates.contains(.chords), baseline.chords != desired.chords { changed.insert(.chords) }
+        if candidates.contains(.irealURL), baseline.irealURL != desired.irealURL {
+            changed.insert(.irealURL)
+        }
+        if candidates.contains(.irealDisabled), baseline.irealDisabled != desired.irealDisabled {
+            changed.insert(.irealDisabled)
+        }
+        return changed
+    }
+
+    private func applySongMutationEverywhere(
+        _ mutation: SongCollectionMutation,
+        in groupID: GroupChat.ID
+    ) {
+        updateGroup(groupID) { chat in
+            chat.repertoire = Self.applyingSongMutation(mutation, to: chat.songs)
             for eventIndex in (chat.events ?? []).indices {
-                if let songIndex = chat.events?[eventIndex].setlist.firstIndex(where: { $0.id == song.id }) {
-                    chat.events?[eventIndex].setlist[songIndex] = song
+                let current = chat.events?[eventIndex].setlist ?? []
+                chat.events?[eventIndex].setlist = Self.applyingSongMutation(mutation, to: current)
+            }
+        }
+    }
+
+    private func syncSongEverywhere(_ mutation: SongCollectionMutation, in groupID: GroupChat.ID) {
+        guard let backend, isLive else { return }
+        enqueueSongMutation(in: groupID) { [weak self] session in
+            let collections = try await backend.fetchGroupSongCollections(groupID: groupID)
+            guard let self, self.isCurrentSongMutationSession(session) else { return }
+
+            if collections.repertoire.contains(where: { $0.id == mutation.songID }) {
+                let desired = Self.applyingSongMutation(mutation, to: collections.repertoire)
+                if desired != collections.repertoire {
+                    try await backend.mergeGroupRepertoireSnapshot(
+                        originalSongs: collections.repertoire,
+                        desiredSongs: desired,
+                        groupID: groupID
+                    )
                 }
             }
-        }
-    }
 
-    private func syncSongEverywhere(_ songID: Song.ID, in groupID: GroupChat.ID) {
-        guard let backend, isLive, let fresh = groups.first(where: { $0.id == groupID }) else { return }
-        let repertoire = fresh.songs
-        let touchedEvents = fresh.allEvents.filter { event in
-            event.setlist.contains { $0.id == songID }
-        }
-        syncLive {
-            try await backend.updateGroupRepertoire(repertoire, groupID: groupID)
-            for event in touchedEvents {
-                try await backend.updateEventSetlist(event.setlist, eventID: event.id)
+            for eventID in collections.eventSetlists.keys.sorted(by: {
+                $0.uuidString < $1.uuidString
+            }) {
+                guard self.isCurrentSongMutationSession(session),
+                      let original = collections.eventSetlists[eventID],
+                      original.contains(where: { $0.id == mutation.songID })
+                else { continue }
+                let desired = Self.applyingSongMutation(mutation, to: original)
+                if desired != original {
+                    try await backend.mergeEventSetlistSnapshot(
+                        originalSongs: original,
+                        desiredSongs: desired,
+                        eventID: eventID
+                    )
+                }
             }
         }
     }
 
     func approveSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
-        updateSong(song.id, in: groupID, eventID: eventID) { $0.isApproved = true }
+        var approved = song
+        approved.isApproved = true
+        updateSong(
+            .update(approved, fields: [.isApproved]),
+            in: groupID,
+            eventID: eventID
+        )
+    }
+
+    /// Réordonne uniquement les morceaux validés d'une setlist. Les
+    /// suggestions gardent leur place relative et ne peuvent pas disparaître
+    /// pendant un glisser-déposer.
+    nonisolated static func applyingApprovedSongOrder(
+        _ orderedIDs: [Song.ID],
+        to setlist: [Song]
+    ) -> [Song] {
+        let approved = setlist.filter(\.isApproved)
+        let allowed = Set(approved.map(\.id))
+        var seen = Set<Song.ID>()
+        var normalized = orderedIDs.filter { allowed.contains($0) && seen.insert($0).inserted }
+        normalized.append(contentsOf: approved.map(\.id).filter { seen.insert($0).inserted })
+
+        let byID = Dictionary(uniqueKeysWithValues: approved.map { ($0.id, $0) })
+        var ordered = normalized.compactMap { byID[$0] }.makeIterator()
+        return setlist.map { song in
+            guard song.isApproved else { return song }
+            return ordered.next() ?? song
+        }
+    }
+
+    /// Persistance automatique de l'ordre choisi au doigt. La même colonne
+    /// JSONB `setlist` est déjà partagée par iOS et Android : aucun nouveau
+    /// schéma n'est requis.
+    func reorderApprovedSetlist(
+        _ orderedIDs: [Song.ID],
+        eventID: GroupEvent.ID,
+        in groupID: GroupChat.ID
+    ) {
+        guard let group = groups.first(where: { $0.id == groupID }), canLead(group) else { return }
+        updateGroup(groupID) { group in
+            guard let eventIndex = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
+            let current = group.events?[eventIndex].setlist ?? []
+            group.events?[eventIndex].setlist = Self.applyingApprovedSongOrder(orderedIDs, to: current)
+        }
+        guard let backend, isLive else { return }
+        enqueueSongMutation(in: groupID) { _ in
+            try await backend.reorderEventSetlist(orderedIDs, eventID: eventID)
+        }
+    }
+
+    /// Même interaction dans le répertoire principal du groupe. Les
+    /// suggestions non validées restent à leur place relative.
+    func reorderApprovedRepertoire(
+        _ orderedIDs: [Song.ID],
+        in groupID: GroupChat.ID
+    ) {
+        guard let group = groups.first(where: { $0.id == groupID }), canLead(group) else { return }
+        updateGroup(groupID) { group in
+            group.repertoire = Self.applyingApprovedSongOrder(orderedIDs, to: group.songs)
+        }
+        guard let backend, isLive else { return }
+        enqueueSongMutation(in: groupID) { _ in
+            try await backend.reorderGroupRepertoire(orderedIDs, groupID: groupID)
+        }
+    }
+
+    /// Ajoute, retire ou réordonne les solos d'un morceau. Les UUID hors du
+    /// groupe sont ignorés et chaque profil ne peut apparaître qu'une fois.
+    /// Le changement suit le morceau dans le répertoire et toutes ses setlists.
+    func setSongSolos(
+        _ profileIDs: [UUID],
+        songID: Song.ID,
+        in groupID: GroupChat.ID
+    ) {
+        guard let group = groups.first(where: { $0.id == groupID }), canLead(group) else { return }
+        let allowed = Set(soloistOptions(for: group).map(\.id))
+        var seen = Set<UUID>()
+        let normalized = profileIDs.filter { allowed.contains($0) && seen.insert($0).inserted }
+
+        updateGroup(groupID) { group in
+            if let index = group.repertoire?.firstIndex(where: { $0.id == songID }) {
+                group.repertoire?[index].solos = normalized.isEmpty ? nil : normalized
+            }
+            for eventIndex in (group.events ?? []).indices {
+                if let index = group.events?[eventIndex].setlist.firstIndex(where: { $0.id == songID }) {
+                    group.events?[eventIndex].setlist[index].solos = normalized.isEmpty ? nil : normalized
+                }
+            }
+        }
+        guard let backend, isLive else { return }
+        enqueueSongMutation(in: groupID) { _ in
+            try await backend.setGroupSongSolos(
+                normalized,
+                songID: songID,
+                groupID: groupID
+            )
+        }
     }
 
     func rejectSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID? = nil) {
-        updateGroup(groupID) { group in
-            if let eventID, let index = group.events?.firstIndex(where: { $0.id == eventID }) {
-                group.events?[index].setlist.removeAll { $0.id == song.id }
-            } else {
-                group.repertoire = group.songs.filter { $0.id != song.id }
-            }
-        }
-        syncSongs(groupID: groupID, eventID: eventID)
+        updateSong(.remove(song.id), in: groupID, eventID: eventID)
     }
 
     private func insertSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID?) {
-        updateGroup(groupID) { group in
-            if let eventID {
-                // Ciblait un événement précis : s'il a disparu entretemps, on
-                // ne bascule pas le morceau vers le répertoire — on abandonne.
-                guard let index = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
-                group.events?[index].setlist.append(song)
-            } else {
-                group.repertoire = group.songs + [song]
-            }
-        }
-        syncSongs(groupID: groupID, eventID: eventID)
+        updateSong(.add(song), in: groupID, eventID: eventID)
     }
 
-    private func updateSong(_ songID: Song.ID, in groupID: GroupChat.ID, eventID: GroupEvent.ID?, _ transform: (inout Song) -> Void) {
+    private func localSong(
+        _ songID: Song.ID,
+        in groupID: GroupChat.ID,
+        eventID: GroupEvent.ID?
+    ) -> Song? {
+        guard let group = groups.first(where: { $0.id == groupID }) else { return nil }
+        if let eventID {
+            return group.allEvents.first(where: { $0.id == eventID })?
+                .setlist.first(where: { $0.id == songID })
+        }
+        return group.songs.first(where: { $0.id == songID })
+    }
+
+    private func updateSong(
+        _ mutation: SongCollectionMutation,
+        in groupID: GroupChat.ID,
+        eventID: GroupEvent.ID?
+    ) {
         updateGroup(groupID) { group in
             if let eventID, let eventIndex = group.events?.firstIndex(where: { $0.id == eventID }) {
-                if let songIndex = group.events?[eventIndex].setlist.firstIndex(where: { $0.id == songID }) {
-                    transform(&group.events![eventIndex].setlist[songIndex])
-                }
-            } else if var repertoire = group.repertoire,
-                      let songIndex = repertoire.firstIndex(where: { $0.id == songID }) {
-                transform(&repertoire[songIndex])
-                group.repertoire = repertoire
+                let current = group.events?[eventIndex].setlist ?? []
+                group.events?[eventIndex].setlist = Self.applyingSongMutation(mutation, to: current)
+            } else if eventID == nil {
+                group.repertoire = Self.applyingSongMutation(mutation, to: group.songs)
             }
         }
-        syncSongs(groupID: groupID, eventID: eventID)
+        syncSongs(groupID: groupID, eventID: eventID, mutation: mutation)
     }
 
-    /// Pousse répertoire / setlist vers Supabase après une mutation locale.
-    private func syncSongs(groupID: GroupChat.ID, eventID: GroupEvent.ID?) {
-        guard let backend, isLive,
-              let group = groups.first(where: { $0.id == groupID })
-        else { return }
-        if let eventID,
-           let event = group.allEvents.first(where: { $0.id == eventID }) {
-            syncLive { try await backend.updateEventSetlist(event.setlist, eventID: eventID) }
-        } else {
-            syncLive { try await backend.updateGroupRepertoire(group.songs, groupID: groupID) }
+    /// Relit la collection dans la file, applique seulement l'intention locale,
+    /// puis confie au RPC le diff `original` → `desired`. Une écriture distante
+    /// reçue pendant l'attente (ordre, validation, solos, suggestion) survit.
+    private func syncSongs(
+        groupID: GroupChat.ID,
+        eventID: GroupEvent.ID?,
+        mutation: SongCollectionMutation
+    ) {
+        guard let backend, isLive else { return }
+        enqueueSongMutation(in: groupID) { [weak self] session in
+            let collections = try await backend.fetchGroupSongCollections(groupID: groupID)
+            guard let self, self.isCurrentSongMutationSession(session) else { return }
+
+            if let eventID {
+                // L'événement peut avoir été supprimé à distance pendant
+                // l'attente : dans ce cas l'action n'est pas redirigée ailleurs.
+                guard let original = collections.eventSetlists[eventID] else { return }
+                let desired = Self.applyingSongMutation(mutation, to: original)
+                guard desired != original else { return }
+                try await backend.mergeEventSetlistSnapshot(
+                    originalSongs: original,
+                    desiredSongs: desired,
+                    eventID: eventID
+                )
+            } else {
+                let original = collections.repertoire
+                let desired = Self.applyingSongMutation(mutation, to: original)
+                guard desired != original else { return }
+                try await backend.mergeGroupRepertoireSnapshot(
+                    originalSongs: original,
+                    desiredSongs: desired,
+                    groupID: groupID
+                )
+            }
         }
+    }
+
+    /// Sérialise les écritures JSON/RPC par groupe. Les snapshots anciens
+    /// partent avant les nouveaux, jamais après ; un refresh dont la génération
+    /// a été dépassée n'a pas le droit de restaurer un ordre obsolète.
+    private struct SongMutationSession {
+        let userID: UUID
+        let generation: UInt64
+    }
+
+    private func isCurrentSongMutationSession(_ session: SongMutationSession) -> Bool {
+        Self.isMatchingLiveSession(
+            expectedUserID: session.userID,
+            currentUserID: liveUserID,
+            expectedGeneration: session.generation,
+            currentGeneration: liveSessionGeneration
+        )
+    }
+
+    private func enqueueSongMutation(
+        in groupID: GroupChat.ID,
+        _ work: @escaping (SongMutationSession) async throws -> Void
+    ) {
+        guard let mutationUserID = liveUserID else { return }
+        let mutationSessionGeneration = liveSessionGeneration
+        let session = SongMutationSession(
+            userID: mutationUserID,
+            generation: mutationSessionGeneration
+        )
+        let predecessor = songMutationTasks[groupID]
+        let generation = (songMutationGenerations[groupID] ?? 0) + 1
+        songMutationGenerations[groupID] = generation
+        songMutationRevision &+= 1
+
+        let task = Task { [weak self] in
+            _ = await predecessor?.result
+            guard let self,
+                  !Task.isCancelled,
+                  Self.isMatchingLiveSession(
+                      expectedUserID: mutationUserID,
+                      currentUserID: self.liveUserID,
+                      expectedGeneration: mutationSessionGeneration,
+                      currentGeneration: self.liveSessionGeneration
+                  )
+            else { return }
+            do {
+                try await work(session)
+            } catch {
+                guard Self.isMatchingLiveSession(
+                    expectedUserID: mutationUserID,
+                    currentUserID: self.liveUserID,
+                    expectedGeneration: mutationSessionGeneration,
+                    currentGeneration: self.liveSessionGeneration
+                ) else { return }
+                self.backendError = self.tr("La synchro groupe a échoué — réessaie.")
+            }
+            guard !Task.isCancelled,
+                  Self.isMatchingLiveSession(
+                      expectedUserID: mutationUserID,
+                      currentUserID: self.liveUserID,
+                      expectedGeneration: mutationSessionGeneration,
+                      currentGeneration: self.liveSessionGeneration
+                  )
+            else { return }
+            if self.songMutationGenerations[groupID] == generation {
+                self.songMutationTasks[groupID] = nil
+            }
+            // Tous groupes confondus, seul le dernier travail terminé relit le
+            // serveur. Une mutation démarrée pendant ce fetch changera la
+            // révision et empêchera automatiquement son snapshot de s'appliquer.
+            if self.songMutationTasks.isEmpty {
+                let finalRevision = self.songMutationRevision
+                await self.refreshGroups(expectedSongMutationRevision: finalRevision)
+            }
+        }
+        songMutationTasks[groupID] = task
     }
 
     /// Cherche la pochette et le lien Apple Music du morceau (iTunes
@@ -3548,10 +4131,17 @@ final class AppStore: ObservableObject {
         updated.chords = chords?.isEmpty == true ? nil : chords
         updated.irealURL = irealURL?.isEmpty == true ? nil : irealURL
         if let irealDisabled { updated.irealDisabled = irealDisabled }
-        replaceSongEverywhere(updated, in: group.id)
+        let fields = Self.changedSongFields(
+            from: song,
+            to: updated,
+            candidates: [.key, .chords, .irealURL, .irealDisabled]
+        )
+        guard !fields.isEmpty else { return }
+        let mutation = SongCollectionMutation.update(updated, fields: fields)
+        applySongMutationEverywhere(mutation, in: group.id)
         // Le morceau vit aussi dans les setlists : on republie celles qui le
         // contiennent, sinon la version transposée n'y arriverait jamais.
-        syncSongEverywhere(song.id, in: group.id)
+        syncSongEverywhere(mutation, in: group.id)
     }
 
     func removeDoc(_ doc: GroupDoc, from group: GroupChat) {
@@ -4665,8 +5255,34 @@ final class AppStore: ObservableObject {
 
     /// Les demandes de dépannage qui m'ont été adressées, en attente d'abord.
     var incomingRequests: [GigRequest] {
+        let visibleGroupEventIDs = Set(
+            Self.deduplicatedGroups(groups)
+                .flatMap(\.upcomingEvents)
+                .map(\.id)
+        )
+        return Self.filteredIncomingRequests(
+            events,
+            visibleGroupEventIDs: visibleGroupEventIDs
+        )
+    }
+
+    /// Une demande directe créée depuis une date de groupe partage l'identité
+    /// de cette date. Si le membre voit déjà l'événement, seule sa carte de
+    /// présence doit rester ; un non-membre qui ne voit pas l'événement garde
+    /// bien sa demande ciblée.
+    nonisolated static func filteredIncomingRequests(
+        _ events: [GigRequest],
+        visibleGroupEventIDs: Set<GroupEvent.ID>
+    ) -> [GigRequest] {
         events
-            .filter { $0.isDirect && !$0.isMine }
+            .filter {
+                $0.isDirect
+                    && !$0.isMine
+                    && AgendaItem.shouldIncludeGig(
+                        linkedEventID: $0.eventId,
+                        visibleGroupEventIDs: visibleGroupEventIDs
+                    )
+            }
             .sorted {
                 let a = $0.targetStatus == .pending ? 0 : 1
                 let b = $1.targetStatus == .pending ? 0 : 1
@@ -4799,8 +5415,10 @@ final class AppStore: ObservableObject {
     /// candidatures en attente de réponse. C'est la page « Mes événements ».
     var agenda: [AgendaItem] {
         var items: [AgendaItem] = []
+        var visibleGroupEventIDs = Set<GroupEvent.ID>()
         for group in Self.deduplicatedGroups(groups) {
             for event in group.upcomingEvents {
+                visibleGroupEventIDs.insert(event.id)
                 items.append(
                     AgendaItem(
                         source: .group(
@@ -4814,14 +5432,22 @@ final class AppStore: ObservableObject {
                 )
             }
         }
-        for gig in events where !gig.isMine && gig.date > Date() {
+        for gig in events where !gig.isMine && gig.date > Date()
+            && AgendaItem.shouldIncludeGig(
+                linkedEventID: gig.eventId,
+                visibleGroupEventIDs: visibleGroupEventIDs
+            ) {
             if gig.myApplicationStatus == .accepted || gig.targetStatus == .accepted {
                 items.append(AgendaItem(source: .playing(gig: gig), date: gig.date))
             } else if gig.applied && gig.myApplicationStatus == .pending {
                 items.append(AgendaItem(source: .applied(gig: gig), date: gig.date))
             }
         }
-        for gig in events where gig.isMine && gig.date > Date() {
+        for gig in events where gig.isMine && gig.date > Date()
+            && AgendaItem.shouldIncludeGig(
+                linkedEventID: gig.eventId,
+                visibleGroupEventIDs: visibleGroupEventIDs
+            ) {
             items.append(AgendaItem(source: .hosting(gig: gig), date: gig.date))
         }
         return items.sorted { $0.date < $1.date }
@@ -4915,8 +5541,15 @@ final class AppStore: ObservableObject {
 
     /// Recharge les invités des événements de tous mes groupes.
     func refreshEventGuests() async {
-        guard let backend, isLive else { return }
+        guard let backend, let userID = liveUserID else { return }
+        let sessionGeneration = liveSessionGeneration
         guard let rows = try? await backend.fetchEventGuests() else { return }
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: sessionGeneration,
+            currentGeneration: liveSessionGeneration
+        ) else { return }
         let guests = rows.map {
             EventGuest(
                 eventID: $0.eventId,

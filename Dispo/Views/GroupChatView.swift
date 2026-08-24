@@ -2,6 +2,7 @@ import SwiftUI
 import QuickLook
 import UniformTypeIdentifiers
 import PhotosUI
+import UIKit
 
 // MARK: - Aperçu de document (partitions PDF / images)
 
@@ -74,6 +75,10 @@ struct GroupChatView: View {
     @State private var sendingGroupMessage = false
     /// Recherche dans le répertoire (apparaît au-delà de 8 morceaux).
     @State private var songQuery = ""
+    /// Ordre local pendant le glisser-déposer. La persistance ne part qu'au
+    /// lâcher du doigt pour éviter des écritures réseau concurrentes.
+    @State private var repertoireOrder: [Song.ID] = []
+    @State private var repertoireDragSession = OrderedUUIDDragSession()
     /// Document prêt à être affiché (fichier local ou copie téléchargée).
     @State private var previewingDoc: PreviewableDoc?
     /// Document en cours de téléchargement (spinner sur sa ligne).
@@ -140,6 +145,13 @@ struct GroupChatView: View {
                     }
                 }
             }
+        }
+        .onAppear {
+            if let group { repertoireOrder = group.approvedSongs.map(\.id) }
+        }
+        .onChange(of: group?.approvedSongs.map(\.id) ?? []) { _, ids in
+            guard repertoireDragSession.draggingID == nil else { return }
+            repertoireOrder = ids
         }
         .sheet(isPresented: $showGroupSettings) {
             if let group {
@@ -512,6 +524,11 @@ struct GroupChatView: View {
                 }
 
                 SectionHeader(title: "Répertoire du groupe", subtitle: "\(group.approvedSongs.count) morceaux")
+                if isLeader, group.approvedSongs.count > 1, !isSongSearchActive {
+                    Label("Maintiens la poignée puis glisse pour changer l'ordre.", systemImage: "hand.draw")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
                 // Au-delà d'une dizaine de titres, retrouver « Autumn
                 // Leaves » au doigt devient pénible.
                 if group.approvedSongs.count > 8 {
@@ -549,14 +566,53 @@ struct GroupChatView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(songs) { song in
-                    // Le bouton de retrait n'apparaît que pour le leader.
-                    SongRow(
-                        song: song,
-                        isLeader: false,
-                        onApprove: nil,
-                        onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil,
-                        groupID: group.id,
-                        attachedDocs: group.docs(for: song.id).count
+                    HStack(spacing: 8) {
+                        // Le bouton de retrait n'apparaît que pour le leader.
+                        SongRow(
+                            song: song,
+                            isLeader: false,
+                            onApprove: nil,
+                            onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil,
+                            groupID: group.id,
+                            attachedDocs: group.docs(for: song.id).count
+                        )
+                        if isLeader, !isSongSearchActive {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.body.weight(.heavy))
+                                .foregroundStyle(JC.bronze)
+                                .frame(width: 28, height: 48)
+                                .contentShape(Rectangle())
+                                .accessibilityLabel(Text("Déplacer le morceau"))
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityAction(named: Text("Déplacer avant")) {
+                                    moveRepertoireSong(song.id, by: -1, in: group)
+                                }
+                                .accessibilityAction(named: Text("Déplacer après")) {
+                                    moveRepertoireSong(song.id, by: 1, in: group)
+                                }
+                                .onDrag {
+                                    repertoireDragSession = OrderedUUIDDragSession(
+                                        draggingID: song.id,
+                                        initialOrder: repertoireOrder
+                                    )
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    return NSItemProvider(object: song.id.uuidString as NSString)
+                                }
+                        }
+                    }
+                    .opacity(repertoireDragSession.draggingID == song.id ? 0.58 : 1)
+                    .scaleEffect(repertoireDragSession.draggingID == song.id ? 0.985 : 1)
+                    .animation(.snappy(duration: 0.18), value: repertoireDragSession.draggingID)
+                    .onDrop(
+                        of: [UTType.text],
+                        delegate: OrderedUUIDDropDelegate(
+                            targetID: song.id,
+                            orderedIDs: $repertoireOrder,
+                            session: $repertoireDragSession,
+                            onCommit: { ids in
+                                store.reorderApprovedRepertoire(ids, in: group.id)
+                            }
+                        )
                     )
                 }
 
@@ -579,15 +635,48 @@ struct GroupChatView: View {
 
     /// Morceaux validés filtrés par la recherche (titre ou artiste).
     private func matchingSongs(in group: GroupChat) -> [Song] {
+        let ordered = orderedApprovedSongs(in: group)
         let needle = songQuery
             .trimmingCharacters(in: .whitespaces)
             .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-        guard !needle.isEmpty else { return group.approvedSongs }
-        return group.approvedSongs.filter { song in
+        guard !needle.isEmpty else { return ordered }
+        return ordered.filter { song in
             "\(song.title) \(song.artist)"
                 .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
                 .contains(needle)
         }
+    }
+
+    private var isSongSearchActive: Bool {
+        !songQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// L'ordre serveur sert de repli au premier rendu ; pendant le drag, la
+    /// liste locale suit immédiatement le doigt sans attendre Supabase.
+    private func orderedApprovedSongs(in group: GroupChat) -> [Song] {
+        let approved = group.approvedSongs
+        guard !repertoireOrder.isEmpty else { return approved }
+        let byID = Dictionary(uniqueKeysWithValues: approved.map { ($0.id, $0) })
+        let ordered = repertoireOrder.compactMap { byID[$0] }
+        let known = Set(ordered.map(\.id))
+        return ordered + approved.filter { !known.contains($0.id) }
+    }
+
+    /// Repli VoiceOver du drag : les actions du rotor déplacent d'un cran,
+    /// avec la même sauvegarde automatique que le geste au doigt.
+    private func moveRepertoireSong(
+        _ songID: Song.ID,
+        by offset: Int,
+        in group: GroupChat
+    ) {
+        var ids = repertoireOrder.isEmpty ? group.approvedSongs.map(\.id) : repertoireOrder
+        guard let source = ids.firstIndex(of: songID) else { return }
+        let destination = source + offset
+        guard ids.indices.contains(destination) else { return }
+        ids.swapAt(source, destination)
+        repertoireOrder = ids
+        UISelectionFeedbackGenerator().selectionChanged()
+        store.reorderApprovedRepertoire(ids, in: group.id)
     }
 
     // MARK: Événements
@@ -898,10 +987,89 @@ struct PreviewableDoc: Identifiable {
     let url: URL
 }
 
+/// Réordonnancement SwiftUI natif par glisser-déposer. La poignée fournit le
+/// drag, chaque ligne est une cible ; l'ordre local suit immédiatement le
+/// doigt puis `onCommit` persiste une seule fois au lâcher.
+struct OrderedUUIDDragSession {
+    var draggingID: UUID?
+    var initialOrder: [UUID]
+    var exitToken: UUID?
+
+    init(
+        draggingID: UUID? = nil,
+        initialOrder: [UUID] = [],
+        exitToken: UUID? = nil
+    ) {
+        self.draggingID = draggingID
+        self.initialOrder = initialOrder
+        self.exitToken = exitToken
+    }
+}
+
+struct OrderedUUIDDropDelegate: DropDelegate {
+    let targetID: UUID
+    @Binding var orderedIDs: [UUID]
+    @Binding var session: OrderedUUIDDragSession
+    let onCommit: ([UUID]) -> Void
+
+    func dropEntered(info: DropInfo) {
+        session.exitToken = nil
+        guard let draggingID = session.draggingID,
+              draggingID != targetID,
+              let source = orderedIDs.firstIndex(of: draggingID),
+              let destination = orderedIDs.firstIndex(of: targetID)
+        else { return }
+
+        var reordered = orderedIDs
+        let moved = reordered.remove(at: source)
+        reordered.insert(moved, at: min(destination, reordered.count))
+        guard reordered != orderedIDs else { return }
+        withAnimation(.snappy(duration: 0.18)) { orderedIDs = reordered }
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    /// SwiftUI ne fournit pas de `onDragEnded`. Quand le doigt quitte les
+    /// lignes (drop annulé ou relâché dans le vide), on attend brièvement
+    /// une nouvelle cible puis on restaure l'ordre d'avant le geste. Entrer
+    /// dans une autre ligne invalide ce token, donc aucun saut entre deux rows.
+    func dropExited(info: DropInfo) {
+        guard session.draggingID != nil else { return }
+        let token = UUID()
+        session.exitToken = token
+        let orderBinding = _orderedIDs
+        let sessionBinding = _session
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            guard sessionBinding.wrappedValue.exitToken == token,
+                  sessionBinding.wrappedValue.draggingID != nil
+            else { return }
+            withAnimation(.snappy(duration: 0.18)) {
+                orderBinding.wrappedValue = sessionBinding.wrappedValue.initialOrder
+            }
+            sessionBinding.wrappedValue = OrderedUUIDDragSession()
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard session.draggingID != nil else { return false }
+        session.exitToken = nil
+        if orderedIDs != session.initialOrder {
+            onCommit(orderedIDs)
+        }
+        session = OrderedUUIDDragSession()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        return true
+    }
+}
+
 // MARK: - Ligne d'un morceau (pochette iTunes si trouvée)
 
 struct SongRow: View {
     @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var store: AppStore
     let song: Song
     /// true = montrer les boutons valider / refuser (suggestion + leader).
     let isLeader: Bool
@@ -933,8 +1101,10 @@ struct SongRow: View {
 
     var body: some View {
         songCard
-            // Appui long : les mêmes liens d'écoute, sans chercher le bouton.
+            // Appui long sur la tuile : copie du titre et liens d'écoute. Le
+            // drag reste exclusivement sur la poignée voisine.
             .contextMenu { contextLinks }
+            .accessibilityAction(named: Text("Copier le titre")) { copyTitle() }
             .sheet(isPresented: $showListen) {
                 ListenSheet(song: song)
                     .presentationDetents([.height(380)])
@@ -985,7 +1155,7 @@ struct SongRow: View {
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                             if !song.isApproved {
-                                Text("Suggéré par \(song.suggestedBy)")
+                                Text("Suggéré par \(store.suggesterName(for: song, in: groupID))")
                                     .font(.caption2)
                                     .foregroundStyle(JC.bronze)
                                     .lineLimit(1)
@@ -1091,6 +1261,10 @@ struct SongRow: View {
     /// déclenche pas l'ouverture sur certaines versions d'iOS).
     @ViewBuilder
     private var contextLinks: some View {
+        Button { copyTitle() } label: {
+            Label("Copier le titre", systemImage: "doc.on.doc")
+        }
+        Divider()
         ForEach(StreamingPlatform.allCases) { platform in
             if let url = platform.url(for: song) {
                 Button {
@@ -1104,6 +1278,11 @@ struct SongRow: View {
                 }
             }
         }
+    }
+
+    private func copyTitle() {
+        UIPasteboard.general.string = song.title
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     private var artworkPlaceholder: some View {
@@ -1803,6 +1982,10 @@ struct GroupEventSheet: View {
     @State private var invitingName: String?
     /// SOS pré-rempli depuis cette date précise.
     @State private var sosEvent: GroupEvent?
+    /// Ordre optimiste pendant le drag ; sauvegardé dans `group_events.setlist`
+    /// au lâcher du doigt.
+    @State private var setlistOrder: [Song.ID] = []
+    @State private var setlistDragSession = OrderedUUIDDragSession()
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
@@ -1829,6 +2012,13 @@ struct GroupEventSheet: View {
             } else {
                 eventDetail
             }
+        }
+        .onAppear {
+            setlistOrder = event?.setlist.filter(\.isApproved).map(\.id) ?? []
+        }
+        .onChange(of: event?.setlist.filter(\.isApproved).map(\.id) ?? []) { _, ids in
+            guard setlistDragSession.draggingID == nil else { return }
+            setlistOrder = ids
         }
     }
 
@@ -1929,8 +2119,13 @@ struct GroupEventSheet: View {
                                 }
                             }
 
-                            let approved = event.setlist.filter(\.isApproved)
+                            let approved = orderedApprovedSongs(in: event)
                             SectionHeader(title: "Setlist", subtitle: "\(approved.count) morceaux")
+                            if isLeader, approved.count > 1 {
+                                Label("Maintiens la poignée puis glisse pour changer l'ordre.", systemImage: "hand.draw")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
                             if approved.isEmpty {
                                 Text("Setlist vide — pioche dans le répertoire du groupe ou ajoute des morceaux.")
                                     .font(.caption)
@@ -1953,7 +2148,44 @@ struct GroupEventSheet: View {
                                         // partitions doit être là aussi.
                                         attachedDocs: group.docs(for: song.id).count
                                     )
+                                    if isLeader {
+                                        Image(systemName: "line.3.horizontal")
+                                            .font(.body.weight(.heavy))
+                                            .foregroundStyle(JC.bronze)
+                                            .frame(width: 28, height: 48)
+                                            .contentShape(Rectangle())
+                                            .accessibilityLabel(Text("Déplacer le morceau"))
+                                            .accessibilityAddTraits(.isButton)
+                                            .accessibilityAction(named: Text("Déplacer avant")) {
+                                                moveSetlistSong(song.id, by: -1, in: event)
+                                            }
+                                            .accessibilityAction(named: Text("Déplacer après")) {
+                                                moveSetlistSong(song.id, by: 1, in: event)
+                                            }
+                                            .onDrag {
+                                                setlistDragSession = OrderedUUIDDragSession(
+                                                    draggingID: song.id,
+                                                    initialOrder: setlistOrder
+                                                )
+                                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                                return NSItemProvider(object: song.id.uuidString as NSString)
+                                            }
+                                    }
                                 }
+                                .opacity(setlistDragSession.draggingID == song.id ? 0.58 : 1)
+                                .scaleEffect(setlistDragSession.draggingID == song.id ? 0.985 : 1)
+                                .animation(.snappy(duration: 0.18), value: setlistDragSession.draggingID)
+                                .onDrop(
+                                    of: [UTType.text],
+                                    delegate: OrderedUUIDDropDelegate(
+                                        targetID: song.id,
+                                        orderedIDs: $setlistOrder,
+                                        session: $setlistDragSession,
+                                        onCommit: { ids in
+                                            store.reorderApprovedSetlist(ids, eventID: eventID, in: groupID)
+                                        }
+                                    )
+                                )
                             }
 
                             if isLeader {
@@ -2030,6 +2262,32 @@ struct GroupEventSheet: View {
             } message: {
                 Text("La session disparaîtra des agendas et les autres membres recevront une notification.")
             }
+    }
+
+    private func orderedApprovedSongs(in event: GroupEvent) -> [Song] {
+        let approved = event.setlist.filter(\.isApproved)
+        guard !setlistOrder.isEmpty else { return approved }
+        let byID = Dictionary(uniqueKeysWithValues: approved.map { ($0.id, $0) })
+        let ordered = setlistOrder.compactMap { byID[$0] }
+        let known = Set(ordered.map(\.id))
+        return ordered + approved.filter { !known.contains($0.id) }
+    }
+
+    private func moveSetlistSong(
+        _ songID: Song.ID,
+        by offset: Int,
+        in event: GroupEvent
+    ) {
+        var ids = setlistOrder.isEmpty
+            ? event.setlist.filter(\.isApproved).map(\.id)
+            : setlistOrder
+        guard let source = ids.firstIndex(of: songID) else { return }
+        let destination = source + offset
+        guard ids.indices.contains(destination) else { return }
+        ids.swapAt(source, destination)
+        setlistOrder = ids
+        UISelectionFeedbackGenerator().selectionChanged()
+        store.reorderApprovedSetlist(ids, eventID: eventID, in: groupID)
     }
 
     /// Musiciens hors du groupe qui ont déjà coché ce jour-là — invitation en

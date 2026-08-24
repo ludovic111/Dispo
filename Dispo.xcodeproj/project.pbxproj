@@ -27,6 +27,7 @@
 		48CB3AE64BB899CAEBC33239 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 261EC6F531BEE7612BA65B4B /* AppStore.swift */; };
 		4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */; };
 		530F93F51F41638A7C9A249B /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 104977E6E486E674D51AF98E /* RevenueCat */; };
+		5683145287B6535A4441FC0F /* SetlistWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9007F9470142ABE939E4ED91 /* SetlistWorkflowTests.swift */; };
 		582DC7955296EA0AF75CE5C5 /* PostalCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B43292C4EE5F2F48A12C3BFE /* PostalCode.swift */; };
 		5AC78CAEF5E41992FED20DD3 /* SVGPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 407C891F432197F3EDFFC826 /* SVGPath.swift */; };
 		5F68902EA546C88E91CDCA9E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1CF4EDC24A0E508B590C65E7 /* Supabase */; };
@@ -99,6 +100,7 @@
 		8BA88F9A7155F27FCBAA3C2E /* Fraunces-DisplayItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-DisplayItalic.ttf"; sourceTree = "<group>"; };
 		8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
 		8E39C5830D6125D24F3DC7D5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9007F9470142ABE939E4ED91 /* SetlistWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetlistWorkflowTests.swift; sourceTree = "<group>"; };
 		94BACE4F239852EC03210322 /* EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsView.swift; sourceTree = "<group>"; };
 		998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatchNotesView.swift; sourceTree = "<group>"; };
 		9C82BDCC8ADAC11D62595C0A /* SplineSansMono-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SplineSansMono-SemiBold.ttf"; sourceTree = "<group>"; };
@@ -140,6 +142,7 @@
 			children = (
 				077D264F558B81E6720C79C5 /* LocationUXTests.swift */,
 				CD6EB48244B9DD72FB2FFDF2 /* SelectionPresentationTests.swift */,
+				9007F9470142ABE939E4ED91 /* SetlistWorkflowTests.swift */,
 			);
 			path = DispoTests;
 			sourceTree = "<group>";
@@ -356,6 +359,7 @@
 			files = (
 				28095D0A929D08F4FCFF6982 /* LocationUXTests.swift in Sources */,
 				0A820725E4819283EEB964B1 /* SelectionPresentationTests.swift in Sources */,
+				5683145287B6535A4441FC0F /* SetlistWorkflowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

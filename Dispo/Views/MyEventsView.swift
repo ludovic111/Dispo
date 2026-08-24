@@ -26,10 +26,36 @@ struct MyEventsView: View {
         scope == .upcoming ? store.agenda : store.pastAgenda
     }
 
+    /// Les dates qui disposent déjà d'une carte de réponse en tête de page.
+    /// Elles ne doivent pas réapparaître plus bas sous une autre présentation.
+    private var confirmationIDs: Set<AgendaItem.ID> {
+        guard scope == .upcoming else { return [] }
+        return Set(store.agendaToConfirm.map(\.id))
+    }
+
+    /// Première date qui n'est pas déjà mise en avant dans « On attend ta
+    /// réponse ». Si toutes les dates attendent une réponse, ce bloc disparaît.
+    private var nextDateItem: AgendaItem? {
+        guard scope == .upcoming else { return nil }
+        return items.first { !confirmationIDs.contains($0.id) }
+    }
+
+    /// La prochaine date est déjà affichée en grand juste au-dessus. La liste
+    /// mensuelle commence donc à l'élément suivant, en retirant uniquement le
+    /// même identifiant (deux vraies sessions le même jour restent visibles).
+    private var listedItems: [AgendaItem] {
+        guard scope == .upcoming else { return items }
+        return AgendaItem.listItems(
+            from: items,
+            excludingFeatured: nextDateItem,
+            excludingIDs: confirmationIDs
+        )
+    }
+
     /// Les mois, dans l'ordre d'affichage (à venir : chronologique ; passés :
     /// du plus récent au plus ancien).
     private var months: [(key: Date, items: [AgendaItem])] {
-        let grouped = Dictionary(grouping: items) { $0.monthKey() }
+        let grouped = Dictionary(grouping: listedItems) { $0.monthKey() }
         return grouped
             .map { (key: $0.key, items: $0.value) }
             .sorted { scope == .upcoming ? $0.key < $1.key : $0.key > $1.key }
@@ -196,7 +222,7 @@ struct MyEventsView: View {
 
     @ViewBuilder
     private var nextDateSection: some View {
-        if let next = store.nextAgendaItem {
+        if let next = nextDateItem {
             VStack(alignment: .leading, spacing: 10) {
                 SectionHeader(title: "Prochaine date", subtitle: nil)
                 NextDateCard(item: next)

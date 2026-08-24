@@ -272,17 +272,25 @@ struct RootView: View {
             debugCover = .filters
         case "songs":
             debugCover = .songs
-        case "song-detail":
+        case "song-detail", "song-detail-solos":
+            store.hasOnboarded = true
+            let soloists = [
+                SoloistOption(id: UUID(uuidString: "40000000-0000-0000-0000-000000000001")!, name: "Raphaël Herrera"),
+                SoloistOption(id: UUID(uuidString: "40000000-0000-0000-0000-000000000002")!, name: "Léa Zbinden"),
+                SoloistOption(id: UUID(uuidString: "40000000-0000-0000-0000-000000000003")!, name: "Marco Fernández")
+            ]
             let song = Song(
                 title: "Autumn Leaves",
                 artist: "Bill Evans",
                 suggestedBy: "Léa Zbinden",
-                isApproved: true
+                isApproved: true,
+                solos: soloists.map(\.id)
             )
             let group = GroupChat(
                 name: "Blue Notes QA",
                 leaderName: nil,
-                memberNames: [],
+                memberNames: soloists.map(\.name),
+                rosterProfiles: soloists,
                 repertoire: [song]
             )
             store.groups.removeAll { $0.id == group.id }
