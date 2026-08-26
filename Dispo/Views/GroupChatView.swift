@@ -79,6 +79,8 @@ struct GroupChatView: View {
     /// lâcher du doigt pour éviter des écritures réseau concurrentes.
     @State private var repertoireOrder: [Song.ID] = []
     @State private var repertoireDragSession = OrderedUUIDDragSession()
+    @State private var repertoireRowFrames: [UUID: CGRect] = [:]
+    @State private var repertoireViewportHeight: CGFloat = 0
     /// Document prêt à être affiché (fichier local ou copie téléchargée).
     @State private var previewingDoc: PreviewableDoc?
     /// Document en cours de téléchargement (spinner sur sa ligne).
@@ -491,7 +493,8 @@ struct GroupChatView: View {
     // MARK: Répertoire du groupe
 
     private func repertoireTab(_ group: GroupChat) -> some View {
-        ScrollView {
+        ScrollViewReader { scrollProxy in
+            ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Button {
                     addingSong = true
@@ -577,48 +580,51 @@ struct GroupChatView: View {
                             attachedDocs: group.docs(for: song.id).count
                         )
                         if isLeader, !isSongSearchActive {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.body.weight(.heavy))
-                                .foregroundStyle(JC.bronze)
-                                .frame(width: 28, height: 48)
-                                .contentShape(Rectangle())
-                                .accessibilityLabel(Text("Déplacer le morceau"))
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityAction(named: Text("Déplacer avant")) {
-                                    moveRepertoireSong(song.id, by: -1, in: group)
+                            OrderedUUIDDragHandle(
+                                id: song.id,
+                                accessibilityLabel: "Déplacer le morceau",
+                                coordinateSpace: "group-repertoire-reorder",
+                                orderedIDs: $repertoireOrder,
+                                session: $repertoireDragSession,
+                                rowFrames: repertoireRowFrames,
+                                viewportHeight: repertoireViewportHeight,
+                                onAutoScroll: { id, anchor in
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        scrollProxy.scrollTo(id, anchor: anchor)
+                                    }
+                                },
+                                onCommit: { ids in
+                                    store.reorderApprovedRepertoire(ids, in: group.id)
                                 }
-                                .accessibilityAction(named: Text("Déplacer après")) {
-                                    moveRepertoireSong(song.id, by: 1, in: group)
-                                }
-                                .onDrag {
-                                    repertoireDragSession = OrderedUUIDDragSession(
-                                        draggingID: song.id,
-                                        initialOrder: repertoireOrder
-                                    )
-                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                    return NSItemProvider(object: song.id.uuidString as NSString)
-                                }
+                            )
                         }
                     }
+                    .orderedUUIDFrame(song.id, in: "group-repertoire-reorder")
+                    .id(song.id)
                     .opacity(repertoireDragSession.draggingID == song.id ? 0.58 : 1)
                     .scaleEffect(repertoireDragSession.draggingID == song.id ? 0.985 : 1)
                     .animation(.snappy(duration: 0.18), value: repertoireDragSession.draggingID)
-                    .onDrop(
-                        of: [UTType.text],
-                        delegate: OrderedUUIDDropDelegate(
-                            targetID: song.id,
-                            orderedIDs: $repertoireOrder,
-                            session: $repertoireDragSession,
-                            onCommit: { ids in
-                                store.reorderApprovedRepertoire(ids, in: group.id)
-                            }
-                        )
-                    )
                 }
 
                 groupDocsSection(group)
             }
-            .padding(18)
+                .padding(18)
+            }
+            .coordinateSpace(name: "group-repertoire-reorder")
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: OrderedUUIDViewportHeightPreferenceKey.self,
+                        value: proxy.size.height
+                    )
+                }
+            }
+            .onPreferenceChange(OrderedUUIDFramePreferenceKey.self) { frames in
+                repertoireRowFrames = frames
+            }
+            .onPreferenceChange(OrderedUUIDViewportHeightPreferenceKey.self) { height in
+                repertoireViewportHeight = height
+            }
         }
     }
 
@@ -987,81 +993,306 @@ struct PreviewableDoc: Identifiable {
     let url: URL
 }
 
-/// Réordonnancement SwiftUI natif par glisser-déposer. La poignée fournit le
-/// drag, chaque ligne est une cible ; l'ordre local suit immédiatement le
-/// doigt puis `onCommit` persiste une seule fois au lâcher.
+/// État minimal du geste direct. Contrairement au glisser-déposer système, la
+/// fin du geste arrive toujours ici, même quand le doigt quitte les lignes.
 struct OrderedUUIDDragSession {
     var draggingID: UUID?
     var initialOrder: [UUID]
-    var exitToken: UUID?
 
     init(
         draggingID: UUID? = nil,
-        initialOrder: [UUID] = [],
-        exitToken: UUID? = nil
+        initialOrder: [UUID] = []
     ) {
         self.draggingID = draggingID
         self.initialOrder = initialOrder
-        self.exitToken = exitToken
     }
 }
 
-struct OrderedUUIDDropDelegate: DropDelegate {
-    let targetID: UUID
+/// Cadres des lignes dans l'espace du ScrollView. Ils permettent à la poignée
+/// de suivre réellement le doigt sans dépendre d'un `performDrop` aléatoire.
+struct OrderedUUIDFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] = [:]
+
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+struct OrderedUUIDViewportHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+extension View {
+    func orderedUUIDFrame(_ id: UUID, in coordinateSpace: String) -> some View {
+        background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: OrderedUUIDFramePreferenceKey.self,
+                    value: [id: proxy.frame(in: .named(coordinateSpace))]
+                )
+            }
+        }
+    }
+}
+
+/// Poignée 44 pt pilotée par un `DragGesture` local. L'ordre visuel suit le
+/// doigt et la persistance part exactement une fois dans `onEnded`.
+struct OrderedUUIDDragHandle: View {
+    let id: UUID
+    let accessibilityLabel: LocalizedStringKey
+    let coordinateSpace: String
     @Binding var orderedIDs: [UUID]
     @Binding var session: OrderedUUIDDragSession
+    let rowFrames: [UUID: CGRect]
+    var viewportHeight: CGFloat = 0
+    var onAutoScroll: ((UUID, UnitPoint) -> Void)?
     let onCommit: ([UUID]) -> Void
 
-    func dropEntered(info: DropInfo) {
-        session.exitToken = nil
-        guard let draggingID = session.draggingID,
-              draggingID != targetID,
-              let source = orderedIDs.firstIndex(of: draggingID),
-              let destination = orderedIDs.firstIndex(of: targetID)
-        else { return }
+    @State private var edgeDirection = 0
+    @State private var autoScrollTask: Task<Void, Never>?
+    @State private var lastVerticalTranslation: CGFloat = 0
+    @State private var initialRowStep: CGFloat = 72
+    @State private var didAutoScroll = false
 
-        var reordered = orderedIDs
+    var body: some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.body.weight(.heavy))
+            .foregroundStyle(JC.bronze)
+            .frame(width: 44, height: 48)
+            .contentShape(Rectangle())
+            .accessibilityLabel(Text(accessibilityLabel))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(named: Text("Déplacer avant")) { move(by: -1) }
+            .accessibilityAction(named: Text("Déplacer après")) { move(by: 1) }
+            .highPriorityGesture(reorderGesture)
+            .onDisappear {
+                if session.draggingID == id {
+                    finishDrag(verticalTranslation: lastVerticalTranslation)
+                } else {
+                    stopEdgeScroll()
+                }
+            }
+    }
+
+    /// Le court maintien donne explicitement la priorité à la poignée sur le
+    /// pan vertical du ScrollView. Sans cette séquence, UIKit choisissait
+    /// parfois le scroll lors d'un geste pourtant commencé sur les trois traits.
+    private var reorderGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.12, maximumDistance: 18)
+            .sequenced(before: DragGesture(
+                minimumDistance: 0,
+                coordinateSpace: .named(coordinateSpace)
+            ))
+            .onChanged { value in
+                switch value {
+                case .first(let pressed):
+                    if pressed { beginDrag() }
+                case .second(_, let drag):
+                    if let drag { updateDrag(drag) }
+                }
+            }
+            .onEnded { value in
+                switch value {
+                case .second(_, let drag):
+                    if let drag {
+                        endDrag(drag)
+                    } else {
+                        cancelDrag()
+                    }
+                case .first:
+                    cancelDrag()
+                }
+            }
+    }
+
+    private func beginDrag() {
+        guard session.draggingID == nil, orderedIDs.contains(id) else { return }
+        initialRowStep = estimatedRowStep(for: orderedIDs)
+        session = OrderedUUIDDragSession(draggingID: id, initialOrder: orderedIDs)
+        lastVerticalTranslation = 0
+        didAutoScroll = false
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    private func updateDrag(_ value: DragGesture.Value) {
+        beginDrag()
+        guard session.draggingID == id else { return }
+        lastVerticalTranslation = value.translation.height
+        updateEdgeScroll(for: value.location.y)
+        if let targetID = nearestTarget(to: value.location.y), targetID != id {
+            applyOrder(Self.moving(id, beforeOrAt: targetID, in: orderedIDs))
+        } else if !hasCompleteRowFrames,
+                  let fallback = translatedOrder(for: value.translation.height) {
+            // Au tout premier rendu, SwiftUI peut livrer le geste avant les
+            // préférences GeometryReader. La translation reste disponible :
+            // elle évite alors qu'un vrai glisser soit silencieusement perdu.
+            applyOrder(fallback)
+        }
+    }
+
+    private func endDrag(_ value: DragGesture.Value) {
+        beginDrag()
+        lastVerticalTranslation = value.translation.height
+        finishDrag(verticalTranslation: value.translation.height)
+    }
+
+    private func finishDrag(verticalTranslation: CGFloat) {
+        guard session.draggingID == id else { return }
+        stopEdgeScroll()
+
+        let initialOrder = session.initialOrder
+        var finalOrder = orderedIDs
+        if let fallback = translatedOrder(for: verticalTranslation),
+           fallback != finalOrder,
+           !didAutoScroll || dragDistance(in: fallback) > dragDistance(in: finalOrder) {
+            // Les frames bougent pendant l'animation et peuvent laisser un
+            // déplacement partiel (par exemple un rang sur les deux demandés).
+            // La translation finale reste alors la source de vérité stable,
+            // même si les préférences sont absentes ou périmées. Après un
+            // auto-scroll, on conserve toutefois l'ordre qui a parcouru le
+            // plus de lignes afin de ne pas annuler la progression hors écran.
+            finalOrder = fallback
+            withAnimation(.snappy(duration: 0.18)) { orderedIDs = fallback }
+        }
+        if finalOrder != initialOrder {
+            onCommit(finalOrder)
+        }
+        session = OrderedUUIDDragSession()
+        lastVerticalTranslation = 0
+        initialRowStep = 72
+        didAutoScroll = false
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func dragDistance(in order: [UUID]) -> Int {
+        guard let source = session.initialOrder.firstIndex(of: id),
+              let destination = order.firstIndex(of: id)
+        else { return 0 }
+        return abs(destination - source)
+    }
+
+    private func cancelDrag() {
+        guard session.draggingID == id else { return }
+        finishDrag(verticalTranslation: lastVerticalTranslation)
+    }
+
+    private func nearestTarget(to y: CGFloat) -> UUID? {
+        orderedIDs
+            .compactMap { candidate in
+                rowFrames[candidate].map { (candidate, abs($0.midY - y)) }
+            }
+            .min(by: { $0.1 < $1.1 })?
+            .0
+    }
+
+    private var hasCompleteRowFrames: Bool {
+        !orderedIDs.isEmpty && orderedIDs.allSatisfy { id in
+            guard let frame = rowFrames[id] else { return false }
+            return frame.midY.isFinite && frame.height > 1
+        }
+    }
+
+    /// Ordre estimé uniquement depuis la translation du geste. Il sert de
+    /// repli quand les préférences de géométrie n'ont pas encore été livrées.
+    private func translatedOrder(for verticalTranslation: CGFloat) -> [UUID]? {
+        let initialOrder = session.initialOrder
+        guard let source = initialOrder.firstIndex(of: id), initialOrder.count > 1 else {
+            return nil
+        }
+        let delta = Int((verticalTranslation / initialRowStep).rounded())
+        guard delta != 0 else { return initialOrder }
+        let destination = min(max(source + delta, 0), initialOrder.count - 1)
+        guard destination != source else { return initialOrder }
+
+        var reordered = initialOrder
         let moved = reordered.remove(at: source)
         reordered.insert(moved, at: min(destination, reordered.count))
+        return reordered
+    }
+
+    private func estimatedRowStep(for order: [UUID]) -> CGFloat {
+        let mids = order.compactMap { rowFrames[$0]?.midY }
+        let spacings = zip(mids, mids.dropFirst())
+            .map { pair in abs(pair.1 - pair.0) }
+            .filter { $0.isFinite && $0 > 8 }
+            .sorted()
+        if !spacings.isEmpty { return spacings[spacings.count / 2] }
+
+        let heights = order
+            .compactMap { rowFrames[$0]?.height }
+            .filter { $0.isFinite && $0 > 8 }
+            .sorted()
+        if !heights.isEmpty { return max(56, heights[heights.count / 2] + 12) }
+        return 72
+    }
+
+    private func applyOrder(_ reordered: [UUID]) {
         guard reordered != orderedIDs else { return }
         withAnimation(.snappy(duration: 0.18)) { orderedIDs = reordered }
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
-    /// SwiftUI ne fournit pas de `onDragEnded`. Quand le doigt quitte les
-    /// lignes (drop annulé ou relâché dans le vide), on attend brièvement
-    /// une nouvelle cible puis on restaure l'ordre d'avant le geste. Entrer
-    /// dans une autre ligne invalide ce token, donc aucun saut entre deux rows.
-    func dropExited(info: DropInfo) {
-        guard session.draggingID != nil else { return }
-        let token = UUID()
-        session.exitToken = token
-        let orderBinding = _orderedIDs
-        let sessionBinding = _session
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            guard sessionBinding.wrappedValue.exitToken == token,
-                  sessionBinding.wrappedValue.draggingID != nil
-            else { return }
-            withAnimation(.snappy(duration: 0.18)) {
-                orderBinding.wrappedValue = sessionBinding.wrappedValue.initialOrder
+    nonisolated static func moving(
+        _ draggingID: UUID,
+        beforeOrAt targetID: UUID,
+        in orderedIDs: [UUID]
+    ) -> [UUID] {
+        guard draggingID != targetID,
+              let source = orderedIDs.firstIndex(of: draggingID),
+              let destination = orderedIDs.firstIndex(of: targetID)
+        else { return orderedIDs }
+        var reordered = orderedIDs
+        let moved = reordered.remove(at: source)
+        reordered.insert(moved, at: min(destination, reordered.count))
+        return reordered
+    }
+
+    private func move(by offset: Int) {
+        guard let source = orderedIDs.firstIndex(of: id) else { return }
+        let destination = source + offset
+        guard orderedIDs.indices.contains(destination) else { return }
+        orderedIDs.swapAt(source, destination)
+        UISelectionFeedbackGenerator().selectionChanged()
+        onCommit(orderedIDs)
+    }
+
+    private func updateEdgeScroll(for y: CGFloat) {
+        guard viewportHeight > 0, onAutoScroll != nil else { return }
+        let edge: CGFloat = 64
+        let direction = y < edge ? -1 : (y > viewportHeight - edge ? 1 : 0)
+        guard direction != edgeDirection else { return }
+        stopEdgeScroll()
+        edgeDirection = direction
+        guard direction != 0 else { return }
+
+        autoScrollTask = Task { @MainActor in
+            while !Task.isCancelled, session.draggingID == id {
+                try? await Task.sleep(for: .milliseconds(240))
+                guard !Task.isCancelled,
+                      session.draggingID == id,
+                      let source = orderedIDs.firstIndex(of: id)
+                else { break }
+                let destination = source + direction
+                guard orderedIDs.indices.contains(destination) else { break }
+                let targetID = orderedIDs[destination]
+                let reordered = Self.moving(id, beforeOrAt: targetID, in: orderedIDs)
+                guard reordered != orderedIDs else { continue }
+                didAutoScroll = true
+                withAnimation(.snappy(duration: 0.18)) { orderedIDs = reordered }
+                onAutoScroll?(id, direction < 0 ? .top : .bottom)
+                UISelectionFeedbackGenerator().selectionChanged()
             }
-            sessionBinding.wrappedValue = OrderedUUIDDragSession()
         }
     }
 
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        guard session.draggingID != nil else { return false }
-        session.exitToken = nil
-        if orderedIDs != session.initialOrder {
-            onCommit(orderedIDs)
-        }
-        session = OrderedUUIDDragSession()
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        return true
+    private func stopEdgeScroll() {
+        autoScrollTask?.cancel()
+        autoScrollTask = nil
+        edgeDirection = 0
     }
 }
 
@@ -1082,6 +1313,7 @@ struct SongRow: View {
     let attachedDocs: Int
     @State private var showListen = false
     @State private var showDetail = false
+    @State private var showCopyToRepertoire = false
 
     init(
         song: Song,
@@ -1112,6 +1344,12 @@ struct SongRow: View {
             .sheet(isPresented: $showDetail) {
                 if let groupID {
                     SongDetailSheet(groupID: groupID, songID: song.id)
+                }
+            }
+            .sheet(isPresented: $showCopyToRepertoire) {
+                if let groupID {
+                    CopySongSheet(song: song, sourceGroupID: groupID)
+                        .presentationDetents([.medium, .large])
                 }
             }
     }
@@ -1264,6 +1502,11 @@ struct SongRow: View {
         Button { copyTitle() } label: {
             Label("Copier le titre", systemImage: "doc.on.doc")
         }
+        if hasCopyDestination {
+            Button { showCopyToRepertoire = true } label: {
+                Label("Copier vers un autre répertoire", systemImage: "rectangle.on.rectangle.angled")
+            }
+        }
         Divider()
         ForEach(StreamingPlatform.allCases) { platform in
             if let url = platform.url(for: song) {
@@ -1285,6 +1528,11 @@ struct SongRow: View {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
+    private var hasCopyDestination: Bool {
+        guard let groupID else { return false }
+        return store.groups.contains { $0.id != groupID }
+    }
+
     private var artworkPlaceholder: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -1292,6 +1540,194 @@ struct SongRow: View {
             Image(systemName: "music.note")
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(JC.bronze)
+        }
+    }
+}
+
+// MARK: - Copie d'un morceau entre répertoires
+
+/// Destination explicite pour éviter l'ancien malentendu entre « copier le
+/// titre » (presse-papiers) et copier réellement le morceau dans un groupe.
+struct CopySongSheet: View {
+    @EnvironmentObject private var store: AppStore
+    @Environment(\.dismiss) private var dismiss
+    let song: Song
+    let sourceGroupID: GroupChat.ID
+
+    @State private var resultMessage: String?
+    @State private var copyError: String?
+    @State private var copyingDestinationID: GroupChat.ID?
+
+    private var destinations: [GroupChat] {
+        store.groups
+            .filter { $0.id != sourceGroupID }
+            .sorted {
+                if store.canLead($0) != store.canLead($1) {
+                    return store.canLead($0) && !store.canLead($1)
+                }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                JCBackground()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        JCCard {
+                            HStack(spacing: 11) {
+                                Image(systemName: "music.note")
+                                    .font(.headline.weight(.bold))
+                                    .foregroundStyle(JC.bronze)
+                                    .frame(width: 42, height: 42)
+                                    .background(JC.bronze.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(song.title)
+                                        .font(.subheadline.weight(.bold))
+                                    Text(song.artist)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+
+                        Text("Choisis le répertoire de destination. La tonalité et la grille sont copiées ; les solos restent propres à chaque groupe.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if destinations.isEmpty {
+                            JCEmptyState(
+                                icon: "rectangle.stack.badge.minus",
+                                title: "Aucun autre répertoire",
+                                message: "Crée ou rejoins un autre groupe pour y copier ce morceau."
+                            )
+                        } else {
+                            ForEach(destinations) { destination in
+                                let duplicate = containsSong(in: destination)
+                                Button {
+                                    copy(to: destination)
+                                } label: {
+                                    JCCard(padding: 12) {
+                                        HStack(spacing: 11) {
+                                            Text(destination.emoji)
+                                                .font(.title2)
+                                                .frame(width: 40, height: 40)
+                                                .background(JC.inset, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(destination.name)
+                                                    .font(.subheadline.weight(.bold))
+                                                    .foregroundStyle(.primary)
+                                                Text(copyHint(for: destination, duplicate: duplicate))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(duplicate ? .secondary : JC.bronze)
+                                            }
+                                            Spacer(minLength: 0)
+                                            if copyingDestinationID == destination.id {
+                                                ProgressView()
+                                                    .tint(JC.bronze)
+                                            } else {
+                                                Image(systemName: duplicate ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+                                                    .font(.title3)
+                                                    .foregroundStyle(duplicate ? .secondary : JC.bronze)
+                                            }
+                                        }
+                                    }
+                                }
+                                .buttonStyle(PressableStyle())
+                                .disabled(duplicate || copyingDestinationID != nil)
+                            }
+                        }
+                    }
+                    .padding(18)
+                }
+            }
+            .navigationTitle("Copier le morceau")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler") { dismiss() }
+                }
+            }
+            .alert("Morceau copié", isPresented: Binding(
+                get: { resultMessage != nil },
+                set: { if !$0 { resultMessage = nil } }
+            )) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text(resultMessage ?? "")
+            }
+            .alert("Copie impossible", isPresented: Binding(
+                get: { copyError != nil },
+                set: { if !$0 { copyError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(copyError ?? "")
+            }
+        }
+    }
+
+    private func containsSong(in group: GroupChat) -> Bool {
+        group.songs.contains {
+            AppStore.normalizedSongIdentity($0) == AppStore.normalizedSongIdentity(song)
+        }
+    }
+
+    private func copyHint(for group: GroupChat, duplicate: Bool) -> String {
+        if duplicate { return store.tr("Déjà dans ce répertoire") }
+        return store.canLead(group)
+            ? store.tr("Ajouté directement")
+            : store.tr("Envoyé comme suggestion")
+    }
+
+    private func copy(to destination: GroupChat) {
+        copyingDestinationID = destination.id
+        let immediateResult = store.copySong(
+            song,
+            from: sourceGroupID,
+            to: destination.id
+        ) { finalResult in
+            copyingDestinationID = nil
+            switch finalResult {
+            case .copied(let approved):
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                let format = approved
+                    ? store.tr("%@ a été ajouté au répertoire de %@.")
+                    : store.tr("%@ a été envoyé au groupe %@ pour validation.")
+                resultMessage = String(
+                    format: format,
+                    locale: store.language.locale,
+                    song.title,
+                    destination.name
+                )
+            case .alreadyExists:
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                copyError = store.tr("Déjà dans ce répertoire")
+            case .unavailable:
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                copyError = store.tr("Ce répertoire n'est plus disponible.")
+            case .failed:
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                copyError = store.tr("Le morceau n'a pas pu être copié. Vérifie le réseau puis réessaie.")
+            }
+        }
+        switch immediateResult {
+        case .copied:
+            break
+        case .alreadyExists:
+            copyingDestinationID = nil
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            copyError = store.tr("Déjà dans ce répertoire")
+        case .unavailable:
+            copyingDestinationID = nil
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            copyError = store.tr("Ce répertoire n'est plus disponible.")
+        case .failed:
+            copyingDestinationID = nil
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            copyError = store.tr("Le morceau n'a pas pu être copié. Vérifie le réseau puis réessaie.")
         }
     }
 }
@@ -1986,6 +2422,8 @@ struct GroupEventSheet: View {
     /// au lâcher du doigt.
     @State private var setlistOrder: [Song.ID] = []
     @State private var setlistDragSession = OrderedUUIDDragSession()
+    @State private var setlistRowFrames: [UUID: CGRect] = [:]
+    @State private var setlistViewportHeight: CGFloat = 0
 
     private var group: GroupChat? {
         store.groups.first { $0.id == groupID }
@@ -2026,7 +2464,8 @@ struct GroupEventSheet: View {
             ZStack {
                 JCBackground()
                 if let group, let event {
-                    ScrollView {
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
                             JCCard {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -2149,43 +2588,30 @@ struct GroupEventSheet: View {
                                         attachedDocs: group.docs(for: song.id).count
                                     )
                                     if isLeader {
-                                        Image(systemName: "line.3.horizontal")
-                                            .font(.body.weight(.heavy))
-                                            .foregroundStyle(JC.bronze)
-                                            .frame(width: 28, height: 48)
-                                            .contentShape(Rectangle())
-                                            .accessibilityLabel(Text("Déplacer le morceau"))
-                                            .accessibilityAddTraits(.isButton)
-                                            .accessibilityAction(named: Text("Déplacer avant")) {
-                                                moveSetlistSong(song.id, by: -1, in: event)
+                                        OrderedUUIDDragHandle(
+                                            id: song.id,
+                                            accessibilityLabel: "Déplacer le morceau",
+                                            coordinateSpace: "event-setlist-reorder",
+                                            orderedIDs: $setlistOrder,
+                                            session: $setlistDragSession,
+                                            rowFrames: setlistRowFrames,
+                                            viewportHeight: setlistViewportHeight,
+                                            onAutoScroll: { id, anchor in
+                                                withAnimation(.snappy(duration: 0.2)) {
+                                                    scrollProxy.scrollTo(id, anchor: anchor)
+                                                }
+                                            },
+                                            onCommit: { ids in
+                                                store.reorderApprovedSetlist(ids, eventID: eventID, in: groupID)
                                             }
-                                            .accessibilityAction(named: Text("Déplacer après")) {
-                                                moveSetlistSong(song.id, by: 1, in: event)
-                                            }
-                                            .onDrag {
-                                                setlistDragSession = OrderedUUIDDragSession(
-                                                    draggingID: song.id,
-                                                    initialOrder: setlistOrder
-                                                )
-                                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                                return NSItemProvider(object: song.id.uuidString as NSString)
-                                            }
+                                        )
                                     }
                                 }
+                                .orderedUUIDFrame(song.id, in: "event-setlist-reorder")
+                                .id(song.id)
                                 .opacity(setlistDragSession.draggingID == song.id ? 0.58 : 1)
                                 .scaleEffect(setlistDragSession.draggingID == song.id ? 0.985 : 1)
                                 .animation(.snappy(duration: 0.18), value: setlistDragSession.draggingID)
-                                .onDrop(
-                                    of: [UTType.text],
-                                    delegate: OrderedUUIDDropDelegate(
-                                        targetID: song.id,
-                                        orderedIDs: $setlistOrder,
-                                        session: $setlistDragSession,
-                                        onCommit: { ids in
-                                            store.reorderApprovedSetlist(ids, eventID: eventID, in: groupID)
-                                        }
-                                    )
-                                )
                             }
 
                             if isLeader {
@@ -2199,7 +2625,23 @@ struct GroupEventSheet: View {
                                 .padding(.top, 8)
                             }
                         }
-                        .padding(18)
+                            .padding(18)
+                        }
+                        .coordinateSpace(name: "event-setlist-reorder")
+                        .background {
+                            GeometryReader { proxy in
+                                Color.clear.preference(
+                                    key: OrderedUUIDViewportHeightPreferenceKey.self,
+                                    value: proxy.size.height
+                                )
+                            }
+                        }
+                        .onPreferenceChange(OrderedUUIDFramePreferenceKey.self) { frames in
+                            setlistRowFrames = frames
+                        }
+                        .onPreferenceChange(OrderedUUIDViewportHeightPreferenceKey.self) { height in
+                            setlistViewportHeight = height
+                        }
                     }
                 }
             }

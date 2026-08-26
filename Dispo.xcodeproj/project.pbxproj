@@ -31,6 +31,7 @@
 		582DC7955296EA0AF75CE5C5 /* PostalCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B43292C4EE5F2F48A12C3BFE /* PostalCode.swift */; };
 		5AC78CAEF5E41992FED20DD3 /* SVGPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 407C891F432197F3EDFFC826 /* SVGPath.swift */; };
 		5F68902EA546C88E91CDCA9E /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1CF4EDC24A0E508B590C65E7 /* Supabase */; };
+		6288765BEA0A232C6326E5FF /* SongSoloReorderingUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF2E46F89827D5949C2868F /* SongSoloReorderingUITests.swift */; };
 		62DA359C3C872606E6F85770 /* PatchNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */; };
 		684AAD0BDF544BFCA23723C5 /* NotificationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 047421D42EA7C1DBEFE4FA2E /* NotificationsSettingsView.swift */; };
 		6927EB0344A7E7F17D260458 /* MessageControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64946B92A861F1AF7608755A /* MessageControls.swift */; };
@@ -60,6 +61,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		06CE02017AF07C23C163CF71 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F89E602A632ACBB89C9F53AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FD0242C882907DEA3B658BAE;
+			remoteInfo = Dispo;
+		};
 		4DAEF7E724EC4719F3DAC9C3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = F89E602A632ACBB89C9F53AB /* Project object */;
@@ -101,11 +109,13 @@
 		8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
 		8E39C5830D6125D24F3DC7D5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9007F9470142ABE939E4ED91 /* SetlistWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetlistWorkflowTests.swift; sourceTree = "<group>"; };
+		91D022EAE62CE5FA8F6E434B /* DispoUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DispoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		94BACE4F239852EC03210322 /* EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventsView.swift; sourceTree = "<group>"; };
 		998F1111E4F34CA8B9B3A488 /* PatchNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatchNotesView.swift; sourceTree = "<group>"; };
 		9C82BDCC8ADAC11D62595C0A /* SplineSansMono-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SplineSansMono-SemiBold.ttf"; sourceTree = "<group>"; };
 		AC58C1AA319C707515F059D7 /* MessageAttachments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageAttachments.swift; sourceTree = "<group>"; };
 		ADFE9F58146FF3293161B78E /* DispoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DispoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AEF2E46F89827D5949C2868F /* SongSoloReorderingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongSoloReorderingUITests.swift; sourceTree = "<group>"; };
 		B3F7B7D2ABAA2E0458C61619 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		B43292C4EE5F2F48A12C3BFE /* PostalCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostalCode.swift; sourceTree = "<group>"; };
 		B9B3F83842515BEBAEE6211B /* AccountSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSheet.swift; sourceTree = "<group>"; };
@@ -152,6 +162,7 @@
 			children = (
 				DBA8ACFA6E8D766C7A7C6A2C /* Dispo */,
 				06D2EFD08B705EF33DDAE394 /* DispoTests */,
+				C7833E3F7DB1E112F0A10C94 /* DispoUITests */,
 				9D12D213EF95C6B2567C786C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -201,8 +212,17 @@
 			children = (
 				31DA5F3B8B8851CC225E3A6E /* Dispo.app */,
 				ADFE9F58146FF3293161B78E /* DispoTests.xctest */,
+				91D022EAE62CE5FA8F6E434B /* DispoUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C7833E3F7DB1E112F0A10C94 /* DispoUITests */ = {
+			isa = PBXGroup;
+			children = (
+				AEF2E46F89827D5949C2868F /* SongSoloReorderingUITests.swift */,
+			);
+			path = DispoUITests;
 			sourceTree = "<group>";
 		};
 		CC066F8BC537AC1F0D31F7B1 /* Fonts */ = {
@@ -246,6 +266,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		273AE7A5AB29BA5258B63D2B /* DispoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CD8000C5E8D2A01BD0601712 /* Build configuration list for PBXNativeTarget "DispoUITests" */;
+			buildPhases = (
+				9714C38733725CC596892081 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4198A4885C2493A09D3DDE02 /* PBXTargetDependency */,
+			);
+			name = DispoUITests;
+			packageProductDependencies = (
+			);
+			productName = DispoUITests;
+			productReference = 91D022EAE62CE5FA8F6E434B /* DispoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		928750A910F6072AA77DCAD3 /* DispoTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 515D931BA593BC0F12F1A51F /* Build configuration list for PBXNativeTarget "DispoTests" */;
@@ -294,6 +332,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					273AE7A5AB29BA5258B63D2B = {
+						DevelopmentTeam = 2YBQQ56HH8;
+						ProvisioningStyle = Automatic;
+						TestTargetID = FD0242C882907DEA3B658BAE;
+					};
 					928750A910F6072AA77DCAD3 = {
 						DevelopmentTeam = 2YBQQ56HH8;
 						ProvisioningStyle = Automatic;
@@ -330,6 +373,7 @@
 			targets = (
 				FD0242C882907DEA3B658BAE /* Dispo */,
 				928750A910F6072AA77DCAD3 /* DispoTests */,
+				273AE7A5AB29BA5258B63D2B /* DispoUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -407,9 +451,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9714C38733725CC596892081 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6288765BEA0A232C6326E5FF /* SongSoloReorderingUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		4198A4885C2493A09D3DDE02 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FD0242C882907DEA3B658BAE /* Dispo */;
+			targetProxy = 06CE02017AF07C23C163CF71 /* PBXContainerItemProxy */;
+		};
 		5994B374119203829684B3E4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FD0242C882907DEA3B658BAE /* Dispo */;
@@ -472,7 +529,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -496,6 +553,23 @@
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
+		};
+		4B0742F325A7E03A11391916 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ch.dispo.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Dispo;
+			};
+			name = Debug;
 		};
 		4D72A642AB8AF1B2862D6EFA /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -532,7 +606,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -617,6 +691,23 @@
 			};
 			name = Debug;
 		};
+		D2143BF48A895898981510B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ch.dispo.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Dispo;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -643,6 +734,15 @@
 			buildConfigurations = (
 				4D72A642AB8AF1B2862D6EFA /* Debug */,
 				499E4C8BBDC3185ED24F0E84 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CD8000C5E8D2A01BD0601712 /* Build configuration list for PBXNativeTarget "DispoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4B0742F325A7E03A11391916 /* Debug */,
+				D2143BF48A895898981510B5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -162,6 +162,8 @@ struct RootView: View {
                 case .songs: DebugSongRowsPreview()
                 case .songDetail(let groupID, let songID):
                     SongDetailSheet(groupID: groupID, songID: songID)
+                case .groupRepertoire(let groupID):
+                    GroupChatView(groupID: groupID, initialTab: .repertoire)
                 }
             }
         }
@@ -180,6 +182,7 @@ struct RootView: View {
         case filters
         case songs
         case songDetail(GroupChat.ID, Song.ID)
+        case groupRepertoire(GroupChat.ID)
         var id: String {
             switch self {
             case .chat: return "chat"
@@ -190,6 +193,7 @@ struct RootView: View {
             case .filters: return "filters"
             case .songs: return "songs"
             case .songDetail: return "song-detail"
+            case .groupRepertoire: return "group-repertoire"
             }
         }
     }
@@ -272,14 +276,19 @@ struct RootView: View {
             debugCover = .filters
         case "songs":
             debugCover = .songs
-        case "song-detail", "song-detail-solos":
+        case "song-detail", "song-detail-solos", "song-detail-copy":
             store.hasOnboarded = true
+            // IDs fixes : relancer plusieurs UI tests ne doit ni accumuler les
+            // groupes QA ni dépendre du cache laissé par l'itération précédente.
+            let sourceGroupID = UUID(uuidString: "50000000-0000-0000-0000-000000000010")!
+            let destinationGroupID = UUID(uuidString: "50000000-0000-0000-0000-000000000020")!
             let soloists = [
                 SoloistOption(id: UUID(uuidString: "40000000-0000-0000-0000-000000000001")!, name: "Raphaël Herrera"),
                 SoloistOption(id: UUID(uuidString: "40000000-0000-0000-0000-000000000002")!, name: "Léa Zbinden"),
                 SoloistOption(id: UUID(uuidString: "40000000-0000-0000-0000-000000000003")!, name: "Marco Fernández")
             ]
             let song = Song(
+                id: UUID(uuidString: "50000000-0000-0000-0000-000000000001")!,
                 title: "Autumn Leaves",
                 artist: "Bill Evans",
                 suggestedBy: "Léa Zbinden",
@@ -287,15 +296,69 @@ struct RootView: View {
                 solos: soloists.map(\.id)
             )
             let group = GroupChat(
+                id: sourceGroupID,
                 name: "Blue Notes QA",
                 leaderName: nil,
                 memberNames: soloists.map(\.name),
                 rosterProfiles: soloists,
                 repertoire: [song]
             )
-            store.groups.removeAll { $0.id == group.id }
-            store.groups.insert(group, at: 0)
+            let destination = GroupChat(
+                id: destinationGroupID,
+                name: "Copy Destination QA",
+                emoji: "📚",
+                leaderName: nil,
+                memberNames: [],
+                repertoire: []
+            )
+            store.groups.removeAll { $0.id == sourceGroupID || $0.id == destinationGroupID }
+            store.groups.insert(contentsOf: [group, destination], at: 0)
+            if route == "song-detail-copy" {
+                // La copie QA reste 100 % locale : aucun faux UUID de groupe
+                // n'est envoyé au backend pendant le test d'interface.
+                store.liveUserID = nil
+            }
             debugCover = .songDetail(group.id, song.id)
+        case "group-repertoire-reorder":
+            store.hasOnboarded = true
+            let groupID = UUID(uuidString: "50000000-0000-0000-0000-000000000030")!
+            let songs = [
+                Song(
+                    id: UUID(uuidString: "50000000-0000-0000-0000-000000000031")!,
+                    title: "Blue Bossa",
+                    artist: "Joe Henderson",
+                    suggestedBy: "Léa Zbinden",
+                    isApproved: true
+                ),
+                Song(
+                    id: UUID(uuidString: "50000000-0000-0000-0000-000000000032")!,
+                    title: "Cantaloupe Island",
+                    artist: "Herbie Hancock",
+                    suggestedBy: "Marco Fernández",
+                    isApproved: true
+                ),
+                Song(
+                    id: UUID(uuidString: "50000000-0000-0000-0000-000000000033")!,
+                    title: "Dolphin Dance",
+                    artist: "Herbie Hancock",
+                    suggestedBy: "Raphaël Herrera",
+                    isApproved: true
+                )
+            ]
+            let group = GroupChat(
+                id: groupID,
+                name: "Repertoire Drag QA",
+                emoji: "🎸",
+                leaderName: nil,
+                memberNames: [],
+                repertoire: songs
+            )
+            store.groups.removeAll { $0.id == groupID }
+            store.groups.insert(group, at: 0)
+            // Données de test purement locales : aucun faux UUID ne part vers
+            // Supabase quand `onCommit` persiste l'ordre du répertoire.
+            store.liveUserID = nil
+            debugCover = .groupRepertoire(groupID)
         default: break
         }
     }

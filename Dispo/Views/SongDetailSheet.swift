@@ -26,6 +26,7 @@ struct SongDetailSheet: View {
     @State private var tab: Tab = .ireal
     @State private var showListen = false
     @State private var showEdit = false
+    @State private var showCopyToRepertoire = false
     @State private var newComment = ""
     @State private var photoItem: PhotosPickerItem?
     @State private var importingFile = false
@@ -40,6 +41,8 @@ struct SongDetailSheet: View {
     /// persistés avec le morceau au lâcher du doigt.
     @State private var soloOrder: [UUID] = []
     @State private var soloDragSession = OrderedUUIDDragSession()
+    @State private var soloRowFrames: [UUID: CGRect] = [:]
+    @State private var soloViewportHeight: CGFloat = 0
 
     private var group: GroupChat? { store.groups.first { $0.id == groupID } }
     private var song: Song? {
@@ -54,8 +57,9 @@ struct SongDetailSheet: View {
             ZStack {
                 JCBackground()
                 if let group, let song {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 14) {
                             header(song)
                             Picker("", selection: $tab.animation()) {
                                 ForEach(Tab.allCases) { option in
@@ -67,11 +71,32 @@ struct SongDetailSheet: View {
                             switch tab {
                             case .ireal: irealTab(song)
                             case .scores: scoresTab(song, group: group)
-                            case .solos: solosTab(song, group: group)
+                            case .solos:
+                                solosTab(song, group: group) { id, anchor in
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        scrollProxy.scrollTo(id, anchor: anchor)
+                                    }
+                                }
                             case .comments: commentsTab(song, group: group)
                             }
+                            }
+                            .padding(18)
                         }
-                        .padding(18)
+                        .coordinateSpace(name: "song-solos-reorder")
+                        .background {
+                            GeometryReader { proxy in
+                                Color.clear.preference(
+                                    key: OrderedUUIDViewportHeightPreferenceKey.self,
+                                    value: proxy.size.height
+                                )
+                            }
+                        }
+                        .onPreferenceChange(OrderedUUIDFramePreferenceKey.self) { frames in
+                            soloRowFrames = frames
+                        }
+                        .onPreferenceChange(OrderedUUIDViewportHeightPreferenceKey.self) { height in
+                            soloViewportHeight = height
+                        }
                     }
                 }
             }
@@ -104,6 +129,12 @@ struct SongDetailSheet: View {
                 if let song {
                     EditSongSheet(groupID: groupID, song: song)
                         .presentationDetents([.medium])
+                }
+            }
+            .sheet(isPresented: $showCopyToRepertoire) {
+                if let song {
+                    CopySongSheet(song: song, sourceGroupID: groupID)
+                        .presentationDetents([.medium, .large])
                 }
             }
             .sheet(item: $previewURL) { doc in
@@ -167,7 +198,11 @@ struct SongDetailSheet: View {
     // MARK: - Ordre des solos
 
     @ViewBuilder
-    private func solosTab(_ song: Song, group: GroupChat) -> some View {
+    private func solosTab(
+        _ song: Song,
+        group: GroupChat,
+        onAutoScroll: @escaping (UUID, UnitPoint) -> Void
+    ) -> some View {
         let candidates = store.soloistOptions(for: group)
         let available = candidates.filter { !soloOrder.contains($0.id) }
 
@@ -258,44 +293,27 @@ struct SongDetailSheet: View {
                         .buttonStyle(PressableStyle())
                         .accessibilityLabel(Text("Retirer ce solo"))
 
-                        Image(systemName: "line.3.horizontal")
-                            .font(.body.weight(.heavy))
-                            .foregroundStyle(JC.bronze)
-                            .frame(width: 28, height: 44)
-                            .contentShape(Rectangle())
-                            .accessibilityLabel(Text("Déplacer le solo"))
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityAction(named: Text("Déplacer avant")) {
-                                moveSoloist(profileID, by: -1, in: song)
+                        OrderedUUIDDragHandle(
+                            id: profileID,
+                            accessibilityLabel: "Déplacer le solo",
+                            coordinateSpace: "song-solos-reorder",
+                            orderedIDs: $soloOrder,
+                            session: $soloDragSession,
+                            rowFrames: soloRowFrames,
+                            viewportHeight: soloViewportHeight,
+                            onAutoScroll: onAutoScroll,
+                            onCommit: { ids in
+                                store.setSongSolos(ids, songID: song.id, in: groupID)
                             }
-                            .accessibilityAction(named: Text("Déplacer après")) {
-                                moveSoloist(profileID, by: 1, in: song)
-                            }
-                            .onDrag {
-                                soloDragSession = OrderedUUIDDragSession(
-                                    draggingID: profileID,
-                                    initialOrder: soloOrder
-                                )
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                return NSItemProvider(object: profileID.uuidString as NSString)
-                            }
+                        )
                     }
                 }
             }
+            .orderedUUIDFrame(profileID, in: "song-solos-reorder")
+            .id(profileID)
             .opacity(soloDragSession.draggingID == profileID ? 0.58 : 1)
             .scaleEffect(soloDragSession.draggingID == profileID ? 0.985 : 1)
             .animation(.snappy(duration: 0.18), value: soloDragSession.draggingID)
-            .onDrop(
-                of: [UTType.text],
-                delegate: OrderedUUIDDropDelegate(
-                    targetID: profileID,
-                    orderedIDs: $soloOrder,
-                    session: $soloDragSession,
-                    onCommit: { ids in
-                        store.setSongSolos(ids, songID: song.id, in: groupID)
-                    }
-                )
-            )
         }
     }
 
@@ -360,6 +378,17 @@ struct SongDetailSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
+                if store.groups.contains(where: { $0.id != groupID }) {
+                    Button { showCopyToRepertoire = true } label: {
+                        Image(systemName: "rectangle.on.rectangle.angled")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(JC.bronze)
+                            .padding(9)
+                            .background(JC.inset, in: Circle())
+                    }
+                    .buttonStyle(PressableStyle())
+                    .accessibilityLabel(Text("Copier vers un autre répertoire"))
+                }
                 Button { showListen = true } label: {
                     Image(systemName: "headphones")
                         .font(.body.weight(.semibold))

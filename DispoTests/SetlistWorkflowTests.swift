@@ -127,6 +127,140 @@ final class SetlistWorkflowTests: XCTestCase {
         )
     }
 
+    func testCopiedSongGetsIndependentIdentityAndKeepsMusicalMetadata() {
+        let soloist = UUID(uuidString: "14000000-0000-0000-0000-000000000001")!
+        var source = song(
+            id: "14000000-0000-0000-0000-000000000002",
+            title: "Autumn Leaves"
+        )
+        source.artist = "Bill Evans"
+        source.artworkURL = "https://example.com/cover.jpg"
+        source.trackURL = "https://example.com/track"
+        source.platformLinks = ["spotify": "https://example.com/spotify"]
+        source.key = "Bb"
+        source.chords = "Cm7 | F7 | Bbmaj7"
+        source.irealURL = "irealb://Autumn%20Leaves"
+        source.irealDisabled = true
+        source.solos = [soloist]
+
+        let copy = AppStore.copiedSong(
+            from: source,
+            suggestedBy: "14000000-0000-0000-0000-000000000003",
+            isApproved: false
+        )
+
+        XCTAssertNotEqual(copy.id, source.id)
+        XCTAssertEqual(copy.title, source.title)
+        XCTAssertEqual(copy.artist, source.artist)
+        XCTAssertEqual(copy.artworkURL, source.artworkURL)
+        XCTAssertEqual(copy.trackURL, source.trackURL)
+        XCTAssertEqual(copy.platformLinks, source.platformLinks)
+        XCTAssertEqual(copy.key, source.key)
+        XCTAssertEqual(copy.chords, source.chords)
+        XCTAssertEqual(copy.irealURL, source.irealURL)
+        XCTAssertEqual(copy.irealDisabled, source.irealDisabled)
+        XCTAssertEqual(copy.suggestedBy, "14000000-0000-0000-0000-000000000003")
+        XCTAssertFalse(copy.isApproved)
+        XCTAssertTrue(copy.soloProfileIDs.isEmpty)
+    }
+
+    func testCopiedSongDuplicateIdentityIgnoresCaseAccentsAndExtraSpaces() {
+        var canonical = song(
+            id: "15000000-0000-0000-0000-000000000001",
+            title: "Été   indien"
+        )
+        canonical.artist = "Joe Dassin"
+        var variant = canonical
+        variant.title = "  ete indien  "
+        variant.artist = "JOE DASSIN"
+
+        XCTAssertEqual(
+            AppStore.normalizedSongIdentity(canonical),
+            AppStore.normalizedSongIdentity(variant)
+        )
+    }
+
+    func testFreshServerSnapshotRejectsConcurrentEquivalentCopy() {
+        var source = song(
+            id: "16000000-0000-0000-0000-000000000001",
+            title: "Été   indien"
+        )
+        source.artist = "Joe Dassin"
+        var concurrentCopy = song(
+            id: "16000000-0000-0000-0000-000000000002",
+            title: "  ete indien  "
+        )
+        concurrentCopy.artist = "JOE DASSIN"
+        var differentRecording = concurrentCopy
+        differentRecording.artist = "Nancy Sinatra"
+        let attemptedCopy = AppStore.copiedSong(
+            from: source,
+            suggestedBy: "16000000-0000-0000-0000-000000000004",
+            isApproved: true
+        )
+        let duplicateIdentity = AppStore.normalizedSongIdentity(source)
+
+        XCTAssertThrowsError(
+            try AppStore.applyingRepertoireMutation(
+                .add(attemptedCopy),
+                to: [concurrentCopy],
+                rejectingDuplicateIdentity: duplicateIdentity
+            ),
+            "Le snapshot serveur frais doit bloquer la copie ajoutée par un autre appareil."
+        )
+        XCTAssertNoThrow(
+            try AppStore.applyingRepertoireMutation(
+                .add(attemptedCopy),
+                to: [differentRecording],
+                rejectingDuplicateIdentity: duplicateIdentity
+            )
+        )
+    }
+
+    func testSongMutationCompletionGateReportsStaleSuccessAsFailureExactlyOnce() {
+        var gate = AppStore.SongMutationCompletionGate()
+        var callbacks: [Bool] = []
+
+        if let outcome = gate.resolve(
+            .succeeded,
+            taskCancelled: false,
+            sessionMatches: false
+        ) {
+            callbacks.append(outcome == .succeeded)
+        }
+        if let outcome = gate.resolve(
+            .succeeded,
+            taskCancelled: false,
+            sessionMatches: true
+        ) {
+            callbacks.append(outcome == .succeeded)
+        }
+
+        XCTAssertEqual(callbacks, [false])
+    }
+
+    func testSongMutationCompletionGateReportsCancelledSuccessAsFailureExactlyOnce() {
+        var gate = AppStore.SongMutationCompletionGate()
+        var callbacks: [Bool] = []
+
+        if let outcome = gate.resolve(
+            .succeeded,
+            taskCancelled: true,
+            sessionMatches: true
+        ) {
+            callbacks.append(outcome == .succeeded)
+        }
+        if let outcome = gate.resolve(
+            .failed,
+            taskCancelled: false,
+            sessionMatches: true
+        ) {
+            callbacks.append(outcome == .succeeded)
+        }
+
+        XCTAssertEqual(callbacks, [false])
+    }
+
     func testApprovedSongReorderPreservesPendingSuggestionSlot() {
         let first = song(id: "20000000-0000-0000-0000-000000000001", title: "A")
         let pending = song(id: "20000000-0000-0000-0000-000000000002", title: "Suggestion", approved: false)
@@ -140,6 +274,27 @@ final class SetlistWorkflowTests: XCTestCase {
 
         XCTAssertEqual(reordered.map(\.id), [third.id, pending.id, first.id, second.id])
         XCTAssertFalse(reordered[1].isApproved)
+    }
+
+    func testDirectDragMovesInBothDirectionsAndKeepsEveryID() {
+        let first = UUID(uuidString: "20500000-0000-0000-0000-000000000001")!
+        let second = UUID(uuidString: "20500000-0000-0000-0000-000000000002")!
+        let third = UUID(uuidString: "20500000-0000-0000-0000-000000000003")!
+
+        let movedDown = OrderedUUIDDragHandle.moving(
+            first,
+            beforeOrAt: third,
+            in: [first, second, third]
+        )
+        XCTAssertEqual(movedDown, [second, third, first])
+
+        let movedUp = OrderedUUIDDragHandle.moving(
+            third,
+            beforeOrAt: first,
+            in: [first, second, third]
+        )
+        XCTAssertEqual(movedUp, [third, first, second])
+        XCTAssertEqual(Set(movedDown), Set([first, second, third]))
     }
 
     func testFreshSongMutationPreservesRemoteOrderApprovalAndSolos() {

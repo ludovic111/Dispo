@@ -50,6 +50,17 @@
                ReferencedContainer = "container:Dispo.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "273AE7A5AB29BA5258B63D2B"
+               BuildableName = "DispoUITests.xctest"
+               BlueprintName = "DispoUITests"
+               ReferencedContainer = "container:Dispo.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

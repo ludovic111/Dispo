@@ -2878,6 +2878,134 @@ final class AppStore: ObservableObject {
         }
     }
 
+    enum SongCopyResult: Equatable {
+        case copied(approved: Bool)
+        case alreadyExists
+        case unavailable
+        case failed
+    }
+
+    enum SongMutationOutcome: Equatable {
+        case succeeded
+        case alreadyExists
+        case failed
+    }
+
+    /// Barrière pure et testable : un travail asynchrone ne livre son résultat
+    /// qu'une fois, et jamais comme succès si sa tâche ou sa session a expiré.
+    struct SongMutationCompletionGate {
+        private(set) var didComplete = false
+
+        mutating func resolve(
+            _ provisionalOutcome: SongMutationOutcome,
+            taskCancelled: Bool,
+            sessionMatches: Bool
+        ) -> SongMutationOutcome? {
+            guard !didComplete else { return nil }
+            didComplete = true
+            guard !taskCancelled, sessionMatches else { return .failed }
+            return provisionalOutcome
+        }
+    }
+
+    private enum SongMutationSyncError: Error {
+        case duplicateIdentity
+    }
+
+    /// Crée une vraie copie indépendante dans un autre répertoire. Les
+    /// informations musicales suivent le morceau, tandis que l'identité et
+    /// l'ordre des solos restent propres au groupe de destination.
+    nonisolated static func copiedSong(
+        from source: Song,
+        suggestedBy: String,
+        isApproved: Bool
+    ) -> Song {
+        Song(
+            title: source.title,
+            artist: source.artist,
+            artworkURL: source.artworkURL,
+            trackURL: source.trackURL,
+            platformLinks: source.platformLinks,
+            suggestedBy: suggestedBy,
+            isApproved: isApproved,
+            key: source.key,
+            chords: source.chords,
+            irealURL: source.irealURL,
+            irealDisabled: source.irealDisabled,
+            solos: nil
+        )
+    }
+
+    /// Copie un morceau vers un autre groupe. Un leader l'ajoute directement ;
+    /// un membre l'envoie comme suggestion, exactement comme le formulaire
+    /// d'ajout. Une copie au même endroit ou un doublon titre/artiste est refusé.
+    @discardableResult
+    func copySong(
+        _ source: Song,
+        from sourceGroupID: GroupChat.ID,
+        to destinationGroupID: GroupChat.ID,
+        completion: ((SongCopyResult) -> Void)? = nil
+    ) -> SongCopyResult {
+        guard sourceGroupID != destinationGroupID,
+              let destination = groups.first(where: { $0.id == destinationGroupID })
+        else { return .unavailable }
+
+        let duplicate = Self.containsEquivalentSong(to: source, in: destination.songs)
+        guard !duplicate else { return .alreadyExists }
+
+        let approved = canLead(destination)
+        let copy = Self.copiedSong(
+            from: source,
+            suggestedBy: Self.suggestionAuthorStorageValue(
+                userID: liveUserID,
+                legacyProfileName: profile.name
+            ),
+            isApproved: approved
+        )
+        insertSong(
+            copy,
+            in: destinationGroupID,
+            eventID: nil,
+            rejectingDuplicateIdentity: Self.normalizedSongIdentity(source)
+        ) { [weak self] outcome in
+            if outcome != .succeeded {
+                self?.updateGroup(destinationGroupID) { group in
+                    group.repertoire = group.songs.filter { $0.id != copy.id }
+                }
+            }
+            switch outcome {
+            case .succeeded:
+                completion?(.copied(approved: approved))
+            case .alreadyExists:
+                completion?(.alreadyExists)
+            case .failed:
+                completion?(.failed)
+            }
+        }
+        return .copied(approved: approved)
+    }
+
+    nonisolated static func normalizedSongIdentity(_ song: Song) -> String {
+        func normalize(_ value: String) -> String {
+            value
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .folding(
+                    options: [.diacriticInsensitive, .caseInsensitive],
+                    locale: Locale(identifier: "fr_FR")
+                )
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        }
+        return "\(normalize(song.title))|\(normalize(song.artist))"
+    }
+
+    nonisolated static func containsEquivalentSong(
+        to song: Song,
+        in songs: [Song]
+    ) -> Bool {
+        let identity = normalizedSongIdentity(song)
+        return songs.contains { normalizedSongIdentity($0) == identity }
+    }
+
     /// Modifie l'identité et la tonalité d'un morceau déjà ajouté. Toutes ses
     /// copies (répertoire et setlists) restent strictement identiques.
     func editSong(
@@ -2985,6 +3113,23 @@ final class AppStore: ObservableObject {
                 return merged
             }
         }
+    }
+
+    /// Revalide une copie sur le snapshot serveur relu dans la file, juste
+    /// avant le merge. Le contrôle local reste utile pour l'UX, mais ne suffit
+    /// pas si un autre appareil a ajouté le même titre pendant le fetch.
+    nonisolated static func applyingRepertoireMutation(
+        _ mutation: SongCollectionMutation,
+        to freshSongs: [Song],
+        rejectingDuplicateIdentity duplicateIdentity: String?
+    ) throws -> [Song] {
+        if let duplicateIdentity,
+           freshSongs.contains(where: {
+               normalizedSongIdentity($0) == duplicateIdentity
+           }) {
+            throw SongMutationSyncError.duplicateIdentity
+        }
+        return applyingSongMutation(mutation, to: freshSongs)
     }
 
     /// Calcule l'intention d'un formulaire à partir de sa valeur d'ouverture.
@@ -3174,8 +3319,20 @@ final class AppStore: ObservableObject {
         updateSong(.remove(song.id), in: groupID, eventID: eventID)
     }
 
-    private func insertSong(_ song: Song, in groupID: GroupChat.ID, eventID: GroupEvent.ID?) {
-        updateSong(.add(song), in: groupID, eventID: eventID)
+    private func insertSong(
+        _ song: Song,
+        in groupID: GroupChat.ID,
+        eventID: GroupEvent.ID?,
+        rejectingDuplicateIdentity duplicateIdentity: String? = nil,
+        completion: ((SongMutationOutcome) -> Void)? = nil
+    ) {
+        updateSong(
+            .add(song),
+            in: groupID,
+            eventID: eventID,
+            rejectingDuplicateIdentity: duplicateIdentity,
+            completion: completion
+        )
     }
 
     private func localSong(
@@ -3194,7 +3351,9 @@ final class AppStore: ObservableObject {
     private func updateSong(
         _ mutation: SongCollectionMutation,
         in groupID: GroupChat.ID,
-        eventID: GroupEvent.ID?
+        eventID: GroupEvent.ID?,
+        rejectingDuplicateIdentity duplicateIdentity: String? = nil,
+        completion: ((SongMutationOutcome) -> Void)? = nil
     ) {
         updateGroup(groupID) { group in
             if let eventID, let eventIndex = group.events?.firstIndex(where: { $0.id == eventID }) {
@@ -3204,7 +3363,13 @@ final class AppStore: ObservableObject {
                 group.repertoire = Self.applyingSongMutation(mutation, to: group.songs)
             }
         }
-        syncSongs(groupID: groupID, eventID: eventID, mutation: mutation)
+        syncSongs(
+            groupID: groupID,
+            eventID: eventID,
+            mutation: mutation,
+            rejectingDuplicateIdentity: duplicateIdentity,
+            completion: completion
+        )
     }
 
     /// Relit la collection dans la file, applique seulement l'intention locale,
@@ -3213,10 +3378,15 @@ final class AppStore: ObservableObject {
     private func syncSongs(
         groupID: GroupChat.ID,
         eventID: GroupEvent.ID?,
-        mutation: SongCollectionMutation
+        mutation: SongCollectionMutation,
+        rejectingDuplicateIdentity duplicateIdentity: String? = nil,
+        completion: ((SongMutationOutcome) -> Void)? = nil
     ) {
-        guard let backend, isLive else { return }
-        enqueueSongMutation(in: groupID) { [weak self] session in
+        guard let backend, isLive else {
+            completion?(.succeeded)
+            return
+        }
+        enqueueSongMutation(in: groupID, completion: completion) { [weak self] session in
             let collections = try await backend.fetchGroupSongCollections(groupID: groupID)
             guard let self, self.isCurrentSongMutationSession(session) else { return }
 
@@ -3233,7 +3403,11 @@ final class AppStore: ObservableObject {
                 )
             } else {
                 let original = collections.repertoire
-                let desired = Self.applyingSongMutation(mutation, to: original)
+                let desired = try Self.applyingRepertoireMutation(
+                    mutation,
+                    to: original,
+                    rejectingDuplicateIdentity: duplicateIdentity
+                )
                 guard desired != original else { return }
                 try await backend.mergeGroupRepertoireSnapshot(
                     originalSongs: original,
@@ -3263,9 +3437,13 @@ final class AppStore: ObservableObject {
 
     private func enqueueSongMutation(
         in groupID: GroupChat.ID,
+        completion: ((SongMutationOutcome) -> Void)? = nil,
         _ work: @escaping (SongMutationSession) async throws -> Void
     ) {
-        guard let mutationUserID = liveUserID else { return }
+        guard let mutationUserID = liveUserID else {
+            completion?(.failed)
+            return
+        }
         let mutationSessionGeneration = liveSessionGeneration
         let session = SongMutationSession(
             userID: mutationUserID,
@@ -3277,6 +3455,7 @@ final class AppStore: ObservableObject {
         songMutationRevision &+= 1
 
         let task = Task { [weak self] in
+            var completionGate = SongMutationCompletionGate()
             _ = await predecessor?.result
             guard let self,
                   !Task.isCancelled,
@@ -3286,26 +3465,46 @@ final class AppStore: ObservableObject {
                       expectedGeneration: mutationSessionGeneration,
                       currentGeneration: self.liveSessionGeneration
                   )
-            else { return }
+            else {
+                if let outcome = completionGate.resolve(
+                    .failed,
+                    taskCancelled: Task.isCancelled,
+                    sessionMatches: false
+                ) {
+                    completion?(outcome)
+                }
+                return
+            }
+            var provisionalOutcome = SongMutationOutcome.succeeded
             do {
                 try await work(session)
+            } catch SongMutationSyncError.duplicateIdentity {
+                provisionalOutcome = .alreadyExists
             } catch {
-                guard Self.isMatchingLiveSession(
-                    expectedUserID: mutationUserID,
-                    currentUserID: self.liveUserID,
-                    expectedGeneration: mutationSessionGeneration,
-                    currentGeneration: self.liveSessionGeneration
-                ) else { return }
-                self.backendError = self.tr("La synchro groupe a échoué — réessaie.")
+                provisionalOutcome = .failed
+                if !Task.isCancelled,
+                   Self.isMatchingLiveSession(
+                       expectedUserID: mutationUserID,
+                       currentUserID: self.liveUserID,
+                       expectedGeneration: mutationSessionGeneration,
+                       currentGeneration: self.liveSessionGeneration
+                   ) {
+                    self.backendError = self.tr("La synchro groupe a échoué — réessaie.")
+                }
             }
-            guard !Task.isCancelled,
-                  Self.isMatchingLiveSession(
-                      expectedUserID: mutationUserID,
-                      currentUserID: self.liveUserID,
-                      expectedGeneration: mutationSessionGeneration,
-                      currentGeneration: self.liveSessionGeneration
-                  )
-            else { return }
+            let sessionMatches = Self.isMatchingLiveSession(
+                expectedUserID: mutationUserID,
+                currentUserID: self.liveUserID,
+                expectedGeneration: mutationSessionGeneration,
+                currentGeneration: self.liveSessionGeneration
+            )
+            guard let outcome = completionGate.resolve(
+                provisionalOutcome,
+                taskCancelled: Task.isCancelled,
+                sessionMatches: sessionMatches
+            ) else { return }
+            completion?(outcome)
+            guard !Task.isCancelled, sessionMatches else { return }
             if self.songMutationGenerations[groupID] == generation {
                 self.songMutationTasks[groupID] = nil
             }

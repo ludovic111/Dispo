@@ -12,7 +12,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
     MARKETING_VERSION: "2.3"
-    CURRENT_PROJECT_VERSION: "29"
+    CURRENT_PROJECT_VERSION: "30"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -36,6 +36,7 @@ schemes:
       config: Debug
       targets:
         - DispoTests
+        - DispoUITests
 targets:
   Dispo:
     type: application
@@ -107,3 +108,15 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ch.dispo.app.tests
         GENERATE_INFOPLIST_FILE: true
+  DispoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: DispoUITests
+    dependencies:
+      - target: Dispo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ch.dispo.app.uitests
+        GENERATE_INFOPLIST_FILE: true
+        TEST_TARGET_NAME: Dispo
