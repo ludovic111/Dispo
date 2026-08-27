@@ -255,7 +255,9 @@ struct RootView: View {
         case "sos": store.selectedTab = .sos
         case "messages": store.selectedTab = .messages
         case "profile": store.selectedTab = .profile
-        case "paywall": store.showPaywall = true
+        case "paywall", "paywall-prices":
+            store.hasOnboarded = true
+            store.showPaywall = true
         case "chat":
             if let conversation = store.conversations.first(where: { !$0.messages.isEmpty }) {
                 debugCover = .chat(conversation.id)
@@ -1339,14 +1341,54 @@ struct DemoAccountBadge: View {
     }
 }
 
-/// Style de bouton signature : léger enfoncement élastique au toucher.
+/// Valeurs visuelles pures du retour pressé, testables sans rendre de vue.
+struct PressableMotionState: Equatable {
+    let scale: CGFloat
+    let opacity: Double
+    let animatesTransition: Bool
+}
+
+enum PressableMotionPolicy {
+    static func state(
+        isPressed: Bool,
+        reduceMotion: Bool,
+        pressedScale: CGFloat
+    ) -> PressableMotionState {
+        PressableMotionState(
+            scale: reduceMotion ? 1 : (isPressed ? pressedScale : 1),
+            opacity: isPressed ? (reduceMotion ? 0.96 : 0.94) : 1,
+            animatesTransition: !reduceMotion
+        )
+    }
+}
+
+/// Style de bouton signature : léger enfoncement élastique au toucher, ou
+/// simple variation d'opacité instantanée quand les animations sont réduites.
 struct PressableStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var scale: CGFloat = 0.97
+
     func makeBody(configuration: Configuration) -> some View {
+        let state = PressableMotionPolicy.state(
+            isPressed: configuration.isPressed,
+            reduceMotion: reduceMotion,
+            pressedScale: scale
+        )
+
         configuration.label
-            .scaleEffect(configuration.isPressed ? scale : 1)
-            .opacity(configuration.isPressed ? 0.94 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.72), value: configuration.isPressed)
+            .scaleEffect(state.scale)
+            .opacity(state.opacity)
+            .animation(
+                state.animatesTransition
+                    ? .spring(response: 0.3, dampingFraction: 0.72)
+                    : nil,
+                value: configuration.isPressed
+            )
+            .transaction { transaction in
+                if reduceMotion {
+                    transaction.animation = nil
+                }
+            }
     }
 }
 

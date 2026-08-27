@@ -98,8 +98,8 @@ struct GroupChatView: View {
         store.groups.first { $0.id == groupID }
     }
 
-    /// Peut exercer les pouvoirs de leader (leader ET Premium). Un
-    /// abonnement expiré fait retomber au rang de membre.
+    /// Le leader garde toujours les commandes de son groupe. Premium ouvre
+    /// des outils avancés, il ne rend jamais un groupe existant inutilisable.
     private var isLeader: Bool {
         group.map { store.canLead($0) } ?? false
     }
@@ -409,6 +409,8 @@ struct GroupChatView: View {
                         .foregroundStyle(JC.electric)
                         .frame(width: 36, height: 36)
                         .background(JC.card, in: Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                     }
                     .buttonStyle(PressableStyle())
                     .disabled(preparingMessageMedia || store.messageAttachmentUploadInProgress)
@@ -420,6 +422,8 @@ struct GroupChatView: View {
                             .foregroundStyle(JC.electric)
                             .frame(width: 36, height: 36)
                             .background(JC.card, in: Circle())
+                            .frame(width: 44, height: 44)
+                            .contentShape(Circle())
                     }
                     .buttonStyle(PressableStyle())
                     .disabled(preparingMessageMedia || store.messageAttachmentUploadInProgress)
@@ -441,12 +445,15 @@ struct GroupChatView: View {
                             }
                         }
                         .foregroundStyle(canSendGroupMessage ? AnyShapeStyle(JC.hero) : AnyShapeStyle(Color.gray))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                     }
                     .disabled(
                         !canSendGroupMessage
                             || store.messageAttachmentUploadInProgress
                             || sendingGroupMessage
                     )
+                    .accessibilityLabel(Text("Envoyer le message"))
                 }
             }
             .padding()
@@ -762,9 +769,9 @@ struct GroupChatView: View {
                                     Text("Setlist : \(event.setlist.filter(\.isApproved).count) morceaux")
                                         .font(.caption2.weight(.bold))
                                         .foregroundStyle(JC.bronze)
-                                    let available = event.availableNames.count
+                                    let available = store.availableNames(for: event, in: group).count
                                     let total = store.roster(of: group).count
-                                    let myStatus = event.status(for: store.profile.name)
+                                    let myStatus = store.myAttendance(for: event)
                                     HStack(spacing: 6) {
                                         switch lineup {
                                         case .complete:
@@ -1906,14 +1913,14 @@ struct GroupMessageBubble: View {
 // MARK: - Membres (invitations, exclusions, leadership)
 
 /// Gestion des membres. Le leader invite, exclut et peut transmettre son
-/// rôle — uniquement à un membre Premium.
+/// rôle à un membre éligible (Premium, ou qui ne dirige encore aucun groupe).
 struct GroupMembersSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     let groupID: GroupChat.ID
     @State private var showInvite = false
     /// Membre en attente de confirmation pour devenir leader.
-    @State private var pendingLeader: String?
+    @State private var pendingLeader: SoloistOption?
     /// Fiche du membre qu'on consulte.
     @State private var viewingMusician: Musician?
 
@@ -1921,8 +1928,7 @@ struct GroupMembersSheet: View {
         store.groups.first { $0.id == groupID }
     }
 
-    /// Peut exercer les pouvoirs de leader (leader ET Premium). Un
-    /// abonnement expiré fait retomber au rang de membre.
+    /// Le leader reste administrateur même si son abonnement expire.
     private var isLeader: Bool {
         group.map { store.canLead($0) } ?? false
     }
@@ -1948,23 +1954,10 @@ struct GroupMembersSheet: View {
                                 .buttonStyle(PressableStyle())
                             }
 
-                            // Moi
-                            memberRow(
-                                name: store.profile.name,
-                                isMe: true,
-                                isLeaderRow: store.isLeader(of: group),
-                                isPremiumMember: store.isPremium,
-                                group: group
-                            )
-                            // Les autres membres
-                            ForEach(group.memberNames, id: \.self) { name in
-                                memberRow(
-                                    name: name,
-                                    isMe: false,
-                                    isLeaderRow: group.leaderName == name,
-                                    isPremiumMember: store.isPremiumMusician(name),
-                                    group: group
-                                )
+                            // Le roster est rendu et manipulé par UUID. Deux
+                            // homonymes restent deux lignes et deux actions.
+                            ForEach(store.soloistOptions(for: group)) { member in
+                                memberRow(member: member, group: group)
                             }
 
                             // Invités en attente de réponse (le leader peut annuler).
@@ -1973,7 +1966,7 @@ struct GroupMembersSheet: View {
                             }
 
                             if isLeader {
-                                Text("Le leadership ne peut être transmis qu'à un membre Premium. Marque chaque membre Permanent (noyau) ou Occasionnel.")
+                                Text("Le leadership peut être transmis à un membre Premium, ou à un membre qui ne dirige encore aucun autre groupe. Marque aussi chacun Permanent (noyau) ou Occasionnel.")
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                                     .padding(.top, 4)
@@ -2005,13 +1998,13 @@ struct GroupMembersSheet: View {
                 .presentationDetents([.large])
             }
             .confirmationDialog(
-                pendingLeader.map { String(format: store.tr("Nommer %@ leader ? Tu perdras la gestion du groupe."), $0) } ?? "",
+                pendingLeader.map { String(format: store.tr("Nommer %@ leader ? Tu perdras la gestion du groupe."), $0.name) } ?? "",
                 isPresented: Binding(get: { pendingLeader != nil }, set: { if !$0 { pendingLeader = nil } }),
                 titleVisibility: .visible
             ) {
-                if let name = pendingLeader, let group {
-                    Button(String(format: store.tr("Nommer %@ leader"), name)) {
-                        store.transferLeadership(of: group, to: name)
+                if let member = pendingLeader, let group {
+                    Button(String(format: store.tr("Nommer %@ leader"), member.name)) {
+                        store.transferLeadership(of: group, to: member)
                         pendingLeader = nil
                     }
                 }
@@ -2054,20 +2047,24 @@ struct GroupMembersSheet: View {
 
     /// Instruments joués par un membre — les miens viennent de mon profil,
     /// ceux des autres de leur fiche serveur.
-    private func instruments(of name: String, isMe: Bool) -> [Instrument] {
+    private func instruments(of member: SoloistOption, isMe: Bool) -> [Instrument] {
         isMe
             ? store.profile.instruments
-            : (store.musicians.first(where: { $0.name == name })?.instruments ?? [])
+            : (store.musician(for: member)?.instruments ?? [])
     }
 
-    private func memberRow(name: String, isMe: Bool, isLeaderRow: Bool, isPremiumMember: Bool, group: GroupChat) -> some View {
-        let kind = group.memberKind(for: name)
-        let role = group.role(for: name)
-        let played = instruments(of: name, isMe: isMe)
+    private func memberRow(member: SoloistOption, group: GroupChat) -> some View {
+        let name = member.name
+        let isMe = store.isCurrentProfile(member)
+        let isLeaderRow = store.isLeader(member, in: group)
+        let isPremiumMember = store.isPremiumMember(member)
+        let kind = group.memberKind(for: member)
+        let role = group.role(for: member)
+        let played = instruments(of: member, isMe: isMe)
         // Le rôle tenu dans le groupe passe devant, ses autres instruments
         // suivent. Un rôle assigné hors de sa panoplie reste affiché.
         let orderedInstruments: [Instrument] = role.map { [$0] + played.filter { $0 != role } } ?? played
-        let profileToOpen = isMe ? nil : store.musicians.first(where: { $0.name == name })
+        let profileToOpen = isMe ? nil : store.musician(for: member)
         return JCCard(padding: 11) {
             HStack(spacing: 11) {
                 // Toute la ligne ouvre la fiche du membre.
@@ -2136,7 +2133,7 @@ struct GroupMembersSheet: View {
                         if !isLeaderRow {
                             Button {
                                 store.setMemberKind(
-                                    name,
+                                    member,
                                     kind == .permanent ? .occasional : .permanent,
                                     in: group
                                 )
@@ -2149,21 +2146,21 @@ struct GroupMembersSheet: View {
                                 )
                             }
                             Menu {
-                                let options = store.musicians.first(where: { $0.name == name })?.instruments ?? Instrument.allCases
+                                let options = store.musician(for: member)?.instruments ?? Instrument.allCases
                                 ForEach(options) { instrument in
                                     Button {
-                                        store.setMemberRole(name, instrument, in: group)
+                                        store.setMemberRole(member, instrument, in: group)
                                     } label: {
-                                        if group.role(for: name) == instrument {
+                                        if group.role(for: member) == instrument {
                                             Label(store.tr(instrument.rawValue), systemImage: "checkmark")
                                         } else {
                                             Text(store.tr(instrument.rawValue))
                                         }
                                     }
                                 }
-                                if group.role(for: name) != nil {
+                                if group.role(for: member) != nil {
                                     Button(role: .destructive) {
-                                        store.setMemberRole(name, nil, in: group)
+                                        store.setMemberRole(member, nil, in: group)
                                     } label: {
                                         Label("Retirer le rôle", systemImage: "xmark")
                                     }
@@ -2172,15 +2169,13 @@ struct GroupMembersSheet: View {
                                 Label("Rôle dans le groupe", systemImage: "guitars")
                             }
                         }
-                        if isPremiumMember {
-                            Button {
-                                pendingLeader = name
-                            } label: {
-                                Label("Nommer leader", systemImage: "crown")
-                            }
+                        Button {
+                            pendingLeader = member
+                        } label: {
+                            Label("Nommer leader", systemImage: "crown")
                         }
                         Button(role: .destructive) {
-                            store.kickMember(name, from: group)
+                            store.kickMember(member, from: group)
                         } label: {
                             Label("Exclure du groupe", systemImage: "person.badge.minus")
                         }
@@ -2262,17 +2257,32 @@ struct GroupSettingsSheet: View {
                         Text("Public : le groupe apparaît sur les profils de ses membres (nom, photo, effectif). Privé : il reste entre vous.")
                     }
 
-                    // Un membre lâche à J-2 : soit tu publies le SOS toi-même,
-                    // soit l'app s'en charge dans la seconde.
+                    // L'automatisation est Premium, mais elle reste toujours
+                    // désactivable si l'abonnement expire.
                     Section {
-                        Toggle(
-                            "Chercher un remplaçant tout seul",
-                            isOn: Binding(
-                                get: { group.autoSOSEnabled ?? false },
-                                set: { store.setAutoSOS(enabled: $0, levelRule: levelRule, in: group) }
+                        if store.canUse(.autoSOS) || group.autoSOSEnabled == true {
+                            Toggle(
+                                "Chercher un remplaçant tout seul",
+                                isOn: Binding(
+                                    get: { group.autoSOSEnabled ?? false },
+                                    set: { store.setAutoSOS(enabled: $0, levelRule: levelRule, in: group) }
+                                )
                             )
-                        )
-                        .tint(JC.signal)
+                            .tint(JC.signal)
+                        } else {
+                            Button { store.showPaywall = true } label: {
+                                HStack {
+                                    Label("Chercher un remplaçant tout seul", systemImage: "wand.and.stars")
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text("Premium")
+                                        .font(.caption2.weight(.heavy))
+                                        .foregroundStyle(JC.laiton)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint(Text("Ouvre les offres Premium"))
+                        }
                         if group.autoSOSEnabled == true {
                             Picker("Niveau demandé", selection: Binding(
                                 get: { levelRule },
@@ -2431,8 +2441,7 @@ struct GroupEventSheet: View {
     private var event: GroupEvent? {
         group?.allEvents.first { $0.id == eventID }
     }
-    /// Peut exercer les pouvoirs de leader (leader ET Premium). Un
-    /// abonnement expiré fait retomber au rang de membre.
+    /// Le leader reste administrateur même si son abonnement expire.
     private var isLeader: Bool {
         group.map { store.canLead($0) } ?? false
     }
@@ -2482,6 +2491,39 @@ struct GroupEventSheet: View {
                                         .font(.caption)
                                     Label(event.venue, systemImage: "mappin.and.ellipse")
                                         .font(.caption)
+                                    if let exactAddress = event.exactAddress,
+                                       event.resolvedPrivateLocationState == .available {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Label("Rendez-vous privé", systemImage: "lock.open.fill")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(JC.feutrine)
+                                            Text(verbatim: exactAddress)
+                                                .font(.caption)
+                                        }
+                                        .padding(10)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(
+                                            JC.feutrine.opacity(0.10),
+                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        )
+                                    } else if event.resolvedPrivateLocationState == .unknown {
+                                        Label(
+                                            "Adresse privée non chargée — réessaie dans un instant",
+                                            systemImage: "exclamationmark.arrow.triangle.2.circlepath"
+                                        )
+                                        .font(.caption)
+                                        .foregroundStyle(JC.signal)
+                                    } else {
+                                        Label(
+                                            store.isLeader(of: group)
+                                                && event.resolvedPrivateLocationState == .absent
+                                                ? "Aucune adresse privée renseignée"
+                                                : "Adresse révélée après confirmation de présence",
+                                            systemImage: "lock.shield.fill"
+                                        )
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    }
                                     if let recurrence = event.recurrence, event.isRecurring {
                                         let remaining = store.remainingOccurrences(of: event, in: group)
                                         Label(
@@ -2810,7 +2852,7 @@ struct GroupEventSheet: View {
     /// délai vaut pour tout le groupe : chaque appareil planifie le sien.
     @ViewBuilder
     private func reminderRow(event: GroupEvent, isLeader: Bool) -> some View {
-        if isLeader {
+        if isLeader && store.canUse(.configurableReminders) {
             Menu {
                 ForEach(GroupEvent.reminderLeadOptions, id: \.self) { days in
                     Button {
@@ -2831,6 +2873,22 @@ struct GroupEventSheet: View {
                 .font(.caption)
                 .foregroundStyle(JC.laiton)
             }
+        } else if isLeader {
+            Button { store.showPaywall = true } label: {
+                HStack(spacing: 6) {
+                    Label(
+                        String(format: store.tr("Rappel : %@"), store.reminderLeadLabel(event.reminderLead)),
+                        systemImage: "bell.badge"
+                    )
+                    Spacer(minLength: 4)
+                    Text("Premium")
+                        .font(.caption2.weight(.heavy))
+                }
+                .font(.caption)
+                .foregroundStyle(JC.laiton)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Ouvre les offres Premium pour personnaliser le rappel"))
         } else {
             Label(
                 String(format: store.tr("Rappel : %@"), store.reminderLeadLabel(event.reminderLead)),
@@ -2844,10 +2902,10 @@ struct GroupEventSheet: View {
     /// Confirmation de présence — un tap Oui / Non, plus le tableau pour le leader.
     @ViewBuilder
     private func attendanceCard(event: GroupEvent, group: GroupChat) -> some View {
-        let myStatus = event.status(for: store.profile.name)
+        let myStatus = store.myAttendance(for: event)
         let pending = store.pendingAttendance(for: event, in: group)
-        let available = event.availableNames
-        let unavailable = event.unavailableNames
+        let available = store.availableNames(for: event, in: group)
+        let unavailable = store.unavailableMembers(for: event, in: group).map(\.name)
 
         JCCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -3217,6 +3275,7 @@ struct AddGroupEventSheet: View {
     @State private var kind: GroupEventKind = .concert
     @State private var title = ""
     @State private var venue = ""
+    @State private var exactAddress = ""
     @State private var country: Country = .switzerland
     @State private var postalCode = ""
     @State private var city = ""
@@ -3267,18 +3326,44 @@ struct AddGroupEventSheet: View {
                         detectedCountry: store.detectedCountry
                     )
                     DatePicker("Date et heure", selection: $date, in: Date()...)
+                    TextField("Adresse privée — rue, numéro, entrée…", text: $exactAddress, axis: .vertical)
+                        .lineLimit(1...3)
                 }
 
                 Section {
-                    Picker("Ça se répète", selection: $recurrence) {
-                        ForEach(EventRecurrence.allCases) { option in
-                            Text(LocalizedStringKey(option.rawValue)).tag(option)
+                    Label("L'adresse exacte n'est visible que par le leader et les personnes qui confirment leur présence.", systemImage: "lock.shield.fill")
+                        .font(.caption)
+                        .foregroundStyle(JC.feutrine)
+                } header: {
+                    Text("Confidentialité du rendez-vous")
+                }
+
+                Section {
+                    if store.canUse(.recurringEvents) {
+                        Picker("Ça se répète", selection: $recurrence) {
+                            ForEach(EventRecurrence.allCases) { option in
+                                Text(LocalizedStringKey(option.rawValue)).tag(option)
+                            }
                         }
-                    }
-                    // Passer d'hebdomadaire à mensuel réduit le plafond :
-                    // on ramène le compteur dans les clous.
-                    .onChange(of: recurrence) { _, _ in
-                        occurrences = min(occurrences, maxOccurrences)
+                        // Passer d'hebdomadaire à mensuel réduit le plafond :
+                        // on ramène le compteur dans les clous.
+                        .onChange(of: recurrence) { _, _ in
+                            occurrences = min(occurrences, maxOccurrences)
+                        }
+                    } else {
+                        LabeledContent("Ça se répète", value: "Une seule fois")
+                        Button { store.showPaywall = true } label: {
+                            HStack {
+                                Label("Planifier toute une série", systemImage: "repeat")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text("Premium")
+                                    .font(.caption2.weight(.heavy))
+                                    .foregroundStyle(JC.laiton)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(Text("Ouvre les offres Premium"))
                     }
                     if recurrence != .once {
                         Stepper(value: $occurrences, in: 2...maxOccurrences) {
@@ -3310,15 +3395,36 @@ struct AddGroupEventSheet: View {
                 }
 
                 Section {
-                    Picker("Prévenir le groupe", selection: $reminderLeadDays) {
-                        ForEach(GroupEvent.reminderLeadOptions, id: \.self) { days in
-                            Text(store.reminderLeadLabel(days)).tag(days)
+                    if store.canUse(.configurableReminders) {
+                        Picker("Prévenir le groupe", selection: $reminderLeadDays) {
+                            ForEach(GroupEvent.reminderLeadOptions, id: \.self) { days in
+                                Text(store.reminderLeadLabel(days)).tag(days)
+                            }
                         }
+                    } else {
+                        LabeledContent(
+                            "Prévenir le groupe",
+                            value: store.reminderLeadLabel(GroupEvent.defaultReminderLeadDays)
+                        )
+                        Button { store.showPaywall = true } label: {
+                            HStack {
+                                Label("Choisir le moment du rappel", systemImage: "bell.badge")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text("Premium")
+                                    .font(.caption2.weight(.heavy))
+                                    .foregroundStyle(JC.laiton)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(Text("Ouvre les offres Premium"))
                     }
                 } header: {
                     Text("Rappel")
                 } footer: {
-                    Text("Chaque membre reçoit un rappel à ce moment-là — pour confirmer sa présence, ou juste ne pas oublier.")
+                    Text(store.canUse(.configurableReminders)
+                         ? "Chaque membre reçoit un rappel à ce moment-là — pour confirmer sa présence, ou juste ne pas oublier."
+                         : "Le rappel gratuit part deux jours avant. Premium permet de choisir le moment exact.")
                 }
 
                 if recurrence != .once {
@@ -3353,6 +3459,13 @@ struct AddGroupEventSheet: View {
                                 name: venue,
                                 place: PlaceDraft(country: country, postalCode: postalCode, city: city)
                             ).label,
+                            exactAddress: {
+                                let value = exactAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+                                return value.isEmpty ? nil : value
+                            }(),
+                            privateLocationState: exactAddress.trimmingCharacters(
+                                in: .whitespacesAndNewlines
+                            ).isEmpty ? .absent : .available,
                             date: date,
                             reminderLeadDays: reminderLeadDays
                         )
@@ -3391,6 +3504,8 @@ struct EditGroupEventSheet: View {
 
     @State private var title: String
     @State private var venue: String
+    @State private var exactAddress: String
+    @State private var clearExactAddress = false
     @State private var country: Country
     @State private var postalCode: String
     @State private var city: String
@@ -3403,6 +3518,7 @@ struct EditGroupEventSheet: View {
         let parsedVenue = VenueDraft(storageLabel: event.venue, fallbackCountry: .switzerland)
         _title = State(initialValue: event.title)
         _venue = State(initialValue: parsedVenue.name)
+        _exactAddress = State(initialValue: event.exactAddress ?? "")
         _country = State(initialValue: parsedVenue.place.country)
         _postalCode = State(initialValue: parsedVenue.place.postalCode)
         _city = State(initialValue: parsedVenue.place.city)
@@ -3440,6 +3556,64 @@ struct EditGroupEventSheet: View {
                         city: $city,
                         detectedCountry: store.detectedCountry
                     )
+                    TextField("Adresse privée — rue, numéro, entrée…", text: $exactAddress, axis: .vertical)
+                        .lineLimit(1...3)
+                        .onChange(of: exactAddress) { _, value in
+                            if !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                clearExactAddress = false
+                            }
+                        }
+                }
+
+                Section {
+                    Label("L'adresse exacte reste invisible aux membres qui n'ont pas confirmé leur présence.", systemImage: "lock.shield.fill")
+                        .font(.caption)
+                        .foregroundStyle(JC.feutrine)
+                    switch event.resolvedPrivateLocationState {
+                    case .unknown:
+                        Label(
+                            "L'adresse existante n'a pas pu être chargée. Elle sera conservée si tu ne la remplaces pas.",
+                            systemImage: "exclamationmark.arrow.triangle.2.circlepath"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(JC.signal)
+                    case .restricted:
+                        Label(
+                            "L'adresse privée n'est pas accessible. Une saisie vide conservera la valeur serveur.",
+                            systemImage: "lock.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    case .absent:
+                        Label("Aucune adresse privée enregistrée.", systemImage: "mappin.slash")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    case .available:
+                        if clearExactAddress {
+                            HStack {
+                                Label("L'adresse sera supprimée.", systemImage: "trash.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(JC.signal)
+                                Spacer()
+                                Button("Annuler la suppression") {
+                                    clearExactAddress = false
+                                    exactAddress = event.exactAddress ?? ""
+                                }
+                                .font(.caption.weight(.semibold))
+                            }
+                        } else {
+                            Button(role: .destructive) {
+                                exactAddress = ""
+                                clearExactAddress = true
+                            } label: {
+                                Label("Supprimer l'adresse privée", systemImage: "trash")
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Rendez-vous privé")
+                } footer: {
+                    Text("Effacer simplement le champ ne supprime rien : utilise l'action dédiée.")
                 }
 
                 if event.isRecurring {
@@ -3498,6 +3672,12 @@ struct EditGroupEventSheet: View {
                                 name: venue,
                                 place: PlaceDraft(country: country, postalCode: postalCode, city: city)
                             ).label,
+                            exactAddressMutation: .editing(
+                                currentState: event.resolvedPrivateLocationState,
+                                currentAddress: event.exactAddress,
+                                draft: exactAddress,
+                                clearRequested: clearExactAddress
+                            ),
                             scope: scope
                         )
                         dismiss()
@@ -3533,7 +3713,8 @@ extension AppStore {
 
 // MARK: - Nouveau groupe
 
-/// Création d'un groupe — réservée aux Premium. Le créateur devient leader.
+/// Création d'un groupe. Le premier groupe dirigé est gratuit ; Premium
+/// permet d'en diriger plusieurs. Le créateur devient leader.
 struct NewGroupSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss

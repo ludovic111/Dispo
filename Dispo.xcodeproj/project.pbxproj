@@ -41,9 +41,11 @@
 		7D8885F2E241C09E56C1C339 /* BackendConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29B18D3DD55BFEDCE6D109D /* BackendConfig.swift */; };
 		7FFC99269986DF7164276E64 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD32389AB32CF9529D343 /* AuthGateView.swift */; };
 		89CAF17D56DDCD16E989299F /* SOSMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BF7594E5DECA397D60C3C0 /* SOSMatchView.swift */; };
+		8D75095C31BAFB11BED86B97 /* MusicSchoolViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A46E9BEC0ED3F7ED8391D8 /* MusicSchoolViews.swift */; };
 		9EA9F23A7A804B91F2AB0664 /* FilterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */; };
 		A21CFD4B8CD824BD4EA45150 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6CEE8CF8E49314AC43A8F44F /* Secrets.plist */; };
 		ABDC5A4D00EC694DC10929E2 /* DispoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */; };
+		ADF0DE196C538E5DBF0D2845 /* PrivateLocationIntegrityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */; };
 		B0D6FC9FF9B73F6BCC3D0567 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D10ACFB71CC40CFF3DFAC7 /* ChatView.swift */; };
 		BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */; };
 		C8BB5275D442027AF380E0DB /* MyEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30520EB8A6E15D9BD250814A /* MyEventsView.swift */; };
@@ -79,6 +81,7 @@
 
 /* Begin PBXFileReference section */
 		047421D42EA7C1DBEFE4FA2E /* NotificationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsView.swift; sourceTree = "<group>"; };
+		04A46E9BEC0ED3F7ED8391D8 /* MusicSchoolViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicSchoolViews.swift; sourceTree = "<group>"; };
 		04DD095B72FFD09E7389249C /* PushNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotifications.swift; sourceTree = "<group>"; };
 		0572EEA41798DA367143B191 /* Music.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Music.swift; sourceTree = "<group>"; };
 		077D264F558B81E6720C79C5 /* LocationUXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationUXTests.swift; sourceTree = "<group>"; };
@@ -87,6 +90,7 @@
 		261EC6F531BEE7612BA65B4B /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		2BA029833082A56A604FC4F5 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		2E6D4C225C9452004F0539F2 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateLocationIntegrityTests.swift; sourceTree = "<group>"; };
 		30520EB8A6E15D9BD250814A /* MyEventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyEventsView.swift; sourceTree = "<group>"; };
 		31DA5F3B8B8851CC225E3A6E /* Dispo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dispo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EA2496415AB09812C4FC2CD /* SupabaseBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseBackend.swift; sourceTree = "<group>"; };
@@ -151,6 +155,7 @@
 			isa = PBXGroup;
 			children = (
 				077D264F558B81E6720C79C5 /* LocationUXTests.swift */,
+				2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */,
 				CD6EB48244B9DD72FB2FFDF2 /* SelectionPresentationTests.swift */,
 				9007F9470142ABE939E4ED91 /* SetlistWorkflowTests.swift */,
 			);
@@ -191,6 +196,7 @@
 				AC58C1AA319C707515F059D7 /* MessageAttachments.swift */,
 				64946B92A861F1AF7608755A /* MessageControls.swift */,
 				6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */,
+				04A46E9BEC0ED3F7ED8391D8 /* MusicSchoolViews.swift */,
 				30520EB8A6E15D9BD250814A /* MyEventsView.swift */,
 				8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */,
 				E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */,
@@ -402,6 +408,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				28095D0A929D08F4FCFF6982 /* LocationUXTests.swift in Sources */,
+				ADF0DE196C538E5DBF0D2845 /* PrivateLocationIntegrityTests.swift in Sources */,
 				0A820725E4819283EEB964B1 /* SelectionPresentationTests.swift in Sources */,
 				5683145287B6535A4441FC0F /* SetlistWorkflowTests.swift in Sources */,
 			);
@@ -430,6 +437,7 @@
 				6927EB0344A7E7F17D260458 /* MessageControls.swift in Sources */,
 				7AF0430FCB7DB66B78E0D64C /* Models.swift in Sources */,
 				19B8469D6C8B9EE2D45F61AE /* Music.swift in Sources */,
+				8D75095C31BAFB11BED86B97 /* MusicSchoolViews.swift in Sources */,
 				D7DE32D1745AF72A345DF15B /* MusicianDetailView.swift in Sources */,
 				C8BB5275D442027AF380E0DB /* MyEventsView.swift in Sources */,
 				BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */,
@@ -529,7 +537,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 31;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -543,7 +551,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -606,7 +614,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 30;
+				CURRENT_PROJECT_VERSION = 31;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -626,7 +634,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 2.3;
+				MARKETING_VERSION = 2.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

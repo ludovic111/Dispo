@@ -193,7 +193,7 @@ struct FilterSheet: View {
 
     private var levelsSection: some View {
         Section {
-            if store.isPremium {
+            if store.canUse(.advancedFilters) {
                 FlowLayout(spacing: 8) {
                     ChoiceChip(label: "Tous", isSelected: filters.levels.isEmpty) {
                         filters.levels.removeAll()
@@ -221,7 +221,7 @@ struct FilterSheet: View {
         } header: {
             selectionHeader("Niveaux", count: filters.levels.count)
         } footer: {
-            if store.isPremium {
+            if store.canUse(.advancedFilters) {
                 Text("Plusieurs niveaux sont possibles : l'un d'eux suffit.")
             } else {
                 Text("Le filtre par niveau fait partie de Dispo Premium.")

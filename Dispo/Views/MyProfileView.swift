@@ -73,6 +73,7 @@ struct MyProfileView: View {
     @State private var editingVideo: DemoVideo?
     @State private var showFollowers = false
     @State private var showPlayedWith = false
+    @State private var showSchools = false
     /// Séjour en cours d'ajout ou de modification.
     @State private var editingPlace: AvailabilityPlace?
 
@@ -86,6 +87,7 @@ struct MyProfileView: View {
                         topBar
                         header
                         identity
+                        mySchoolsCard
                         editButton
                         availabilityCard
                         videosCard
@@ -118,6 +120,16 @@ struct MyProfileView: View {
             .sheet(isPresented: $showPlayedWith) {
                 PlayedWithSheet(ownerName: store.profile.name, collaborators: myCollaboratorMusicians)
             }
+            .sheet(isPresented: $showSchools) {
+                NavigationStack {
+                    MusicSchoolDirectoryView()
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Fermer") { showSchools = false }
+                            }
+                        }
+                }
+            }
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
                 Task {
@@ -142,6 +154,49 @@ struct MyProfileView: View {
                     importingVideo = false
                 }
             }
+        }
+    }
+
+    // MARK: - Écoles
+
+    @ViewBuilder
+    private var mySchoolsCard: some View {
+        let affiliations = store.myMusicSchoolCommunities.map(\.affiliation)
+        if affiliations.isEmpty {
+            Button { showSchools = true } label: {
+                JCCard {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .fill(JC.bronze.opacity(0.14))
+                                .frame(width: 42, height: 42)
+                            Image(systemName: "building.columns.fill")
+                                .foregroundStyle(JC.bronze)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Ajouter mon école de musique")
+                                .font(.subheadline.weight(.heavy))
+                                .foregroundStyle(.primary)
+                            Text("Retrouve ses membres et rejoins sa conversation.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(JC.bronze)
+                    }
+                }
+            }
+            .buttonStyle(PressableStyle())
+        } else {
+            MusicSchoolAffiliationsCard(
+                affiliations: affiliations,
+                title: "Mes écoles",
+                actionTitle: "Gérer",
+                action: { showSchools = true }
+            )
         }
     }
 
@@ -526,7 +581,7 @@ struct MyProfileView: View {
                         .foregroundStyle(JC.bronze)
                     }
                     .disabled(isBusy)
-                } else if !store.isPremium {
+                } else if !store.canUse(.expandedPortfolio) {
                     // Limite gratuite atteinte : l'ajout passe par Premium.
                     Button { store.showPaywall = true } label: {
                         HStack(spacing: 8) {
@@ -608,8 +663,8 @@ struct MyProfileView: View {
     private var premiumCard: some View {
         JCPromoBanner(
             icon: "crown.fill",
-            title: "Ne rate plus un cachet",
-            subtitle: "Alertes en priorité, groupes, 6 vidéos · via l'App Store"
+            title: "Plus de musique. Moins d'organisation.",
+            subtitle: "Plusieurs groupes, automatisations et 6 vidéos · via l'App Store"
         ) { store.showPaywall = true }
     }
 }
@@ -690,6 +745,30 @@ struct EditProfileSheet: View {
                         get: { store.profile.name },
                         set: { store.profile.name = $0; store.saveProfile() }
                     ))
+                }
+
+                Section {
+                    NavigationLink {
+                        MusicSchoolDirectoryView()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "building.columns.fill")
+                                .foregroundStyle(JC.bronze)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Mes écoles de musique")
+                                Text(
+                                    store.myMusicSchoolCommunities.isEmpty
+                                        ? "Ajouter une école et rejoindre sa communauté"
+                                        : "\(store.myMusicSchoolCommunities.count) affiliation·s"
+                                )
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("Ton rôle est déclaré par toi jusqu'à validation par l'établissement.")
                 }
 
                 // Mes instruments — une section par famille, avec le niveau

@@ -10,7 +10,10 @@ struct SOSRequestSheet: View {
 
     @State private var instrument: Instrument?
     @State private var date: Date = SOSRequestSheet.defaultDate
+    /// Repère public volontairement vague.
     @State private var place: String = ""
+    /// Rendez-vous révélé seulement si le musicien accepte.
+    @State private var exactAddress: String = ""
     @State private var postalCode: String = ""
     @State private var city: String = ""
     @State private var country: Country = .switzerland
@@ -37,8 +40,12 @@ struct SOSRequestSheet: View {
 
     private var isValid: Bool {
         instrument != nil
-            && !place.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete
+    }
+
+    private var privateAddressValue: String? {
+        let value = exactAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 
     var body: some View {
@@ -92,7 +99,7 @@ struct SOSRequestSheet: View {
                 }
 
                 Section {
-                    TextField("Salle, bar, adresse…", text: $place)
+                    TextField("Quartier ou repère public (optionnel)", text: $place)
                     CountryPostalField(
                         country: $country,
                         postalCode: $postalCode,
@@ -100,9 +107,21 @@ struct SOSRequestSheet: View {
                         detectedCountry: store.detectedCountry
                     )
                 } header: {
-                    Text("Lieu")
+                    Text("Zone visible avant la réponse")
                 } footer: {
-                    Text("Tape le code postal : la ville se trouve toute seule.")
+                    Text("Le musicien voit la zone générale pour décider, jamais l'adresse précise.")
+                }
+
+                Section {
+                    TextField("Rue, numéro, entrée, étage…", text: $exactAddress, axis: .vertical)
+                        .lineLimit(1...3)
+                    Label("Révélée seulement si la demande est acceptée.", systemImage: "lock.shield.fill")
+                        .font(.caption)
+                        .foregroundStyle(JC.feutrine)
+                } header: {
+                    Text("Rendez-vous privé")
+                } footer: {
+                    Text("Tu peux laisser vide si le lieu n'est pas encore fixé.")
                 }
 
                 // Cachet entre professionnels uniquement.
@@ -170,7 +189,10 @@ struct SOSRequestSheet: View {
             to: musician,
             instrument: instrument,
             date: date,
-            place: place,
+            place: place.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? PlaceDraft(country: country, postalCode: postalCode, city: city).label
+                : place.trimmingCharacters(in: .whitespacesAndNewlines),
+            exactAddress: privateAddressValue,
             neighborhood: PlaceDraft(country: country, postalCode: postalCode, city: city).label,
             fee: fee,
             paymentMethod: PaymentMethodField.storedValue(

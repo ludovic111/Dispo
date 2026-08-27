@@ -468,14 +468,11 @@ struct HomeView: View {
             if visible.isEmpty {
                 emptyScopeState
             }
-            ForEach(Array(visible.enumerated()), id: \.element.id) { index, musician in
+            ForEach(visible) { musician in
                 NavigationLink(value: musician) {
                     SearchMusicianRow(musician: musician, on: scopeDate)
                 }
                 .buttonStyle(PressableStyle())
-                if index == min(2, visible.count - 1), !store.isPremium {
-                    levelUpsellBox
-                }
             }
         }
     }
@@ -539,37 +536,6 @@ struct HomeView: View {
         }
     }
 
-    /// Encart Premium : le tri et l'affichage du niveau sont réservés aux
-    /// abonnés — les comptes gratuits ne voient que le tri par relations.
-    private var levelUpsellBox: some View {
-        Button { store.showPaywall = true } label: {
-            HStack(spacing: 11) {
-                Image(systemName: "medal.fill")
-                    .font(.title3)
-                    .foregroundStyle(JC.laiton)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Vois le niveau des musiciens")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.primary)
-                    Text("Avec Premium, les profils sont triés par niveau — les meilleurs en haut.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "lock.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(JC.laiton)
-            }
-            .padding(12)
-            .background(JC.laiton.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(JC.laiton.opacity(0.35), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PressableStyle())
-    }
 }
 
 /// Petit badge du lien social avec un musicien (ami / suivi / te suit).

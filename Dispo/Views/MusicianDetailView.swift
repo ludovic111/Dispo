@@ -28,6 +28,7 @@ struct MusicianDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     header
                     identity
+                    schoolAffiliationsCard
                     actionButtons
                     availabilityRow
                     groupsCard
@@ -41,7 +42,9 @@ struct MusicianDetailView: View {
             }
         }
         .task(id: musician.id) {
-            await store.loadPublicGroups(of: musician.id)
+            async let groups: Void = store.loadPublicGroups(of: musician.id)
+            async let schools: Void = store.loadMusicSchoolAffiliations(for: musician.id)
+            _ = await (groups, schools)
         }
         .navigationTitle(Text(verbatim: musician.handle))
         .navigationBarTitleDisplayMode(.inline)
@@ -111,6 +114,16 @@ struct MusicianDetailView: View {
         }
         .sheet(isPresented: $showFollowers) {
             FollowersSheet(ownerName: firstName, followers: store.followers(of: musician))
+        }
+    }
+
+    // MARK: - Écoles de musique
+
+    @ViewBuilder
+    private var schoolAffiliationsCard: some View {
+        let affiliations = store.musicSchoolAffiliations(for: musician.id)
+        if !affiliations.isEmpty {
+            MusicSchoolAffiliationsCard(affiliations: affiliations)
         }
     }
 
@@ -185,24 +198,9 @@ struct MusicianDetailView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(JC.bronze)
                 AvailabilityBadge(availability: musician.availability)
-                // Niveau : avantage Premium.
-                if store.isPremium {
-                    TagView(text: musician.level.label, color: JC.laiton)
-                } else {
-                    Button { store.showPaywall = true } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 8, weight: .bold))
-                            Text("niveau")
-                                .font(.caption2.weight(.bold))
-                        }
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(JC.laiton.opacity(0.14), in: Capsule())
-                        .foregroundStyle(JC.laiton)
-                    }
-                    .buttonStyle(PressableStyle())
-                }
+                // Le niveau est une information de compatibilité, pas un
+                // privilège payant : chacun doit savoir avec qui il joue.
+                TagView(text: musician.level.label, color: JC.laiton)
             }
             // La distance ne s'affiche que quand elle est fiable : ma géoloc
             // partagée ET la sienne. « ≈ » quand la position est au niveau
@@ -228,15 +226,12 @@ struct MusicianDetailView: View {
             }
             .padding(.top, 2)
             if !musician.instruments.isEmpty {
-                // Instruments joués, avec le niveau par instrument
-                // (visible pour les membres Premium, comme le niveau global).
+                // Instruments joués, avec le niveau par instrument.
                 FlowLayout {
                     ForEach(musician.instruments) { instrument in
                         InstrumentChip(
                             instrument: instrument,
-                            level: store.isPremium
-                                ? (musician.level(for: instrument) ?? musician.level)
-                                : nil
+                            level: musician.level(for: instrument) ?? musician.level
                         )
                     }
                 }

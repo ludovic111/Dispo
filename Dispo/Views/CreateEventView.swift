@@ -6,7 +6,11 @@ struct CreateEventView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var title: String
+    /// Repère volontairement public : quartier, festival ou nom de scène que
+    /// l'organisateur accepte d'afficher dans le feed.
     @State private var place: String
+    /// Rendez-vous complet, conservé séparément et révélé après acceptation.
+    @State private var exactAddress = ""
     /// Le lieu se saisit au code postal : la ville se trouve toute seule.
     @State private var postalCode = ""
     @State private var city = ""
@@ -65,7 +69,6 @@ struct CreateEventView: View {
 
     private var isValid: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !place.trimmingCharacters(in: .whitespaces).isEmpty &&
         PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete &&
         !wanted.isEmpty
     }
@@ -74,6 +77,11 @@ struct CreateEventView: View {
     /// seule si le code postal n'a rien donné.
     private var neighborhoodLabel: String {
         PlaceDraft(country: country, postalCode: postalCode, city: city).label
+    }
+
+    private var privateAddressValue: String? {
+        let value = exactAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 
     /// Pastille de niveau — `nil` = « Peu importe » (aucun niveau coché).
@@ -120,7 +128,7 @@ struct CreateEventView: View {
                 }
 
                 Section {
-                    TextField("Salle ou bar — ex. Le Chat Noir", text: $place)
+                    TextField("Quartier ou repère public (optionnel)", text: $place)
                     CountryPostalField(
                         country: $country,
                         postalCode: $postalCode,
@@ -128,9 +136,21 @@ struct CreateEventView: View {
                         detectedCountry: store.detectedCountry
                     )
                 } header: {
-                    Text("Lieu")
+                    Text("Zone visible dans l'annonce")
                 } footer: {
-                    Text("Tape le code postal : la ville se trouve toute seule.")
+                    Text("Tout le monde voit cette zone. Laisse le repère vide pour n'afficher que la ville et le code postal.")
+                }
+
+                Section {
+                    TextField("Rue, numéro, entrée, étage…", text: $exactAddress, axis: .vertical)
+                        .lineLimit(1...3)
+                    Label("Visible uniquement pour toi et les musiciens acceptés.", systemImage: "lock.shield.fill")
+                        .font(.caption)
+                        .foregroundStyle(JC.feutrine)
+                } header: {
+                    Text("Rendez-vous privé")
+                } footer: {
+                    Text("L'adresse exacte n'apparaît jamais dans le fil, la recherche ni les notifications.")
                 }
 
                 Section {
@@ -245,8 +265,12 @@ struct CreateEventView: View {
                             title: title,
                             hostName: store.profile.name,
                             date: date,
-                            place: place,
+                            place: place.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? neighborhoodLabel
+                                : place.trimmingCharacters(in: .whitespacesAndNewlines),
                             neighborhood: neighborhoodLabel,
+                            exactAddress: privateAddressValue,
+                            privateLocationState: privateAddressValue == nil ? .absent : .available,
                             genre: genre,
                             wantedInstruments: Array(wanted).sorted { $0.rawValue < $1.rawValue },
                             wantedLevels: levels.isEmpty ? nil : levels.sorted(),

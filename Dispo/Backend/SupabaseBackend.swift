@@ -3,7 +3,8 @@ import Supabase
 
 /// Couche d'accès au backend Supabase : auth (code par e-mail), profils,
 /// annonces SOS, candidatures et messagerie temps réel.
-/// Toute la sécurité (RLS, avant-première Premium) est appliquée côté serveur.
+/// Toute la sécurité (RLS, confidentialité des lieux, droits) est appliquée
+/// côté serveur.
 final class SupabaseBackend: Sendable {
 
     private enum AccountDeletionFailure: Error {
@@ -466,6 +467,9 @@ final class SupabaseBackend: Sendable {
         var eventId: UUID?
         var targetId: UUID?
         var targetStatus: String?
+        /// Ajouté à la fin de la vue pour ne pas casser les anciens clients.
+        /// `place` reste présent et porte le même libellé public sûr.
+        var publicLocationLabel: String?
 
         enum CodingKeys: String, CodingKey {
             case id, date, genre, fee, description, title, place, neighborhood
@@ -480,12 +484,15 @@ final class SupabaseBackend: Sendable {
             case eventId = "event_id"
             case targetId = "target_id"
             case targetStatus = "target_status"
+            case publicLocationLabel = "public_location_label"
         }
 
         func asGigRequest(
             hostName: String,
             isMine: Bool,
-            application: (instrument: Instrument?, status: GigApplicationStatus)?
+            application: (instrument: Instrument?, status: GigApplicationStatus)?,
+            exactAddress: String? = nil,
+            privateLocationState: PrivateLocationState = .unknown
         ) -> GigRequest {
             GigRequest(
                 id: id,
@@ -493,8 +500,10 @@ final class SupabaseBackend: Sendable {
                 hostName: hostName,
                 hostId: hostId,
                 date: date,
-                place: place ?? "",
+                place: publicLocationLabel ?? place ?? "",
                 neighborhood: neighborhood ?? "",
+                exactAddress: exactAddress,
+                privateLocationState: privateLocationState,
                 genre: Genre(rawValue: genre) ?? .jazz,
                 wantedInstruments: wantedInstruments.compactMap(Instrument.init(rawValue:)),
                 wantedLevels: wantedLevels.map { $0.compactMap(Level.init(rawValue:)) },
@@ -512,6 +521,46 @@ final class SupabaseBackend: Sendable {
                 targetId: targetId,
                 targetStatus: targetStatus.flatMap(DirectRequestStatus.init(rawValue:))
             )
+        }
+    }
+
+    struct GigRequestLocationRow: Codable, Hashable {
+        var gigId: UUID
+        var publicLocationLabel: String
+        var exactAddress: String?
+        var postalCode: String?
+        var city: String?
+        var countryCode: String?
+        var latitude: Double?
+        var longitude: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case city, latitude, longitude
+            case gigId = "gig_id"
+            case publicLocationLabel = "public_location_label"
+            case exactAddress = "exact_address"
+            case postalCode = "postal_code"
+            case countryCode = "country_code"
+        }
+    }
+
+    struct GroupEventLocationRow: Codable, Hashable {
+        var eventId: UUID
+        var publicLocationLabel: String
+        var exactAddress: String?
+        var postalCode: String?
+        var city: String?
+        var countryCode: String?
+        var latitude: Double?
+        var longitude: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case city, latitude, longitude
+            case eventId = "event_id"
+            case publicLocationLabel = "public_location_label"
+            case exactAddress = "exact_address"
+            case postalCode = "postal_code"
+            case countryCode = "country_code"
         }
     }
 
@@ -615,6 +664,19 @@ final class SupabaseBackend: Sendable {
         try await client.from("profiles").select().execute().value
     }
 
+    func fetchServerPremium(userID: UUID) async throws -> Bool {
+        struct PremiumStatus: Decodable {
+            let isPremium: Bool
+            enum CodingKeys: String, CodingKey { case isPremium = "is_premium" }
+        }
+        let row: PremiumStatus = try await client.from("profiles")
+            .select("is_premium")
+            .eq("id", value: userID)
+            .single()
+            .execute().value
+        return row.isPremium
+    }
+
     /// Musiciens du feed (profils complets, sauf moi). La note étoilée
     /// arrive agrégée sur le profil (moyenne + nombre, jamais le détail).
     /// Les musiciens du réseau. La base refuse désormais tout `is_demo=true`;
@@ -672,6 +734,330 @@ final class SupabaseBackend: Sendable {
             availability_places: profile.trips.map(AvailabilityPlacePayload.init(from:))
         )
         try await client.from("profiles").update(update).eq("id", value: userID).execute()
+    }
+
+    // MARK: - Écoles de musique
+
+    struct MusicSchoolRow: Codable {
+        var id: UUID
+        var slug: String
+        var name: String
+        var shortName: String?
+        var city: String
+        var countryCode: String
+        var websiteUrl: String?
+        var logoUrl: String?
+        var isVerified: Bool
+        var isActive: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id, slug, name, city
+            case shortName = "short_name"
+            case countryCode = "country_code"
+            case websiteUrl = "website_url"
+            case logoUrl = "logo_url"
+            case isVerified = "is_verified"
+            case isActive = "is_active"
+        }
+
+        var asMusicSchool: MusicSchool {
+            MusicSchool(
+                id: id,
+                slug: slug,
+                name: name,
+                shortName: shortName,
+                city: city,
+                countryCode: countryCode,
+                websiteURL: websiteUrl,
+                logoURL: logoUrl,
+                isVerified: isVerified
+            )
+        }
+    }
+
+    /// Forme commune aux RPC `my_music_schools`,
+    /// `profile_music_schools` et `visible_profile_music_schools`. Les champs
+    /// propres à l'une d'elles restent optionnels afin que le client survive à
+    /// un déploiement progressif de la migration.
+    struct MusicSchoolAffiliationRow: Codable {
+        var profileId: UUID?
+        var schoolId: UUID
+        var slug: String
+        var name: String
+        var shortName: String?
+        var city: String
+        /// Présent dans `my_music_schools`; les RPC d'affiliations de profil
+        /// n'exposent volontairement pas ce champ pour garder leur contrat
+        /// minimal. La Suisse reste le repli historique de l'app.
+        var countryCode: String?
+        var logoUrl: String?
+        var isVerified: Bool
+        var membershipId: UUID
+        var role: String
+        var roleLabel: String?
+        var visibility: String
+        var status: String?
+        var verificationLevel: String
+        var isPrimary: Bool
+        var joinedAt: Date
+        var channelId: UUID?
+        var memberCount: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case slug, name, city, role, visibility, status
+            case profileId = "profile_id"
+            case schoolId = "school_id"
+            case shortName = "short_name"
+            case countryCode = "country_code"
+            case logoUrl = "logo_url"
+            case isVerified = "is_verified"
+            case membershipId = "membership_id"
+            case roleLabel = "role_label"
+            case verificationLevel = "verification_level"
+            case isPrimary = "is_primary"
+            case joinedAt = "joined_at"
+            case channelId = "channel_id"
+            case memberCount = "member_count"
+        }
+
+        var asAffiliation: MusicSchoolAffiliation? {
+            guard let role = MusicSchoolRole(rawValue: role),
+                  let visibility = MusicSchoolVisibility(rawValue: visibility),
+                  let verification = MusicSchoolVerificationLevel(rawValue: verificationLevel)
+            else { return nil }
+            return MusicSchoolAffiliation(
+                membershipID: membershipId,
+                profileID: profileId,
+                school: MusicSchool(
+                    id: schoolId,
+                    slug: slug,
+                    name: name,
+                    shortName: shortName,
+                    city: city,
+                    countryCode: countryCode ?? "CH",
+                    websiteURL: nil,
+                    logoURL: logoUrl,
+                    isVerified: isVerified
+                ),
+                role: role,
+                roleLabel: roleLabel,
+                visibility: visibility,
+                status: status.flatMap(MusicSchoolMembershipStatus.init(rawValue:)) ?? .active,
+                verificationLevel: verification,
+                isPrimary: isPrimary,
+                joinedAt: joinedAt
+            )
+        }
+    }
+
+    struct MusicSchoolMemberRow: Codable {
+        var profileId: UUID
+        var name: String
+        var photoUrl: String?
+        var instruments: [String]
+        var level: String
+        var role: String
+        var roleLabel: String?
+        var verificationLevel: String
+        var isPrimary: Bool
+        var joinedAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case name, instruments, level, role
+            case profileId = "profile_id"
+            case photoUrl = "photo_url"
+            case roleLabel = "role_label"
+            case verificationLevel = "verification_level"
+            case isPrimary = "is_primary"
+            case joinedAt = "joined_at"
+        }
+
+        var asMember: MusicSchoolMember? {
+            guard let role = MusicSchoolRole(rawValue: role),
+                  let verification = MusicSchoolVerificationLevel(rawValue: verificationLevel)
+            else { return nil }
+            return MusicSchoolMember(
+                profileID: profileId,
+                name: name,
+                photoURL: photoUrl,
+                instruments: instruments.compactMap(Instrument.init(rawValue:)),
+                level: Level(rawValue: level) ?? .intermediaire,
+                role: role,
+                roleLabel: roleLabel,
+                verificationLevel: verification,
+                isPrimary: isPrimary,
+                joinedAt: joinedAt
+            )
+        }
+    }
+
+    struct SchoolMessageRow: Codable {
+        var id: UUID
+        var channelId: UUID
+        var senderId: UUID
+        var text: String
+        var createdAt: Date
+        var editedAt: Date?
+        var deletedAt: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case id, text
+            case channelId = "channel_id"
+            case senderId = "sender_id"
+            case createdAt = "created_at"
+            case editedAt = "edited_at"
+            case deletedAt = "deleted_at"
+        }
+
+        func asMessage(members: [MusicSchoolMember]) -> SchoolMessage {
+            let sender = members.first { $0.profileID == senderId }
+            return SchoolMessage(
+                id: id,
+                channelID: channelId,
+                senderID: senderId,
+                senderName: sender?.name,
+                senderPhotoURL: sender?.photoURL,
+                text: text,
+                createdAt: createdAt,
+                editedAt: editedAt,
+                deletedAt: deletedAt
+            )
+        }
+    }
+
+    func fetchMusicSchools() async throws -> [MusicSchool] {
+        let rows: [MusicSchoolRow] = try await client.from("music_schools")
+            .select()
+            .eq("is_active", value: true)
+            .order("name")
+            .execute().value
+        return rows.map(\.asMusicSchool)
+    }
+
+    func fetchVisibleProfileMusicSchools() async throws -> [UUID: [MusicSchoolAffiliation]] {
+        let rows: [MusicSchoolAffiliationRow] = try await client
+            .rpc("visible_profile_music_schools")
+            .execute().value
+        let affiliations = rows.compactMap { row -> MusicSchoolAffiliation? in
+            guard row.profileId != nil else { return nil }
+            return row.asAffiliation
+        }
+        return Dictionary(grouping: affiliations, by: { $0.profileID! })
+    }
+
+    func fetchProfileMusicSchools(profileID: UUID) async throws -> [MusicSchoolAffiliation] {
+        struct Params: Encodable { let p_profile_id: UUID }
+        let rows: [MusicSchoolAffiliationRow] = try await client.rpc(
+            "profile_music_schools",
+            params: Params(p_profile_id: profileID)
+        ).execute().value
+        return rows.compactMap { row in
+            guard var affiliation = row.asAffiliation else { return nil }
+            affiliation.profileID = profileID
+            return affiliation
+        }
+    }
+
+    func fetchMusicSchoolMembers(schoolID: UUID) async throws -> [MusicSchoolMember] {
+        struct Params: Encodable { let p_school_id: UUID }
+        let rows: [MusicSchoolMemberRow] = try await client.rpc(
+            "music_school_members",
+            params: Params(p_school_id: schoolID)
+        ).execute().value
+        return rows.compactMap(\.asMember)
+    }
+
+    func fetchRecentSchoolMessages(limit: Int = 60) async throws -> [SchoolMessageRow] {
+        struct Params: Encodable { let p_limit: Int }
+        return try await client.rpc(
+            "recent_school_messages",
+            params: Params(p_limit: limit)
+        ).execute().value
+    }
+
+    func fetchMyMusicSchoolCommunities() async throws -> [MusicSchoolCommunity] {
+        let rows: [MusicSchoolAffiliationRow] = try await client
+            .rpc("my_music_schools")
+            .execute().value
+        let recentRows = (try? await fetchRecentSchoolMessages()) ?? []
+        var result: [MusicSchoolCommunity] = []
+        for row in rows {
+            guard let affiliation = row.asAffiliation else { continue }
+            let members = (try? await fetchMusicSchoolMembers(schoolID: row.schoolId)) ?? []
+            let messages = recentRows
+                .filter { $0.channelId == row.channelId }
+                .map { $0.asMessage(members: members) }
+                .sorted { $0.createdAt < $1.createdAt }
+            result.append(MusicSchoolCommunity(
+                affiliation: affiliation,
+                channelID: row.channelId,
+                memberCount: row.memberCount ?? members.count,
+                members: members,
+                messages: messages
+            ))
+        }
+        return result.sorted { $0.school.name.localizedCaseInsensitiveCompare($1.school.name) == .orderedAscending }
+    }
+
+    func joinMusicSchool(
+        schoolID: UUID,
+        role: MusicSchoolRole,
+        visibility: MusicSchoolVisibility,
+        roleLabel: String?
+    ) async throws {
+        struct Params: Encodable {
+            let p_school_id: UUID
+            let p_role: String
+            let p_visibility: String
+            let p_role_label: String?
+        }
+        try await client.rpc(
+            "join_music_school",
+            params: Params(
+                p_school_id: schoolID,
+                p_role: role.rawValue,
+                p_visibility: visibility.rawValue,
+                p_role_label: roleLabel
+            )
+        ).execute()
+    }
+
+    func leaveMusicSchool(schoolID: UUID) async throws {
+        struct Params: Encodable { let p_school_id: UUID }
+        try await client.rpc(
+            "leave_music_school",
+            params: Params(p_school_id: schoolID)
+        ).execute()
+    }
+
+    func sendSchoolMessage(channelID: UUID, text: String) async throws -> SchoolMessageRow {
+        struct Params: Encodable {
+            let p_channel_id: UUID
+            let p_text: String
+        }
+        return try await client.rpc(
+            "send_school_message",
+            params: Params(p_channel_id: channelID, p_text: text)
+        ).execute().value
+    }
+
+    func editSchoolMessage(messageID: UUID, text: String) async throws {
+        struct Params: Encodable {
+            let p_message_id: UUID
+            let p_text: String
+        }
+        try await client.rpc(
+            "edit_school_message",
+            params: Params(p_message_id: messageID, p_text: text)
+        ).execute()
+    }
+
+    func deleteSchoolMessage(messageID: UUID) async throws {
+        struct Params: Encodable { let p_message_id: UUID }
+        try await client.rpc(
+            "delete_school_message",
+            params: Params(p_message_id: messageID)
+        ).execute()
     }
 
     /// Écrit ma position publique niveau ville (déjà floutée par AppStore).
@@ -902,6 +1288,26 @@ final class SupabaseBackend: Sendable {
         )).execute()
     }
 
+    func reportSchoolMessage(
+        _ messageID: UUID,
+        senderID: UUID,
+        me: UUID,
+        reason: String
+    ) async throws {
+        struct Insert: Encodable {
+            let reporter_id: UUID
+            let reported_id: UUID
+            let school_message_id: UUID
+            let reason: String
+        }
+        try await client.from("reports").insert(Insert(
+            reporter_id: me,
+            reported_id: senderID,
+            school_message_id: messageID,
+            reason: reason
+        )).execute()
+    }
+
     func deleteMyAccount() async throws {
         guard let userID = await currentUserID() else {
             throw AccountDeletionFailure.unauthenticated
@@ -1004,16 +1410,31 @@ final class SupabaseBackend: Sendable {
 
     // MARK: - Annonces SOS
 
-    /// Feed des annonces à venir. Les annonces en avant-première arrivent
-    /// masquées (is_locked) pour les non-Premium — décision du serveur.
+    /// Feed des annonces à venir. Tous les musiciens y accèdent au même
+    /// moment ; l'adresse exacte est chargée séparément par une RPC privée.
     func fetchGigs(myID: UUID) async throws -> [GigRequest] {
         async let feedTask: [GigFeedRow] = client.from("gig_requests_feed")
             .select().order("date").execute().value
         async let profilesTask = fetchProfiles()
         async let applicationsTask: [ApplicationRow] = client.from("gig_applications")
             .select().eq("musician_id", value: myID).execute().value
+        async let locationsTask = fetchVisibleGigRequestLocations()
 
         let (feed, profiles, applications) = try await (feedTask, profilesTask, applicationsTask)
+        // Le feed public reste utilisable pendant une panne de la RPC privée,
+        // mais l'échec devient `.unknown` au lieu d'être déguisé en liste vide.
+        let locationsResult: Result<[GigRequestLocationRow], Error>
+        do {
+            locationsResult = .success(try await locationsTask)
+        } catch {
+            locationsResult = .failure(error)
+        }
+        let locations: [GigRequestLocationRow]
+        switch locationsResult {
+        case let .success(rows): locations = rows
+        case .failure: locations = []
+        }
+        let locationByGig = Dictionary(uniqueKeysWithValues: locations.map { ($0.gigId, $0) })
         let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
         let myApplications = Dictionary(applications.map { ($0.gigId, $0) }, uniquingKeysWith: { a, _ in a })
 
@@ -1023,12 +1444,76 @@ final class SupabaseBackend: Sendable {
                 (Instrument(rawValue: $0.instrument ?? ""),
                  GigApplicationStatus(rawValue: $0.status ?? "pending") ?? .pending)
             }
+            let location = locationByGig[row.id]
+            let locationState: PrivateLocationState
+            switch locationsResult {
+            case .success:
+                locationState = .serverValue(
+                    rowReturned: location != nil,
+                    exactAddress: location?.exactAddress
+                )
+            case .failure:
+                locationState = .unknown
+            }
             return row.asGigRequest(
                 hostName: row.isLocked ? "Membre Premium requis" : (nameByID[row.hostId] ?? "Organisateur"),
                 isMine: row.hostId == myID,
-                application: application
+                application: application,
+                exactAddress: location?.exactAddress,
+                privateLocationState: locationState
             )
         }
+    }
+
+    func fetchVisibleGigRequestLocations() async throws -> [GigRequestLocationRow] {
+        try await client.rpc("visible_gig_request_locations").execute().value
+    }
+
+    func fetchGigRequestLocation(gigID: UUID) async throws -> GigRequestLocationRow? {
+        struct Params: Encodable { let p_gig_id: UUID }
+        let rows: [GigRequestLocationRow] = try await client.rpc(
+            "get_gig_request_location",
+            params: Params(p_gig_id: gigID)
+        ).execute().value
+        return rows.first
+    }
+
+    func setGigRequestLocation(
+        gigID: UUID,
+        publicLocationLabel: String,
+        exactAddress: String?,
+        clearExactAddress: Bool = false,
+        postalCode: String? = nil,
+        city: String? = nil,
+        countryCode: String = "CH",
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) async throws {
+        struct Params: Encodable {
+            let p_gig_id: UUID
+            let p_public_location_label: String
+            let p_exact_address: String?
+            let p_postal_code: String?
+            let p_city: String?
+            let p_country_code: String
+            let p_latitude: Double?
+            let p_longitude: Double?
+            let p_clear_exact_address: Bool
+        }
+        try await client.rpc(
+            "set_gig_request_location",
+            params: Params(
+                p_gig_id: gigID,
+                p_public_location_label: publicLocationLabel,
+                p_exact_address: exactAddress,
+                p_postal_code: postalCode,
+                p_city: city,
+                p_country_code: countryCode,
+                p_latitude: latitude,
+                p_longitude: longitude,
+                p_clear_exact_address: clearExactAddress
+            )
+        ).execute()
     }
 
     struct ApplicationRow: Codable {
@@ -1089,6 +1574,7 @@ final class SupabaseBackend: Sendable {
             let event_id: UUID?
             let target_id: UUID?
             let target_status: String?
+            let public_location_label: String
         }
         let insert = Insert(
             id: gig.id,
@@ -1106,9 +1592,66 @@ final class SupabaseBackend: Sendable {
             group_id: gig.groupId,
             event_id: gig.eventId,
             target_id: gig.targetId,
-            target_status: gig.targetId == nil ? nil : DirectRequestStatus.pending.rawValue
+            target_status: gig.targetId == nil ? nil : DirectRequestStatus.pending.rawValue,
+            public_location_label: gig.place
         )
         try await client.from("gig_requests").insert(insert).execute()
+        do {
+            try await setGigRequestLocation(
+                gigID: gig.id,
+                publicLocationLabel: gig.place,
+                exactAddress: gig.exactAddress
+            )
+        } catch {
+            // Une annonce ne doit jamais survivre avec son adresse privée dans
+            // un état ambigu. La suppression est best-effort, puis l'erreur
+            // originale remonte pour que le client annule aussi son optimisme.
+            try? await deleteGig(gig.id)
+            throw error
+        }
+    }
+
+    struct AutoSOSCreationResult: Decodable {
+        let gigID: UUID
+        let created: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case gigID = "gig_id"
+            case created
+        }
+    }
+
+    /// Crée un SOS automatique de manière atomique et idempotente côté base.
+    /// Deux appareils ou un retry réseau reçoivent le même `gig_id` ; seul le
+    /// premier résultat porte `created = true`.
+    func createAutoSOS(
+        eventID: UUID,
+        absentProfileID: UUID,
+        title: String,
+        description: String,
+        instrument: Instrument
+    ) async throws -> AutoSOSCreationResult {
+        struct Params: Encodable {
+            let p_event_id: UUID
+            let p_absent_profile_id: UUID
+            let p_title: String
+            let p_description: String
+            let p_instrument: String
+        }
+        let rows: [AutoSOSCreationResult] = try await client.rpc(
+            "create_auto_sos",
+            params: Params(
+                p_event_id: eventID,
+                p_absent_profile_id: absentProfileID,
+                p_title: title,
+                p_description: description,
+                p_instrument: instrument.rawValue
+            )
+        ).execute().value
+        guard let result = rows.first else {
+            throw URLError(.cannotParseResponse)
+        }
+        return result
     }
 
     /// Retire une de mes annonces (RLS : organisateur uniquement). Les
@@ -1538,6 +2081,7 @@ final class SupabaseBackend: Sendable {
         var kind: String
         var title: String
         var venue: String
+        var publicLocationLabel: String?
         var date: Date
         var setlist: [SongPayload]
         /// Série (répétition hebdomadaire…) — nil pour un événement ponctuel.
@@ -1548,6 +2092,7 @@ final class SupabaseBackend: Sendable {
 
         enum CodingKeys: String, CodingKey {
             case id, kind, title, venue, date, setlist, recurrence
+            case publicLocationLabel = "public_location_label"
             case groupId = "group_id"
             case seriesId = "series_id"
             case reminderLeadDays = "reminder_lead_days"
@@ -1716,7 +2261,22 @@ final class SupabaseBackend: Sendable {
             .in("group_id", values: groupIDs)
             .order("date")
             .execute().value
+        async let eventLocationsTask = fetchVisibleGroupEventLocations()
         let (members, events) = try await (membersTask, eventsTask)
+        // Une erreur de lecture privée n'est pas une preuve d'absence. On
+        // conserve le résultat public et marque chaque adresse `.unknown`.
+        let eventLocationsResult: Result<[GroupEventLocationRow], Error>
+        do {
+            eventLocationsResult = .success(try await eventLocationsTask)
+        } catch {
+            eventLocationsResult = .failure(error)
+        }
+        let eventLocations: [GroupEventLocationRow]
+        switch eventLocationsResult {
+        case let .success(rows): eventLocations = rows
+        case .failure: eventLocations = []
+        }
+        let locationByEvent = Dictionary(uniqueKeysWithValues: eventLocations.map { ($0.eventId, $0) })
         // Tolérant si la migration group_messages n'est pas encore appliquée :
         // les groupes restent utilisables, juste sans historique de messages.
         struct RecentGroupParams: Encodable { let p_limit: Int }
@@ -1798,29 +2358,54 @@ final class SupabaseBackend: Sendable {
                 return [SoloistOption(id: row.leaderId, name: name)] + memberProfiles
             } ?? memberProfiles
             var kinds: [String: GroupMemberKind] = [:]
+            var kindsByProfileID: [String: GroupMemberKind] = [:]
             var roles: [String: String] = [:]
+            var rolesByProfileID: [String: String] = [:]
             for member in memberRows {
                 if let name = nameByID[member.profileId] {
-                    if let kind = GroupMemberKind(dbValue: member.kind) { kinds[name] = kind }
-                    if let role = member.role, !role.isEmpty { roles[name] = role }
+                    if let kind = GroupMemberKind(dbValue: member.kind) {
+                        kinds[name] = kind
+                        kindsByProfileID[member.profileId.uuidString.lowercased()] = kind
+                    }
+                    if let role = member.role, !role.isEmpty {
+                        roles[name] = role
+                        rolesByProfileID[member.profileId.uuidString.lowercased()] = role
+                    }
                 }
             }
 
             let mappedEvents: [GroupEvent] = (eventsByGroup[row.id] ?? []).map { event in
                 var attendanceMap: [String: AttendanceStatus] = [:]
+                var attendanceByProfileID: [String: AttendanceStatus] = [:]
                 for entry in attendanceByEvent[event.id] ?? [] {
                     let name = entry.profileId == myID ? myName : (nameByID[entry.profileId] ?? "")
-                    guard !name.isEmpty, let status = AttendanceStatus(dbValue: entry.status) else { continue }
+                    guard let status = AttendanceStatus(dbValue: entry.status) else { continue }
+                    attendanceByProfileID[entry.profileId.uuidString.lowercased()] = status
+                    guard !name.isEmpty else { continue }
                     attendanceMap[name] = status
+                }
+                let location = locationByEvent[event.id]
+                let locationState: PrivateLocationState
+                switch eventLocationsResult {
+                case .success:
+                    locationState = .serverValue(
+                        rowReturned: location != nil,
+                        exactAddress: location?.exactAddress
+                    )
+                case .failure:
+                    locationState = .unknown
                 }
                 return GroupEvent(
                     id: event.id,
                     kind: GroupEventKind(rawValue: event.kind) ?? .jam,
                     title: event.title,
-                    venue: event.venue,
+                    venue: event.publicLocationLabel ?? event.venue,
+                    exactAddress: location?.exactAddress,
+                    privateLocationState: locationState,
                     date: event.date,
                     setlist: event.setlist.map(\.asSong),
                     attendance: attendanceMap,
+                    attendanceByProfileID: attendanceByProfileID,
                     seriesID: event.seriesId,
                     recurrence: event.recurrence.flatMap(EventRecurrence.init(rawValue:)),
                     reminderLeadDays: event.reminderLeadDays
@@ -1834,10 +2419,13 @@ final class SupabaseBackend: Sendable {
                 photoURL: row.photoUrl,
                 isPublic: row.isPublic ?? false,
                 leaderName: leaderName,
+                leaderProfileID: row.leaderId,
                 memberNames: memberNames,
                 rosterProfiles: rosterProfiles,
                 memberKinds: kinds,
+                memberKindsByProfileID: kindsByProfileID,
                 memberRoles: roles,
+                memberRolesByProfileID: rolesByProfileID,
                 autoSOSEnabled: row.autoSosEnabled,
                 autoSOSMinLevel: row.autoSosMinLevel,
                 messages: (messagesByGroup[row.id] ?? []).map {
@@ -2025,12 +2613,18 @@ final class SupabaseBackend: Sendable {
     }
 
     func transferLeadership(of groupID: UUID, to profileID: UUID) async throws {
-        try await client.from("music_groups")
-            .update(["leader_id": profileID.uuidString])
-            .eq("id", value: groupID)
-            .execute()
-        // Le nouveau leader reste membre permanent.
-        try await setMemberKind(profileID, .permanent, in: groupID)
+        struct Params: Encodable {
+            let p_group_id: UUID
+            let p_new_leader_id: UUID
+        }
+        // Transaction serveur unique : vérifie le leader courant, l'adhésion
+        // du destinataire et sa capacité à diriger un groupe supplémentaire,
+        // puis le rend permanent avant de transférer. L'UPDATE direct est
+        // volontairement refusé par la RLS.
+        try await client.rpc(
+            "transfer_group_leadership",
+            params: Params(p_group_id: groupID, p_new_leader_id: profileID)
+        ).execute()
     }
 
     func deleteGroup(_ groupID: UUID) async throws {
@@ -2125,37 +2719,136 @@ final class SupabaseBackend: Sendable {
         try await createEvents([event], groupID: groupID)
     }
 
-    /// Insère une ou plusieurs dates d'un coup (série récurrente) — un seul
-    /// aller-retour, et le trigger marque le leader présent sur chacune.
-    func createEvents(_ events: [GroupEvent], groupID: UUID) async throws {
-        guard !events.isEmpty else { return }
-        struct Insert: Encodable {
-            let id: UUID
-            let group_id: UUID
-            let kind: String
-            let title: String
-            let venue: String
-            let date: Date
-            let setlist: [SongPayload]
-            let series_id: UUID?
-            let recurrence: String?
-            let reminder_lead_days: Int?
+    func fetchVisibleGroupEventLocations() async throws -> [GroupEventLocationRow] {
+        try await client.rpc("visible_group_event_locations").execute().value
+    }
+
+    func fetchGroupEventLocation(eventID: UUID) async throws -> GroupEventLocationRow? {
+        struct Params: Encodable { let p_event_id: UUID }
+        let rows: [GroupEventLocationRow] = try await client.rpc(
+            "get_group_event_location",
+            params: Params(p_event_id: eventID)
+        ).execute().value
+        return rows.first
+    }
+
+    func setGroupEventLocation(
+        eventID: UUID,
+        publicLocationLabel: String,
+        exactAddress: String?,
+        clearExactAddress: Bool = false,
+        postalCode: String? = nil,
+        city: String? = nil,
+        countryCode: String = "CH",
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) async throws {
+        struct Params: Encodable {
+            let p_event_id: UUID
+            let p_public_location_label: String
+            let p_exact_address: String?
+            let p_postal_code: String?
+            let p_city: String?
+            let p_country_code: String
+            let p_latitude: Double?
+            let p_longitude: Double?
+            let p_clear_exact_address: Bool
         }
-        let rows = events.map { event in
-            Insert(
+        try await client.rpc(
+            "set_group_event_location",
+            params: Params(
+                p_event_id: eventID,
+                p_public_location_label: publicLocationLabel,
+                p_exact_address: exactAddress,
+                p_postal_code: postalCode,
+                p_city: city,
+                p_country_code: countryCode,
+                p_latitude: latitude,
+                p_longitude: longitude,
+                p_clear_exact_address: clearExactAddress
+            )
+        ).execute()
+    }
+
+    private enum GroupEventSaveMode: String, Encodable {
+        case create, update
+    }
+
+    private struct GroupEventSavePayload: Encodable {
+        let id: UUID
+        let kind: String
+        let title: String
+        let public_location_label: String
+        let date: Date
+        let setlist: [SongPayload]
+        let series_id: UUID?
+        let recurrence: String?
+        let reminder_lead_days: Int?
+        let exact_address: String?
+        let clear_exact_address: Bool
+        let postal_code: String?
+        let city: String?
+        let country_code: String
+        let latitude: Double?
+        let longitude: Double?
+    }
+
+    /// Métadonnées publiques et adresse privée sont enregistrées par une
+    /// seule transaction PostgreSQL. Une interruption ne peut donc plus
+    /// laisser un upsert public réussi suivi d'une mutation privée perdue.
+    private func saveGroupEvents(
+        _ events: [GroupEvent],
+        groupID: UUID,
+        mode: GroupEventSaveMode,
+        locationMutations: [UUID: ExactAddressMutation]
+    ) async throws {
+        guard !events.isEmpty else { return }
+        struct Params: Encodable {
+            let p_group_id: UUID
+            let p_events: [GroupEventSavePayload]
+            let p_mode: GroupEventSaveMode
+        }
+        let payloads = events.map { event -> GroupEventSavePayload in
+            let mutation = locationMutations[event.id] ?? .preserve
+            return GroupEventSavePayload(
                 id: event.id,
-                group_id: groupID,
                 kind: event.kind.rawValue,
                 title: event.title,
-                venue: event.venue,
+                public_location_label: event.venue,
                 date: event.date,
                 setlist: event.setlist.map(SongPayload.init(from:)),
                 series_id: event.seriesID,
                 recurrence: event.recurrence?.rawValue,
-                reminder_lead_days: event.reminderLeadDays
+                reminder_lead_days: event.reminderLeadDays,
+                exact_address: mutation.rpcExactAddress,
+                clear_exact_address: mutation.clearsExactAddress,
+                postal_code: nil,
+                city: nil,
+                country_code: "CH",
+                latitude: nil,
+                longitude: nil
             )
         }
-        try await client.from("group_events").insert(rows).execute()
+        try await client.rpc(
+            "save_group_events_with_locations",
+            params: Params(p_group_id: groupID, p_events: payloads, p_mode: mode)
+        ).execute()
+    }
+
+    /// Insère une ou plusieurs dates et leur rendez-vous privé atomiquement.
+    func createEvents(_ events: [GroupEvent], groupID: UUID) async throws {
+        let mutations: [UUID: ExactAddressMutation] = Dictionary(
+            uniqueKeysWithValues: events.map { event in
+            let address = event.exactAddress?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return (event.id, address.isEmpty ? .preserve : .replace(address))
+            }
+        )
+        try await saveGroupEvents(
+            events,
+            groupID: groupID,
+            mode: .create,
+            locationMutations: mutations
+        )
     }
 
     /// Active ou coupe le remplacement automatique du groupe (leader).
@@ -2180,36 +2873,22 @@ final class SupabaseBackend: Sendable {
             .execute()
     }
 
-    /// Réécrit la date, le titre et le lieu d'une ou plusieurs occurrences en
-    /// un seul aller-retour.
-    ///
-    /// C'est un `upsert` sur la clé primaire : les lignes existent déjà, donc
-    /// seul le `DO UPDATE` s'exécute et les colonnes non citées (setlist,
-    /// série, rythme, délai de rappel) ne bougent pas. Côté serveur, le
-    /// trigger `group_events_guard_core` refuse ces champs à quelqu'un qui
-    /// n'est pas le leader — la policy `update`, elle, est ouverte à tous les
-    /// membres depuis les setlists.
-    func updateEventSchedules(_ events: [GroupEvent], groupID: UUID) async throws {
-        guard !events.isEmpty else { return }
-        struct Row: Encodable {
-            let id: UUID
-            let group_id: UUID
-            let kind: String
-            let title: String
-            let venue: String
-            let date: Date
-        }
-        let rows = events.map {
-            Row(
-                id: $0.id,
-                group_id: groupID,
-                kind: $0.kind.rawValue,
-                title: $0.title,
-                venue: $0.venue,
-                date: $0.date
-            )
-        }
-        try await client.from("group_events").upsert(rows).execute()
+    /// Réécrit les horaires/libellés et applique UNE intention privée commune
+    /// à la portée choisie. `.preserve` conserve chaque adresse existante.
+    func updateEventSchedules(
+        _ events: [GroupEvent],
+        groupID: UUID,
+        exactAddressMutation: ExactAddressMutation = .preserve
+    ) async throws {
+        let mutations = Dictionary(uniqueKeysWithValues: events.map {
+            ($0.id, exactAddressMutation)
+        })
+        try await saveGroupEvents(
+            events,
+            groupID: groupID,
+            mode: .update,
+            locationMutations: mutations
+        )
     }
 
     /// Efface les réponses de présence de ces dates, sauf celle du leader :
@@ -2761,6 +3440,72 @@ final class SupabaseBackend: Sendable {
             .is("removed_at", value: nil)
             .execute().value
         return Self.reactionSummaries(rows, myID: myID)
+    }
+
+    // MARK: - Écoles : temps réel
+
+    enum SchoolRealtimeEvent {
+        case messageInserted(SchoolMessageRow)
+        case messageUpdated(SchoolMessageRow)
+        case membershipsChanged
+    }
+
+    /// RLS filtre les messages et adhésions aux seules écoles visibles par le
+    /// compte. La liste des membres est rechargée/coalescée côté AppStore ; les
+    /// messages, beaucoup plus fréquents, sont intégrés incrémentalement.
+    func schoolStream() async throws -> (
+        channel: RealtimeChannelV2,
+        stream: AsyncStream<SchoolRealtimeEvent>
+    ) {
+        let channel = client.channel("schools-live")
+        let messageInserts = channel.postgresChange(
+            InsertAction.self, schema: "public", table: "school_messages"
+        )
+        let messageUpdates = channel.postgresChange(
+            UpdateAction.self, schema: "public", table: "school_messages"
+        )
+        let membershipChanges = channel.postgresChange(
+            AnyAction.self, schema: "public", table: "music_school_memberships"
+        )
+        do {
+            try await channel.subscribeWithError()
+        } catch {
+            await client.removeChannel(channel)
+            throw error
+        }
+        let stream = AsyncStream<SchoolRealtimeEvent> { continuation in
+            let insertTask = Task {
+                for await insert in messageInserts {
+                    if let row = try? insert.decodeRecord(
+                        as: SchoolMessageRow.self,
+                        decoder: Self.realtimeDecoder
+                    ) {
+                        continuation.yield(.messageInserted(row))
+                    }
+                }
+            }
+            let updateTask = Task {
+                for await update in messageUpdates {
+                    if let row = try? update.decodeRecord(
+                        as: SchoolMessageRow.self,
+                        decoder: Self.realtimeDecoder
+                    ) {
+                        continuation.yield(.messageUpdated(row))
+                    }
+                }
+            }
+            let membershipsTask = Task {
+                for await _ in membershipChanges {
+                    continuation.yield(.membershipsChanged)
+                }
+            }
+            continuation.onTermination = { _ in
+                insertTask.cancel()
+                updateTask.cancel()
+                membershipsTask.cancel()
+            }
+        }
+        return (channel, stream)
     }
 
     /// Événement temps réel côté groupes : un message arrive en incrémental,

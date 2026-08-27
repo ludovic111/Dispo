@@ -1,276 +1,619 @@
 import SwiftUI
 
-/// Paywall Premium centre sur la promesse n°1 : ne jamais rater un cachet.
-/// Abonnements auto-renouvelables achetes et restaures avec StoreKit 2.
+/// Un seul niveau Premium, avec deux périodicités. Les prix et essais affichés
+/// viennent exclusivement de l'offre Apple chargée par `AppStore`.
 struct PaywallView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedPlan: PremiumPlan = .annual
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private struct Perk {
+    @State private var selectedPlan: PremiumPlan = .annual
+    @State private var isLoadingPlans = false
+
+    private struct Perk: Identifiable {
         let icon: String
         let title: LocalizedStringKey
         let text: LocalizedStringKey
-        var highlight: Bool = false
+
+        var id: String { icon }
     }
 
+    /// Capacités réellement monétisées. L'accès aux SOS, le niveau des
+    /// profils, les écoles et les fonctions de sécurité restent gratuits.
     private let perks: [Perk] = [
-        Perk(icon: "bolt.fill", title: "Alertes dépannage en priorité",
-             text: "Un groupe cherche un remplaçant près de toi ? Tu reçois l'alerte 30 min avant tout le monde — le cachet est pour toi.",
-             highlight: true),
-        Perk(icon: "person.3.fill", title: "Crée et dirige des groupes",
-             text: "Leader du groupe : membres, répertoire validé, événements et setlists — rejoindre reste gratuit."),
-        Perk(icon: "video.fill", title: "6 vidéos de démo",
-             text: "Montre plusieurs styles — un seul extrait en gratuit."),
-        Perk(icon: "medal.fill", title: "Tri et niveau des musiciens",
-             text: "Les meilleurs profils en haut, leur niveau affiché.")
+        Perk(
+            icon: "person.3.fill",
+            title: "Dirige plusieurs groupes",
+            text: "Centralise les membres, répertoires, setlists et événements de chacun de tes projets."
+        ),
+        Perk(
+            icon: "slider.horizontal.3",
+            title: "Affûte tes recherches",
+            text: "Combine les filtres avancés pour trouver plus vite les profils qui correspondent à ton projet."
+        ),
+        Perk(
+            icon: "calendar.badge.clock",
+            title: "Automatise l'organisation",
+            text: "Événements récurrents, rappels configurables et recherche automatique d'un remplaçant en cas de désistement."
+        ),
+        Perk(
+            icon: "play.rectangle.on.rectangle.fill",
+            title: "Présente jusqu'à 6 vidéos",
+            text: "Construis un portfolio qui montre plusieurs styles, formations et facettes de ton jeu."
+        )
     ]
+
+    private var allPlansUnavailable: Bool {
+        PremiumPlan.allCases.allSatisfy { !store.planAvailable($0) }
+    }
+
+    private var privacyURL: URL {
+        URL(string: store.language == .french
+            ? "https://dispoapp.net/privacy"
+            : "https://dispoapp.net/privacy-en")!
+    }
+
+    private let termsURL = URL(
+        string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+    )!
+    private let manageSubscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
 
     var body: some View {
         ZStack {
             JCBackground()
 
-            ScrollView {
-                VStack(spacing: 22) {
-                    hero
-                    if AppStore.isBeta {
-                        // Bêta fermée : pas de plans, pas de faux prix —
-                        // on dit simplement ce qui est ouvert.
-                        betaNotice
-                        perksList
-                    } else {
-                        roiHook
-                        perksList
-                        planPicker
-                        ctaSection
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 20) {
+                        hero
+
+                        if AppStore.isBeta {
+                            betaNotice
+                            perksList
+                            freeFoundations
+                        } else {
+                            perksList
+                            freeFoundations
+                            plansSection
+                                .id("premium-plans")
+                            ctaSection
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 32)
                 }
-                .padding(20)
+                .scrollIndicators(.hidden)
+                #if DEBUG
+                .task {
+                    guard UserDefaults.standard.string(forKey: "screenshotRoute") == "paywall-prices" else { return }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    proxy.scrollTo("premium-plans", anchor: .top)
+                }
+                #endif
             }
         }
         .overlay(alignment: .topTrailing) {
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+                Image(systemName: "xmark")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .contentShape(Circle())
             }
-            .padding()
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel(Text("Fermer Premium"))
+            .padding(12)
+        }
+        .task {
+            guard !AppStore.isBeta, allPlansUnavailable else { return }
+            await loadPlans()
         }
     }
 
-    /// Le pass backstage — badge plastifié sous la lumière de scène,
-    /// fente de tour de cou comprise.
     private var hero: some View {
-        ZStack(alignment: .top) {
+        ZStack(alignment: .bottomTrailing) {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(JC.premium)
-                .frame(height: 172)
-            Capsule()
-                .fill(JC.bg)
-                .frame(width: 44, height: 8)
-                .padding(.top, 14)
-            VStack(spacing: 7) {
-                Text("Pass backstage")
-                    .font(JCFont.monoBold(11))
-                    .tracking(2.5)
-                    .textCase(.uppercase)
-                    .opacity(0.75)
-                Text(verbatim: "Dispo Premium")
-                    .font(JCFont.display(27))
-                Text("Ne rate plus jamais un cachet")
-                    .font(.subheadline.weight(.semibold))
-                    .opacity(0.8)
+
+            Image(systemName: "music.note")
+                .font(.system(size: 118, weight: .black))
+                .foregroundStyle(JC.billetPaper.opacity(0.08))
+                .rotationEffect(.degrees(-9))
+                .offset(x: 18, y: 20)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 7) {
+                    Image(systemName: "crown.fill")
+                    Text(verbatim: "DISPO PREMIUM")
+                        .font(JCFont.monoBold(11))
+                        .tracking(1.6)
+                }
+                .foregroundStyle(JC.billetPaper.opacity(0.82))
+
+                Text("Plus de musique.\nMoins d'organisation.")
+                    .font(JCFont.display(30))
+                    .foregroundStyle(JC.billetPaper)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Des outils pour faire avancer tes projets sans alourdir les échanges.")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(JC.billetPaper.opacity(0.78))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(JC.billetPaper)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 38)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 22)
+            .padding(.top, 30)
+            .padding(.bottom, 26)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(JC.billetPaper.opacity(0.14), lineWidth: 1)
+        )
         .padding(.top, 8)
+        .accessibilityElement(children: .combine)
     }
 
-    /// L'argument massue : un cachet de dépannage vaut CHF 100–300 à Genève.
-    /// Pendant la bêta, tout ce qui suit est déjà à toi — rien à acheter.
     private var betaNotice: some View {
         JCCard {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Version bêta", systemImage: "wrench.and.screwdriver.fill")
-                    .font(.subheadline.weight(.heavy))
+            HStack(alignment: .top, spacing: 13) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title2)
                     .foregroundStyle(JC.premiumTint)
-                Text("Tout est ouvert pendant les tests : aucun abonnement n'est vendu et rien ne sera débité. Ces fonctions sont déjà actives sur ton compte.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
+                    .frame(width: 44, height: 44)
+                    .background(JC.premiumTint.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .accessibilityHidden(true)
 
-    private var roiHook: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(JC.laiton.opacity(0.18))
-                    .frame(width: 36, height: 36)
-                Image(systemName: "lightbulb.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(JC.laiton)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Premium est inclus dans cette bêta")
+                        .font(.headline)
+                    Text("Aucun abonnement n'est proposé à la vente. Aucun achat ni débit ne peut être effectué depuis cette version.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            Text("Un seul concert dépanné (souvent CHF 100–300 à Genève) **peut couvrir ton abonnement à l'année**.")
-                .font(.footnote)
-                .foregroundStyle(.primary.opacity(0.9))
-            Spacer(minLength: 0)
         }
-        .padding(14)
-        .background(JC.laiton.opacity(0.12), in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(JC.laiton.opacity(0.35), lineWidth: 1))
+        .accessibilityElement(children: .combine)
     }
 
     private var perksList: some View {
-        VStack(spacing: 12) {
-            ForEach(perks, id: \.icon) { perk in
-                HStack(spacing: 14) {
-                    Image(systemName: perk.icon)
-                        .font(.title3)
-                        .foregroundStyle(perk.highlight ? JC.laiton : JC.premiumTint)
-                        .frame(width: 34)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(perk.title).font(.subheadline.weight(.bold))
-                        Text(perk.text)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(
+                title: "Premium te rend du temps",
+                subtitle: "Quatre outils concrets, sans limiter le cœur du réseau"
+            )
+
+            JCCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(perks.enumerated()), id: \.element.id) { index, perk in
+                        perkRow(perk)
+                        if index < perks.count - 1 {
+                            Divider()
+                                .padding(.leading, 70)
+                        }
                     }
-                    Spacer()
                 }
-                .padding(14)
-                .background(JC.card, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(perk.highlight ? JC.laiton.opacity(0.5) : .clear, lineWidth: 1)
+            }
+        }
+    }
+
+    private func perkRow(_ perk: Perk) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: perk.icon)
+                .font(.body.weight(.bold))
+                .foregroundStyle(JC.premiumTint)
+                .frame(width: 42, height: 42)
+                .background(JC.premiumTint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(perk.title)
+                    .font(.subheadline.weight(.bold))
+                Text(perk.text)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var freeFoundations: some View {
+        JCCard {
+            VStack(alignment: .leading, spacing: 11) {
+                Label("Toujours gratuit", systemImage: "lock.open.fill")
+                    .font(.subheadline.weight(.heavy))
+                    .foregroundStyle(JC.feutrine)
+
+                Text("Premium n'achète ni l'accès au réseau ni ta sécurité.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                freeLine(
+                    icon: "building.2.fill",
+                    text: "Affiliation et communautés d'école"
+                )
+                freeLine(
+                    icon: "shield.checkered",
+                    text: "Accès aux SOS, adresse protégée, blocage et signalement"
                 )
             }
         }
     }
 
-    private var planPicker: some View {
-        HStack(spacing: 12) {
-            ForEach(PremiumPlan.allCases) { plan in
-                planCard(plan)
+    private func freeLine(icon: String, text: LocalizedStringKey) -> some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(JC.feutrine)
+                .frame(width: 18)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.caption.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var plansSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(
+                title: "Choisis ton rythme",
+                subtitle: "Un seul Premium, mensuel ou annuel"
+            )
+
+            if isLoadingPlans && allPlansUnavailable {
+                HStack(spacing: 11) {
+                    ProgressView()
+                        .tint(JC.premiumTint)
+                    Text("Chargement des offres Apple…")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 72)
+                .background(JC.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityElement(children: .combine)
+            } else {
+                ForEach(PremiumPlan.allCases) { plan in
+                    planCard(plan)
+                }
+
+                if allPlansUnavailable {
+                    plansUnavailableNotice
+                }
             }
         }
     }
 
     private func planCard(_ plan: PremiumPlan) -> some View {
         let isSelected = selectedPlan == plan
+        let isAvailable = store.planAvailable(plan)
+        let price = store.displayPrice(for: plan)
+
         return Button {
-            withAnimation(.snappy) { selectedPlan = plan }
+            select(plan)
         } label: {
-            VStack(spacing: 6) {
-                if let tag = plan.promoTag {
-                    Text(LocalizedStringKey(tag))
-                        .font(.system(size: 9, weight: .heavy))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(JC.premium, in: Capsule())
-                        .foregroundStyle(JC.billetPaper)
-                } else {
-                    Spacer().frame(height: 18)
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(spacing: 8) {
+                    Text(LocalizedStringKey(plan.title))
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    if plan == .annual {
+                        Text(verbatim: annualOfferLabel)
+                            .font(JCFont.monoBold(9))
+                            .tracking(0.8)
+                            .foregroundStyle(JC.billetPaper)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(JC.premium, in: Capsule())
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(isSelected ? JC.premiumTint : Color.secondary.opacity(0.45))
+                        .accessibilityHidden(true)
                 }
-                Text(LocalizedStringKey(plan.title))
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Text(verbatim: store.displayPrice(for: plan))
-                    .font(JCFont.monoBold(16))
-                Text(plan == .annual
-                     ? LocalizedStringKey("par an")
-                     : LocalizedStringKey("par mois"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(plan == .annual ? "Facturé chaque année" : "Facturé chaque mois")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    Text(verbatim: price)
+                        .font(JCFont.monoBold(18))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.trailing)
+                }
+
                 if let trial = store.trialLabel(for: plan) {
-                    Text(verbatim: trial)
-                        .font(.system(size: 9, weight: .heavy))
+                    Label(trial, systemImage: "gift.fill")
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(JC.feutrine)
-                        .multilineTextAlignment(.center)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 15)
             .padding(.vertical, 14)
-            .padding(.horizontal, 8)
-            .background(isSelected ? JC.laiton.opacity(0.14) : JC.card,
-                        in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(
+                isSelected ? JC.premiumTint.opacity(0.12) : JC.card,
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? JC.laiton : JC.cardStroke, lineWidth: isSelected ? 2 : 1)
+                    .stroke(isSelected ? JC.premiumTint : JC.cardStroke, lineWidth: isSelected ? 2 : 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(PressableStyle())
+        .disabled(!isAvailable || store.purchaseInProgress)
+        .opacity(isAvailable ? 1 : 0.58)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(planAccessibilityLabel(plan, price: price)))
+        .accessibilityValue(Text(planAccessibilityValue(plan, isSelected: isSelected, isAvailable: isAvailable)))
+        .accessibilityHint(Text(isAvailable ? "Sélectionne cette périodicité" : "Cette offre Apple est indisponible"))
+    }
+
+    private var plansUnavailableNotice: some View {
+        JCCard {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
+                    .font(.title3)
+                    .foregroundStyle(JC.bronze)
+                    .frame(width: 32)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Offres Apple indisponibles")
+                        .font(.subheadline.weight(.bold))
+                    Text("Vérifie ta connexion, puis réessaie. Aucun achat ne peut partir tant qu'un prix Apple n'est pas chargé.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Réessayer") {
+                        Task { await loadPlans() }
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(JC.premiumTint)
+                    .frame(minHeight: 44)
+                    .disabled(isLoadingPlans)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
     private var ctaSection: some View {
-        if store.isPremium {
+        VStack(spacing: 12) {
+            if store.isPremium {
+                activeSubscriptionCard
+            } else {
+                purchaseCard
+            }
+
+            legalLinks
+        }
+    }
+
+    private var activeSubscriptionCard: some View {
+        JCCard {
             VStack(spacing: 10) {
                 Label(
-                    store.premiumPlan == .annual
-                        ? "Abonnement annuel actif"
-                        : "Abonnement mensuel actif",
-                    systemImage: "checkmark.seal.fill"
+                    store.premiumActivationPending ? "Activation en cours…" : "Premium est actif",
+                    systemImage: store.premiumActivationPending
+                        ? "hourglass.circle.fill"
+                        : "checkmark.seal.fill"
                 )
-                .font(.headline)
-                .foregroundStyle(JC.feutrine)
-                if let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions") {
-                    Link("Gérer l'abonnement", destination: subscriptionsURL)
-                        .font(.subheadline)
-                }
-            }
-        } else {
-            VStack(spacing: 10) {
-                Button {
-                    Task {
-                        if await store.purchasePremium(plan: selectedPlan) { dismiss() }
-                    }
-                } label: {
-                    HStack {
-                        if store.purchaseInProgress { ProgressView().tint(JC.billetPaper) }
-                        if store.trialLabel(for: selectedPlan) != nil {
-                            Text("Commencer l'essai gratuit")
-                                .font(.headline)
-                        } else {
-                            Text("S'abonner · \(store.displayPrice(for: selectedPlan))")
-                                .font(.headline)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(JC.premium, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(JC.billetPaper)
-                }
-                .buttonStyle(PressableStyle())
-                .disabled(store.purchaseInProgress || !store.planAvailable(selectedPlan))
+                    .font(.headline)
+                    .foregroundStyle(store.premiumActivationPending ? JC.bronze : JC.feutrine)
 
-                if let trial = store.trialLabel(for: selectedPlan) {
-                    Text(verbatim: String(format: store.tr("%@, puis %@ — résiliable à tout moment."), trial, store.displayPrice(for: selectedPlan)))
+                if store.premiumActivationPending {
+                    Text("Le paiement est confirmé. Dispo synchronise maintenant tes droits sécurisés avec le serveur.")
                         .font(.caption)
-                        .foregroundStyle(JC.feutrine)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                    Button {
+                        Task { _ = await store.refreshPremiumServerConfirmation(maxAttempts: 12) }
+                    } label: {
+                        Label("Vérifier l'activation", systemImage: "arrow.clockwise")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .disabled(store.purchaseInProgress)
+                } else if let premiumPlan = store.premiumPlan {
+                    Text(premiumPlan == .annual ? "Formule annuelle" : "Formule mensuelle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
-                Text("Paiement débité sur ton compte Apple. L'abonnement se renouvelle automatiquement jusqu'à sa résiliation dans les réglages App Store.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-
-                Button("Restaurer mes achats") {
-                    Task { await store.restorePurchases() }
+                Link(destination: manageSubscriptionsURL) {
+                    Label("Gérer mon abonnement", systemImage: "gearshape.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .font(.caption.weight(.semibold))
-                .disabled(store.purchaseInProgress)
-
-                Text("Pensé avec la scène jazz & latin de Genève")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(JC.laiton)
-
+                .accessibilityHint(Text("Ouvre la gestion des abonnements Apple"))
             }
+            .frame(maxWidth: .infinity)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var purchaseCard: some View {
+        VStack(spacing: 10) {
+            Button {
+                Task {
+                    if await store.purchasePremium(plan: selectedPlan) {
+                        dismiss()
+                    }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    if store.purchaseInProgress {
+                        ProgressView()
+                            .tint(JC.billetPaper)
+                        Text("Validation avec Apple…")
+                    } else {
+                        Text(store.trialLabel(for: selectedPlan) == nil
+                             ? "Choisir Premium"
+                             : "Commencer l'essai")
+                        Spacer(minLength: 8)
+                        Text(verbatim: store.displayPrice(for: selectedPlan))
+                            .font(JCFont.monoBold(14))
+                    }
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .padding(.horizontal, 17)
+                .background(JC.premium, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .foregroundStyle(JC.billetPaper)
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(PressableStyle())
+            .disabled(store.purchaseInProgress || !store.planAvailable(selectedPlan))
+            .accessibilityLabel(Text(purchaseAccessibilityLabel))
+            .accessibilityValue(Text(billingDisclosure))
+            .accessibilityHint(Text("Ouvre la confirmation d'achat Apple"))
+
+            Text(verbatim: billingDisclosure)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                Task { await store.restorePurchases() }
+            } label: {
+                Label("Restaurer mes achats", systemImage: "arrow.clockwise")
+                    .font(.caption.weight(.semibold))
+                    .frame(minHeight: 44)
+            }
+            .disabled(store.purchaseInProgress)
+            .accessibilityHint(Text("Recherche un abonnement acheté avec ton compte Apple"))
+
+            Link(destination: manageSubscriptionsURL) {
+                Text("Gérer mes abonnements Apple")
+                    .font(.caption.weight(.semibold))
+                    .frame(minHeight: 44)
+            }
+            .accessibilityHint(Text("Ouvre les réglages d'abonnements Apple"))
+        }
+    }
+
+    private var legalLinks: some View {
+        VStack(spacing: 2) {
+            Text("En continuant, tu acceptes les conditions applicables et la politique de confidentialité de Dispo.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 18) {
+                    termsLink
+                    privacyLink
+                }
+                VStack(spacing: 0) {
+                    termsLink
+                    privacyLink
+                }
+            }
+        }
+    }
+
+    private var termsLink: some View {
+        Link("Conditions d'utilisation", destination: termsURL)
+            .font(.caption.weight(.semibold))
+            .frame(minHeight: 44)
+    }
+
+    private var privacyLink: some View {
+        Link("Confidentialité", destination: privacyURL)
+            .font(.caption.weight(.semibold))
+            .frame(minHeight: 44)
+    }
+
+    private var purchaseAccessibilityLabel: String {
+        if store.purchaseInProgress {
+            return store.tr("Validation avec Apple")
+        }
+        if store.trialLabel(for: selectedPlan) != nil {
+            return store.tr("Commencer l'essai Premium")
+        }
+        return store.tr("Choisir Premium")
+    }
+
+    private var billingDisclosure: String {
+        let price = store.displayPrice(for: selectedPlan)
+        let renewal = store.tr("Renouvellement automatique jusqu'à résiliation dans les réglages Apple.")
+        let cadence = selectedPlan == .annual ? store.tr("par an") : store.tr("par mois")
+
+        if let trial = store.trialLabel(for: selectedPlan) {
+            return "\(trial), puis \(price) \(cadence). \(renewal)"
+        }
+        return "\(price) \(cadence). \(renewal)"
+    }
+
+    private func planAccessibilityLabel(_ plan: PremiumPlan, price: String) -> String {
+        let cadence = plan == .annual ? store.tr("par an") : store.tr("par mois")
+        return "\(store.tr(plan.title)), \(price) \(cadence)"
+    }
+
+    private var annualOfferLabel: String {
+        if let savings = store.annualSavingsPercent() {
+            return String(format: store.tr("ÉCONOMISE %d %%"), savings)
+        }
+        return store.tr("RECOMMANDÉ")
+    }
+
+    private func planAccessibilityValue(
+        _ plan: PremiumPlan,
+        isSelected: Bool,
+        isAvailable: Bool
+    ) -> String {
+        var values = [isSelected ? store.tr("Sélectionné") : store.tr("Non sélectionné")]
+        if let trial = store.trialLabel(for: plan) {
+            values.append(trial)
+        }
+        if !isAvailable {
+            values.append(store.tr("Indisponible"))
+        }
+        return values.joined(separator: ", ")
+    }
+
+    private func select(_ plan: PremiumPlan) {
+        guard store.planAvailable(plan) else { return }
+        if reduceMotion {
+            selectedPlan = plan
+        } else {
+            withAnimation(.easeOut(duration: 0.14)) {
+                selectedPlan = plan
+            }
+        }
+    }
+
+    @MainActor
+    private func loadPlans() async {
+        guard !isLoadingPlans else { return }
+        isLoadingPlans = true
+        await store.loadStoreProducts()
+        isLoadingPlans = false
+
+        if !store.planAvailable(selectedPlan),
+           let firstAvailable = PremiumPlan.allCases.first(where: store.planAvailable) {
+            selectedPlan = firstAvailable
         }
     }
 }

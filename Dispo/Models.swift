@@ -568,12 +568,158 @@ enum PremiumPlan: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Étiquette promo (bandeau sur la carte du plan).
-    var promoTag: String? {
+}
+
+/// Capacités réellement monétisées. Le niveau des profils, la pertinence du
+/// tri et l'accès aux SOS restent volontairement hors de cette liste : ils font
+/// partie du cœur gratuit du réseau.
+enum PremiumCapability: String, CaseIterable, Identifiable, Hashable {
+    case leadAdditionalGroup
+    case advancedFilters
+    case recurringEvents
+    case configurableReminders
+    case autoSOS
+    case expandedPortfolio
+
+    var id: String { rawValue }
+}
+
+// MARK: - Écoles de musique
+
+/// Rôle déclaré dans une école. Les raw values sont le contrat Postgres : ne
+/// pas les traduire ni les renommer ; l'interface traduit uniquement `label`.
+enum MusicSchoolRole: String, Codable, CaseIterable, Identifiable, Hashable {
+    case student
+    case teacher
+    case alumni
+    case staff
+    case applicant
+    case other
+
+    var id: String { rawValue }
+
+    var label: String {
         switch self {
-        case .annual: return "MEILLEURE OFFRE · −33 %"
-        case .monthly: return nil
+        case .student: return "Élève"
+        case .teacher: return "Professeur·e"
+        case .alumni: return "Ancien·ne élève"
+        case .staff: return "Équipe"
+        case .applicant: return "Candidat·e"
+        case .other: return "Autre"
         }
+    }
+}
+
+/// Qui peut voir l'affiliation. L'annuaire public ne renvoie que `.profile` ;
+/// `.schoolOnly` reste entre membres et `.privateMembership` seulement pour soi.
+enum MusicSchoolVisibility: String, Codable, CaseIterable, Identifiable, Hashable {
+    case profile
+    case schoolOnly = "school_only"
+    case privateMembership = "private"
+
+    var id: String { rawValue }
+}
+
+enum MusicSchoolMembershipStatus: String, Codable, Hashable {
+    case active
+    case left
+    case suspended
+}
+
+enum MusicSchoolVerificationLevel: String, Codable, Hashable {
+    case selfDeclared = "self_declared"
+    case verified
+}
+
+/// Entrée de l'annuaire des écoles. Les affiliations restent dans un modèle
+/// séparé : une école existe même si aucun profil courant n'y est encore lié.
+struct MusicSchool: Codable, Identifiable, Hashable {
+    var id: UUID
+    var slug: String
+    var name: String
+    var shortName: String?
+    var city: String
+    var countryCode: String
+    var websiteURL: String?
+    var logoURL: String?
+    var isVerified: Bool
+
+    var displayName: String {
+        let short = shortName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return short.isEmpty ? name : short
+    }
+}
+
+/// Lien profil ↔ école tel que les RPC de visibilité l'autorisent. `profileID`
+/// est nil pour `my_music_schools`, et renseigné par le chargement bulk des
+/// affiliations visibles sur les profils du réseau.
+struct MusicSchoolAffiliation: Codable, Identifiable, Hashable {
+    var membershipID: UUID
+    var profileID: UUID?
+    var school: MusicSchool
+    var role: MusicSchoolRole
+    var roleLabel: String?
+    var visibility: MusicSchoolVisibility
+    var status: MusicSchoolMembershipStatus = .active
+    var verificationLevel: MusicSchoolVerificationLevel
+    var isPrimary: Bool
+    var joinedAt: Date
+
+    var id: UUID { membershipID }
+
+    var displayedRole: String {
+        let custom = roleLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return custom.isEmpty ? role.label : custom
+    }
+}
+
+struct MusicSchoolMember: Codable, Identifiable, Hashable {
+    var profileID: UUID
+    var name: String
+    var photoURL: String?
+    var instruments: [Instrument]
+    var level: Level
+    var role: MusicSchoolRole
+    var roleLabel: String?
+    var verificationLevel: MusicSchoolVerificationLevel
+    var isPrimary: Bool
+    var joinedAt: Date
+
+    var id: UUID { profileID }
+}
+
+struct SchoolMessage: Codable, Identifiable, Hashable {
+    var id: UUID
+    var channelID: UUID
+    var senderID: UUID
+    /// Enrichi côté client depuis `music_school_members`; nil si le profil
+    /// vient de quitter l'école ou si son nom n'est plus visible.
+    var senderName: String?
+    /// Résolu avec `senderID`, jamais par le nom affiché : deux homonymes ne
+    /// doivent pas pouvoir emprunter visuellement l'avatar l'un de l'autre.
+    var senderPhotoURL: String?
+    var text: String
+    var createdAt: Date
+    var editedAt: Date?
+    var deletedAt: Date?
+
+    var isDeleted: Bool { deletedAt != nil }
+    func isMine(userID: UUID?) -> Bool { senderID == userID }
+}
+
+/// La communauté spéciale créée pour une école : affiliation courante, canal
+/// de conversation, membres et historique récent, chargés sous la même RLS.
+struct MusicSchoolCommunity: Codable, Identifiable, Hashable {
+    var affiliation: MusicSchoolAffiliation
+    var channelID: UUID?
+    var memberCount: Int
+    var members: [MusicSchoolMember]
+    var messages: [SchoolMessage]
+
+    var id: UUID { affiliation.school.id }
+    var school: MusicSchool { affiliation.school }
+    var canPost: Bool {
+        affiliation.status == .active && channelID != nil
     }
 }
 
@@ -1465,6 +1611,54 @@ enum AttendanceStatus: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// État de la donnée privée chargée séparément de la ligne publique.
+/// `unknown` est volontairement distinct de `absent` : une panne de RPC ne
+/// doit jamais être interprétée comme la preuve qu'il n'existe rien à garder.
+enum PrivateLocationState: String, Codable, Hashable {
+    case unknown
+    case restricted
+    case absent
+    case available
+
+    static func serverValue(rowReturned: Bool, exactAddress: String?) -> Self {
+        guard rowReturned else { return .restricted }
+        return exactAddress?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            ? .available
+            : .absent
+    }
+}
+
+/// Intention de mutation envoyée au serveur. Une valeur absente signifie
+/// toujours « conserver » ; seul `clear` autorise un DELETE privé.
+enum ExactAddressMutation: Hashable {
+    case preserve
+    case replace(String)
+    case clear
+
+    static func editing(
+        currentState: PrivateLocationState,
+        currentAddress: String?,
+        draft: String,
+        clearRequested: Bool
+    ) -> Self {
+        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            let current = currentAddress?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return currentState == .available && current == trimmed
+                ? .preserve
+                : .replace(trimmed)
+        }
+        return clearRequested ? .clear : .preserve
+    }
+
+    var rpcExactAddress: String? {
+        guard case let .replace(value) = self else { return nil }
+        return value
+    }
+
+    var clearsExactAddress: Bool { self == .clear }
+}
+
 /// Un événement du groupe (concert, répé, jam) avec sa propre setlist.
 /// Créé par le leader ; les membres suggèrent des morceaux qu'il valide.
 /// Relié aux SOS : si un membre lâche, SOS pré-rempli en un tap.
@@ -1473,10 +1667,20 @@ struct GroupEvent: Codable, Identifiable, Hashable {
     var kind: GroupEventKind
     var title: String
     var venue: String
+    /// Adresse exacte renvoyée uniquement par le RPC privé quand le compte est
+    /// réellement autorisé à rejoindre cette date. Absente des anciens caches.
+    var exactAddress: String? = nil
+    /// Optionnel pour décoder les caches antérieurs. `nil` est résolu depuis
+    /// l'adresse historique, sinon comme `unknown` — jamais comme `absent`.
+    var privateLocationState: PrivateLocationState? = nil
     var date: Date
     var setlist: [Song] = []
     /// Présence par nom de membre (et le leader). Absent = pas encore répondu.
+    /// Conservé pour relire les caches historiques et les clients antérieurs.
     var attendance: [String: AttendanceStatus]?
+    /// Présence canonique par UUID de profil. Deux membres homonymes restent
+    /// ainsi deux personnes distinctes dans le line-up et dans l'auto-SOS.
+    var attendanceByProfileID: [String: AttendanceStatus]? = nil
     /// Série à laquelle appartient l'événement — nil pour un événement
     /// ponctuel. Toutes les occurrences d'une répétition hebdomadaire
     /// partagent le même identifiant, ce qui permet de les colorer ensemble
@@ -1494,6 +1698,13 @@ struct GroupEvent: Codable, Identifiable, Hashable {
     /// Délais proposés au leader (en jours).
     static let reminderLeadOptions = [0, 1, 2, 3, 7, 14]
 
+    var resolvedPrivateLocationState: PrivateLocationState {
+        privateLocationState
+            ?? (exactAddress?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? .available
+                : .unknown)
+    }
+
     /// Fait partie d'une série récurrente (couleur et pastille distinctes).
     var isRecurring: Bool { seriesID != nil && (recurrence ?? .once) != .once }
 
@@ -1506,6 +1717,15 @@ struct GroupEvent: Codable, Identifiable, Hashable {
 
     func status(for name: String) -> AttendanceStatus {
         responses[name] ?? .pending
+    }
+
+    /// Statut stable d'un membre du roster. Le nom ne sert qu'au repli des
+    /// événements enregistrés avant l'introduction des UUID de présence.
+    func status(for member: SoloistOption) -> AttendanceStatus {
+        if let status = attendanceByProfileID?[member.id.uuidString.lowercased()] {
+            return status
+        }
+        return status(for: member.name)
     }
 
     var availableNames: [String] {
@@ -1605,9 +1825,10 @@ enum LineupState {
     var isLate: Bool { self == .late }
 }
 
-/// Un groupe de musique : le leader (créateur, forcément Premium) gère les
-/// membres, le répertoire et les événements ; les membres — Premium ou non —
-/// discutent, partagent des partitions et font des suggestions.
+/// Un groupe de musique : le premier groupe dirigé est gratuit, puis Premium
+/// permet d'en diriger plusieurs. Le leader gère les membres, le répertoire et
+/// les événements ; tous les membres discutent, partagent des partitions et
+/// font des suggestions sans abonnement obligatoire.
 /// Synchronisé via Supabase en mode live, pièces jointes privées comprises.
 struct GroupChat: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
@@ -1618,9 +1839,13 @@ struct GroupChat: Codable, Identifiable, Hashable {
     /// Groupe visible sur les profils publics de ses membres (nil = privé,
     /// optionnel pour décoder les groupes sauvegardés avant la 0.9.6).
     var isPublic: Bool?
-    /// Leader du groupe (rôle transférable à un membre Premium uniquement).
+    /// Leader du groupe (transférable à un membre Premium ou à un membre qui
+    /// ne dirige encore aucun autre groupe).
     /// Optionnel pour décoder les groupes v0.7 — nil = moi.
     var leaderName: String?
+    /// Identité serveur du leader. Optionnelle pour les anciens caches et la
+    /// démo, où `leaderName == nil` continue de signifier « moi ».
+    var leaderProfileID: UUID? = nil
     /// Membres (par nom) — moi en plus, implicitement.
     var memberNames: [String]
     /// Identités stables du roster live, leader inclus. Optionnel pour rester
@@ -1630,8 +1855,12 @@ struct GroupChat: Codable, Identifiable, Hashable {
     var rosterProfiles: [SoloistOption]? = nil
     /// Permanent vs occasionnel, par nom. Absent = permanent (noyau par défaut).
     var memberKinds: [String: GroupMemberKind]?
+    /// Version canonique indexée par UUID, utilisée dès qu'elle est présente.
+    var memberKindsByProfileID: [String: GroupMemberKind]? = nil
     /// Rôle (instrument) de chaque membre dans le groupe, par nom.
     var memberRoles: [String: String]?
+    /// Rôles canoniques par UUID : aucun écrasement entre homonymes.
+    var memberRolesByProfileID: [String: String]? = nil
     /// Remplacement automatique : quand un membre se déclare indisponible,
     /// un SOS part tout seul pour son poste. nil = désactivé.
     var autoSOSEnabled: Bool?
@@ -1682,14 +1911,28 @@ struct GroupChat: Codable, Identifiable, Hashable {
         memberKinds?[name] ?? .permanent
     }
 
+    func memberKind(for member: SoloistOption) -> GroupMemberKind {
+        memberKindsByProfileID?[member.id.uuidString.lowercased()]
+            ?? memberKind(for: member.name)
+    }
+
     /// Rôle (instrument) d'un membre dans le groupe, si défini.
     func role(for name: String) -> Instrument? {
         memberRoles?[name].flatMap(Instrument.init(rawValue:))
     }
 
+    func role(for member: SoloistOption) -> Instrument? {
+        let raw = memberRolesByProfileID?[member.id.uuidString.lowercased()]
+            ?? memberRoles?[member.name]
+        return raw.flatMap(Instrument.init(rawValue:))
+    }
+
     /// Rôles présents dans le groupe (l'instrumentation).
     var roleInstruments: [Instrument] {
-        let set = Set((memberRoles ?? [:]).values.compactMap(Instrument.init(rawValue:)))
+        let source = memberRolesByProfileID?.isEmpty == false
+            ? memberRolesByProfileID ?? [:]
+            : memberRoles ?? [:]
+        let set = Set(source.values.compactMap(Instrument.init(rawValue:)))
         return set.sorted { $0.rawValue < $1.rawValue }
     }
 
@@ -1773,8 +2016,14 @@ struct GigRequest: Codable, Identifiable, Hashable {
     /// Identifiant serveur de l'organisateur (pour ouvrir la conversation).
     var hostId: UUID?
     var date: Date
+    /// Libellé public (quartier, ville ou salle volontairement vague).
     var place: String
     var neighborhood: String
+    /// Adresse exacte : nil tant que le serveur ne considère pas le compte
+    /// comme participant. Optionnelle pour décoder tous les caches historiques.
+    var exactAddress: String? = nil
+    /// État explicite du chargement privé. Optionnel pour les caches historiques.
+    var privateLocationState: PrivateLocationState? = nil
     var genre: Genre
     var wantedInstruments: [Instrument]
     /// Niveaux acceptés pour ce SOS (nil ou vide = tous les niveaux). Sert à
@@ -1796,8 +2045,8 @@ struct GigRequest: Codable, Identifiable, Hashable {
     var myApplicationInstrument: Instrument?
     var myApplicationStatus: GigApplicationStatus?
     var isMine: Bool = false
-    /// Date de publication — les 30 premières minutes sont réservées aux
-    /// membres Premium (la killer feature « alerte en avance »).
+    /// Date de publication — utilisée pour l'ordre et le libellé de fraîcheur.
+    /// Tous les musiciens voient désormais un SOS au même moment.
     var postedAt: Date?
     /// Groupe et événement à l'origine du SOS (remplacement d'un membre).
     /// Le lien sert au groupe : dès que le poste est pourvu, le line-up de
@@ -1820,6 +2069,13 @@ struct GigRequest: Codable, Identifiable, Hashable {
 
     /// Demande adressée à une personne, plutôt qu'une annonce publique.
     var isDirect: Bool { targetId != nil }
+
+    var resolvedPrivateLocationState: PrivateLocationState {
+        privateLocationState
+            ?? (exactAddress?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? .available
+                : .unknown)
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, title, hostName, hostId, date, place, neighborhood, genre
@@ -1869,19 +2125,6 @@ struct GigRequest: Codable, Identifiable, Hashable {
         return PaymentMethod.displayLabel(for: paymentMethod)
     }
 
-    /// Durée de l'avant-première Premium après publication.
-    static let earlyAccessWindow: TimeInterval = 30 * 60
-
-    /// Fin de la fenêtre d'avant-première (nil si l'annonce n'en a pas).
-    var earlyAccessEnd: Date? {
-        postedAt.map { $0.addingTimeInterval(Self.earlyAccessWindow) }
-    }
-
-    /// true si l'annonce est encore en avant-première Premium.
-    func isEarlyAccess(now: Date = Date()) -> Bool {
-        guard let earlyAccessEnd, !isMine else { return false }
-        return now < earlyAccessEnd
-    }
 }
 
 /// État d'une candidature à un SOS.

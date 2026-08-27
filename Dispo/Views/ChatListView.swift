@@ -6,12 +6,14 @@ import SwiftUI
 enum ChatRoute: Hashable {
     case conversation(Conversation.ID)
     case group(GroupChat.ID)
+    case school(UUID)
 }
 
 struct ChatListView: View {
     @EnvironmentObject private var store: AppStore
     @State private var showNewGroup = false
     @State private var segment: Segment = .conversations
+    @State private var path = NavigationPath()
 
     /// Deux espaces bien séparés : mes conversations 1:1 et mes groupes.
     enum Segment: String, CaseIterable, Identifiable {
@@ -21,7 +23,7 @@ struct ChatListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ZStack {
                 JCBackground()
 
@@ -56,23 +58,28 @@ struct ChatListView: View {
                 switch route {
                 case .conversation(let id): ChatView(conversationID: id)
                 case .group(let id): GroupChatView(groupID: id)
+                case .school(let id): MusicSchoolCommunityView(schoolID: id)
                 }
             }
             .navigationDestination(for: Musician.self) { MusicianDetailView(musician: $0) }
             .sheet(isPresented: $showNewGroup) { NewGroupSheet() }
+            .onAppear { openPendingSchoolIfNeeded() }
+            .onChange(of: store.pendingSchoolCommunityID) { _, _ in
+                openPendingSchoolIfNeeded()
+            }
         }
     }
 
     /// Bouton « nouveau groupe » (verrouillé Premium pour la création).
     private var newGroupButton: some View {
         Button {
-            if store.isPremium {
+            if canCreateGroup {
                 showNewGroup = true
             } else {
                 store.showPaywall = true
             }
         } label: {
-            Label("Nouveau", systemImage: store.isPremium ? "plus.circle.fill" : "lock.fill")
+            Label("Nouveau", systemImage: canCreateGroup ? "plus.circle.fill" : "lock.fill")
                 .font(.caption.weight(.bold))
                 .padding(.horizontal, 11)
                 .padding(.vertical, 7)
@@ -80,6 +87,19 @@ struct ChatListView: View {
                 .foregroundStyle(JC.bronze)
         }
         .buttonStyle(PressableStyle())
+    }
+
+    /// Le premier groupe dirigé est gratuit : il crée la boucle réseau. Les
+    /// groupes supplémentaires deviennent un outil d'organisation Premium.
+    private var canCreateGroup: Bool {
+        store.canCreateGroup
+    }
+
+    private func openPendingSchoolIfNeeded() {
+        guard let schoolID = store.pendingSchoolCommunityID else { return }
+        segment = .groups
+        path.append(ChatRoute.school(schoolID))
+        store.pendingSchoolCommunityID = nil
     }
 
     // MARK: - Conversations 1:1
@@ -139,27 +159,34 @@ struct ChatListView: View {
 
     // MARK: - Groupes
 
-    /// Groupes : rejoindre est gratuit, créer et diriger est Premium.
+    /// Groupes : rejoindre et diriger son premier groupe restent gratuits ;
+    /// Premium débloque les groupes dirigés supplémentaires.
     @ViewBuilder
     private var groupsSection: some View {
+        if !store.myMusicSchoolCommunities.isEmpty {
+            schoolCommunitiesSection
+        }
+
         // Invitations reçues — accepter ou refuser avant d'entrer.
         ForEach(store.myGroupInvitations) { invitation in
             GroupInvitationCard(invitation: invitation)
         }
 
-        if store.groups.isEmpty && store.myGroupInvitations.isEmpty {
-            if store.isPremium {
+        if store.groups.isEmpty
+            && store.myGroupInvitations.isEmpty
+            && store.myMusicSchoolCommunities.isEmpty {
+            if canCreateGroup {
                 JCEmptyState(
-                    icon: "person.3.fill",
-                    title: "Aucun groupe",
-                    message: "Réunis ton groupe : messages, partitions et agenda des concerts au même endroit.",
+                    icon: "person.3.sequence.fill",
+                    title: "Ton collectif commence ici",
+                    message: "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.",
                     iconColor: JC.bronze
                 )
             } else {
                 JCPromoBanner(
                     icon: "person.3.fill",
                     title: "Crée ton groupe",
-                    subtitle: "Rejoindre est gratuit — créer et diriger un groupe est Premium"
+                    subtitle: "Ton premier groupe est gratuit — Premium sert à en diriger plusieurs"
                 ) { store.showPaywall = true }
             }
         }
@@ -185,7 +212,14 @@ struct ChatListView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
-                            Text("\(group.memberNames.count + 1) membres · \(group.approvedSongs.count) morceaux · \(group.upcomingEvents.count) événements")
+                            Text(
+                                String(
+                                    format: store.tr("%lld membres · %lld morceaux · %lld événements"),
+                                    Int64(group.memberNames.count + 1),
+                                    Int64(group.approvedSongs.count),
+                                    Int64(group.upcomingEvents.count)
+                                )
+                            )
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(JC.bronze)
                                 .lineLimit(1)
@@ -207,6 +241,90 @@ struct ChatListView: View {
             }
             .buttonStyle(PressableStyle())
         }
+    }
+
+    private var schoolCommunitiesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Écoles")
+                    .font(.caption2.weight(.heavy))
+                    .textCase(.uppercase)
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                NavigationLink {
+                    MusicSchoolDirectoryView()
+                } label: {
+                    Label("Ajouter", systemImage: "plus")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(JC.bronze)
+                }
+            }
+            ForEach(store.myMusicSchoolCommunities) { community in
+                let unread = store.unreadCount(in: community)
+                NavigationLink(value: ChatRoute.school(community.school.id)) {
+                    JCCard(padding: 13) {
+                        HStack(spacing: 12) {
+                            MusicSchoolAvatar(school: community.school, size: 50)
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(community.school.displayName)
+                                        .font(.subheadline.weight(unread > 0 ? .heavy : .bold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    if community.school.isVerified {
+                                        Image(systemName: "checkmark.seal.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(JC.feutrine)
+                                    }
+                                    Spacer(minLength: 0)
+                                    if let last = community.messages.last {
+                                        Text(last.createdAt.formatted(.relative(presentation: .named)))
+                                            .font(.caption2)
+                                            .foregroundStyle(unread > 0 ? JC.laiton : .secondary)
+                                    }
+                                }
+                                Text(
+                                    String(
+                                        format: store.tr("%lld membres · %@"),
+                                        Int64(community.memberCount),
+                                        localizedRole(community.affiliation)
+                                    )
+                                )
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(JC.bronze)
+                                    .lineLimit(1)
+                                if let last = community.messages.last {
+                                    Text(
+                                        last.isDeleted
+                                            ? store.tr("Message supprimé")
+                                            : "\(last.senderName ?? store.tr("Membre")) : \(last.text)"
+                                    )
+                                    .font(.caption)
+                                    .fontWeight(unread > 0 ? .semibold : .regular)
+                                    .foregroundStyle(unread > 0 ? .primary : .secondary)
+                                    .lineLimit(1)
+                                } else {
+                                    Text("Présente-toi à la communauté")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            UnreadDot(count: unread)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .buttonStyle(PressableStyle())
+            }
+        }
+    }
+
+    private func localizedRole(_ affiliation: MusicSchoolAffiliation) -> String {
+        let custom = affiliation.roleLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return custom.isEmpty ? store.tr(affiliation.role.label) : custom
     }
 }
 

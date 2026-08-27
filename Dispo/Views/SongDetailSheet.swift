@@ -274,7 +274,8 @@ struct SongDetailSheet: View {
                         Text(verbatim: name)
                             .font(.subheadline.weight(.bold))
                             .lineLimit(1)
-                        if let role = group.role(for: name) {
+                        if let member = store.soloistOptions(for: group).first(where: { $0.id == profileID }),
+                           let role = group.role(for: member) {
                             Text(LocalizedStringKey(role.rawValue))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

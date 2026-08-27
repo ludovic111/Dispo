@@ -90,4 +90,80 @@ final class SelectionPresentationTests: XCTestCase {
             XCTAssertTrue(preferences.isEnabled(category))
         }
     }
+
+    func testPressableMotionPolicyPreservesSignatureFeedback() {
+        let state = PressableMotionPolicy.state(
+            isPressed: true,
+            reduceMotion: false,
+            pressedScale: 0.97
+        )
+
+        XCTAssertEqual(state.scale, 0.97, accuracy: 0.0001)
+        XCTAssertEqual(state.opacity, 0.94, accuracy: 0.0001)
+        XCTAssertTrue(state.animatesTransition)
+    }
+
+    func testPressableMotionPolicyUsesInstantOpacityForReducedMotion() {
+        let pressed = PressableMotionPolicy.state(
+            isPressed: true,
+            reduceMotion: true,
+            pressedScale: 0.97
+        )
+        let released = PressableMotionPolicy.state(
+            isPressed: false,
+            reduceMotion: true,
+            pressedScale: 0.97
+        )
+
+        XCTAssertEqual(pressed.scale, 1)
+        XCTAssertEqual(pressed.opacity, 0.96, accuracy: 0.0001)
+        XCTAssertFalse(pressed.animatesTransition)
+        XCTAssertEqual(released, PressableMotionState(scale: 1, opacity: 1, animatesTransition: false))
+    }
+
+    func testSchoolMessageAvatarIsResolvedBySenderUUIDForHomonyms() {
+        let firstID = UUID(uuidString: "11111111-1111-4111-8111-111111111111")!
+        let secondID = UUID(uuidString: "22222222-2222-4222-8222-222222222222")!
+        let members = [
+            MusicSchoolMember(
+                profileID: firstID,
+                name: "Camille Martin",
+                photoURL: "https://example.test/camille-a.jpg",
+                instruments: [.piano],
+                level: .intermediaire,
+                role: .student,
+                roleLabel: nil,
+                verificationLevel: .selfDeclared,
+                isPrimary: false,
+                joinedAt: Date()
+            ),
+            MusicSchoolMember(
+                profileID: secondID,
+                name: "Camille Martin",
+                photoURL: "https://example.test/camille-b.jpg",
+                instruments: [.guitare],
+                level: .avance,
+                role: .teacher,
+                roleLabel: nil,
+                verificationLevel: .verified,
+                isPrimary: true,
+                joinedAt: Date()
+            ),
+        ]
+        let row = SupabaseBackend.SchoolMessageRow(
+            id: UUID(),
+            channelId: UUID(),
+            senderId: secondID,
+            text: "Message du second Camille",
+            createdAt: Date(),
+            editedAt: nil,
+            deletedAt: nil
+        )
+
+        let message = row.asMessage(members: members)
+
+        XCTAssertEqual(message.senderID, secondID)
+        XCTAssertEqual(message.senderName, "Camille Martin")
+        XCTAssertEqual(message.senderPhotoURL, "https://example.test/camille-b.jpg")
+    }
 }

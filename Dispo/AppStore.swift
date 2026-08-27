@@ -75,18 +75,23 @@ final class AppStore: ObservableObject {
     private var liveMyRatings: [UUID: Int] = [:]
     /// Ma propre note agrégée (moyenne + nb d'avis), lue du serveur.
     @Published private(set) var myRatingSummary: RatingSummary?
-    /// **Bêta fermée.** Pendant la phase de test avec un cercle d'invités,
-    /// aucun abonnement n'est vendu : tout est ouvert. Rien n'est simulé —
-    /// il n'y a simplement pas de paywall, et le serveur ne fait dépendre
-    /// aucune permission de `is_premium` (voir la migration
-    /// `v13_beta_pro_rules`). Repasser à `false` le jour de la mise en vente,
-    /// en restaurant la même migration côté base.
-    static let isBeta = true
+    /// Les achats réels sont activés dans ce build TestFlight. Les offres,
+    /// prix et essais viennent de RevenueCat / StoreKit ; aucun droit Premium
+    /// n'est simulé côté client. Repasser temporairement à `true` uniquement
+    /// pour une bêta explicitement non monétisée.
+    static let isBeta = false
 
     /// Abonnement Premium — RevenueCat en production (StoreKit pur en repli),
     /// état local en démo. Le serveur (webhook RevenueCat) reste seul juge de
     /// `is_premium` côté base. En bêta, toujours vrai.
     @Published var isPremium: Bool = AppStore.isBeta
+    /// Confirmation que le webhook RevenueCat a aussi ouvert les invariants
+    /// Supabase. Un paiement ne doit pas mener à une première action rejetée.
+    @Published private(set) var premiumServerConfirmed = false
+    var premiumActivationPending: Bool {
+        isPremium && isLive && !premiumServerConfirmed
+            && !Self.directStoreKitFallbackEnabled
+    }
     /// Plan choisi (mensuel / annuel), nil si non abonné.
     @Published var premiumPlan: PremiumPlan?
     @Published var showPaywall: Bool = false
@@ -114,6 +119,9 @@ final class AppStore: ObservableObject {
     @Published var playedWith: Set<String> = []
     /// Onglet actif — utilisé aussi par les raccourcis et les notifications.
     @Published var selectedTab: AppTab = .home
+    /// Destination interne reçue par push ; l'onglet Messages la consomme dès
+    /// qu'il est visible afin d'ouvrir directement la bonne communauté.
+    @Published var pendingSchoolCommunityID: UUID?
     /// Etats UUID exclusivement serveur; les Sets par nom restent le repli demo.
     private var liveFollowingIDs: Set<UUID> = []
     private var liveFollowerIDs: Set<UUID> = []
@@ -145,6 +153,13 @@ final class AppStore: ObservableObject {
     /// Groupes (messagerie d'équipe Premium) — synchronisés serveur en live
     /// (messages, pièces jointes, événements, présence, membres et partitions).
     @Published var groups: [GroupChat] = []
+    /// Annuaire vérifié et actif des écoles de musique.
+    @Published private(set) var musicSchools: [MusicSchool] = []
+    /// Mes affiliations, enrichies de leur communauté, de leurs membres et de
+    /// l'historique récent visible sous la RLS de l'école.
+    @Published private(set) var myMusicSchoolCommunities: [MusicSchoolCommunity] = []
+    /// Affiliations visibles sur les profils du réseau, chargées en bulk.
+    @Published private(set) var musicSchoolAffiliationsByProfile: [UUID: [MusicSchoolAffiliation]] = [:]
     /// Candidatures reçues par annonce (côté organisateur d'un SOS).
     @Published var applicantsByGig: [UUID: [GigApplicant]] = [:]
     /// Invités d'un soir par événement de groupe (remplaçants acceptés).
@@ -178,6 +193,13 @@ final class AppStore: ObservableObject {
     private var deliveryAcknowledgementTask: Task<Void, Never>?
     private var groupChannel: RealtimeChannelV2?
     private var groupTask: Task<Void, Never>?
+    private var schoolChannel: RealtimeChannelV2?
+    private var schoolTask: Task<Void, Never>?
+    /// Empêche deux abonnements simultanés pendant le `subscribe` asynchrone.
+    /// Le numéro de session évite qu'une ancienne connexion remette cet état
+    /// à zéro après une reconnexion rapide du même compte.
+    private var schoolStreamStartingGeneration: UInt64?
+    private var pendingSchoolRefresh: Task<Void, Never>?
     private var notificationChannel: RealtimeChannelV2?
     private var notificationTask: Task<Void, Never>?
     /// Conversation affichée à l'écran (ChatView) — sert à marquer « lu » en
@@ -221,6 +243,15 @@ final class AppStore: ObservableObject {
         .monthly: "ch.dispo.app.premium.monthly",
         .annual: "ch.dispo.app.premium.annual"
     ]
+
+    /// Le fallback StoreKit direct sert uniquement aux scénarios Xcode locaux.
+    /// En distribution, vendre sans RevenueCat créerait un paiement local sans
+    /// preuve serveur et les invariants Supabase refuseraient ensuite le droit.
+    #if DEBUG
+    private static let directStoreKitFallbackEnabled = true
+    #else
+    private static let directStoreKitFallbackEnabled = false
+    #endif
 
     private static let eventsKey = "jamconnect.events"
     private static let conversationsKey = "jamconnect.conversations"
@@ -283,7 +314,7 @@ final class AppStore: ObservableObject {
                     self?.applyCustomerInfo(info)
                 }
             }
-        } else {
+        } else if Self.directStoreKitFallbackEnabled {
             transactionTask = Task { [weak self] in
                 for await update in Transaction.updates {
                     guard case .verified(let transaction) = update else { continue }
@@ -296,8 +327,11 @@ final class AppStore: ObservableObject {
         if let saved: [String: Int] = Self.load(key: Self.starRatingsKey) {
             myStarRatings = saved
         }
-        isPremium = Self.isBeta || UserDefaults.standard.bool(forKey: Self.premiumKey)
-        premiumPlan = UserDefaults.standard.string(forKey: Self.premiumPlanKey).flatMap(PremiumPlan.init)
+        // Un droit payant ne vient jamais d'un cache global : il pourrait
+        // appartenir au compte précédent sur un appareil partagé. RevenueCat
+        // / StoreKit (puis le serveur en repli) le résolvent ci-dessous.
+        isPremium = Self.isBeta
+        premiumPlan = nil
         hasOnboarded = UserDefaults.standard.bool(forKey: Self.onboardedKey)
         prepareWhatsNew()
         theme = UserDefaults.standard.string(forKey: Self.themeKey).flatMap(AppTheme.init) ?? .dark
@@ -368,6 +402,7 @@ final class AppStore: ObservableObject {
         Task {
             await startMessageStream()
             await startGroupStream()
+            await startSchoolStream()
             await startGigStream()
             await startNotificationStream()
         }
@@ -483,7 +518,11 @@ final class AppStore: ObservableObject {
         events = []
         conversations = []
         groups = []
+        musicSchools = []
+        myMusicSchoolCommunities = []
+        musicSchoolAffiliationsByProfile = [:]
         notifications = []
+        premiumServerConfirmed = false
         Self.purgeCachedMessageAttachments()
         liveUserID = userID
         liveEmail = await backend.currentUserEmail()
@@ -492,9 +531,11 @@ final class AppStore: ObservableObject {
 
         // Relie l'abonné RevenueCat au compte Supabase : le webhook serveur
         // pourra alors activer is_premium sur le bon profil.
+        var revenueCatResolved = false
         if revenueCatEnabled {
             if let result = try? await Purchases.shared.logIn(userID.uuidString) {
                 applyCustomerInfo(result.customerInfo)
+                revenueCatResolved = true
             }
         }
         // Géoloc réelle : demandée à la connexion (autorisation « pendant
@@ -511,7 +552,14 @@ final class AppStore: ObservableObject {
             } else {
                 applyServerProfile(mine)
             }
-            isPremium = Self.isBeta || mine.isPremium
+            // RevenueCat est la source immédiate des droits. Le webhook peut
+            // mettre quelques secondes à refléter un achat dans `profiles` :
+            // ne jamais écraser un entitlement frais par ce miroir en retard.
+            if !revenueCatResolved {
+                isPremium = Self.isBeta || mine.isPremium
+                premiumPlan = nil
+            }
+            premiumServerConfirmed = isPremium && mine.isPremium
             // La préférence de partage de position suit le compte.
             if let precision = mine.locationPrecision.flatMap(LocationPrecision.init(rawValue:)) {
                 locationPrecision = precision
@@ -522,6 +570,7 @@ final class AppStore: ObservableObject {
         // entre le SELECT initial et l'ouverture du canal.
         await startMessageStream()
         await startGroupStream()
+        await startSchoolStream()
         await startGigStream()
         await startNotificationStream()
         await refreshLiveData(prefetchedProfiles: initialProfiles)
@@ -628,6 +677,9 @@ final class AppStore: ObservableObject {
                 profile.videoFileNames = nil
                 // L'URL hébergée fait foi : c'est elle que les autres voient.
                 profile.photoURL = mine.photoUrl
+                if isPremium && mine.isPremium {
+                    premiumServerConfirmed = true
+                }
             }
             healProfilePhotoIfNeeded()
             let groupSnapshotRevision = songMutationRevision
@@ -679,6 +731,7 @@ final class AppStore: ObservableObject {
             loadAllApplicants()
             rescheduleAllAttendanceNotifications()
             runAutoSOSIfNeeded()
+            await refreshMusicSchools()
             backendError = nil
         } catch {
             guard Self.isMatchingLiveSession(
@@ -721,9 +774,16 @@ final class AppStore: ObservableObject {
             : nil
     }
 
-    /// UUID profil pour un nom affiché (moi ou musicien du feed).
+    /// Identité stable du profil de démonstration courant. Elle n'est jamais
+    /// envoyée au serveur, mais empêche les vues de groupe de retomber sur le
+    /// nom comme clé pendant la démo et dans les anciens caches.
+    private static let demoCurrentProfileID = UUID(uuidString: "00000000-0000-4000-8000-00000000d150")!
+
+    /// UUID profil pour un nom affiché (compatibilité des anciens parcours).
+    /// Les actions de groupe modernes passent directement un `SoloistOption`
+    /// et ne doivent plus utiliser cette résolution ambiguë.
     private func profileID(for name: String) -> UUID? {
-        if name == profile.name { return liveUserID }
+        if name == profile.name { return liveUserID ?? (isLive ? nil : Self.demoCurrentProfileID) }
         return musicians.first(where: { $0.name == name })?.id
     }
 
@@ -778,6 +838,15 @@ final class AppStore: ObservableObject {
             await backend.client.removeChannel(channel)
             groupChannel = nil
         }
+        schoolTask?.cancel()
+        schoolTask = nil
+        schoolStreamStartingGeneration = nil
+        pendingSchoolRefresh?.cancel()
+        pendingSchoolRefresh = nil
+        if let channel = schoolChannel {
+            await backend.client.removeChannel(channel)
+            schoolChannel = nil
+        }
         gigTask?.cancel()
         gigTask = nil
         pendingGigRefresh?.cancel()
@@ -802,6 +871,9 @@ final class AppStore: ObservableObject {
         typingConversationIDs = []
         visibleConversationID = nil
         publicGroupsByProfile = [:]
+        musicSchools = []
+        myMusicSchoolCommunities = []
+        musicSchoolAffiliationsByProfile = [:]
         musicians = []
         events = []
         conversations = []
@@ -814,10 +886,13 @@ final class AppStore: ObservableObject {
         [
             Self.eventsKey, Self.conversationsKey, Self.groupsKey, Self.profileKey,
             Self.followingKey, Self.playedWithKey, Self.starRatingsKey,
-            Self.groupLastSeenKey
+            Self.groupLastSeenKey, Self.schoolLastSeenKey,
+            Self.premiumKey, Self.premiumPlanKey
         ].forEach(UserDefaults.standard.removeObject(forKey:))
         Self.purgeCachedMessageAttachments()
-        isPremium = Self.isBeta || UserDefaults.standard.bool(forKey: Self.premiumKey)
+        isPremium = Self.isBeta
+        premiumPlan = nil
+        premiumServerConfirmed = false
     }
 
     /// Écoute les nouveaux messages en temps réel et les range dans la bonne
@@ -938,9 +1013,14 @@ final class AppStore: ObservableObject {
     /// Dernière visite de chaque groupe (les messages de groupe n'ont pas
     /// d'accusé de lecture serveur — on garde le repère sur l'appareil).
     private static let groupLastSeenKey = "dispo.groups.lastSeen"
+    private static let schoolLastSeenKey = "dispo.schools.lastSeen"
     private var groupLastSeen: [String: Date] {
         get { (UserDefaults.standard.dictionary(forKey: Self.groupLastSeenKey) as? [String: Date]) ?? [:] }
         set { UserDefaults.standard.set(newValue, forKey: Self.groupLastSeenKey) }
+    }
+    private var schoolLastSeen: [String: Date] {
+        get { (UserDefaults.standard.dictionary(forKey: Self.schoolLastSeenKey) as? [String: Date]) ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: Self.schoolLastSeenKey) }
     }
 
     /// Messages reçus et pas encore lus dans une conversation. En démo il n'y
@@ -960,10 +1040,19 @@ final class AppStore: ObservableObject {
         }.count
     }
 
+    /// Messages d'école arrivés depuis ma dernière visite de la communauté.
+    func unreadCount(in community: MusicSchoolCommunity) -> Int {
+        guard let seen = schoolLastSeen[community.school.id.uuidString] else { return 0 }
+        return community.messages.filter {
+            $0.senderID != liveUserID && $0.createdAt > seen && !$0.isDeleted
+        }.count
+    }
+
     /// La pastille de l'onglet Messages.
     var totalUnread: Int {
         conversations.reduce(0) { $0 + unreadCount(in: $1) }
             + groups.reduce(0) { $0 + unreadCount(in: $1) }
+            + myMusicSchoolCommunities.reduce(0) { $0 + unreadCount(in: $1) }
     }
 
     /// Un groupe jamais ouvert ne doit pas afficher tout son historique comme
@@ -983,6 +1072,23 @@ final class AppStore: ObservableObject {
         var seen = groupLastSeen
         seen[groupID.uuidString] = Date()
         groupLastSeen = seen
+        objectWillChange.send()
+    }
+
+    private func seedSchoolLastSeenIfNeeded() {
+        var seen = schoolLastSeen
+        var changed = false
+        for community in myMusicSchoolCommunities where seen[community.school.id.uuidString] == nil {
+            seen[community.school.id.uuidString] = Date()
+            changed = true
+        }
+        if changed { schoolLastSeen = seen }
+    }
+
+    func markSchoolSeen(_ schoolID: UUID) {
+        var seen = schoolLastSeen
+        seen[schoolID.uuidString] = Date()
+        schoolLastSeen = seen
         objectWillChange.send()
     }
 
@@ -1104,6 +1210,290 @@ final class AppStore: ObservableObject {
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
             await self.startGroupStream()
+        }
+    }
+
+    // MARK: - Écoles de musique
+
+    func musicSchoolCommunity(schoolID: UUID) -> MusicSchoolCommunity? {
+        myMusicSchoolCommunities.first { $0.id == schoolID }
+    }
+
+    func musicSchoolAffiliations(for profileID: UUID) -> [MusicSchoolAffiliation] {
+        musicSchoolAffiliationsByProfile[profileID] ?? []
+    }
+
+    func musicSchoolMembers(schoolID: UUID) -> [MusicSchoolMember] {
+        musicSchoolCommunity(schoolID: schoolID)?.members ?? []
+    }
+
+    func schoolMessages(channelID: UUID) -> [SchoolMessage] {
+        myMusicSchoolCommunities
+            .first { $0.channelID == channelID }?
+            .messages ?? []
+    }
+
+    /// Recharge l'annuaire, mes communautés et les affiliations visibles en
+    /// bulk. Chaque appel est indépendant : pendant un déploiement progressif,
+    /// une RPC absente ne fait pas disparaître les données déjà affichées.
+    func refreshMusicSchools() async {
+        guard let backend, let userID = liveUserID else { return }
+        let generation = liveSessionGeneration
+        let directory = try? await backend.fetchMusicSchools()
+        let communities = try? await backend.fetchMyMusicSchoolCommunities()
+        let visible = try? await backend.fetchVisibleProfileMusicSchools()
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: generation,
+            currentGeneration: liveSessionGeneration
+        ) else { return }
+        if let directory { musicSchools = directory }
+        if let communities { myMusicSchoolCommunities = communities }
+        if let visible { musicSchoolAffiliationsByProfile = visible }
+        seedSchoolLastSeenIfNeeded()
+    }
+
+    /// Charge au besoin les affiliations d'un seul profil. Utile depuis une
+    /// fiche ouverte avant la fin du chargement bulk.
+    func loadMusicSchoolAffiliations(for profileID: UUID) async {
+        guard let backend, let userID = liveUserID else { return }
+        let generation = liveSessionGeneration
+        guard let affiliations = try? await backend.fetchProfileMusicSchools(profileID: profileID)
+        else { return }
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: generation,
+            currentGeneration: liveSessionGeneration
+        ) else { return }
+        musicSchoolAffiliationsByProfile[profileID] = affiliations
+    }
+
+    /// Recharge membres + messages d'une communauté sans forcer le reste de
+    /// l'app à relire profils, groupes et SOS.
+    func refreshMusicSchoolCommunity(_ schoolID: UUID) async {
+        guard let backend, let userID = liveUserID else { return }
+        let generation = liveSessionGeneration
+        guard let communities = try? await backend.fetchMyMusicSchoolCommunities()
+        else { return }
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: generation,
+            currentGeneration: liveSessionGeneration
+        ) else { return }
+        if let replacement = communities.first(where: { $0.id == schoolID }) {
+            if let index = myMusicSchoolCommunities.firstIndex(where: { $0.id == schoolID }) {
+                myMusicSchoolCommunities[index] = replacement
+            } else {
+                myMusicSchoolCommunities.append(replacement)
+            }
+        } else {
+            myMusicSchoolCommunities.removeAll { $0.id == schoolID }
+        }
+        myMusicSchoolCommunities.sort {
+            $0.school.name.localizedCaseInsensitiveCompare($1.school.name) == .orderedAscending
+        }
+        seedSchoolLastSeenIfNeeded()
+    }
+
+    @discardableResult
+    func joinMusicSchool(
+        _ schoolID: UUID,
+        role: MusicSchoolRole,
+        visibility: MusicSchoolVisibility,
+        roleLabel: String? = nil
+    ) async -> Bool {
+        guard let backend, isLive else { return false }
+        let cleanLabel = roleLabel?.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await backend.joinMusicSchool(
+                schoolID: schoolID,
+                role: role,
+                visibility: visibility,
+                roleLabel: cleanLabel?.isEmpty == true ? nil : cleanLabel
+            )
+            await refreshMusicSchools()
+            return true
+        } catch {
+            backendError = tr("L'école n'a pas pu être ajoutée à ton profil.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func leaveMusicSchool(_ schoolID: UUID) async -> Bool {
+        guard let backend, isLive else { return false }
+        do {
+            try await backend.leaveMusicSchool(schoolID: schoolID)
+            await refreshMusicSchools()
+            return true
+        } catch {
+            backendError = tr("Impossible de quitter cette école pour le moment.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func sendSchoolMessage(_ text: String, channelID: UUID) async -> Bool {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, acceptsUserContent(clean), let backend, isLive else { return false }
+        do {
+            let row = try await backend.sendSchoolMessage(channelID: channelID, text: clean)
+            integrateSchoolMessage(row)
+            // Le trigger vient de remplir la file APNs des autres membres.
+            await backend.deliverPendingPushNotifications()
+            return true
+        } catch {
+            backendError = tr("Le message n'a pas pu être envoyé.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func reportSchoolMessage(_ message: SchoolMessage) async -> Bool {
+        guard let backend, let userID = liveUserID, message.senderID != userID else { return false }
+        do {
+            try await backend.reportSchoolMessage(
+                message.id,
+                senderID: message.senderID,
+                me: userID,
+                reason: "Message d'école inapproprié"
+            )
+            return true
+        } catch {
+            backendError = tr("Le signalement n'a pas pu etre envoye.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func blockSchoolMessageSender(_ senderID: UUID) async -> Bool {
+        guard let backend, let userID = liveUserID, senderID != userID else { return false }
+        do {
+            try await backend.block(senderID, me: userID)
+            applyBlockedUserLocally(senderID)
+            await refreshMusicSchools()
+            return true
+        } catch {
+            backendError = tr("Le blocage n'a pas pu etre applique.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func editSchoolMessage(_ messageID: UUID, text: String) async -> Bool {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, acceptsUserContent(clean), let backend, isLive else { return false }
+        do {
+            try await backend.editSchoolMessage(messageID: messageID, text: clean)
+            for communityIndex in myMusicSchoolCommunities.indices {
+                guard let messageIndex = myMusicSchoolCommunities[communityIndex].messages
+                    .firstIndex(where: { $0.id == messageID }) else { continue }
+                myMusicSchoolCommunities[communityIndex].messages[messageIndex].text = clean
+                myMusicSchoolCommunities[communityIndex].messages[messageIndex].editedAt = Date()
+                break
+            }
+            return true
+        } catch {
+            backendError = tr("Le message n'a pas pu être modifié.")
+            return false
+        }
+    }
+
+    @discardableResult
+    func deleteSchoolMessage(_ messageID: UUID) async -> Bool {
+        guard let backend, isLive else { return false }
+        do {
+            try await backend.deleteSchoolMessage(messageID: messageID)
+            for communityIndex in myMusicSchoolCommunities.indices {
+                guard let messageIndex = myMusicSchoolCommunities[communityIndex].messages
+                    .firstIndex(where: { $0.id == messageID }) else { continue }
+                myMusicSchoolCommunities[communityIndex].messages[messageIndex].deletedAt = Date()
+                break
+            }
+            return true
+        } catch {
+            backendError = tr("Le message n'a pas pu être supprimé.")
+            return false
+        }
+    }
+
+    private func startSchoolStream() async {
+        guard let backend, let userID = liveUserID, schoolTask == nil,
+              schoolStreamStartingGeneration == nil else { return }
+        let generation = liveSessionGeneration
+        schoolStreamStartingGeneration = generation
+        defer {
+            if schoolStreamStartingGeneration == generation {
+                schoolStreamStartingGeneration = nil
+            }
+        }
+        let channel: RealtimeChannelV2
+        let stream: AsyncStream<SupabaseBackend.SchoolRealtimeEvent>
+        do {
+            (channel, stream) = try await backend.schoolStream()
+        } catch {
+            // Migration/RealtIme pas encore disponible : le refresh au premier
+            // plan garde toute la fonctionnalité utilisable.
+            return
+        }
+        guard Self.isMatchingLiveSession(
+            expectedUserID: userID,
+            currentUserID: liveUserID,
+            expectedGeneration: generation,
+            currentGeneration: liveSessionGeneration
+        ) else {
+            await backend.client.removeChannel(channel)
+            return
+        }
+        schoolChannel = channel
+        schoolTask = Task { [weak self] in
+            for await event in stream {
+                switch event {
+                case .messageInserted(let row), .messageUpdated(let row):
+                    self?.integrateSchoolMessage(row)
+                case .membershipsChanged:
+                    self?.scheduleSchoolRefresh()
+                }
+            }
+            guard !Task.isCancelled, let self, self.isLive else { return }
+            self.schoolTask = nil
+            if let channel = self.schoolChannel {
+                await backend.client.removeChannel(channel)
+                self.schoolChannel = nil
+            }
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            await self.startSchoolStream()
+        }
+    }
+
+    private func integrateSchoolMessage(_ row: SupabaseBackend.SchoolMessageRow) {
+        guard let communityIndex = myMusicSchoolCommunities.firstIndex(where: {
+            $0.channelID == row.channelId
+        }) else {
+            scheduleSchoolRefresh()
+            return
+        }
+        let community = myMusicSchoolCommunities[communityIndex]
+        let message = row.asMessage(members: community.members)
+        if let index = myMusicSchoolCommunities[communityIndex].messages.firstIndex(where: { $0.id == row.id }) {
+            myMusicSchoolCommunities[communityIndex].messages[index] = message
+        } else {
+            myMusicSchoolCommunities[communityIndex].messages.append(message)
+        }
+        myMusicSchoolCommunities[communityIndex].messages.sort { $0.createdAt < $1.createdAt }
+    }
+
+    private func scheduleSchoolRefresh() {
+        guard pendingSchoolRefresh == nil else { return }
+        pendingSchoolRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            await self?.refreshMusicSchools()
+            self?.pendingSchoolRefresh = nil
         }
     }
 
@@ -1581,14 +1971,12 @@ final class AppStore: ObservableObject {
         return link.rawValue
     }
 
-    /// Ordre du feed et des matchs : les amis / « a joué avec un ami » /
-    /// suivis / abonnés d'abord, puis — pour les membres Premium — les
-    /// meilleurs niveaux en haut. Les comptes gratuits n'ont ni le tri ni
-    /// l'affichage du niveau (c'est un argument d'abonnement).
+    /// Ordre du feed et des matchs : relations, niveau, disponibilité puis
+    /// distance. La pertinence et le niveau font partie du cœur gratuit.
     func rank(_ a: Musician, _ b: Musician) -> Bool {
         let rankA = relationRank(of: a), rankB = relationRank(of: b)
         if rankA != rankB { return rankA > rankB }
-        if isPremium, a.level != b.level { return a.level > b.level }
+        if a.level != b.level { return a.level > b.level }
         if a.availability.urgencyRank != b.availability.urgencyRank {
             return a.availability.urgencyRank > b.availability.urgencyRank
         }
@@ -1603,6 +1991,24 @@ final class AppStore: ObservableObject {
     }
 
     // MARK: - Social & Premium
+
+    /// Point d'entrée unique des avantages payants. Les vues ne doivent plus
+    /// déduire une capacité directement de `isPremium`.
+    func canUse(_ capability: PremiumCapability) -> Bool {
+        let premiumReady = isPremium
+            && (!isLive || premiumServerConfirmed || Self.directStoreKitFallbackEnabled)
+        switch capability {
+        case .leadAdditionalGroup, .advancedFilters, .recurringEvents,
+             .configurableReminders, .autoSOS, .expandedPortfolio:
+            return premiumReady
+        }
+    }
+
+    /// Le premier groupe dirigé est gratuit ; Premium permet d'en diriger
+    /// plusieurs. Rejoindre un groupe ne compte jamais dans cette limite.
+    var canCreateGroup: Bool {
+        canUse(.leadAdditionalGroup) || !groups.contains(where: isLeader(of:))
+    }
 
     /// Photo d'un musicien par nom (avis, conversations, membres de groupe).
     func photo(forName name: String) -> String? {
@@ -1643,13 +2049,34 @@ final class AppStore: ObservableObject {
         guard let backend, let userID = liveUserID else { return false }
         do {
             try await backend.block(musician.id, me: userID)
-            blockedUserIDs.insert(musician.id)
-            musicians.removeAll { $0.id == musician.id }
-            conversations.removeAll { $0.contactName == musician.name }
+            applyBlockedUserLocally(musician.id, knownName: musician.name)
             return true
         } catch {
             backendError = tr("Le blocage n'a pas pu etre applique.")
             return false
+        }
+    }
+
+    /// Applique immédiatement le blocage dans toutes les surfaces locales.
+    /// La base/RLS reste la source de vérité, mais aucune carte, DM ou message
+    /// d'école ne doit rester visible jusqu'au prochain refresh global.
+    private func applyBlockedUserLocally(_ profileID: UUID, knownName: String? = nil) {
+        blockedUserIDs.insert(profileID)
+        let names = Set(
+            musicians.filter { $0.id == profileID }.map(\.name)
+                + (knownName.map { [$0] } ?? [])
+        )
+        musicians.removeAll { $0.id == profileID }
+        conversations.removeAll { conversation in
+            conversation.contactID == profileID || names.contains(conversation.contactName)
+        }
+        musicSchoolAffiliationsByProfile[profileID] = nil
+        myMusicSchoolCommunities = myMusicSchoolCommunities.map { community in
+            var filtered = community
+            filtered.members.removeAll { $0.profileID == profileID }
+            filtered.messages.removeAll { $0.senderID == profileID }
+            filtered.memberCount = filtered.members.count
+            return filtered
         }
     }
 
@@ -1707,10 +2134,17 @@ final class AppStore: ObservableObject {
     /// Désistements déjà traités (clé « eventID.membre ») — un SOS
     /// automatique ne part qu'une fois par poste libéré.
     private static let handledDropoutsKey = "dispo.autoSOS.handled"
+    /// Évite de lancer deux requêtes identiques entre deux snapshots Realtime.
+    /// La vraie idempotence reste assurée par la contrainte serveur.
+    private var autoSOSInFlight: Set<String> = []
 
     /// Active ou coupe le remplacement automatique du groupe (leader).
     func setAutoSOS(enabled: Bool, levelRule: AutoSOSLevelRule, in group: GroupChat) {
         guard canLead(group) else { return }
+        if enabled && !canUse(.autoSOS) {
+            showPaywall = true
+            return
+        }
         let stored = levelRule.stored
         updateGroup(group.id) {
             $0.autoSOSEnabled = enabled
@@ -1732,33 +2166,48 @@ final class AppStore: ObservableObject {
     /// correspondant. Appelé après chaque synchro des groupes — c'est
     /// l'appareil du leader qui décide, lui seul a le droit de publier.
     func runAutoSOSIfNeeded() {
-        var handled = Set(UserDefaults.standard.stringArray(forKey: Self.handledDropoutsKey) ?? [])
-        var published = false
+        guard canUse(.autoSOS) else { return }
+        let handled = Set(UserDefaults.standard.stringArray(forKey: Self.handledDropoutsKey) ?? [])
         for group in groups where group.autoSOSEnabled == true && isLeader(of: group) {
             let rule = group.autoSOSLevelRule
             for event in group.upcomingEvents {
-                for member in event.unavailableNames where member != profile.name {
-                    let key = "\(event.id.uuidString).\(member)"
-                    guard !handled.contains(key) else { continue }
-                    handled.insert(key)
-                    publishAutoSOS(for: event, in: group, replacing: member, rule: rule)
-                    published = true
+                for member in unavailableMembers(for: event, in: group) where !isCurrentProfile(member) {
+                    let key = "\(event.id.uuidString).\(member.id.uuidString.lowercased())"
+                    guard !handled.contains(key), !autoSOSInFlight.contains(key) else { continue }
+                    autoSOSInFlight.insert(key)
+                    Task { [weak self] in
+                        guard let self else { return }
+                        let success = await self.publishAutoSOS(
+                            for: event,
+                            in: group,
+                            replacing: member,
+                            rule: rule
+                        )
+                        self.autoSOSInFlight.remove(key)
+                        guard success else { return }
+                        self.markAutoSOSHandled(key)
+                    }
                 }
             }
         }
-        if published {
-            // On ne garde que les désistements des événements encore à venir :
-            // sans ça, la liste grossirait indéfiniment sur l'appareil.
-            let liveKeys = Set(groups.flatMap { group in
-                group.upcomingEvents.flatMap { event in
-                    event.unavailableNames.map { "\(event.id.uuidString).\($0)" }
+    }
+
+    private func markAutoSOSHandled(_ key: String) {
+        var handled = Set(UserDefaults.standard.stringArray(forKey: Self.handledDropoutsKey) ?? [])
+        handled.insert(key)
+        // On ne garde que les désistements des événements encore à venir :
+        // sans ça, la liste grossirait indéfiniment sur l'appareil.
+        let liveKeys = Set(groups.flatMap { group in
+            group.upcomingEvents.flatMap { event in
+                unavailableMembers(for: event, in: group).map {
+                    "\(event.id.uuidString).\($0.id.uuidString.lowercased())"
                 }
-            })
-            UserDefaults.standard.set(
-                Array(handled.intersection(liveKeys)),
-                forKey: Self.handledDropoutsKey
-            )
-        }
+            }
+        })
+        UserDefaults.standard.set(
+            Array(handled.intersection(liveKeys)),
+            forKey: Self.handledDropoutsKey
+        )
     }
 
     /// Publie le SOS qui remplace un membre défaillant : même date, même lieu,
@@ -1766,19 +2215,19 @@ final class AppStore: ObservableObject {
     private func publishAutoSOS(
         for event: GroupEvent,
         in group: GroupChat,
-        replacing member: String,
+        replacing member: SoloistOption,
         rule: AutoSOSLevelRule
-    ) {
+    ) async -> Bool {
         // Le poste à pourvoir : son rôle dans le groupe, sinon son premier
         // instrument. Sans instrument connu, on ne devine pas.
-        let instrument = group.role(for: member)
-            ?? musicians.first(where: { $0.name == member })?.instruments.first
-        guard let instrument else { return }
+        let absent = musician(for: member)
+        let instrument = group.role(for: member) ?? absent?.instruments.first
+        guard let instrument else { return false }
         // « Identique à l'absent » : on demande son niveau sur cet instrument
         // (son niveau global à défaut). « Peu importe » ne demande rien.
         let wantedLevel: Level? = {
             guard rule == .sameAsAbsent,
-                  let absent = musicians.first(where: { $0.name == member })
+                  let absent
             else { return nil }
             return absent.level(for: instrument) ?? absent.level
         }()
@@ -1792,27 +2241,64 @@ final class AppStore: ObservableObject {
             date: event.date,
             place: event.venue,
             neighborhood: profile.cityLabel,
+            exactAddress: event.exactAddress,
+            privateLocationState: event.resolvedPrivateLocationState,
             genre: group.songs.isEmpty ? .jazz : (profile.genres.first ?? .jazz),
             wantedInstruments: [instrument],
             fee: nil,
             descriptionText: String(
                 format: tr("%@ s'est désisté·e pour « %@ » (%@). %@"),
-                member, event.title, group.name, levelNote
+                member.name, event.title, group.name, levelNote
             ).trimmingCharacters(in: .whitespaces),
             isMine: true,
             postedAt: Date(),
             groupId: group.id,
             eventId: event.id
         )
+        if let backend, isLive {
+            do {
+                let result = try await backend.createAutoSOS(
+                    eventID: event.id,
+                    absentProfileID: member.id,
+                    title: sos.title,
+                    description: sos.descriptionText,
+                    instrument: instrument
+                )
+                if !events.contains(where: { $0.id == result.gigID }) {
+                    var canonical = sos
+                    canonical.id = result.gigID
+                    events.append(canonical)
+                    events.sort { $0.date < $1.date }
+                    persistEvents()
+                }
+                await backend.deliverPendingPushNotifications()
+                if result.created {
+                    pushLocal(
+                        title: "\(group.emoji) \(group.name)",
+                        body: String(
+                            format: tr("SOS publié automatiquement pour remplacer %@ (%@)."),
+                            member.name, tr(instrument.rawValue)
+                        ),
+                        category: .groups
+                    )
+                }
+                return true
+            } catch {
+                backendError = tr("Le SOS automatique n'a pas pu être publié — Dispo réessaiera.")
+                return false
+            }
+        }
+
         addEvent(sos)
         pushLocal(
             title: "\(group.emoji) \(group.name)",
             body: String(
                 format: tr("SOS publié automatiquement pour remplacer %@ (%@)."),
-                member, tr(instrument.rawValue)
+                member.name, tr(instrument.rawValue)
             ),
             category: .groups
         )
+        return true
     }
 
     // MARK: Séjours ailleurs
@@ -1954,7 +2440,9 @@ final class AppStore: ObservableObject {
 
     /// true si le plan est achetable maintenant (offre chargée).
     func planAvailable(_ plan: PremiumPlan) -> Bool {
-        revenueCatEnabled ? rcPackages[plan] != nil : storeProducts[plan] != nil
+        revenueCatEnabled
+            ? rcPackages[plan] != nil
+            : (Self.directStoreKitFallbackEnabled && storeProducts[plan] != nil)
     }
 
     func loadStoreProducts() async {
@@ -1976,9 +2464,14 @@ final class AppStore: ObservableObject {
                     }
                 }
                 rcPackages = packages
-                updateTrialLabels()
+                await updateTrialLabels()
             } catch {
-                backendError = tr("Les abonnements App Store sont momentanement indisponibles.")
+                // Le catalogue peut être indisponible au lancement (simulateur,
+                // compte App Store hors ligne, propagation App Store Connect).
+                // Ce n'est pas une erreur de session : le paywall présente déjà
+                // son propre état indisponible lorsqu'il est réellement ouvert.
+                rcPackages = [:]
+                trialByPlan = [:]
             }
             return
         }
@@ -1988,32 +2481,59 @@ final class AppStore: ObservableObject {
                 guard let plan = Self.productIDs.first(where: { $0.value == product.id })?.key else { return nil }
                 return (plan, product)
             })
-            updateTrialLabels()
+            await updateTrialLabels()
         } catch {
-            backendError = tr("Les abonnements App Store sont momentanement indisponibles.")
+            storeProducts = [:]
+            trialByPlan = [:]
         }
     }
 
-    /// Recalcule les étiquettes d'essai gratuit depuis les offres d'intro.
-    /// L'éligibilité réelle (un essai par groupe / Apple ID) est appliquée par
-    /// StoreKit à l'achat ; ici on la propose dès qu'une offre « free trial »
-    /// existe sur le produit.
-    private func updateTrialLabels() {
+    /// Recalcule les étiquettes d'essai gratuit depuis les offres d'intro et
+    /// l'éligibilité réelle du compte Apple. Un statut inconnu est traité
+    /// comme inéligible afin de ne jamais promettre un essai non disponible.
+    private func updateTrialLabels() async {
         var result: [PremiumPlan: String] = [:]
         if revenueCatEnabled {
+            let eligibility = await Purchases.shared
+                .checkTrialOrIntroDiscountEligibility(packages: Array(rcPackages.values))
             for (plan, package) in rcPackages {
-                if let discount = package.storeProduct.introductoryDiscount, discount.paymentMode == .freeTrial {
+                if eligibility[package]?.status == .eligible,
+                   let discount = package.storeProduct.introductoryDiscount,
+                   discount.paymentMode == .freeTrial {
                     result[plan] = trialLabel(days: Self.periodDays(discount.subscriptionPeriod))
                 }
             }
-        } else {
+        } else if Self.directStoreKitFallbackEnabled {
             for (plan, product) in storeProducts {
-                if let offer = product.subscription?.introductoryOffer, offer.paymentMode == .freeTrial {
+                if let subscription = product.subscription,
+                   await subscription.isEligibleForIntroOffer,
+                   let offer = subscription.introductoryOffer,
+                   offer.paymentMode == .freeTrial {
                     result[plan] = trialLabel(days: Self.periodDays(offer.period))
                 }
             }
         }
         trialByPlan = result
+    }
+
+    /// Économie annuelle calculée à partir des prix réellement chargés, jamais
+    /// depuis une remise codée en dur. nil si les plans/devises ne permettent
+    /// pas une comparaison honnête.
+    func annualSavingsPercent() -> Int? {
+        let monthly: Decimal?
+        let annual: Decimal?
+        if revenueCatEnabled {
+            monthly = rcPackages[.monthly]?.storeProduct.price
+            annual = rcPackages[.annual]?.storeProduct.price
+        } else {
+            monthly = storeProducts[.monthly]?.price
+            annual = storeProducts[.annual]?.price
+        }
+        guard let monthly, let annual else { return nil }
+        let twelveMonths = monthly * 12
+        guard twelveMonths > 0, annual < twelveMonths else { return nil }
+        let ratio = NSDecimalNumber(decimal: (twelveMonths - annual) / twelveMonths).doubleValue
+        return max(1, Int((ratio * 100).rounded()))
     }
 
     private func trialLabel(days: Int) -> String {
@@ -2057,11 +2577,16 @@ final class AppStore: ObservableObject {
                 let result = try await Purchases.shared.purchase(package: package)
                 guard !result.userCancelled else { return false }
                 applyCustomerInfo(result.customerInfo)
-                return isPremium
+                guard isPremium else { return false }
+                return await refreshPremiumServerConfirmation(maxAttempts: 12)
             } catch {
                 backendError = tr("L'achat n'a pas pu etre finalise.")
                 return false
             }
+        }
+        guard Self.directStoreKitFallbackEnabled else {
+            backendError = tr("L'achat n'a pas pu etre finalise.")
+            return false
         }
         guard let product = storeProducts[plan] else {
             await loadStoreProducts()
@@ -2094,9 +2619,16 @@ final class AppStore: ObservableObject {
             do {
                 let info = try await Purchases.shared.restorePurchases()
                 applyCustomerInfo(info)
+                if isPremium {
+                    _ = await refreshPremiumServerConfirmation(maxAttempts: 12)
+                }
             } catch {
                 backendError = tr("La restauration des achats a echoue.")
             }
+            return
+        }
+        guard Self.directStoreKitFallbackEnabled else {
+            backendError = tr("La restauration des achats a echoue.")
             return
         }
         do {
@@ -2112,8 +2644,8 @@ final class AppStore: ObservableObject {
 
     /// Applique l'état d'abonnement RevenueCat (achat, renouvellement,
     /// expiration, autre appareil). `is_premium` côté serveur est mis à jour
-    /// par le webhook RevenueCat, jamais par le client — on recharge juste le
-    /// feed quand le statut change (l'avant-première SOS dépend de la RLS).
+    /// par le webhook RevenueCat, jamais par le client. Un changement recharge
+    /// les données pour refléter immédiatement les capacités d'organisation.
     private func applyCustomerInfo(_ info: CustomerInfo) {
         let entitlement = info.entitlements[Self.premiumEntitlementID]
         let active = entitlement?.isActive == true
@@ -2123,6 +2655,7 @@ final class AppStore: ObservableObject {
         let changed = active != isPremium
         isPremium = Self.isBeta || active
         premiumPlan = active ? plan : nil
+        if !active { premiumServerConfirmed = false }
         persistPremiumState()
         if changed, isLive {
             Task { await refreshLiveData() }
@@ -2133,7 +2666,16 @@ final class AppStore: ObservableObject {
         if revenueCatEnabled {
             if let info = try? await Purchases.shared.customerInfo() {
                 applyCustomerInfo(info)
+                if isPremium && isLive && !premiumServerConfirmed {
+                    _ = await refreshPremiumServerConfirmation(maxAttempts: 3)
+                }
             }
+            return
+        }
+        guard Self.directStoreKitFallbackEnabled else {
+            isPremium = Self.isBeta
+            premiumPlan = nil
+            persistPremiumState()
             return
         }
         var activePlan: PremiumPlan?
@@ -2150,13 +2692,38 @@ final class AppStore: ObservableObject {
         persistPremiumState()
     }
 
-    private func persistPremiumState() {
-        UserDefaults.standard.set(isPremium, forKey: Self.premiumKey)
-        if let premiumPlan {
-            UserDefaults.standard.set(premiumPlan.rawValue, forKey: Self.premiumPlanKey)
-        } else {
-            UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
+    /// Attend le miroir serveur après achat/restauration. RevenueCat reste la
+    /// preuve de paiement, mais les capacités ne deviennent actionnables que
+    /// lorsque le webhook a mis `profiles.is_premium` à jour.
+    @discardableResult
+    func refreshPremiumServerConfirmation(maxAttempts: Int = 1) async -> Bool {
+        guard isPremium else {
+            premiumServerConfirmed = false
+            return false
         }
+        guard let backend, let userID = liveUserID else {
+            return !isLive
+        }
+        let attempts = max(1, min(maxAttempts, 20))
+        for attempt in 0..<attempts {
+            if (try? await backend.fetchServerPremium(userID: userID)) == true {
+                guard liveUserID == userID, isPremium else { return false }
+                premiumServerConfirmed = true
+                return true
+            }
+            if attempt + 1 < attempts {
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+        premiumServerConfirmed = false
+        return false
+    }
+
+    private func persistPremiumState() {
+        // Migration des anciens builds : ces clés n'étaient pas liées à un
+        // compte et pouvaient donc montrer le Premium du compte précédent.
+        UserDefaults.standard.removeObject(forKey: Self.premiumKey)
+        UserDefaults.standard.removeObject(forKey: Self.premiumPlanKey)
     }
 
     func completeOnboarding() {
@@ -2266,6 +2833,15 @@ final class AppStore: ObservableObject {
         // « agenda » est le nom historique de l'onglet Sessions côté serveur.
         case "agenda", "sessions": selectedTab = .agenda
         default: selectedTab = .home
+        }
+        let directSchoolID = (userInfo["school_id"] as? String).flatMap(UUID.init(uuidString:))
+        let channelID = (userInfo["school_channel_id"] as? String).flatMap(UUID.init(uuidString:))
+        let schoolID = directSchoolID ?? channelID.flatMap { channel in
+            myMusicSchoolCommunities.first(where: { $0.channelID == channel })?.school.id
+        }
+        if let schoolID {
+            selectedTab = .messages
+            pendingSchoolCommunityID = schoolID
         }
         syncApplicationBadge()
     }
@@ -2538,10 +3114,14 @@ final class AppStore: ObservableObject {
         return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
     }
 
-    /// Crée un groupe — création réservée aux Premium (l'appelant vérifie,
-    /// paywall sinon). Le créateur devient leader — représenté par
+    /// Crée un groupe — le premier est gratuit, les suivants nécessitent la
+    /// capacité Premium `leadAdditionalGroup`. Le créateur devient leader — représenté par
     /// leaderName == nil (« moi »), robuste à un futur renommage du profil.
     func createGroup(name: String, emoji: String, members: [String]) {
+        guard canCreateGroup else {
+            showPaywall = true
+            return
+        }
         if let backend, let userID = liveUserID {
             // En live, les musiciens choisis reçoivent une INVITATION (à
             // accepter) — le groupe démarre avec le leader seul.
@@ -2556,24 +3136,57 @@ final class AppStore: ObservableObject {
             persistGroups()
             let memberIDs: [UUID] = members.compactMap { profileID(for: $0) }
             let groupID = group.id
-            syncLive { [weak self] in
-                _ = try await backend.createGroup(
-                    id: groupID,
-                    name: name,
-                    emoji: emoji,
-                    leaderID: userID,
-                    memberIDs: []
-                )
-                for memberID in memberIDs {
-                    try await backend.createGroupInvitation(
-                        groupID: groupID,
-                        profileID: memberID,
-                        invitedBy: userID,
-                        kind: .permanent
+            let generation = liveSessionGeneration
+            Task { [weak self] in
+                do {
+                    _ = try await backend.createGroup(
+                        id: groupID,
+                        name: name,
+                        emoji: emoji,
+                        leaderID: userID,
+                        memberIDs: []
                     )
+                } catch {
+                    guard let self, Self.isMatchingLiveSession(
+                        expectedUserID: userID,
+                        currentUserID: self.liveUserID,
+                        expectedGeneration: generation,
+                        currentGeneration: self.liveSessionGeneration
+                    ) else { return }
+                    self.groups.removeAll { $0.id == groupID }
+                    self.persistGroups()
+                    self.backendError = self.tr("Le groupe n'a pas pu être créé sur le serveur.")
+                    return
+                }
+
+                // Une invitation refusée par le serveur ne doit pas effacer
+                // le groupe qui vient d'être créé. On envoie les autres puis
+                // on explique honnêtement le résultat partiel.
+                var invitationFailed = false
+                for memberID in memberIDs {
+                    do {
+                        try await backend.createGroupInvitation(
+                            groupID: groupID,
+                            profileID: memberID,
+                            invitedBy: userID,
+                            kind: .permanent
+                        )
+                    } catch {
+                        invitationFailed = true
+                    }
                 }
                 await backend.deliverPendingPushNotifications()
                 await self?.refreshGroups()
+                guard invitationFailed,
+                      let self,
+                      Self.isMatchingLiveSession(
+                        expectedUserID: userID,
+                        currentUserID: self.liveUserID,
+                        expectedGeneration: generation,
+                        currentGeneration: self.liveSessionGeneration
+                      )
+                else { return }
+                self.backendError = self.tr("Le groupe est créé, mais certaines invitations n'ont pas pu partir.")
             }
             return
         }
@@ -2593,7 +3206,10 @@ final class AppStore: ObservableObject {
     /// Suis-je le leader de ce groupe ? leaderName == nil ⇒ moi (le titre ne
     /// dépend pas de mon nom d'affichage, qui peut changer).
     func isLeader(of group: GroupChat) -> Bool {
-        group.leaderName == nil
+        if let liveUserID, let leaderProfileID = group.leaderProfileID {
+            return liveUserID == leaderProfileID
+        }
+        return group.leaderName == nil
     }
 
     /// Nom affiché du leader (le mien si c'est moi).
@@ -2601,11 +3217,11 @@ final class AppStore: ObservableObject {
         group.leaderName ?? profile.name
     }
 
-    /// Puis-je exercer les pouvoirs de leader ? Être leader ne suffit pas :
-    /// il faut aussi être Premium (un abonnement expiré fait retomber au
-    /// rang de membre — on ne perd pas le titre, juste les commandes).
+    /// Un groupe déjà créé reste administrable même si l'abonnement expire.
+    /// Premium limite la création de groupes supplémentaires, pas la continuité
+    /// opérationnelle du premier groupe gratuit.
     func canLead(_ group: GroupChat) -> Bool {
-        isLeader(of: group) && isPremium
+        isLeader(of: group)
     }
 
     /// Statut Premium d'un membre. En live, c'est le vrai flag serveur
@@ -2623,8 +3239,7 @@ final class AppStore: ObservableObject {
 
     /// Noms de tous les participants du groupe (leader inclus).
     func roster(of group: GroupChat) -> [String] {
-        ([leaderDisplayName(of: group)] + group.memberNames)
-            .filter { !$0.isEmpty }
+        soloistOptions(for: group).map(\.name)
     }
 
     /// Membres utilisables dans l'ordre des solos. L'interface affiche les
@@ -2641,10 +3256,57 @@ final class AppStore: ObservableObject {
         // du serveur possèdent `rosterProfiles`, donc deux homonymes ne sont
         // jamais réassociés au hasard par leur nom d'affichage.
         var seen = Set<UUID>()
-        return roster(of: group).compactMap { name in
+        let legacyNames = ([leaderDisplayName(of: group)] + group.memberNames)
+            .filter { !$0.isEmpty }
+        return legacyNames.compactMap { name in
             guard let id = profileID(for: name), seen.insert(id).inserted else { return nil }
             return SoloistOption(id: id, name: name)
         }
+    }
+
+    /// Identité courante dans un roster. Toutes les vues de présence et de
+    /// membres l'utilisent pour ne jamais confondre deux homonymes.
+    func isCurrentProfile(_ member: SoloistOption) -> Bool {
+        if let liveUserID { return member.id == liveUserID }
+        return member.id == Self.demoCurrentProfileID || member.name == profile.name
+    }
+
+    func currentRosterMember(in group: GroupChat) -> SoloistOption? {
+        soloistOptions(for: group).first(where: isCurrentProfile)
+    }
+
+    func isLeader(_ member: SoloistOption, in group: GroupChat) -> Bool {
+        if let leaderProfileID = group.leaderProfileID {
+            return member.id == leaderProfileID
+        }
+        if let first = group.rosterProfiles?.first {
+            return member.id == first.id
+        }
+        return member.name == leaderDisplayName(of: group)
+    }
+
+    func musician(for member: SoloistOption) -> Musician? {
+        musicians.first(where: { $0.id == member.id })
+    }
+
+    func isPremiumMember(_ member: SoloistOption) -> Bool {
+        isCurrentProfile(member) ? isPremium : musician(for: member)?.isPremium == true
+    }
+
+    func attendanceStatus(for member: SoloistOption, event: GroupEvent) -> AttendanceStatus {
+        event.status(for: member)
+    }
+
+    func availableMembers(for event: GroupEvent, in group: GroupChat) -> [SoloistOption] {
+        soloistOptions(for: group).filter { event.status(for: $0) == .available }
+    }
+
+    func unavailableMembers(for event: GroupEvent, in group: GroupChat) -> [SoloistOption] {
+        soloistOptions(for: group).filter { event.status(for: $0) == .unavailable }
+    }
+
+    func myRole(in group: GroupChat) -> Instrument? {
+        currentRosterMember(in: group).flatMap { group.role(for: $0) }
     }
 
     /// Nom courant d'un UUID de solo, résolu exclusivement dans les membres
@@ -2726,73 +3388,111 @@ final class AppStore: ObservableObject {
     }
 
     /// Permanent ↔ occasionnel — le noyau fixe du groupe.
-    func setMemberKind(_ name: String, _ kind: GroupMemberKind, in group: GroupChat) {
+    func setMemberKind(_ member: SoloistOption, _ kind: GroupMemberKind, in group: GroupChat) {
+        if let backend, isLive {
+            syncLive {
+                try await backend.setMemberKind(member.id, kind, in: group.id)
+                await self.refreshGroups()
+            }
+            return
+        }
         updateGroup(group.id) {
             var kinds = $0.memberKinds ?? [:]
-            kinds[name] = kind
+            kinds[member.name] = kind
             $0.memberKinds = kinds
-        }
-        if let backend, let profileID = profileID(for: name) {
-            syncLive { try await backend.setMemberKind(profileID, kind, in: group.id) }
+            var stableKinds = $0.memberKindsByProfileID ?? [:]
+            stableKinds[member.id.uuidString.lowercased()] = kind
+            $0.memberKindsByProfileID = stableKinds
         }
     }
 
     /// Assigne (ou retire) le rôle/instrument d'un membre dans le groupe.
-    func setMemberRole(_ name: String, _ instrument: Instrument?, in group: GroupChat) {
+    func setMemberRole(_ member: SoloistOption, _ instrument: Instrument?, in group: GroupChat) {
+        if let backend, isLive {
+            syncLive {
+                try await backend.setMemberRole(instrument?.rawValue, for: member.id, in: group.id)
+                await self.refreshGroups()
+            }
+            return
+        }
         updateGroup(group.id) {
             var roles = $0.memberRoles ?? [:]
-            roles[name] = instrument?.rawValue
+            roles[member.name] = instrument?.rawValue
             $0.memberRoles = roles
-        }
-        if let backend, let profileID = profileID(for: name) {
-            syncLive { try await backend.setMemberRole(instrument?.rawValue, for: profileID, in: group.id) }
+            var stableRoles = $0.memberRolesByProfileID ?? [:]
+            stableRoles[member.id.uuidString.lowercased()] = instrument?.rawValue
+            $0.memberRolesByProfileID = stableRoles
         }
     }
 
-    func kickMember(_ name: String, from group: GroupChat) {
-        let removedProfileID = group.rosterProfiles?.first(where: { $0.name == name })?.id
-            ?? profileID(for: name)
+    func kickMember(_ member: SoloistOption, from group: GroupChat) {
+        if let backend, isLive {
+            syncLive {
+                try await backend.kickMember(member.id, from: group.id)
+                await self.refreshGroups()
+            }
+            return
+        }
         updateGroup(group.id) {
-            $0.memberNames.removeAll { $0 == name }
-            $0.memberKinds?[name] = nil
+            if let index = $0.memberNames.firstIndex(of: member.name) {
+                $0.memberNames.remove(at: index)
+            }
+            $0.rosterProfiles?.removeAll { $0.id == member.id }
+            $0.memberKinds?[member.name] = nil
+            $0.memberKindsByProfileID?[member.id.uuidString.lowercased()] = nil
+            $0.memberRolesByProfileID?[member.id.uuidString.lowercased()] = nil
             // Un membre viré ne laisse pas de suggestions orphelines — ni dans
             // le répertoire, ni dans les setlists des événements.
             $0.repertoire = $0.songs.filter { song in
-                let matchesStableID = removedProfileID.map {
-                    UUID(uuidString: song.suggestedBy) == $0
-                } ?? false
+                let matchesStableID = UUID(uuidString: song.suggestedBy) == member.id
                 return song.isApproved
-                    || (song.suggestedBy != name && !matchesStableID)
+                    || (song.suggestedBy != member.name && !matchesStableID)
             }
             $0.events = $0.events?.map { event in
                 var event = event
                 event.setlist.removeAll { song in
-                    let matchesStableID = removedProfileID.map {
-                        UUID(uuidString: song.suggestedBy) == $0
-                    } ?? false
+                    let matchesStableID = UUID(uuidString: song.suggestedBy) == member.id
                     return !song.isApproved
-                        && (song.suggestedBy == name || matchesStableID)
+                        && (song.suggestedBy == member.name || matchesStableID)
                 }
-                event.attendance?[name] = nil
+                event.attendance?[member.name] = nil
+                event.attendanceByProfileID?[member.id.uuidString.lowercased()] = nil
                 return event
             }
         }
-        if let backend, let profileID = removedProfileID {
-            syncLive { try await backend.kickMember(profileID, from: group.id) }
-        }
     }
 
-    /// Transfère le leadership — uniquement vers un membre Premium
-    /// (statut serveur en live, simulation en démo).
-    func transferLeadership(of group: GroupChat, to name: String) {
-        guard isPremiumMusician(name) else { return }
+    /// Transfère le leadership. En live, la RPC serveur décide de façon
+    /// atomique : Premium, ou aucun autre groupe déjà dirigé.
+    func transferLeadership(of group: GroupChat, to member: SoloistOption) {
         if isLive {
-            guard let backend, let profileID = profileID(for: name) else { return }
-            updateGroup(group.id) { $0.leaderName = name }
-            syncLive { try await backend.transferLeadership(of: group.id, to: profileID) }
+            guard let backend,
+                  let expectedUserID = liveUserID
+            else { return }
+            let groupID = group.id
+            let generation = liveSessionGeneration
+            Task { [weak self] in
+                do {
+                    try await backend.transferLeadership(of: groupID, to: member.id)
+                    await self?.refreshGroups()
+                } catch {
+                    guard let self,
+                          Self.isMatchingLiveSession(
+                            expectedUserID: expectedUserID,
+                            currentUserID: self.liveUserID,
+                            expectedGeneration: generation,
+                            currentGeneration: self.liveSessionGeneration
+                    )
+                    else { return }
+                    self.backendError = self.tr("Le leadership n'a pas pu être transféré.")
+                }
+            }
             return
         }
-        updateGroup(group.id) { $0.leaderName = name }
+        updateGroup(group.id) {
+            $0.leaderName = member.name
+            $0.leaderProfileID = member.id
+        }
     }
 
     // MARK: Répertoire (leader valide, membres suggèrent)
@@ -3601,11 +4301,27 @@ final class AppStore: ObservableObject {
     /// leur setlist et leur feuille de présence.
     func addEvents(_ events: [GroupEvent], to group: GroupChat) {
         guard !events.isEmpty else { return }
+        if events.count > 1 && !canUse(.recurringEvents) {
+            showPaywall = true
+            return
+        }
+        if events.contains(where: { $0.reminderLead != GroupEvent.defaultReminderLeadDays })
+            && !canUse(.configurableReminders) {
+            showPaywall = true
+            return
+        }
         let leader = leaderDisplayName(of: group)
+        let leaderMember = soloistOptions(for: group).first { isLeader($0, in: group) }
         // Le leader confirme sa présence d'office ; les autres restent en attente.
         let prepared = events.map { event -> GroupEvent in
             var copy = event
+            copy.privateLocationState = copy.exactAddress?.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty == false ? .available : .absent
             copy.attendance = [leader: .available]
+            if let leaderMember {
+                copy.attendanceByProfileID = [leaderMember.id.uuidString.lowercased(): .available]
+            }
             return copy
         }
         updateGroup(group.id) {
@@ -3615,10 +4331,27 @@ final class AppStore: ObservableObject {
         // Une seule passe, plafonnée : programmer un rappel par occurrence
         // ferait 52 notifications pour une répétition hebdomadaire.
         rescheduleAllAttendanceNotifications()
-        if let backend, isLive {
-            syncLive {
-                try await backend.createEvents(prepared, groupID: group.id)
-                await backend.deliverPendingPushNotifications()
+        if let backend, isLive, let userID = liveUserID {
+            let eventIDs = Set(prepared.map(\.id))
+            let groupID = group.id
+            let generation = liveSessionGeneration
+            Task { [weak self] in
+                do {
+                    try await backend.createEvents(prepared, groupID: groupID)
+                    await backend.deliverPendingPushNotifications()
+                } catch {
+                    guard let self, Self.isMatchingLiveSession(
+                        expectedUserID: userID,
+                        currentUserID: self.liveUserID,
+                        expectedGeneration: generation,
+                        currentGeneration: self.liveSessionGeneration
+                    ) else { return }
+                    self.updateGroup(groupID) {
+                        $0.events?.removeAll { eventIDs.contains($0.id) }
+                    }
+                    self.rescheduleAllAttendanceNotifications()
+                    self.backendError = self.tr("Les dates n'ont pas pu être créées sur le serveur.")
+                }
             }
         }
     }
@@ -3647,6 +4380,7 @@ final class AppStore: ObservableObject {
         date: Date,
         title: String,
         venue: String,
+        exactAddressMutation: ExactAddressMutation,
         scope: EventEditScope
     ) {
         guard canLead(group) else { return }
@@ -3688,11 +4422,28 @@ final class AppStore: ObservableObject {
             copy.date = target
             copy.title = title
             copy.venue = venue
+            // Preserve garde la valeur propre de chaque occurrence. Seules
+            // les intentions explicites replace/clear changent l'état local.
+            switch exactAddressMutation {
+            case .preserve:
+                break
+            case let .replace(address):
+                copy.exactAddress = address
+                copy.privateLocationState = .available
+            case .clear:
+                copy.exactAddress = nil
+                copy.privateLocationState = .absent
+            }
             if movedToAnotherDay {
                 dayChanged.append(occurrence.id)
                 // On repart d'une feuille de présence vierge — sauf le leader,
                 // qui vient de choisir la date.
                 copy.attendance = [leader: .available]
+                if let leaderMember = soloistOptions(for: group).first(where: { isLeader($0, in: group) }) {
+                    copy.attendanceByProfileID = [leaderMember.id.uuidString.lowercased(): .available]
+                } else {
+                    copy.attendanceByProfileID = nil
+                }
             }
             updated.append(copy)
         }
@@ -3713,9 +4464,13 @@ final class AppStore: ObservableObject {
         let anchorID = updated.first?.id ?? event.id
         let count = updated.count
         let resetIDs = dayChanged
-        let leaderID = profileID(for: leader)
+        let leaderID = soloistOptions(for: group).first(where: { isLeader($0, in: group) })?.id
         syncLive {
-            try await backend.updateEventSchedules(updated, groupID: groupID)
+            try await backend.updateEventSchedules(
+                updated,
+                groupID: groupID,
+                exactAddressMutation: exactAddressMutation
+            )
             if !resetIDs.isEmpty, let leaderID {
                 try await backend.resetAttendance(eventIDs: resetIDs, keeping: leaderID)
             }
@@ -3749,6 +4504,10 @@ final class AppStore: ObservableObject {
     /// est synchronisé : chaque appareil replanifiera son rappel local.
     func setReminderLead(_ days: Int, forEventID eventID: GroupEvent.ID, in groupID: GroupChat.ID) {
         guard let group = groups.first(where: { $0.id == groupID }), canLead(group) else { return }
+        guard canUse(.configurableReminders) else {
+            showPaywall = true
+            return
+        }
         updateGroup(groupID) { group in
             guard let index = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
             group.events?[index].reminderLeadDays = days
@@ -3756,8 +4515,8 @@ final class AppStore: ObservableObject {
         if let group = groups.first(where: { $0.id == groupID }),
            let event = group.allEvents.first(where: { $0.id == eventID }) {
             scheduleMyEventReminder(for: event, in: group)
-            for name in event.unavailableNames {
-                scheduleUnavailableAlert(for: event, member: name, in: group)
+            for member in unavailableMembers(for: event, in: group) {
+                scheduleUnavailableAlert(for: event, member: member, in: group)
             }
         }
         if let backend, isLive {
@@ -3793,24 +4552,29 @@ final class AppStore: ObservableObject {
     /// Confirme ou refuse sa présence à un événement — un tap.
     func setAttendance(
         _ status: AttendanceStatus,
-        for name: String? = nil,
+        for explicitMember: SoloistOption? = nil,
         eventID: GroupEvent.ID,
         in groupID: GroupChat.ID
     ) {
-        let member = name ?? profile.name
+        guard let sourceGroup = groups.first(where: { $0.id == groupID }) else { return }
+        let member = explicitMember ?? currentRosterMember(in: sourceGroup)
+        guard let member else { return }
         guard status == .available || status == .unavailable else { return }
         updateGroup(groupID) { group in
             guard let index = group.events?.firstIndex(where: { $0.id == eventID }) else { return }
             var attendance = group.events?[index].attendance ?? [:]
-            attendance[member] = status
+            attendance[member.name] = status
             group.events?[index].attendance = attendance
+            var stableAttendance = group.events?[index].attendanceByProfileID ?? [:]
+            stableAttendance[member.id.uuidString.lowercased()] = status
+            group.events?[index].attendanceByProfileID = stableAttendance
         }
         guard let group = groups.first(where: { $0.id == groupID }),
               let event = group.allEvents.first(where: { $0.id == eventID })
         else { return }
 
         // Mon rappel change de ton (confirmation → simple rappel) ou disparaît.
-        if member == profile.name {
+        if isCurrentProfile(member) {
             scheduleMyEventReminder(for: event, in: group)
         }
         if status == .unavailable {
@@ -3819,8 +4583,8 @@ final class AppStore: ObservableObject {
             cancelNotification(id: Self.unavailableAlertID(eventID: eventID, member: member))
         }
 
-        if let backend, isLive, let profileID = profileID(for: member) {
-            syncLive { try await backend.setAttendance(status, eventID: eventID, profileID: profileID) }
+        if let backend, isLive {
+            syncLive { try await backend.setAttendance(status, eventID: eventID, profileID: member.id) }
         }
     }
 
@@ -3840,7 +4604,9 @@ final class AppStore: ObservableObject {
 
     /// Membres encore sans réponse pour un événement.
     func pendingAttendance(for event: GroupEvent, in group: GroupChat) -> [String] {
-        roster(of: group).filter { event.status(for: $0) == .pending }
+        soloistOptions(for: group)
+            .filter { event.status(for: $0) == .pending }
+            .map(\.name)
     }
 
     /// Musiciens hors groupe déjà marqués dispo ce jour-là — candidats
@@ -3859,7 +4625,12 @@ final class AppStore: ObservableObject {
             inviteMember(musician.name, to: group, kind: .occasional)
         }
         // Pré-marque dispo (il a indiqué sa dispo sur le calendrier).
-        setAttendance(.available, for: musician.name, eventID: event.id, in: group.id)
+        setAttendance(
+            .available,
+            for: SoloistOption(id: musician.id, name: musician.name),
+            eventID: event.id,
+            in: group.id
+        )
 
         let conversation = await conversation(with: musician)
         let dateLabel = event.date.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
@@ -3887,8 +4658,8 @@ final class AppStore: ObservableObject {
         "event.\(eventID.uuidString)"
     }
 
-    private static func unavailableAlertID(eventID: UUID, member: String) -> String {
-        "unavailable.\(eventID.uuidString).\(member)"
+    private static func unavailableAlertID(eventID: UUID, member: SoloistOption) -> String {
+        "unavailable.\(eventID.uuidString).\(member.id.uuidString.lowercased())"
     }
 
     /// Mon rappel pour un événement : « confirme ta présence » tant que je
@@ -3901,7 +4672,8 @@ final class AppStore: ObservableObject {
         let when = event.date.addingTimeInterval(-Double(event.reminderLead) * 24 * 3600)
         let dateLabel = event.date.formatted(.dateTime.weekday(.wide).day().month().hour().minute())
         let body: String
-        switch event.status(for: profile.name) {
+        let myStatus = currentRosterMember(in: group).map { event.status(for: $0) } ?? .pending
+        switch myStatus {
         case .pending:
             body = String(
                 format: tr("Confirmes-tu ta présence pour « %@ » le %@ ?"),
@@ -3926,18 +4698,18 @@ final class AppStore: ObservableObject {
     /// du leader, qui voit les réponses arriver en temps réel.
     private func scheduleUnavailableAlert(
         for event: GroupEvent,
-        member: String,
+        member: SoloistOption,
         in group: GroupChat
     ) {
         let id = Self.unavailableAlertID(eventID: event.id, member: member)
         cancelNotification(id: id)
-        guard isLeader(of: group), member != profile.name, event.date > Date() else { return }
+        guard isLeader(of: group), !isCurrentProfile(member), event.date > Date() else { return }
         let when = event.date.addingTimeInterval(-Double(event.reminderLead) * 24 * 3600)
         pushLocal(
             title: String(format: tr("⚠️ Remplaçant pour %@"), group.name),
             body: String(
                 format: tr("%@ est indispo pour « %@ » — trouve un remplaçant."),
-                member, event.title
+                member.name, event.title
             ),
             identifier: id,
             at: when,
@@ -3982,9 +4754,9 @@ final class AppStore: ObservableObject {
         for entry in upcoming.prefix(Self.maxScheduledEventReminders) {
             scheduleMyEventReminder(for: entry.event, in: entry.group)
             keep.insert(Self.eventReminderID(eventID: entry.event.id))
-            for name in entry.event.unavailableNames {
-                scheduleUnavailableAlert(for: entry.event, member: name, in: entry.group)
-                keep.insert(Self.unavailableAlertID(eventID: entry.event.id, member: name))
+            for member in unavailableMembers(for: entry.event, in: entry.group) {
+                scheduleUnavailableAlert(for: entry.event, member: member, in: entry.group)
+                keep.insert(Self.unavailableAlertID(eventID: entry.event.id, member: member))
             }
         }
         pruneEventNotifications(keeping: keep)
@@ -4463,6 +5235,7 @@ final class AppStore: ObservableObject {
         instrument: Instrument,
         date: Date,
         place: String,
+        exactAddress: String? = nil,
         neighborhood: String? = nil,
         fee: Int?,
         paymentMethod: String?,
@@ -4470,6 +5243,7 @@ final class AppStore: ObservableObject {
     ) {
         let trimmedPlace = place.trimmingCharacters(in: .whitespacesAndNewlines)
         let town = (neighborhood ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedExactAddress = exactAddress?.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = GigRequest(
             title: String(format: tr("Dépannage — %@"), tr(instrument.rawValue)),
             hostName: profile.name,
@@ -4477,6 +5251,8 @@ final class AppStore: ObservableObject {
             date: date,
             place: trimmedPlace.isEmpty ? tr("À préciser") : trimmedPlace,
             neighborhood: town.isEmpty ? profile.cityLabel : town,
+            exactAddress: trimmedExactAddress,
+            privateLocationState: trimmedExactAddress?.isEmpty == false ? .available : .absent,
             genre: profile.genres.first ?? musician.genres.first ?? .jazz,
             wantedInstruments: [instrument],
             fee: fee,
@@ -4493,7 +5269,7 @@ final class AppStore: ObservableObject {
     // MARK: - Médias du profil (photo + vidéos de démo)
 
     /// Nombre maximum de vidéos de démo selon l'abonnement.
-    var videoLimit: Int { isPremium ? 6 : 1 }
+    var videoLimit: Int { canUse(.expandedPortfolio) ? 6 : 1 }
     var canAddVideo: Bool { profile.videos.count < videoLimit }
     /// true pendant la compression + l'envoi d'une vidéo au serveur.
     @Published private(set) var videoUploadInProgress = false
@@ -5262,12 +6038,26 @@ final class AppStore: ObservableObject {
         events.sort { $0.date < $1.date }
         persistEvents()
         if let backend, let userID = liveUserID {
-            Task {
+            let generation = liveSessionGeneration
+            Task { [weak self] in
                 do {
                     try await backend.createGig(event, hostID: userID)
                     await backend.deliverPendingPushNotifications()
+                } catch {
+                    // `createGig` supprime déjà la ligne si l'écriture de
+                    // l'adresse privée échoue ; ce second passage couvre aussi
+                    // une interruption juste avant son rollback.
+                    try? await backend.deleteGig(event.id)
+                    guard let self, Self.isMatchingLiveSession(
+                        expectedUserID: userID,
+                        currentUserID: self.liveUserID,
+                        expectedGeneration: generation,
+                        currentGeneration: self.liveSessionGeneration
+                    ) else { return }
+                    self.events.removeAll { $0.id == event.id }
+                    self.persistEvents()
+                    self.backendError = self.tr("L'annonce n'a pas pu être publiée sur le serveur.")
                 }
-                catch { backendError = tr("L'annonce n'a pas pu être publiée sur le serveur.") }
             }
         }
     }
@@ -5656,14 +6446,22 @@ final class AppStore: ObservableObject {
     /// l'onglet Agenda, et le premier bloc de la page.
     var agendaToConfirm: [AgendaItem] {
         agenda.filter { item in
-            guard case .group(_, _, _, let event) = item.source else { return false }
-            return event.status(for: profile.name) == .pending
+            guard case .group(let groupID, _, _, let event) = item.source,
+                  let group = groups.first(where: { $0.id == groupID }),
+                  let me = currentRosterMember(in: group)
+            else { return false }
+            return event.status(for: me) == .pending
         }
     }
 
     /// Mon statut de présence sur une date de groupe.
     func myAttendance(for event: GroupEvent) -> AttendanceStatus {
-        event.status(for: profile.name)
+        guard let group = groups.first(where: { group in
+            group.allEvents.contains(where: { $0.id == event.id })
+        }), let me = currentRosterMember(in: group) else {
+            return event.status(for: profile.name)
+        }
+        return event.status(for: me)
     }
 
     /// La prochaine chose qui m'attend, quelle qu'elle soit.
@@ -5679,7 +6477,7 @@ final class AppStore: ObservableObject {
         for group in groups {
             for event in group.allEvents
             where event.date <= now && event.date >= floor
-                && event.status(for: profile.name) != .unavailable {
+                && (currentRosterMember(in: group).map { event.status(for: $0) } ?? .pending) != .unavailable {
                 items.append(
                     AgendaItem(
                         source: .group(
@@ -5708,11 +6506,22 @@ final class AppStore: ObservableObject {
 
     /// L'état du line-up : complet (vert), en retard (rouge), ou en cours.
     func lineupState(_ event: GroupEvent, in group: GroupChat) -> LineupState {
-        group.lineupState(
-            for: event,
-            roster: roster(of: group),
-            replacements: replacements(for: event)
+        let roster = soloistOptions(for: group)
+        let roles = Set(roster.compactMap { group.role(for: $0) })
+        let replacementRoles = Set(replacements(for: event))
+        let availableRoles = Set(
+            roster.compactMap { member in
+                event.status(for: member) == .available ? group.role(for: member) : nil
+            }
         )
+        let complete: Bool
+        if roles.isEmpty {
+            complete = !roster.isEmpty && roster.allSatisfy { event.status(for: $0) == .available }
+        } else {
+            complete = roles.subtracting(availableRoles.union(replacementRoles)).isEmpty
+        }
+        if complete { return .complete }
+        return event.timeLeftToConfirm() == nil ? .late : .forming
     }
 
     /// Le line-up de l'événement est-il complet (tout le monde est là, ou
@@ -5723,7 +6532,20 @@ final class AppStore: ObservableObject {
 
     /// Postes encore à trouver pour cet événement (remplaçants compris).
     func missingRoles(_ event: GroupEvent, in group: GroupChat) -> [Instrument] {
-        group.missingRoles(for: event, replacements: replacements(for: event))
+        let roster = soloistOptions(for: group)
+        let roles = Set(roster.compactMap { group.role(for: $0) })
+        let available = Set(
+            roster.compactMap { member in
+                event.status(for: member) == .available ? group.role(for: member) : nil
+            }
+        )
+        return roles
+            .subtracting(available.union(Set(replacements(for: event))))
+            .sorted { $0.rawValue < $1.rawValue }
+    }
+
+    func availableNames(for event: GroupEvent, in group: GroupChat) -> [String] {
+        availableMembers(for: event, in: group).map(\.name)
     }
 
     /// Les SOS publiés pour cet événement de groupe — le leader les gère

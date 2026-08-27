@@ -173,9 +173,7 @@ struct SearchMusicianRow: View {
                             ForEach(musician.instruments.prefix(4)) { instrument in
                                 InstrumentChip(
                                     instrument: instrument,
-                                    level: store.isPremium
-                                        ? (musician.level(for: instrument) ?? musician.level)
-                                        : nil
+                                    level: musician.level(for: instrument) ?? musician.level
                                 )
                             }
                             if musician.instruments.count > 4 {

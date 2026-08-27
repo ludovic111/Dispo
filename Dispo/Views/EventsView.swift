@@ -121,24 +121,15 @@ struct EventsView: View {
                 iconColor: JC.signal
             )
         }
-        // Les annonces fraîches (< 30 min) sont en avant-première Premium :
-        // les non-abonnés voient le cachet mais pas le lieu — la minuterie
-        // rend l'avantage Premium concret.
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            VStack(spacing: 18) {
-                ForEach(feed) { event in
-                    if event.isEarlyAccess(now: context.date) && !store.isPremium {
-                        Button { store.showPaywall = true } label: {
-                            LockedEventCard(event: event, now: context.date)
-                        }
-                        .buttonStyle(PressableStyle())
-                    } else {
-                        NavigationLink(value: event) {
-                            EventCard(event: event, isNew: store.isUnseenGig(event))
-                        }
-                        .buttonStyle(PressableStyle())
-                    }
+        // Tous les musiciens voient les SOS au même moment. Premium vend des
+        // outils d'organisation, jamais une priorité artificielle sur un
+        // cachet ni un avantage qui assèche le réseau gratuit.
+        VStack(spacing: 18) {
+            ForEach(feed) { event in
+                NavigationLink(value: event) {
+                    EventCard(event: event, isNew: store.isUnseenGig(event))
                 }
+                .buttonStyle(PressableStyle())
             }
         }
     }
@@ -714,104 +705,6 @@ struct EventCard: View {
     }
 }
 
-/// Annonce en avant-première Premium : cachet et instrument visibles (le
-/// teasing), titre et lieu masqués jusqu'à la fin de la minuterie.
-struct LockedEventCard: View {
-    @EnvironmentObject private var store: AppStore
-    let event: GigRequest
-    let now: Date
-
-    /// Minutes restantes avant l'ouverture à tous (arrondi supérieur).
-    private var remainingMinutes: Int {
-        guard let end = event.earlyAccessEnd else { return 0 }
-        return max(1, Int((end.timeIntervalSince(now) / 60).rounded(.up)))
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(JC.billetSignal)
-                            .frame(width: 7, height: 7)
-                        Text(LocalizedStringKey(event.genre.rawValue))
-                            .font(JCFont.monoBold(9))
-                            .textCase(.uppercase)
-                            .tracking(1.4)
-                            .foregroundStyle(JC.billetSignal)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        TagView(text: "Nouveau", color: JC.billetLaiton)
-                    }
-                    Text("Nouveau SOS \(store.tr(event.genre.rawValue))")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(JC.billetInk)
-                        .lineLimit(1)
-                    Label("Lieu révélé aux membres Premium", systemImage: "mappin.slash")
-                        .font(.caption)
-                        .foregroundStyle(JC.billetInk.opacity(0.62))
-                        .lineLimit(1)
-                    FlowLayout(spacing: 5) {
-                        Text("Cherche")
-                            .font(JCFont.mono(9))
-                            .textCase(.uppercase)
-                            .tracking(1)
-                            .foregroundStyle(JC.billetInk.opacity(0.45))
-                        ForEach(event.wantedInstruments.prefix(3)) { instrument in
-                            TagView(text: instrument.rawValue, color: JC.billetBronze)
-                        }
-                        if event.wantedInstruments.count > 3 {
-                            TagView(text: "+\(event.wantedInstruments.count - 3)", color: JC.billetBronze)
-                        }
-                    }
-                }
-                .padding(13)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(JC.billetPaper)
-
-                // Talon verrouillé — le pass backstage garde la date.
-                VStack(spacing: 4) {
-                    Image(systemName: "lock.fill")
-                        .font(.subheadline.weight(.bold))
-                    Text(event.date.formatted(.dateTime.day()))
-                        .font(JCFont.display(22))
-                    Text(event.date.formatted(.dateTime.month(.abbreviated)))
-                        .font(JCFont.monoBold(10))
-                        .textCase(.uppercase)
-                        .tracking(1.2)
-                }
-                .foregroundStyle(JC.billetPaper)
-                .frame(width: 74)
-                .frame(maxHeight: .infinity)
-                .background(JC.premium)
-                .overlay(alignment: .leading) { PerforationLine().padding(.vertical, 4) }
-            }
-            .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 6) {
-                Image(systemName: "crown.fill")
-                    .font(.caption2.weight(.bold))
-                Text("En avant-première Premium · ouvert à tous dans \(remainingMinutes) min")
-                    .font(.caption2.weight(.bold))
-                Spacer(minLength: 0)
-                Text("Débloquer")
-                    .font(.caption2.weight(.heavy))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(JC.billetInk.opacity(0.88), in: Capsule())
-                    .foregroundStyle(JC.laiton)
-            }
-            .foregroundStyle(JC.billetPaper)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(JC.premium)
-        }
-        .clipShape(TicketShape(cornerRadius: 18, notchFromTrailing: 74), style: FillStyle(eoFill: true))
-        .shadow(color: .black.opacity(0.28), radius: 12, x: 0, y: 7)
-    }
-}
-
 struct EventDetailView: View {
     @EnvironmentObject private var store: AppStore
     let eventID: GigRequest.ID
@@ -862,7 +755,7 @@ struct EventDetailView: View {
                         JCCard {
                             VStack(alignment: .leading, spacing: 11) {
                                 Label(event.date.formatted(date: .complete, time: .shortened), systemImage: "calendar")
-                                Label("\(event.place) · \(event.neighborhood)", systemImage: "mappin.and.ellipse")
+                                Label("\(event.place) · \(event.neighborhood)", systemImage: "map")
                                 Label("\(store.tr(event.genre.rawValue)) — \(event.genre.codes.map { store.tr($0) }.joined(separator: ", "))", systemImage: "music.quarternote.3")
                                 // Le serveur ne renvoie le cachet qu'aux
                                 // professionnels : pour les autres, la ligne
@@ -881,8 +774,9 @@ struct EventDetailView: View {
                             .font(.subheadline)
                         }
 
-                        // Le lieu sur la carte — géocodé à la volée.
-                        GigPlaceMapCard(event: event)
+                        // Le rendez-vous précis vient d'une RPC privée : le
+                        // serveur ne le renvoie qu'aux personnes autorisées.
+                        GigPrivateLocationCard(event: event)
 
                         JCCard {
                             VStack(alignment: .leading, spacing: 10) {
@@ -1124,42 +1018,55 @@ struct EventDetailView: View {
     }
 }
 
-// MARK: - Carte du lieu du SOS
+// MARK: - Rendez-vous privé du SOS
 
-/// Mini-carte du lieu du concert, géocodée depuis « salle · quartier ».
-/// Un tap ouvre Plans pour l'itinéraire. Invisible si le lieu est
-/// introuvable — jamais de fausse épingle.
-struct GigPlaceMapCard: View {
+/// Adresse et itinéraire ne sont jamais déduits du libellé public. La présence
+/// de `exactAddress` est la preuve que la RLS a autorisé ce compte.
+struct GigPrivateLocationCard: View {
     let event: GigRequest
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var lookupDone = false
 
-    private var query: String {
-        "\(event.place), \(event.neighborhood)"
-    }
-
     var body: some View {
-        Group {
-            if let coordinate {
-                JCCard(padding: 0) {
-                    VStack(spacing: 0) {
+        JCCard(padding: event.resolvedPrivateLocationState == .available ? 0 : 14) {
+            if let exactAddress = event.exactAddress,
+               event.resolvedPrivateLocationState == .available {
+                VStack(spacing: 0) {
+                    HStack(alignment: .top, spacing: 11) {
+                        Image(systemName: "lock.open.fill")
+                            .foregroundStyle(JC.feutrine)
+                            .frame(width: 24, height: 24)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Rendez-vous privé")
+                                .font(.subheadline.weight(.heavy))
+                            Text(verbatim: exactAddress)
+                                .font(.subheadline)
+                            Text("Partagé uniquement avec l'organisateur et les personnes acceptées.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(14)
+
+                    if let coordinate {
                         Map(initialPosition: .region(MKCoordinateRegion(
                             center: coordinate,
                             span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
                         ))) {
-                            Marker(event.place, systemImage: "music.mic", coordinate: coordinate)
+                            Marker("Rendez-vous", systemImage: "music.mic", coordinate: coordinate)
                                 .tint(JC.signal)
                         }
                         .frame(height: 150)
                         .allowsHitTesting(false)
 
                         Button {
-                            openInMaps(coordinate)
+                            openInMaps(coordinate, address: exactAddress)
                         } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: "arrow.triangle.turn.up.right.circle.fill")
                                     .font(.subheadline.weight(.bold))
-                                Text("Itinéraire vers \(event.place)")
+                                Text("Ouvrir l'itinéraire")
                                     .font(.caption.weight(.bold))
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
@@ -1173,20 +1080,69 @@ struct GigPlaceMapCard: View {
                         .buttonStyle(PressableStyle())
                     }
                 }
+            } else {
+                HStack(alignment: .top, spacing: 11) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .fill(JC.feutrine.opacity(0.12))
+                            .frame(width: 38, height: 38)
+                        Image(systemName: protectedSymbol)
+                            .foregroundStyle(JC.feutrine)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(LocalizedStringKey(protectedTitle))
+                            .font(.subheadline.weight(.heavy))
+                        Text(LocalizedStringKey(protectedMessage))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
             }
         }
-        .task(id: event.id) {
+        .task(id: event.exactAddress) {
             guard !lookupDone else { return }
             lookupDone = true
-            let placemarks = try? await CLGeocoder().geocodeAddressString(query)
+            guard event.resolvedPrivateLocationState == .available,
+                  let exactAddress = event.exactAddress else { return }
+            let placemarks = try? await CLGeocoder().geocodeAddressString(
+                "\(exactAddress), \(event.neighborhood)"
+            )
             coordinate = placemarks?.first?.location?.coordinate
         }
     }
 
-    private func openInMaps(_ coordinate: CLLocationCoordinate2D) {
+    private var protectedTitle: String {
+        switch event.resolvedPrivateLocationState {
+        case .unknown: return "Adresse privée non chargée"
+        case .absent: return "Aucune adresse privée"
+        case .restricted, .available: return "Adresse protégée"
+        }
+    }
+
+    private var protectedMessage: String {
+        switch event.resolvedPrivateLocationState {
+        case .unknown:
+            return "Le chargement a échoué. L'adresse serveur n'a pas été modifiée."
+        case .absent:
+            return "Aucune adresse privée n'a encore été renseignée."
+        case .restricted:
+            return "Elle apparaîtra ici si ta candidature ou ta demande est acceptée."
+        case .available:
+            return "Partagée uniquement avec les personnes autorisées."
+        }
+    }
+
+    private var protectedSymbol: String {
+        event.resolvedPrivateLocationState == .unknown
+            ? "exclamationmark.arrow.triangle.2.circlepath"
+            : "lock.shield.fill"
+    }
+
+    private func openInMaps(_ coordinate: CLLocationCoordinate2D, address: String) {
         let placemark = MKPlacemark(coordinate: coordinate)
         let item = MKMapItem(placemark: placemark)
-        item.name = event.place
+        item.name = address
         item.openInMaps()
     }
 }

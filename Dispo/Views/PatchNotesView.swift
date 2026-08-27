@@ -11,6 +11,19 @@ struct PatchNote: Identifiable {
     /// chaque mise à jour (et penser à bumper MARKETING_VERSION).
     static let all: [PatchNote] = [
         PatchNote(
+            version: "2.4",
+            title: "Ton école, ta communauté, tes lieux protégés",
+            points: [
+                "Ajoute AMR Genève, EPI Genève ou HEM Genève à ton profil avec ton rôle et sa visibilité",
+                "Retrouve les membres de ton école et échange dans sa conversation réservée",
+                "Les affiliations restent déclaratives tant que l'établissement ne les a pas vérifiées",
+                "L'adresse exacte d'un SOS n'apparaît qu'à l'organisateur et aux musiciens acceptés",
+                "Pour un événement de groupe, seuls le leader et les participants confirmés voient le rendez-vous exact",
+                "Le premier groupe dirigé reste gratuit ; Premium débloque l'organisation avancée et les groupes supplémentaires",
+                "Premium ne cache plus les niveaux, ne retarde plus les SOS et ne vend jamais une fonction de sécurité"
+            ]
+        ),
+        PatchNote(
             version: "2.3",
             title: "Tes échanges, vraiment sous contrôle",
             points: [
@@ -389,7 +402,7 @@ struct PatchNote: Identifiable {
             points: [
                 "Recentrage 100 % dépannage concert — l'onglet Groupes s'en va",
                 "Dispo par vraies dates cochées au calendrier",
-                "Avant-première Premium visible (SOS verrouillés 30 min)",
+                "Annonces SOS visibles au même moment par tout le réseau",
                 "Compte e-mail + mot de passe, serveur en Suisse"
             ]
         ),

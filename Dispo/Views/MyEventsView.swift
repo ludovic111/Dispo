@@ -346,7 +346,7 @@ struct AgendaRow: View {
                 TagView(text: recurrence.shortLabel, color: JC.feutrine)
             }
             if let group = store.groups.first(where: { $0.id == groupID }),
-               let role = group.role(for: store.profile.name) {
+               let role = store.myRole(in: group) {
                 TagView(text: role.rawValue, color: JC.laiton)
             }
             if isPast {
@@ -354,8 +354,10 @@ struct AgendaRow: View {
                 if songs > 0 {
                     TagView(text: "\(songs) morceaux", color: JC.bronze)
                 }
-                if !event.availableNames.isEmpty {
-                    TagView(text: "\(event.availableNames.count) présent·es", color: JC.feutrine)
+                let availableCount = store.groups.first(where: { $0.id == groupID })
+                    .map { store.availableNames(for: event, in: $0).count } ?? 0
+                if availableCount > 0 {
+                    TagView(text: "\(availableCount) présent·es", color: JC.feutrine)
                 }
             }
         case .playing(let gig):
@@ -509,7 +511,7 @@ struct NextDateCard: View {
                 Image(systemName: "person.2.fill")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.secondary)
-                Text("Présence : \(event.availableNames.count)/\(store.roster(of: group).count)")
+                Text("Présence : \(store.availableNames(for: event, in: group).count)/\(store.roster(of: group).count)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }

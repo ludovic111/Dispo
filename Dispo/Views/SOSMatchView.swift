@@ -194,14 +194,12 @@ struct SOSMatchRow: View {
                         .lineLimit(1)
                     if match.musician.isDemo { DemoAccountBadge() }
                 }
-                // Le niveau ne s'affiche qu'en Premium ; le badge de relation
-                // vit sur la 2e ligne pour ne jamais écraser la 1re.
+                // Niveau et relation vivent sur la 2e ligne pour ne jamais
+                // écraser le nom. Le niveau aide tout le monde à choisir.
                 HStack(spacing: 6) {
                     SocialLinkBadge(link: store.socialLink(with: match.musician.name))
                         .fixedSize()
-                    Text(store.isPremium
-                         ? LocalizedStringKey("\(matchedInstruments) · \(store.tr(match.musician.level.label))")
-                         : LocalizedStringKey(matchedInstruments))
+                    Text(LocalizedStringKey("\(matchedInstruments) · \(store.tr(match.musician.level.label))"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
