@@ -1,4 +1,4 @@
--- Tests transactionnels v35-v40. A executer uniquement sur la base locale :
+-- Tests transactionnels v35-v43. A executer uniquement sur la base locale :
 --   docker exec -i supabase_db_dispo \
 --     psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
 --     < supabase/tests/database/v35_v38_school_location_premium_rls.test.sql
@@ -338,13 +338,23 @@ do $$
 begin
   begin
     update public.music_groups
-    set auto_sos_enabled = true, auto_sos_min_level = null
+    set name = 'Nom qui doit rollback',
+        auto_sos_enabled = true,
+        auto_sos_min_level = null
     where id = '10000000-0000-4000-8000-000000000001';
     raise exception 'Non-Premium auto-SOS unexpectedly accepted';
   exception
     when sqlstate '42501' then
       if sqlerrm <> 'premium_required_for_auto_sos' then raise; end if;
   end;
+  if not exists (
+    select 1 from public.music_groups
+    where id = '10000000-0000-4000-8000-000000000001'
+      and name = 'Premier groupe gratuit'
+      and not auto_sos_enabled
+  ) then
+    raise exception 'Rejected free auto-SOS left partial group settings';
+  end if;
 end;
 $$;
 set local role postgres;
@@ -579,6 +589,137 @@ begin
 end;
 $$;
 
+-- v41 inclut maintenant le rappel dans la meme transaction que le noyau et
+-- l'adresse. Le trigger Premium doit donc rollbacker TOUT le payload gratuit.
+do $$
+begin
+  begin
+    perform public.save_group_events_with_locations(
+      '10000000-0000-4000-8000-000000000001',
+      jsonb_build_array(jsonb_build_object(
+        'id', '30000000-0000-4000-8000-000000000001',
+        'kind', 'Répétition',
+        'title', 'Edition gratuite a rollback',
+        'public_location_label', 'Adresse publique a rollback',
+        'date', (
+          select to_jsonb(e.date) from public.group_events e
+          where e.id = '30000000-0000-4000-8000-000000000001'
+        ),
+        'reminder_lead_days', 7,
+        'exact_address', 'Adresse exacte a rollback',
+        'clear_exact_address', false,
+        'clear_reminder', false
+      )),
+      'update'
+    );
+    raise exception 'Non-Premium atomic reminder update unexpectedly succeeded';
+  exception
+    when sqlstate '42501' then
+      if sqlerrm <> 'premium_required_for_configurable_reminders' then raise; end if;
+  end;
+
+  if not exists (
+    select 1 from public.group_events e
+    where e.id = '30000000-0000-4000-8000-000000000001'
+      and e.title = 'Evenement adresse test'
+      and e.public_location_label = 'Carouge preserve'
+      and e.reminder_lead_days is null
+  ) then
+    raise exception 'Rejected free reminder left a partial public update';
+  end if;
+  if not exists (
+    select 1 from public.get_group_event_location(
+      '30000000-0000-4000-8000-000000000001'
+    ) where exact_address = 'Route ultra secrete 7'
+  ) then
+    raise exception 'Rejected free reminder changed the private address';
+  end if;
+end;
+$$;
+
+-- Le meme payload reussit pour un Premium canonique et persiste les trois
+-- dimensions ensemble. Le droit est ensuite revoque pour la suite du test.
+set local role service_role;
+select public.apply_revenuecat_premium_state(
+  '00000000-0000-4000-8000-0000000000a1', true,
+  '2099-01-01T00:00:00Z'::timestamptz
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+select public.save_group_events_with_locations(
+  '10000000-0000-4000-8000-000000000001',
+  jsonb_build_array(jsonb_build_object(
+    'id', '30000000-0000-4000-8000-000000000001',
+    'kind', 'Répétition',
+    'title', 'Edition Premium atomique',
+    'public_location_label', 'Carouge Premium',
+    'date', (
+      select to_jsonb(e.date) from public.group_events e
+      where e.id = '30000000-0000-4000-8000-000000000001'
+    ),
+    'reminder_lead_days', 7,
+    'exact_address', 'Route Premium 7',
+    'clear_exact_address', false,
+    'clear_reminder', false
+  )),
+  'update'
+);
+do $$
+begin
+  if not exists (
+    select 1 from public.group_events e
+    cross join lateral public.get_group_event_location(e.id) l
+    where e.id = '30000000-0000-4000-8000-000000000001'
+      and e.title = 'Edition Premium atomique'
+      and e.public_location_label = 'Carouge Premium'
+      and e.reminder_lead_days = 7
+      and l.exact_address = 'Route Premium 7'
+  ) then
+    raise exception 'Premium event reminder was not saved atomically';
+  end if;
+end;
+$$;
+set local role service_role;
+select public.apply_revenuecat_premium_state(
+  '00000000-0000-4000-8000-0000000000a1', false,
+  '2099-01-01T00:00:01Z'::timestamptz
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+select public.save_group_events_with_locations(
+  '10000000-0000-4000-8000-000000000001',
+  jsonb_build_array(jsonb_build_object(
+    'id', '30000000-0000-4000-8000-000000000001',
+    'kind', 'Répétition',
+    'title', 'Edition Premium atomique',
+    'public_location_label', 'Carouge Premium',
+    'date', (
+      select to_jsonb(e.date) from public.group_events e
+      where e.id = '30000000-0000-4000-8000-000000000001'
+    ),
+    'clear_reminder', true,
+    'clear_exact_address', false
+  )),
+  'update'
+);
+do $$
+begin
+  if not exists (
+    select 1 from public.group_events e
+    cross join lateral public.get_group_event_location(e.id) l
+    where e.id = '30000000-0000-4000-8000-000000000001'
+      and e.reminder_lead_days is null
+      and l.exact_address = 'Route Premium 7'
+  ) then
+    raise exception 'Free reminder reset was not atomic or erased the address';
+  end if;
+end;
+$$;
+
 -- L'effacement ne se produit qu'avec le booleen explicite, puis on restaure
 -- l'adresse pour les assertions de reveal ci-dessous.
 select public.set_group_event_location(
@@ -802,8 +943,8 @@ begin
 end;
 $$;
 
--- Auto-SOS : la base verifie leader, Premium, presence et instrument, puis
--- deduplique deux appareils/retries sur (event, membre absent).
+-- Auto-SOS durable : une indisponibilite enregistree AVANT l'activation est
+-- reconciliee sans appel du client, puis les retries restent idempotents.
 set local role postgres;
 update public.profiles
 set is_premium = true
@@ -812,6 +953,18 @@ update public.event_attendance
 set status = 'unavailable'
 where event_id = '30000000-0000-4000-8000-000000000001'
   and profile_id = '00000000-0000-4000-8000-0000000000b2';
+do $$
+begin
+  if exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000001'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) then
+    raise exception 'Disabled auto-SOS created a dropout request';
+  end if;
+end;
+$$;
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
@@ -825,14 +978,23 @@ declare
   v_second uuid;
   v_created boolean;
 begin
-  select gig_id, created into v_first, v_created
+  select id into v_first
+  from public.gig_requests
+  where event_id = '30000000-0000-4000-8000-000000000001'
+    and auto_sos_absent_profile_id =
+      '00000000-0000-4000-8000-0000000000b2';
+  if v_first is null then
+    raise exception 'Group activation did not reconcile an existing dropout';
+  end if;
+
+  select gig_id, created into v_second, v_created
   from public.create_auto_sos(
     '30000000-0000-4000-8000-000000000001',
     '00000000-0000-4000-8000-0000000000b2',
-    'Remplacement transactionnel', 'Test auto-SOS', 'Piano'
+    'Remplacement retry', 'Retry auto-SOS', 'Piano'
   );
-  if not v_created then
-    raise exception 'First auto-SOS call did not create a row';
+  if v_created or v_second is distinct from v_first then
+    raise exception 'Client retry diverged from server-created auto-SOS';
   end if;
 
   select gig_id, created into v_second, v_created
@@ -855,6 +1017,462 @@ begin
     where exact_address = 'Route ultra secrete 7'
   ) then
     raise exception 'Auto-SOS did not copy the private event address';
+  end if;
+  if not exists (
+    select 1 from public.gig_requests
+    where id = v_first
+      and wanted_instruments = array['Piano']::text[]
+      and place = 'Carouge centre'
+      and public_location_label = 'Carouge centre'
+      and place <> 'Route ultra secrete 7'
+  ) then
+    raise exception 'Auto-SOS fallback instrument or public location is unsafe';
+  end if;
+end;
+$$;
+
+-- Le scenario principal ne porte plus le JWT du leader : B se declare
+-- indisponible pendant que A est hors ligne. Son role de groupe prime sur son
+-- instrument de profil et le SOS apparait dans la meme transaction.
+update public.group_members
+set role = 'Batterie'
+where group_id = '10000000-0000-4000-8000-000000000001'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000010',
+  '10000000-0000-4000-8000-000000000001',
+  'Concert', 'Concert hors ligne', 'Eaux-Vives', 'Eaux-Vives',
+  now() + interval '10 days'
+);
+select public.set_group_event_location(
+  '30000000-0000-4000-8000-000000000010',
+  'Eaux-Vives', 'Rue Offline 10', '1207', 'Geneve', 'CH', null, null
+);
+
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+insert into public.event_attendance(event_id, profile_id, status)
+values (
+  '30000000-0000-4000-8000-000000000010',
+  '00000000-0000-4000-8000-0000000000b2', 'unavailable'
+);
+do $$
+declare
+  v_gig uuid;
+begin
+  select id into v_gig
+  from public.gig_requests
+  where event_id = '30000000-0000-4000-8000-000000000010'
+    and auto_sos_absent_profile_id =
+      '00000000-0000-4000-8000-0000000000b2';
+  if v_gig is null then
+    raise exception 'Offline member transition did not create auto-SOS';
+  end if;
+  if not exists (
+    select 1 from public.gig_requests
+    where id = v_gig
+      and host_id = '00000000-0000-4000-8000-0000000000a1'
+      and wanted_instruments = array['Batterie']::text[]
+      and wanted_levels = array['Intermédiaire']::text[]
+      and place = 'Eaux-Vives'
+      and public_location_label = 'Eaux-Vives'
+      and description not like '%Rue Offline 10%'
+      and description not like '%Test B%'
+      and description not like '%Premier groupe gratuit%'
+  ) then
+    raise exception 'Offline auto-SOS ignored role, leader or public privacy';
+  end if;
+  if exists (select 1 from public.get_gig_request_location(v_gig)) then
+    raise exception 'Unavailable member unexpectedly saw the exact SOS address';
+  end if;
+
+  begin
+    perform public.create_auto_sos(
+      '30000000-0000-4000-8000-000000000010',
+      '00000000-0000-4000-8000-0000000000b2',
+      'Interdit', '', 'Batterie'
+    );
+    raise exception 'Non-leader unexpectedly called create_auto_sos';
+  exception
+    when sqlstate '42501' then
+      if sqlerrm <> 'only_group_leader_can_create_auto_sos' then raise; end if;
+  end;
+end;
+$$;
+
+-- Le retour a available retire un SOS automatique encore sans engagement.
+-- Un nouveau desistement le recree proprement, toujours en un seul exemplaire.
+update public.event_attendance
+set status = 'available'
+where event_id = '30000000-0000-4000-8000-000000000010'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
+do $$
+begin
+  if exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000010'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) then
+    raise exception 'Resolved uncommitted auto-SOS remained visible';
+  end if;
+end;
+$$;
+update public.event_attendance
+set status = 'unavailable'
+where event_id = '30000000-0000-4000-8000-000000000010'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+do $$
+begin
+  if (
+    select count(*) from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000010'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) <> 1 then
+    raise exception 'Offline auto-SOS transition was not idempotent';
+  end if;
+end;
+$$;
+
+-- Une acceptation est un engagement : le meme retour a available conserve
+-- le SOS et la candidature acceptee pour que le leader tranche explicitement.
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c3', true
+);
+insert into public.gig_applications(
+  id, gig_id, musician_id, instrument, status
+)
+select '21000000-0000-4000-8000-000000000010', g.id,
+       '00000000-0000-4000-8000-0000000000c3', 'Batterie', 'pending'
+from public.gig_requests g
+where g.event_id = '30000000-0000-4000-8000-000000000010'
+  and g.auto_sos_absent_profile_id =
+    '00000000-0000-4000-8000-0000000000b2';
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+select public.accept_gig_application(
+  '21000000-0000-4000-8000-000000000010'
+);
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+update public.event_attendance
+set status = 'available'
+where event_id = '30000000-0000-4000-8000-000000000010'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+do $$
+begin
+  if not exists (
+    select 1
+    from public.gig_requests g
+    join public.gig_applications a on a.gig_id = g.id
+    where g.event_id = '30000000-0000-4000-8000-000000000010'
+      and g.auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+      and a.id = '21000000-0000-4000-8000-000000000010'
+      and a.status = 'accepted'
+  ) then
+    raise exception 'Resolved auto-SOS erased an accepted commitment';
+  end if;
+end;
+$$;
+
+-- L'hote peut relire la copie privee ; ni la ligne publique ni l'appel du
+-- membre absent ci-dessus n'ont revele l'adresse exacte.
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+do $$
+declare
+  v_gig uuid := (
+    select id from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000010'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  );
+begin
+  if not exists (
+    select 1 from public.get_gig_request_location(v_gig)
+    where exact_address = 'Rue Offline 10'
+  ) then
+    raise exception 'Offline auto-SOS lost its private event address';
+  end if;
+end;
+$$;
+
+-- `group_members.role` est historique et libre. Une valeur inconnue ne doit
+-- jamais devenir un instrument public : le noyau revient au premier instrument
+-- valide du profil, ici Piano.
+update public.group_members
+set role = 'Chef de pupitre'
+where group_id = '10000000-0000-4000-8000-000000000001'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000015',
+  '10000000-0000-4000-8000-000000000001',
+  'Jam', 'Role invalide', 'Centre', 'Centre', now() + interval '15 days'
+);
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+insert into public.event_attendance(event_id, profile_id, status)
+values (
+  '30000000-0000-4000-8000-000000000015',
+  '00000000-0000-4000-8000-0000000000b2', 'unavailable'
+);
+do $$
+begin
+  if not exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000015'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+      and wanted_instruments = array['Piano']::text[]
+  ) then
+    raise exception 'Invalid group role did not fall back to profile instrument';
+  end if;
+end;
+$$;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+update public.group_members
+set role = 'Batterie'
+where group_id = '10000000-0000-4000-8000-000000000001'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
+
+-- Une presence corrompue d'un non-membre ne suffit jamais a publier. Le
+-- trigger de presence doit la tolerer sans transformer C en membre implicite.
+set local role postgres;
+select set_config('request.jwt.claim.sub', '', true);
+insert into public.event_attendance(event_id, profile_id, status)
+values (
+  '30000000-0000-4000-8000-000000000010',
+  '00000000-0000-4000-8000-0000000000c3', 'unavailable'
+);
+do $$
+begin
+  if exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000010'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000c3'
+  ) then
+    raise exception 'Orphan attendance created an auto-SOS for a non-member';
+  end if;
+end;
+$$;
+delete from public.event_attendance
+where event_id = '30000000-0000-4000-8000-000000000010'
+  and profile_id = '00000000-0000-4000-8000-0000000000c3';
+
+-- Un evenement passe ne peut jamais etre republie, meme avec toutes les
+-- autres conditions remplies.
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000011',
+  '10000000-0000-4000-8000-000000000001',
+  'Répétition', 'Session passee', 'Centre', 'Centre',
+  now() - interval '1 hour'
+);
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+insert into public.event_attendance(event_id, profile_id, status)
+values (
+  '30000000-0000-4000-8000-000000000011',
+  '00000000-0000-4000-8000-0000000000b2', 'unavailable'
+);
+do $$
+begin
+  if exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000011'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) then
+    raise exception 'Past event unexpectedly created an auto-SOS';
+  end if;
+end;
+$$;
+
+-- Atomicite : une erreur inattendue pendant l'ecriture du SOS remonte jusqu'a
+-- la presence. La ligne de presence, le SOS, l'adresse et les notifications
+-- deja executees par les autres triggers sont tous annules ensemble.
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000012',
+  '10000000-0000-4000-8000-000000000001',
+  'Concert', 'Atomicite auto-SOS', 'Jonction', 'Jonction',
+  now() + interval '12 days'
+);
+select public.set_group_event_location(
+  '30000000-0000-4000-8000-000000000012',
+  'Jonction', 'Rue Rollback 12', '1205', 'Geneve', 'CH', null, null
+);
+set local role postgres;
+create or replace function pg_temp.fail_auto_sos_write()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'forced_auto_sos_write_failure';
+end;
+$$;
+create trigger test_force_auto_sos_write_failure
+after insert on public.gig_requests
+for each row
+when (new.event_id = '30000000-0000-4000-8000-000000000012'::uuid)
+execute function pg_temp.fail_auto_sos_write();
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+do $$
+begin
+  begin
+    insert into public.event_attendance(event_id, profile_id, status)
+    values (
+      '30000000-0000-4000-8000-000000000012',
+      '00000000-0000-4000-8000-0000000000b2', 'unavailable'
+    );
+    raise exception 'Auto-SOS write failure trigger did not fire';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'forced_auto_sos_write_failure' then raise; end if;
+  end;
+
+  if exists (
+    select 1 from public.event_attendance
+    where event_id = '30000000-0000-4000-8000-000000000012'
+      and profile_id = '00000000-0000-4000-8000-0000000000b2'
+  ) or exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000012'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) then
+    raise exception 'Auto-SOS attendance subtransaction left partial state';
+  end if;
+  if current_setting('dispo.auto_sos_server', true) = 'on' then
+    raise exception 'Auto-SOS internal marker leaked after rollback';
+  end if;
+end;
+$$;
+set local role postgres;
+drop trigger test_force_auto_sos_write_failure on public.gig_requests;
+
+-- Le droit Premium est revalide a chaque transition. Une indisponibilite
+-- pendant l'expiration ne publie rien ; l'octroi canonique RevenueCat lance
+-- ensuite la reconciliation sans rappel du webhook ni boucle sur profiles.
+set local role service_role;
+select public.apply_revenuecat_premium_state(
+  '00000000-0000-4000-8000-0000000000a1', false,
+  '2099-01-02T00:00:00Z'::timestamptz
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000013',
+  '10000000-0000-4000-8000-000000000001',
+  'Jam', 'Retour Premium', 'Servette', 'Servette',
+  now() + interval '13 days'
+);
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+insert into public.event_attendance(event_id, profile_id, status)
+values (
+  '30000000-0000-4000-8000-000000000013',
+  '00000000-0000-4000-8000-0000000000b2', 'unavailable'
+);
+do $$
+begin
+  if exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000013'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) then
+    raise exception 'Expired Premium unexpectedly created an auto-SOS';
+  end if;
+end;
+$$;
+set local role service_role;
+select public.apply_revenuecat_premium_state(
+  '00000000-0000-4000-8000-0000000000a1', true,
+  '2099-01-03T00:00:00Z'::timestamptz
+);
+set local role postgres;
+do $$
+begin
+  if (
+    select count(*) from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000013'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) <> 1 then
+    raise exception 'Premium grant did not reconcile existing unavailability';
+  end if;
+end;
+$$;
+
+-- Le leader peut lui aussi manquer sa propre date. Sa ligne group_members
+-- historique n'est pas requise ; le repli profil choisit ici Piano.
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000014',
+  '10000000-0000-4000-8000-000000000001',
+  'Concert', 'Leader absent', 'Paquis', 'Paquis',
+  now() + interval '14 days'
+);
+update public.event_attendance
+set status = 'unavailable'
+where event_id = '30000000-0000-4000-8000-000000000014'
+  and profile_id = '00000000-0000-4000-8000-0000000000a1';
+do $$
+begin
+  if not exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000014'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000a1'
+      and host_id = '00000000-0000-4000-8000-0000000000a1'
+      and wanted_instruments = array['Piano']::text[]
+  ) then
+    raise exception 'Leader dropout was not covered by profile instrument';
   end if;
 end;
 $$;
@@ -925,6 +1543,54 @@ begin
   end;
 end;
 $$;
+
+-- Un transfert vers un leader deja Premium est une transition d'eligibilite
+-- a part entiere. On prepare une indisponibilite pendant l'expiration de A :
+-- elle doit etre reconciliee dans la transaction du transfert vers B.
+set local role service_role;
+select public.apply_revenuecat_premium_state(
+  '00000000-0000-4000-8000-0000000000b2', true,
+  '2099-01-04T00:00:00Z'::timestamptz
+);
+select public.apply_revenuecat_premium_state(
+  '00000000-0000-4000-8000-0000000000a1', false,
+  '2099-01-04T00:00:01Z'::timestamptz
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date
+) values (
+  '30000000-0000-4000-8000-000000000016',
+  '10000000-0000-4000-8000-000000000001',
+  'Concert', 'Transfert Premium', 'Centre', 'Centre',
+  now() + interval '16 days'
+);
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c3', true
+);
+insert into public.event_attendance(event_id, profile_id, status)
+values (
+  '30000000-0000-4000-8000-000000000016',
+  '00000000-0000-4000-8000-0000000000c3', 'unavailable'
+);
+do $$
+begin
+  if exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000016'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000c3'
+  ) then
+    raise exception 'Expired old leader unexpectedly created transfer SOS';
+  end if;
+end;
+$$;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
 select public.transfer_group_leadership(
   '10000000-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-0000000000b2'
@@ -937,6 +1603,32 @@ begin
       and leader_id = '00000000-0000-4000-8000-0000000000b2'
   ) then
     raise exception 'Group leadership transfer did not persist';
+  end if;
+  if exists (
+    select 1 from public.gig_requests
+    where group_id = '10000000-0000-4000-8000-000000000001'
+      and auto_sos_absent_profile_id is not null
+      and host_id <> '00000000-0000-4000-8000-0000000000b2'
+  ) then
+    raise exception 'Leadership transfer left an auto-SOS with its old host';
+  end if;
+  if not exists (
+    select 1 from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000016'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000c3'
+      and host_id = '00000000-0000-4000-8000-0000000000b2'
+      and wanted_instruments = array['Piano']::text[]
+  ) then
+    raise exception 'Premium leadership transfer did not reconcile dropout';
+  end if;
+  if not exists (
+    select 1 from public.gig_requests
+    where id = '20000000-0000-4000-8000-000000000002'
+      and host_id = '00000000-0000-4000-8000-0000000000a1'
+      and auto_sos_absent_profile_id is null
+  ) then
+    raise exception 'Leadership transfer reassigned a manual linked SOS';
   end if;
 end;
 $$;
@@ -994,6 +1686,579 @@ begin
   if (select is_premium from public.profiles
       where id = '00000000-0000-4000-8000-0000000000c3') then
     raise exception 'Newer canonical revocation did not close Premium';
+  end if;
+end;
+$$;
+
+-- v43 : le worker push est installe une seule fois, son token reste dans
+-- Vault, et l'absence volontaire d'URL locale rend l'invocation inerte.
+do $$
+declare
+  v_token text;
+  v_request_count bigint;
+  v_request_id bigint;
+begin
+  if not exists (
+    select 1
+    from pg_extension e
+    join pg_namespace n on n.oid = e.extnamespace
+    where e.extname = 'pgcrypto' and n.nspname = 'extensions'
+  )
+     or not exists (select 1 from pg_extension where extname = 'pg_cron')
+     or not exists (select 1 from pg_extension where extname = 'pg_net')
+  then
+    raise exception 'Push worker extensions are missing';
+  end if;
+  if (
+    select count(*) from cron.job
+    where jobname = 'dispo-push-worker-every-minute'
+  ) <> 1 then
+    raise exception 'Push worker cron is missing or duplicated';
+  end if;
+  if (
+    select count(*) from vault.decrypted_secrets
+    where name = 'dispo_push_worker_token'
+  ) <> 1 then
+    raise exception 'Push worker token is missing or duplicated';
+  end if;
+
+  select s.decrypted_secret into v_token
+  from vault.decrypted_secrets s
+  where s.name = 'dispo_push_worker_token';
+  if not public.verify_push_worker_token(v_token)
+     or public.verify_push_worker_token(repeat('0', 64))
+     or public.verify_push_worker_token(null)
+  then
+    raise exception 'Push worker token verification is not fail-closed';
+  end if;
+  if exists (
+    select 1 from cron.job j
+    where position(v_token in row_to_json(j)::text) > 0
+       or j.command ~ '[0-9a-f]{64}'
+       or j.command ilike '%Bearer %'
+  ) or exists (
+    select 1 from cron.job_run_details d
+    where position(v_token in row_to_json(d)::text) > 0
+  ) then
+    raise exception 'Push worker token leaked into cron metadata or logs';
+  end if;
+  if (
+    select command from cron.job
+    where jobname = 'dispo-push-worker-every-minute'
+  ) <> 'select private.invoke_push_worker();' then
+    raise exception 'Push worker cron command is not the static safe wrapper';
+  end if;
+  if position(
+    'skip locked' in lower(pg_get_functiondef(
+      'public.claim_pending_push_notifications(uuid,uuid,timestamp with time zone,integer)'::regprocedure
+    ))
+  ) = 0 then
+    raise exception 'Push claim RPC lost its SKIP LOCKED concurrency guard';
+  end if;
+
+  select count(*) into v_request_count from net.http_request_queue;
+  select private.invoke_push_worker() into v_request_id;
+  if v_request_id is not null
+     or (select count(*) from net.http_request_queue) <> v_request_count
+  then
+    raise exception 'Push worker made a request without configured project URL';
+  end if;
+
+  if has_function_privilege(
+    'authenticated', 'public.verify_push_worker_token(text)', 'execute'
+  ) or not has_function_privilege(
+    'service_role', 'public.verify_push_worker_token(text)', 'execute'
+  ) or has_function_privilege(
+    'authenticated',
+    'public.claim_pending_push_notifications(uuid,uuid,timestamp with time zone,integer)',
+    'execute'
+  ) or not has_function_privilege(
+    'service_role',
+    'public.claim_pending_push_notifications(uuid,uuid,timestamp with time zone,integer)',
+    'execute'
+  ) or has_function_privilege(
+    'authenticated',
+    'public.begin_push_notification_attempt(uuid,uuid)', 'execute'
+  ) or not has_function_privilege(
+    'service_role',
+    'public.begin_push_notification_attempt(uuid,uuid)', 'execute'
+  ) or has_function_privilege(
+    'authenticated', 'public.release_push_notification_claim(uuid)', 'execute'
+  ) or not has_function_privilege(
+    'service_role', 'public.release_push_notification_claim(uuid)', 'execute'
+  ) or has_function_privilege(
+    'authenticated', 'private.invoke_push_worker()', 'execute'
+  ) then
+    raise exception 'Push worker function privileges are unsafe';
+  end if;
+end;
+$$;
+
+-- Enregistrement push : formats controles aussi sur UPDATE, dix appareils au
+-- maximum, upsert du meme token encore possible au plafond et appareil courant
+-- prioritaire par eviction LRU lors d'une nouvelle inscription ou transfert.
+delete from public.push_devices;
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.push_devices (
+  user_id, token, platform, environment, app_version, last_seen_at
+)
+select
+  '00000000-0000-4000-8000-0000000000a1',
+  lpad(to_hex(g), 64, '0'), 'ios', 'development', 'quota-test',
+  clock_timestamp() - make_interval(mins => 11 - g)
+from generate_series(1, 10) g;
+
+insert into public.push_devices (
+  user_id, token, platform, environment, app_version
+) values (
+  '00000000-0000-4000-8000-0000000000a1',
+  lpad(to_hex(1), 64, '0'), 'ios', 'development', 'upsert-au-plafond'
+)
+on conflict (token) do update
+set app_version = excluded.app_version,
+    last_seen_at = clock_timestamp();
+
+insert into public.push_devices (
+  user_id, token, platform, environment
+) values (
+  '00000000-0000-4000-8000-0000000000a1',
+  lpad(to_hex(11), 64, '0'), 'ios', 'development'
+);
+
+do $$
+begin
+  begin
+    update public.push_devices
+    set token = upper(token)
+    where token = lpad(to_hex(10), 64, '0');
+    raise exception 'Invalid iOS token update unexpectedly accepted';
+  exception when check_violation then null;
+  end;
+
+  begin
+    insert into public.push_devices (
+      user_id, token, platform, environment
+    ) values (
+      '00000000-0000-4000-8000-0000000000a1',
+      'android:token:invalid', 'android', 'production'
+    );
+    raise exception 'Invalid Android token unexpectedly accepted';
+  exception when invalid_parameter_value then null;
+  end;
+end;
+$$;
+
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+insert into public.push_devices (
+  user_id, token, platform, environment, app_version
+) values (
+  '00000000-0000-4000-8000-0000000000b2',
+  'Abcdefghijklmn_1', 'android', 'production', 'android-valid'
+);
+
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
+insert into public.push_devices (
+  user_id, token, platform, environment
+) values (
+  '00000000-0000-4000-8000-0000000000a1',
+  'Abcdefghijklmn_1', 'android', 'production'
+);
+
+set local role postgres;
+do $$
+begin
+  if (
+    select count(*) from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000a1'
+  ) <> 10 or not exists (
+    select 1 from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000a1'
+      and token = lpad(to_hex(1), 64, '0')
+      and app_version = 'upsert-au-plafond'
+  ) or exists (
+    select 1 from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000a1'
+      and token = lpad(to_hex(2), 64, '0')
+  ) or not exists (
+    select 1 from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000a1'
+      and token = lpad(to_hex(11), 64, '0')
+  ) or exists (
+    select 1 from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000a1'
+      and token = lpad(to_hex(3), 64, '0')
+  ) or not exists (
+    select 1 from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000a1'
+      and token = 'Abcdefghijklmn_1'
+  ) or exists (
+    select 1 from public.push_devices
+    where user_id = '00000000-0000-4000-8000-0000000000b2'
+      and token = 'Abcdefghijklmn_1'
+  ) then
+    raise exception 'Push device quota/upsert/transfer invariant failed';
+  end if;
+end;
+$$;
+delete from public.push_devices;
+
+-- Claim atomique : la portee utilisateur reste actor_id + 10 minutes, le
+-- worker reprend globalement les anciennes lignes encore fraiches, une lease
+-- ne peut pas etre volee avant 10 minutes et un crash devient reprenable.
+delete from public.push_notifications;
+do $$
+declare
+  v_now timestamptz := clock_timestamp();
+  v_count integer;
+  v_rows integer;
+begin
+  insert into public.push_notifications (
+    id, user_id, actor_id, category, title, body, data,
+    source_table, source_id, created_at, read_at
+  ) values
+  (
+    '50000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-0000000000b2',
+    '00000000-0000-4000-8000-0000000000a1',
+    'groups', 'Claim recent A', 'Claim recent A', '{}'::jsonb,
+    'claim_test', '70000000-0000-4000-8000-000000000001',
+    v_now - interval '2 minutes', null
+  ),
+  (
+    '50000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-0000000000a1',
+    '00000000-0000-4000-8000-0000000000b2',
+    'groups', 'Claim recent B', 'Claim recent B', '{}'::jsonb,
+    'claim_test', '70000000-0000-4000-8000-000000000002',
+    v_now - interval '1 minute', null
+  ),
+  (
+    '50000000-0000-4000-8000-000000000003',
+    '00000000-0000-4000-8000-0000000000b2',
+    '00000000-0000-4000-8000-0000000000a1',
+    'groups', 'Claim hors fenetre', 'Claim hors fenetre', '{}'::jsonb,
+    'claim_test', '70000000-0000-4000-8000-000000000003',
+    v_now - interval '20 minutes', null
+  ),
+  (
+    '50000000-0000-4000-8000-000000000004',
+    '00000000-0000-4000-8000-0000000000b2',
+    '00000000-0000-4000-8000-0000000000a1',
+    'groups', 'Claim expire', 'Claim expire', '{}'::jsonb,
+    'claim_test', '70000000-0000-4000-8000-000000000004',
+    v_now - interval '25 hours', null
+  ),
+  (
+    '50000000-0000-4000-8000-000000000005',
+    '00000000-0000-4000-8000-0000000000b2',
+    '00000000-0000-4000-8000-0000000000a1',
+    'groups', 'Claim deja lu', 'Claim deja lu', '{}'::jsonb,
+    'claim_test', '70000000-0000-4000-8000-000000000005',
+    v_now - interval '1 minute', v_now
+  );
+
+  select count(*) into v_count
+  from public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-0000000000a1',
+    v_now - interval '10 minutes', 100
+  );
+  if v_count <> 1 or not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000001'
+      and attempts = 0
+      and delivery_claim_id =
+        '60000000-0000-4000-8000-000000000001'
+  ) then
+    raise exception 'User claim lost actor/window scope or consumed early';
+  end if;
+
+  select count(*) into v_count
+  from public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-0000000000a1',
+    v_now - interval '10 minutes', 100
+  );
+  if v_count <> 0 then
+    raise exception 'A live lease was claimed twice';
+  end if;
+
+  update public.push_notifications
+  set read_at = v_now
+  where id = '50000000-0000-4000-8000-000000000001';
+  select public.begin_push_notification_attempt(
+    '50000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000001'
+  ) into v_count;
+  if v_count is not null then
+    raise exception 'Notification read after claim started a provider attempt';
+  end if;
+  update public.push_notifications
+  set read_at = null
+  where id = '50000000-0000-4000-8000-000000000001';
+
+  select public.release_push_notification_claim(
+    '60000000-0000-4000-8000-000000000001'
+  ) into v_count;
+  if v_count <> 1 or exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000001'
+      and (attempts <> 0 or delivery_claim_id is not null
+           or delivery_claimed_at is not null)
+  ) then
+    raise exception 'Pre-provider release did not return its owned lease';
+  end if;
+
+  perform public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000003',
+    '00000000-0000-4000-8000-0000000000a1',
+    v_now - interval '10 minutes', 100
+  );
+  select public.begin_push_notification_attempt(
+    '50000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000003'
+  ) into v_count;
+  if v_count <> 1 then
+    raise exception 'First provider begin did not consume exactly one attempt';
+  end if;
+  update public.push_notifications
+  set delivery_claimed_at = v_now - interval '9 minutes'
+  where id = '50000000-0000-4000-8000-000000000001';
+  select count(*) into v_count
+  from public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000004',
+    '00000000-0000-4000-8000-0000000000a1',
+    v_now - interval '10 minutes', 100
+  );
+  if v_count <> 0 then
+    raise exception 'Nine-minute lease was reclaimed too early';
+  end if;
+
+  update public.push_notifications
+  set delivery_claimed_at = v_now - interval '11 minutes'
+  where id = '50000000-0000-4000-8000-000000000001';
+  select count(*) into v_count
+  from public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000004',
+    '00000000-0000-4000-8000-0000000000a1',
+    v_now - interval '10 minutes', 100
+  );
+  if v_count <> 1 or not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000001'
+      and attempts = 1
+      and delivery_claim_id =
+        '60000000-0000-4000-8000-000000000004'
+  ) then
+    raise exception 'Expired lease was not reclaimed without an early attempt';
+  end if;
+  select public.begin_push_notification_attempt(
+    '50000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000003'
+  ) into v_count;
+  if v_count is not null then
+    raise exception 'Stale claim started a provider attempt';
+  end if;
+  select public.begin_push_notification_attempt(
+    '50000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000004'
+  ) into v_count;
+  if v_count <> 2 then
+    raise exception 'Reclaimed provider begin did not consume second attempt';
+  end if;
+
+  update public.push_notifications
+  set sent_at = v_now,
+      delivery_claim_id = null,
+      delivery_claimed_at = null
+  where id = '50000000-0000-4000-8000-000000000001'
+    and delivery_claim_id =
+      '60000000-0000-4000-8000-000000000001';
+  get diagnostics v_rows = row_count;
+  if v_rows <> 0 then
+    raise exception 'A stale claim finalized a reclaimed notification';
+  end if;
+
+  update public.push_notifications
+  set sent_at = v_now,
+      failed_at = null,
+      last_error = null,
+      delivery_claim_id = null,
+      delivery_claimed_at = null
+  where id = '50000000-0000-4000-8000-000000000001'
+    and delivery_claim_id =
+      '60000000-0000-4000-8000-000000000004';
+  get diagnostics v_rows = row_count;
+  if v_rows <> 1 then
+    raise exception 'Current claim could not finalize its notification';
+  end if;
+
+  if not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000004'
+      and sent_at is null and attempts = 3
+      and last_error = 'delivery_window_expired'
+  ) or not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000005'
+      and sent_at is null and attempts = 3
+      and last_error = 'read_before_delivery'
+  ) or not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000003'
+      and attempts = 0 and delivery_claim_id is null
+  ) then
+    raise exception 'TTL/read terminalization or user time window is unsafe';
+  end if;
+
+  select count(*) into v_count
+  from public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000005', null, null, 1
+  );
+  if v_count <> 1 or not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000003'
+      and delivery_claim_id =
+        '60000000-0000-4000-8000-000000000005'
+  ) then
+    raise exception 'Global worker did not resume the oldest valid row';
+  end if;
+
+  -- Les producteurs historiques rejouent leurs notifications avec un
+  -- `attempts = 0`. Meme si une lease est active, ce reset doit la rendre
+  -- immediatement caduque avant que l'ancien worker ne finalise la ligne.
+  insert into public.push_notifications (
+    user_id, actor_id, category, title, body, data,
+    source_table, source_id, created_at, attempts
+  ) values (
+    '00000000-0000-4000-8000-0000000000b2',
+    '00000000-0000-4000-8000-0000000000a1',
+    'groups', 'Claim rejouee', 'Claim rejouee', '{}'::jsonb,
+    'claim_test', '70000000-0000-4000-8000-000000000003',
+    v_now, 0
+  )
+  on conflict (user_id, category, source_table, source_id) do update
+  set title = excluded.title,
+      body = excluded.body,
+      created_at = excluded.created_at,
+      sent_at = null,
+      failed_at = null,
+      last_error = null,
+      attempts = 0;
+  if not exists (
+    select 1 from public.push_notifications
+    where id = '50000000-0000-4000-8000-000000000003'
+      and attempts = 0
+      and delivery_claim_id is null
+      and delivery_claimed_at is null
+  ) then
+    raise exception 'Producer retry did not invalidate an active push claim';
+  end if;
+end;
+$$;
+
+delete from public.push_notifications;
+insert into public.push_notifications (
+  user_id, actor_id, category, title, body, data,
+  source_table, source_id, created_at
+)
+select
+  '00000000-0000-4000-8000-0000000000b2',
+  '00000000-0000-4000-8000-0000000000a1',
+  'groups', 'Lot borne', 'Lot borne', '{}'::jsonb,
+  'claim_batch', gen_random_uuid(),
+  clock_timestamp() - interval '5 minutes' + g * interval '1 millisecond'
+from generate_series(1, 101) g;
+do $$
+declare
+  v_count integer;
+begin
+  select count(*) into v_count
+  from public.claim_pending_push_notifications(
+    '60000000-0000-4000-8000-000000000006', null, null, 999
+  );
+  if v_count <> 10 or (
+    select count(*) from public.push_notifications
+    where delivery_claim_id =
+      '60000000-0000-4000-8000-000000000006'
+      and attempts = 0
+  ) <> 10 or (
+    select count(*) from public.push_notifications
+    where delivery_claim_id is null and attempts = 0
+  ) <> 91 then
+    raise exception 'Server claim batch is not capped at 10';
+  end if;
+
+  select public.release_push_notification_claim(
+    '60000000-0000-4000-8000-000000000006'
+  ) into v_count;
+  if v_count <> 10 or exists (
+    select 1 from public.push_notifications
+    where attempts <> 0 or delivery_claim_id is not null
+       or delivery_claimed_at is not null
+  ) then
+    raise exception 'Batch release did not refund all still-owned rows';
+  end if;
+end;
+$$;
+
+-- URL inter-tenant refusee et queue vide : aucun appel pg_net, meme si le
+-- token interne reste valide. Le test ne lit ni n'affiche jamais ce token.
+delete from public.push_notifications;
+do $$
+declare
+  v_url_secret_id uuid;
+  v_request_count bigint;
+  v_request_id bigint;
+begin
+  delete from vault.secrets where name = 'dispo_project_url';
+  select count(*) into v_request_count from net.http_request_queue;
+  insert into public.push_notifications (
+    user_id, actor_id, category, title, body, data,
+    source_table, source_id
+  ) values (
+    '00000000-0000-4000-8000-0000000000b2',
+    '00000000-0000-4000-8000-0000000000a1',
+    'groups', 'SSRF test', 'SSRF test', '{}'::jsonb,
+    'claim_ssrf_test', '70000000-0000-4000-8000-000000000099'
+  );
+  select private.invoke_push_worker() into v_request_id;
+  if v_request_id is not null
+     or (select count(*) from net.http_request_queue) <> v_request_count
+  then
+    raise exception 'Missing project URL did not fail closed with pending work';
+  end if;
+
+  select vault.create_secret(
+    'https://another-project.supabase.co',
+    'dispo_project_url', 'URL de test inter-tenant refusee'
+  ) into v_url_secret_id;
+  select private.invoke_push_worker() into v_request_id;
+  if v_request_id is not null
+     or (select count(*) from net.http_request_queue) <> v_request_count
+  then
+    raise exception 'Cross-tenant project URL reached pg_net';
+  end if;
+
+  delete from public.push_notifications
+  where source_table = 'claim_ssrf_test';
+  perform vault.update_secret(
+    v_url_secret_id,
+    'https://cghmmpcwqzpjwgnbiuuw.supabase.co',
+    'dispo_project_url', 'URL canonique de test'
+  );
+  select private.invoke_push_worker() into v_request_id;
+  if v_request_id is not null
+     or (select count(*) from net.http_request_queue) <> v_request_count
+  then
+    raise exception 'Empty queue invoked the Edge worker';
   end if;
 end;
 $$;

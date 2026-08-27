@@ -14,6 +14,7 @@ export type ProviderNotification = {
   title: string;
   body: string;
   data: Record<string, unknown>;
+  created_at: string;
 };
 
 export type ProviderResult = {
@@ -26,8 +27,12 @@ export type ProviderResult = {
 
 type CachedToken = { value: string; expiresAt: number };
 
+export const PUSH_DELIVERY_WINDOW_SECONDS = 86_400;
+export const PROVIDER_REQUEST_TIMEOUT_MS = 10_000;
+
 let cachedAPNsToken: CachedToken | undefined;
 let cachedGoogleToken: CachedToken | undefined;
+let googleAccessTokenPromise: Promise<string> | undefined;
 
 const requiredEnvironment = (name: string) => {
   const value = Deno.env.get(name)?.trim();
@@ -37,6 +42,50 @@ const requiredEnvironment = (name: string) => {
 
 const normalizedPrivateKey = (name: string) =>
   requiredEnvironment(name).replaceAll("\\n", "\n");
+
+export const pushDeliveryMetadata = (
+  notification: Pick<ProviderNotification, "id" | "created_at">,
+  nowMilliseconds = Date.now(),
+) => {
+  const createdMilliseconds = Date.parse(notification.created_at);
+  const expiresAtEpochSeconds = Number.isFinite(createdMilliseconds)
+    ? Math.floor(createdMilliseconds / 1_000) + PUSH_DELIVERY_WINDOW_SECONDS
+    : 0;
+  const remainingTTLSeconds = Math.max(
+    0,
+    Math.min(
+      PUSH_DELIVERY_WINDOW_SECONDS,
+      expiresAtEpochSeconds - Math.floor(nowMilliseconds / 1_000),
+    ),
+  );
+  return {
+    collapseID: notification.id,
+    expiresAtEpochSeconds,
+    remainingTTLSeconds,
+  };
+};
+
+export const buildAPNsDeliveryHeaders = (
+  notification: Pick<ProviderNotification, "id" | "created_at">,
+  nowMilliseconds = Date.now(),
+) => {
+  const metadata = pushDeliveryMetadata(notification, nowMilliseconds);
+  return {
+    "apns-id": metadata.collapseID,
+    "apns-collapse-id": metadata.collapseID,
+    "apns-expiration": String(metadata.expiresAtEpochSeconds),
+  };
+};
+
+const expiredProviderResult = (
+  provider: ProviderResult["provider"],
+): ProviderResult => ({
+  ok: false,
+  status: 410,
+  details: "delivery_window_expired",
+  invalidToken: false,
+  provider,
+});
 
 async function apnsProviderToken() {
   if (cachedAPNsToken && cachedAPNsToken.expiresAt > Date.now() + 5 * 60_000) {
@@ -60,13 +109,7 @@ async function apnsProviderToken() {
   return value;
 }
 
-async function googleAccessToken() {
-  if (
-    cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 5 * 60_000
-  ) {
-    return cachedGoogleToken.value;
-  }
-
+async function refreshGoogleAccessToken() {
   const clientEmail = requiredEnvironment("FCM_CLIENT_EMAIL");
   const key = await importPKCS8(
     normalizedPrivateKey("FCM_PRIVATE_KEY"),
@@ -91,6 +134,7 @@ async function googleAccessToken() {
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion,
     }),
+    signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
   });
   const payload = await response.json() as {
     access_token?: string;
@@ -105,7 +149,22 @@ async function googleAccessToken() {
     value: payload.access_token,
     expiresAt: Date.now() + (payload.expires_in ?? 3_600) * 1_000,
   };
-  return payload.access_token;
+  return cachedGoogleToken.value;
+}
+
+async function googleAccessToken() {
+  if (
+    cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 5 * 60_000
+  ) {
+    return cachedGoogleToken.value;
+  }
+
+  googleAccessTokenPromise ??= refreshGoogleAccessToken();
+  try {
+    return await googleAccessTokenPromise;
+  } finally {
+    googleAccessTokenPromise = undefined;
+  }
 }
 
 const fcmData = (notification: ProviderNotification) => {
@@ -124,27 +183,38 @@ export const buildFCMMessage = (
   installationID: string,
   notification: ProviderNotification,
   badgeCount: number,
-) => ({
-  message: {
-    fid: installationID,
-    notification: { title: notification.title, body: notification.body },
-    data: fcmData(notification),
-    android: {
-      priority: "high",
-      notification: {
-        channel_id: "dispo_alerts",
-        default_sound: true,
-        notification_count: Math.min(999, Math.max(0, badgeCount)),
+  nowMilliseconds = Date.now(),
+) => {
+  const delivery = pushDeliveryMetadata(notification, nowMilliseconds);
+  return ({
+    message: {
+      fid: installationID,
+      notification: { title: notification.title, body: notification.body },
+      data: fcmData(notification),
+      android: {
+        priority: "high",
+        ttl: `${delivery.remainingTTLSeconds}s`,
+        collapse_key: delivery.collapseID,
+        notification: {
+          channel_id: "dispo_alerts",
+          default_sound: true,
+          notification_count: Math.min(999, Math.max(0, badgeCount)),
+          tag: delivery.collapseID,
+        },
       },
     },
-  },
-});
+  });
+};
 
 async function sendToAPNs(
   device: ProviderDevice,
   notification: ProviderNotification,
   badgeCount: number,
 ): Promise<ProviderResult> {
+  const delivery = pushDeliveryMetadata(notification);
+  if (delivery.remainingTTLSeconds <= 0) {
+    return expiredProviderResult("APNs");
+  }
   const host = device.environment === "production"
     ? "https://api.push.apple.com"
     : "https://api.sandbox.push.apple.com";
@@ -156,7 +226,7 @@ async function sendToAPNs(
       "apns-topic": Deno.env.get("APNS_BUNDLE_ID") ?? "ch.dispo.app",
       "apns-push-type": "alert",
       "apns-priority": "10",
-      "apns-expiration": String(Math.floor(Date.now() / 1_000) + 86_400),
+      ...buildAPNsDeliveryHeaders(notification),
     },
     body: JSON.stringify({
       aps: {
@@ -168,6 +238,7 @@ async function sendToAPNs(
       ...notification.data,
       notification_id: notification.id,
     }),
+    signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
   });
   const details = response.ok ? "" : await response.text();
   return {
@@ -186,6 +257,10 @@ async function sendToFCM(
   notification: ProviderNotification,
   badgeCount: number,
 ): Promise<ProviderResult> {
+  const delivery = pushDeliveryMetadata(notification);
+  if (delivery.remainingTTLSeconds <= 0) {
+    return expiredProviderResult("FCM");
+  }
   const projectID = requiredEnvironment("FCM_PROJECT_ID");
   const token = await googleAccessToken();
   const response = await fetch(
@@ -199,6 +274,7 @@ async function sendToFCM(
       body: JSON.stringify(
         buildFCMMessage(device.token, notification, badgeCount),
       ),
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
     },
   );
   const details = response.ok ? "" : await response.text();

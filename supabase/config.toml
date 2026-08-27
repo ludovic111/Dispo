@@ -418,3 +418,10 @@ enabled = true
 # fait par le secret partagé REVENUECAT_WEBHOOK_SECRET (en-tête Authorization).
 [functions.revenuecat-webhook]
 verify_jwt = false
+
+# `push` accepte soit un JWT utilisateur validé dans le handler, soit le jeton
+# worker vérifié par la RPC privée `verify_push_worker_token`. La passerelle JWT
+# doit donc laisser entrer le worker ; toute autre requête échoue fermée dans la
+# logique applicative avant la lecture de la file globale.
+[functions.push]
+verify_jwt = false
