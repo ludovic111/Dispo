@@ -6219,43 +6219,43 @@
         }
       }
     },
-    "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la juste à côté du titre" : {
+    "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre" : {
       "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tonart beim Hinzufügen angeben, später ändern und direkt neben dem Titel sehen"
+            "value" : "Tonart beim Hinzufügen angeben, später ändern und unter dem Titel sehen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add a song's key, edit it later, and see it right next to the title"
+            "value" : "Add a song's key, edit it later, and see it below the title"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Añade la tonalidad de una canción, edítala después y mírala junto al título"
+            "value" : "Añade la tonalidad de una canción, edítala después y mírala debajo del título"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aggiungi la tonalità di un brano, modificala in seguito e vedila accanto al titolo"
+            "value" : "Aggiungi la tonalità di un brano, modificala in seguito e vedila sotto il titolo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "曲の追加時にキーを設定し、後から編集して曲名の横で確認できます"
+            "value" : "曲の追加時にキーを設定し、後から編集して曲名の下で確認できます"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加歌曲时设置调性，之后可编辑，并显示在标题旁"
+            "value" : "添加歌曲时设置调性，之后可编辑，并显示在标题下方"
           }
         }
       }
@@ -30434,42 +30434,42 @@
         }
       }
     },
-    "La tonalité s'affiche à côté du titre. La pochette est récupérée automatiquement si le morceau est trouvé." : {
+    "La tonalité s'affiche sous le titre. La pochette est récupérée automatiquement si le morceau est trouvé." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Tonart erscheint neben dem Titel. Das Cover wird automatisch geladen, wenn der Song gefunden wird."
+            "value" : "Die Tonart erscheint unter dem Titel. Das Cover wird automatisch geladen, wenn der Song gefunden wird."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The key appears next to the title. Artwork is fetched automatically when the song is found."
+            "value" : "The key appears below the title. Artwork is fetched automatically when the song is found."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La tonalidad aparece junto al título. La portada se obtiene automáticamente si se encuentra la canción."
+            "value" : "La tonalidad aparece debajo del título. La portada se obtiene automáticamente si se encuentra la canción."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La tonalità appare accanto al titolo. La copertina viene recuperata automaticamente se il brano viene trovato."
+            "value" : "La tonalità appare sotto il titolo. La copertina viene recuperata automaticamente se il brano viene trovato."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーは曲名の横に表示されます。曲が見つかるとジャケットが自動で取得されます。"
+            "value" : "キーは曲名の下に表示されます。曲が見つかるとジャケットが自動で取得されます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调性会显示在标题旁。找到歌曲后会自动获取封面。"
+            "value" : "调性会显示在标题下方。找到歌曲后会自动获取封面。"
           }
         }
       }

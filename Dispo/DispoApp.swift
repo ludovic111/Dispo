@@ -745,6 +745,54 @@ extension String {
 
 // MARK: - Composants partagés
 
+private struct RemoteAvatarImage<Placeholder: View>: View {
+    let url: URL
+    let size: CGFloat
+    let placeholder: Placeholder
+    @State private var image: UIImage?
+
+    init(
+        url: URL,
+        size: CGFloat,
+        @ViewBuilder placeholder: () -> Placeholder
+    ) {
+        self.url = url
+        self.size = size
+        self.placeholder = placeholder()
+    }
+
+    var body: some View {
+        ZStack {
+            placeholder
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .task(id: url) {
+            image = nil
+            let subscriber = UUID()
+            do {
+                let loaded = try await withTaskCancellationHandler {
+                    try await AvatarImagePipeline.shared.image(for: url, subscriber: subscriber)
+                } onCancel: {
+                    Task {
+                        await AvatarImagePipeline.shared.cancel(url: url, subscriber: subscriber)
+                    }
+                }
+                try Task.checkCancellation()
+                image = loaded
+            } catch {
+                // Le pipeline a déjà tenté les erreurs réseau transitoires.
+                // En cas d'échec définitif, les initiales restent lisibles.
+            }
+        }
+    }
+}
+
 struct AvatarView: View {
     let name: String
     var size: CGFloat = 52
@@ -767,18 +815,11 @@ struct AvatarView: View {
 
     var body: some View {
         ZStack {
-            if let photo, photo.hasPrefix("http"), let url = URL(string: photo) {
-                // Photo hébergée (profil réel) — pastille d'initiales en
-                // attendant le chargement.
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
+            if let remoteURL {
+                RemoteAvatarImage(url: remoteURL, size: size) {
                     placeholder
                 }
-                .frame(width: size, height: size)
-                .clipShape(Circle())
-            } else if let photo, photo.hasPrefix("/"),
-                      let image = UIImage(contentsOfFile: photo) {
+            } else if let image = localImage {
                 // Ma photo, telle qu'elle est sur cet appareil.
                 Image(uiImage: image)
                     .resizable()
@@ -796,6 +837,40 @@ struct AvatarView: View {
             }
         }
         .frame(width: size, height: size)
+    }
+
+    private var remoteURL: URL? {
+        guard let photo,
+              let url = URL(string: photo),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || (scheme == "http" && Self.isLocalDevelopmentHost(url.host)),
+              url.host != nil else { return nil }
+        return url
+    }
+
+    private static func isLocalDevelopmentHost(_ host: String?) -> Bool {
+        guard let host = host?.lowercased() else { return false }
+        if host == "localhost" || host == "::1" || host.hasSuffix(".local") { return true }
+        if host.hasPrefix("127.") || host.hasPrefix("10.") || host.hasPrefix("192.168.") { return true }
+        let components = host.split(separator: ".")
+        if components.count == 4,
+           components[0] == "172",
+           let second = Int(components[1]),
+           (16...31).contains(second) {
+            return true
+        }
+        return false
+    }
+
+    private var localImage: UIImage? {
+        guard let photo else { return nil }
+        if photo.hasPrefix("/") {
+            return UIImage(contentsOfFile: photo)
+        }
+        if let url = URL(string: photo), url.isFileURL {
+            return UIImage(contentsOfFile: url.path)
+        }
+        return nil
     }
 
     private var placeholder: some View {

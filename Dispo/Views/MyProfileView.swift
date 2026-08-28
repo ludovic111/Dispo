@@ -325,6 +325,15 @@ struct MyProfileView: View {
                 }
                 .padding(.top, 1)
             }
+            let schoolAffiliations = store.myMusicSchoolCommunities.map(\.affiliation)
+            if !schoolAffiliations.isEmpty {
+                FlowLayout {
+                    ForEach(schoolAffiliations) { affiliation in
+                        MusicSchoolAffiliationChip(affiliation: affiliation)
+                    }
+                }
+                .padding(.top, 1)
+            }
             SocialLogosRow(socials: store.profile.socials)
                 .padding(.top, 4)
         }

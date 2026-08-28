@@ -28,7 +28,6 @@ struct MusicianDetailView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     header
                     identity
-                    schoolAffiliationsCard
                     actionButtons
                     availabilityRow
                     groupsCard
@@ -114,16 +113,6 @@ struct MusicianDetailView: View {
         }
         .sheet(isPresented: $showFollowers) {
             FollowersSheet(ownerName: firstName, followers: store.followers(of: musician))
-        }
-    }
-
-    // MARK: - Écoles de musique
-
-    @ViewBuilder
-    private var schoolAffiliationsCard: some View {
-        let affiliations = store.musicSchoolAffiliations(for: musician.id)
-        if !affiliations.isEmpty {
-            MusicSchoolAffiliationsCard(affiliations: affiliations)
         }
     }
 
@@ -235,6 +224,15 @@ struct MusicianDetailView: View {
                         )
                     }
                 }
+            }
+            let schoolAffiliations = store.musicSchoolAffiliations(for: musician.id)
+            if !schoolAffiliations.isEmpty {
+                FlowLayout {
+                    ForEach(schoolAffiliations) { affiliation in
+                        MusicSchoolAffiliationChip(affiliation: affiliation)
+                    }
+                }
+                .padding(.top, 1)
             }
             SocialLogosRow(socials: musician.socials)
                 .padding(.top, 4)

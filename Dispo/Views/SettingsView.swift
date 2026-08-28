@@ -407,7 +407,11 @@ struct LinkAppleSheet: View {
                         Image(systemName: "link")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.secondary)
-                        AvatarView(name: store.profile.name, size: 34)
+                        AvatarView(
+                            name: store.profile.name,
+                            size: 34,
+                            photo: store.myPhotoReference
+                        )
                     }
                     Text("Lier mon compte Apple")
                         .font(.title3.weight(.heavy))

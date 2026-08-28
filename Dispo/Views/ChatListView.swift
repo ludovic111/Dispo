@@ -119,7 +119,12 @@ struct ChatListView: View {
             NavigationLink(value: ChatRoute.conversation(conversation.id)) {
                 JCCard(padding: 13) {
                     HStack(spacing: 12) {
-                        AvatarView(name: conversation.contactName, size: 50, photo: store.photo(forName: conversation.contactName))
+                        AvatarView(
+                            name: conversation.contactName,
+                            size: 50,
+                            photo: conversation.contactPhotoURL
+                                ?? store.photo(forName: conversation.contactName)
+                        )
                         VStack(alignment: .leading, spacing: 3) {
                             HStack {
                                 Text(conversation.contactName)

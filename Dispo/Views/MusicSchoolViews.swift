@@ -749,6 +749,51 @@ struct MusicSchoolAvatar: View {
     }
 }
 
+/// Pastille compacte d'affiliation destinée à l'identité d'un profil. Elle
+/// n'affiche que les données déjà filtrées par les RPC de visibilité : le
+/// client ne tente jamais de recalculer qui peut voir quelle école.
+struct MusicSchoolAffiliationChip: View {
+    @EnvironmentObject private var store: AppStore
+    let affiliation: MusicSchoolAffiliation
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "building.columns.fill")
+                .font(.system(size: 9, weight: .black))
+                .accessibilityHidden(true)
+            Text(verbatim: label)
+                .font(.caption.weight(.bold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .frame(maxWidth: 260, alignment: .leading)
+        .background(JC.bronze.opacity(0.16), in: Capsule())
+        .overlay(Capsule().stroke(JC.bronze.opacity(0.4), lineWidth: 1))
+        .foregroundStyle(JC.bronze)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: accessibilityLabel))
+    }
+
+    private var label: String {
+        let base = "\(affiliation.school.displayName) · \(localizedRole)"
+        guard affiliation.verificationLevel != .verified else { return base }
+        return base + " " + store.tr("· déclaré")
+    }
+
+    private var localizedRole: String {
+        let custom = affiliation.roleLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return custom.isEmpty ? store.tr(affiliation.role.label) : custom
+    }
+
+    private var accessibilityLabel: String {
+        let base = "\(affiliation.school.name), \(localizedRole)"
+        guard affiliation.verificationLevel != .verified else { return base }
+        return base + " " + store.tr("· déclaré")
+    }
+}
+
 struct MusicSchoolAffiliationsCard: View {
     @EnvironmentObject private var store: AppStore
     let affiliations: [MusicSchoolAffiliation]

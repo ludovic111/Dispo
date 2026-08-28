@@ -361,18 +361,17 @@ struct SongDetailSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 7) {
-                        Text(song.title)
-                            .font(JCFont.display(19))
-                            .lineLimit(2)
-                        if let key = song.keyBadgeLabel {
-                            Label(key, systemImage: "tuningfork")
-                                .font(.caption2.weight(.heavy))
-                                .foregroundStyle(JC.bronze)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 4)
-                                .background(JC.bronze.opacity(0.12), in: Capsule())
-                        }
+                    Text(song.title)
+                        .font(JCFont.display(19))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let key = song.keyBadgeLabel {
+                        Label(key, systemImage: "tuningfork")
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(JC.bronze)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(JC.bronze.opacity(0.12), in: Capsule())
                     }
                     Text(song.artist)
                         .font(.caption)

@@ -6885,7 +6885,8 @@ final class AppStore: ObservableObject {
                     contactName: musician.name,
                     contactInstrument: musician.instruments.first ?? .voix,
                     messages: [],
-                    contactID: musician.id
+                    contactID: musician.id,
+                    contactPhotoURL: musician.photo
                 )
                 conversations.insert(new, at: 0)
                 return new
@@ -6894,14 +6895,23 @@ final class AppStore: ObservableObject {
                 // Repli local pour ne pas bloquer l'utilisateur.
             }
         }
-        return openConversation(name: musician.name, instrument: musician.instruments.first ?? .voix)
+        return openConversation(
+            name: musician.name,
+            instrument: musician.instruments.first ?? .voix,
+            photo: musician.photo
+        )
     }
 
-    private func openConversation(name: String, instrument: Instrument) -> Conversation {
+    private func openConversation(name: String, instrument: Instrument, photo: String? = nil) -> Conversation {
         if let existing = conversations.first(where: { $0.contactName == name }) {
             return existing
         }
-        let new = Conversation(contactName: name, contactInstrument: instrument, messages: [])
+        let new = Conversation(
+            contactName: name,
+            contactInstrument: instrument,
+            messages: [],
+            contactPhotoURL: photo
+        )
         conversations.insert(new, at: 0)
         persistConversations()
         return new

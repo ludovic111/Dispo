@@ -1386,14 +1386,13 @@ struct SongRow: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                         }
                         VStack(alignment: .leading, spacing: 3) {
-                            HStack(spacing: 6) {
-                                Text(song.title)
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                if let key = song.keyBadgeLabel {
-                                    hint(icon: "tuningfork", label: key)
-                                }
+                            Text(song.title)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let key = song.keyBadgeLabel {
+                                hint(icon: "tuningfork", label: key)
                             }
                             Text(song.artist)
                                 .font(.caption)
@@ -1777,7 +1776,8 @@ struct ListenSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(song.title)
                                 .font(.headline.weight(.heavy))
-                                .lineLimit(1)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                             Text(song.artist)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -3165,7 +3165,7 @@ struct AddSongSheet: View {
                         }
                     }
                 } footer: {
-                    Text("La tonalité s'affiche à côté du titre. La pochette est récupérée automatiquement si le morceau est trouvé.")
+                    Text("La tonalité s'affiche sous le titre. La pochette est récupérée automatiquement si le morceau est trouvé.")
                 }
             }
             .scrollContentBackground(.hidden)

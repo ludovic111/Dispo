@@ -2279,8 +2279,14 @@ struct Conversation: Codable, Identifiable, Hashable {
     var messages: [Message]
     /// UUID du contact côté serveur (nil pour les conversations de démo).
     var contactID: UUID?
+    /// URL déjà résolue par UUID lors du snapshot serveur. Elle évite les
+    /// collisions de noms et reste disponible même si le contact n'est pas
+    /// présent dans la liste de découverte courante.
+    var contactPhotoURL: String? = nil
 
-    enum CodingKeys: String, CodingKey { case id, contactName, contactInstrument, messages, contactID }
+    enum CodingKeys: String, CodingKey {
+        case id, contactName, contactInstrument, messages, contactID, contactPhotoURL
+    }
 
     var lastMessage: Message? { messages.max(by: { $0.date < $1.date }) }
 }

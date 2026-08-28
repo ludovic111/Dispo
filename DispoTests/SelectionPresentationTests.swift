@@ -53,6 +53,34 @@ final class SelectionPresentationTests: XCTestCase {
         XCTAssertEqual(song.keyBadgeLabel, "B♭")
     }
 
+    func testSchoolAffiliationChipInputsPreferShortNameAndTrimCustomRole() {
+        let school = MusicSchool(
+            id: UUID(),
+            slug: "association-musicale",
+            name: "Association pour l'encouragement de la Musique improvisée",
+            shortName: "  AMR  ",
+            city: "Genève",
+            countryCode: "CH",
+            websiteURL: nil,
+            logoURL: nil,
+            isVerified: false
+        )
+        let affiliation = MusicSchoolAffiliation(
+            membershipID: UUID(),
+            profileID: UUID(),
+            school: school,
+            role: .other,
+            roleLabel: "  Classe prépro  ",
+            visibility: .profile,
+            verificationLevel: .selfDeclared,
+            isPrimary: true,
+            joinedAt: Date()
+        )
+
+        XCTAssertEqual(affiliation.school.displayName, "AMR")
+        XCTAssertEqual(affiliation.displayedRole, "Classe prépro")
+    }
+
     func testAllSelectableKeysRoundTripThroughSongStorage() {
         let labels = MusicalKey.allKeys.map(\.label)
 

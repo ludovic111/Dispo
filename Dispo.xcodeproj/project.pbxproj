@@ -47,6 +47,7 @@
 		ABDC5A4D00EC694DC10929E2 /* DispoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */; };
 		ADF0DE196C538E5DBF0D2845 /* PrivateLocationIntegrityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */; };
 		B0D6FC9FF9B73F6BCC3D0567 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D10ACFB71CC40CFF3DFAC7 /* ChatView.swift */; };
+		BC26659ABB42BFBF05B2C5D6 /* AvatarImagePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841C547BDDC7FD6BABB8168E /* AvatarImagePipeline.swift */; };
 		BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */; };
 		C8BB5275D442027AF380E0DB /* MyEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30520EB8A6E15D9BD250814A /* MyEventsView.swift */; };
 		D11DDD8DADF839CA686C2611 /* AccountSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B3F83842515BEBAEE6211B /* AccountSheet.swift */; };
@@ -57,6 +58,7 @@
 		E129DB6ADC05561B67C8650C /* SplineSansMono-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F8A91EBF7C4EC255652D99B6 /* SplineSansMono-Medium.ttf */; };
 		E890AEA9164880D8D280E60A /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94BACE4F239852EC03210322 /* EventsView.swift */; };
 		EF7D0276B64BAF6134B9DFBA /* Locations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8137A13EBE04B692A857CF97 /* Locations.swift */; };
+		F4805E734485F404784B6FAE /* AvatarImagePipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFEBE9F6A57CB36E57187BFA /* AvatarImagePipelineTests.swift */; };
 		F6CA87DABA8FEC20010FA79B /* NotificationsCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */; };
 		F981CE7D7D0A4E6A70F00E1B /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44466866F267B8632340A4B3 /* DiscoveryView.swift */; };
 		FC46796225E74812DD8D86F9 /* Secrets.example.plist in Resources */ = {isa = PBXBuildFile; fileRef = C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */; };
@@ -109,6 +111,7 @@
 		77246C87C767CBDC463705FA /* SelectionControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionControls.swift; sourceTree = "<group>"; };
 		802525F21A49B214710B7D67 /* Dispo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Dispo.entitlements; sourceTree = "<group>"; };
 		8137A13EBE04B692A857CF97 /* Locations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Locations.swift; sourceTree = "<group>"; };
+		841C547BDDC7FD6BABB8168E /* AvatarImagePipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarImagePipeline.swift; sourceTree = "<group>"; };
 		8BA88F9A7155F27FCBAA3C2E /* Fraunces-DisplayItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-DisplayItalic.ttf"; sourceTree = "<group>"; };
 		8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProfileView.swift; sourceTree = "<group>"; };
 		8E39C5830D6125D24F3DC7D5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -132,6 +135,7 @@
 		D128C9A5713A4BEA6CB5CDF1 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		D29B18D3DD55BFEDCE6D109D /* BackendConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendConfig.swift; sourceTree = "<group>"; };
 		D3464C170F8FAE9B2A6C8F07 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		DFEBE9F6A57CB36E57187BFA /* AvatarImagePipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarImagePipelineTests.swift; sourceTree = "<group>"; };
 		E877FC2B3DF8A6D6BC9ACB50 /* NotificationsCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsCenterView.swift; sourceTree = "<group>"; };
 		E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSheet.swift; sourceTree = "<group>"; };
 		F5533270AA3C516AC1B6E955 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -154,6 +158,7 @@
 		06D2EFD08B705EF33DDAE394 /* DispoTests */ = {
 			isa = PBXGroup;
 			children = (
+				DFEBE9F6A57CB36E57187BFA /* AvatarImagePipelineTests.swift */,
 				077D264F558B81E6720C79C5 /* LocationUXTests.swift */,
 				2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */,
 				CD6EB48244B9DD72FB2FFDF2 /* SelectionPresentationTests.swift */,
@@ -247,6 +252,7 @@
 			children = (
 				261EC6F531BEE7612BA65B4B /* AppStore.swift */,
 				8E39C5830D6125D24F3DC7D5 /* Assets.xcassets */,
+				841C547BDDC7FD6BABB8168E /* AvatarImagePipeline.swift */,
 				1C7F31B74378504314D50904 /* Brands.swift */,
 				802525F21A49B214710B7D67 /* Dispo.entitlements */,
 				D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */,
@@ -407,6 +413,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4805E734485F404784B6FAE /* AvatarImagePipelineTests.swift in Sources */,
 				28095D0A929D08F4FCFF6982 /* LocationUXTests.swift in Sources */,
 				ADF0DE196C538E5DBF0D2845 /* PrivateLocationIntegrityTests.swift in Sources */,
 				0A820725E4819283EEB964B1 /* SelectionPresentationTests.swift in Sources */,
@@ -421,6 +428,7 @@
 				D11DDD8DADF839CA686C2611 /* AccountSheet.swift in Sources */,
 				48CB3AE64BB899CAEBC33239 /* AppStore.swift in Sources */,
 				7FFC99269986DF7164276E64 /* AuthGateView.swift in Sources */,
+				BC26659ABB42BFBF05B2C5D6 /* AvatarImagePipeline.swift in Sources */,
 				7D8885F2E241C09E56C1C339 /* BackendConfig.swift in Sources */,
 				30BEB710A59C858335EAF601 /* Brands.swift in Sources */,
 				3542850C3EEC170B6CEEC39A /* ChatListView.swift in Sources */,

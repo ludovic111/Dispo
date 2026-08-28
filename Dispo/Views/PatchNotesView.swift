@@ -39,7 +39,7 @@ struct PatchNote: Identifiable {
             version: "2.2",
             title: "Ton répertoire et tes alertes, enfin complets",
             points: [
-                "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la juste à côté du titre",
+                "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre",
                 "Modifie le titre et l'artiste d'un morceau déjà présent, y compris dans ses setlists",
                 "Concerts, répétitions et jams ont des couleurs distinctes, discrètes et cohérentes",
                 "Les dates terminées quittent l'agenda et rejoignent un historique avec morceaux et présences",

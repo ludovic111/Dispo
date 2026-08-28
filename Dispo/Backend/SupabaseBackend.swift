@@ -1184,7 +1184,9 @@ final class SupabaseBackend: Sendable {
         )
         let base = try client.storage.from(Self.avatarsBucket).getPublicURL(path: path)
         var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "v", value: "\(Int(Date().timeIntervalSince1970))")]
+        // Un UUID évite qu'une deuxième photo envoyée dans la même seconde
+        // réutilise l'ancienne entrée mémoire/CDN.
+        components?.queryItems = [URLQueryItem(name: "v", value: UUID().uuidString.lowercased())]
         return components?.url ?? base
     }
 
@@ -1826,7 +1828,8 @@ final class SupabaseBackend: Sendable {
                         reactions: Self.reactionSummaries(reactionsByMessage[$0.id] ?? [], myID: myID)
                     )
                 },
-                contactID: otherID
+                contactID: otherID,
+                contactPhotoURL: other?.photoUrl
             )
         }
     }
