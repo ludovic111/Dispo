@@ -1116,18 +1116,19 @@ struct OrderedUUIDDragHandle<Content: View>: View {
             }
     }
 
-    /// Le court maintien donne explicitement la priorité à la tuile sur le
-    /// pan vertical du ScrollView, puis le glissement réordonne directement.
+    /// Un court maintien prépare le réordonnancement, mais il ne démarre
+    /// réellement qu'après un mouvement du doigt. Un maintien immobile reste
+    /// ainsi disponible pour le menu contextuel de la tuile.
     private var reorderGesture: some Gesture {
-        LongPressGesture(minimumDuration: 0.12, maximumDistance: 18)
+        LongPressGesture(minimumDuration: 0.18, maximumDistance: 24)
             .sequenced(before: DragGesture(
-                minimumDistance: 0,
+                minimumDistance: 8,
                 coordinateSpace: .named(coordinateSpace)
             ))
             .onChanged { value in
                 switch value {
-                case .first(let pressed):
-                    if pressed { beginDrag() }
+                case .first:
+                    break
                 case .second(_, let drag):
                     if let drag { updateDrag(drag) }
                 }
@@ -1137,11 +1138,9 @@ struct OrderedUUIDDragHandle<Content: View>: View {
                 case .second(_, let drag):
                     if let drag {
                         endDrag(drag)
-                    } else {
-                        cancelDrag()
                     }
                 case .first:
-                    cancelDrag()
+                    break
                 }
             }
     }
@@ -1210,11 +1209,6 @@ struct OrderedUUIDDragHandle<Content: View>: View {
               let destination = order.firstIndex(of: id)
         else { return 0 }
         return abs(destination - source)
-    }
-
-    private func cancelDrag() {
-        guard session.draggingID == id else { return }
-        finishDrag(verticalTranslation: lastVerticalTranslation)
     }
 
     private func nearestTarget(to y: CGFloat) -> UUID? {
@@ -1336,6 +1330,7 @@ struct OrderedUUIDDragHandle<Content: View>: View {
 // MARK: - Ligne d'un morceau (pochette iTunes si trouvée)
 
 struct SongRow: View {
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var store: AppStore
     let song: Song
     /// true = montrer les boutons valider / refuser (suggestion + leader).
@@ -1350,6 +1345,7 @@ struct SongRow: View {
     let eventID: GroupEvent.ID?
     @State private var showListen = false
     @State private var showDetail = false
+    @State private var showCopy = false
 
     init(
         song: Song,
@@ -1369,6 +1365,7 @@ struct SongRow: View {
 
     var body: some View {
         songCard
+            .contextMenu { contextMenu }
             .sheet(isPresented: $showListen) {
                 ListenSheet(song: song)
                     .presentationDetents([.height(380)])
@@ -1376,6 +1373,16 @@ struct SongRow: View {
             .sheet(isPresented: $showDetail) {
                 if let groupID {
                     SongDetailSheet(groupID: groupID, songID: song.id)
+                }
+            }
+            .sheet(isPresented: $showCopy) {
+                if let groupID {
+                    CopySongSheet(
+                        song: song,
+                        sourceGroupID: groupID,
+                        sourceEventID: eventID
+                    )
+                    .presentationDetents([.medium, .large])
                 }
             }
     }
@@ -1503,6 +1510,33 @@ struct SongRow: View {
         }
         .buttonStyle(PressableStyle())
         .accessibilityLabel(Text("Écouter ce morceau"))
+    }
+
+    /// L'appui long immobile conserve les actions du morceau. La copie du
+    /// titre reste volontairement absente : on copie désormais le morceau
+    /// complet, avec son identité catalogue et ses métadonnées.
+    @ViewBuilder
+    private var contextMenu: some View {
+        if groupID != nil {
+            Button { showDetail = true } label: {
+                Label("Ouvrir la fiche du morceau", systemImage: "info.circle")
+            }
+            Button { showCopy = true } label: {
+                Label("Copier le morceau", systemImage: "rectangle.on.rectangle.angled")
+            }
+            Divider()
+        }
+        ForEach(StreamingPlatform.allCases) { platform in
+            if let url = platform.url(for: song) {
+                Button { openURL(url) } label: {
+                    Label {
+                        Text(verbatim: platform.label)
+                    } icon: {
+                        Image(systemName: platform.symbol)
+                    }
+                }
+            }
+        }
     }
 
     private var artworkPlaceholder: some View {

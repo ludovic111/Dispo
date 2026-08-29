@@ -67,6 +67,36 @@ final class SongSoloReorderingUITests: XCTestCase {
         )
     }
 
+    func testStationaryLongPressOnSongTileShowsActionsWithoutStartingReorder() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-screenshotRoute", "group-repertoire-reorder",
+            "-jamconnect.language", "fr",
+            "-AppleLanguages", "(fr)",
+            "-AppleLocale", "fr_FR"
+        ]
+        app.launch()
+
+        XCTAssertTrue(
+            app.navigationBars["🎸 Repertoire Drag QA"].waitForExistence(timeout: 8)
+        )
+        let blueBossa = app.staticTexts["Blue Bossa"].firstMatch
+        let cantaloupe = app.staticTexts["Cantaloupe Island"].firstMatch
+        XCTAssertTrue(blueBossa.waitForExistence(timeout: 3))
+        XCTAssertTrue(cantaloupe.waitForExistence(timeout: 3))
+        let initialBlueBossaY = blueBossa.frame.midY
+        let initialCantaloupeY = cantaloupe.frame.midY
+
+        blueBossa.press(forDuration: 1.2)
+
+        XCTAssertTrue(
+            app.buttons["Ouvrir la fiche du morceau"].waitForExistence(timeout: 3),
+            "Un appui long immobile doit afficher les options du morceau."
+        )
+        XCTAssertEqual(blueBossa.frame.midY, initialBlueBossaY, accuracy: 1)
+        XCTAssertEqual(cantaloupe.frame.midY, initialCantaloupeY, accuracy: 1)
+    }
+
     func testLongPressingFirstSongTileAndDraggingAfterThirdReordersGroupRepertoire() throws {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -106,7 +136,7 @@ final class SongSoloReorderingUITests: XCTestCase {
             CGVector(dx: thirdFrame.midX, dy: thirdFrame.midY + thirdFrame.height * 0.2)
         )
         start.press(
-            forDuration: 0.6,
+            forDuration: 0.25,
             thenDragTo: destination,
             withVelocity: .slow,
             thenHoldForDuration: 0.15
