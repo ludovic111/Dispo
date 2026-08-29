@@ -683,9 +683,6 @@ struct PlayedWithSheet: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                         Spacer(minLength: 0)
-                                        if let summary = store.ratingSummary(for: collaborator) {
-                                            RatingBadge(summary: summary)
-                                        }
                                         Image(systemName: "chevron.right")
                                             .font(.caption2.weight(.bold))
                                             .foregroundStyle(.tertiary)
@@ -749,9 +746,6 @@ struct FollowersSheet: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                         Spacer(minLength: 0)
-                                        if let summary = store.ratingSummary(for: follower) {
-                                            RatingBadge(summary: summary)
-                                        }
                                         Image(systemName: "chevron.right")
                                             .font(.caption2.weight(.bold))
                                             .foregroundStyle(.tertiary)

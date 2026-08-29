@@ -51,53 +51,18 @@ struct SongDetailSheet: View {
             ?? group.allEvents.flatMap(\.setlist).first { $0.id == songID }
     }
     private var isLeader: Bool { group.map { store.canLead($0) } ?? false }
+    private var sourceEventID: GroupEvent.ID? {
+        group?.allEvents.first { event in
+            event.setlist.contains { $0.id == songID }
+        }?.id
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 JCBackground()
                 if let group, let song {
-                    ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 14) {
-                            header(song)
-                            Picker("", selection: $tab.animation()) {
-                                ForEach(Tab.allCases) { option in
-                                    Text(LocalizedStringKey(option.rawValue)).tag(option)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-
-                            switch tab {
-                            case .ireal: irealTab(song)
-                            case .scores: scoresTab(song, group: group)
-                            case .solos:
-                                solosTab(song, group: group) { id, anchor in
-                                    withAnimation(.snappy(duration: 0.2)) {
-                                        scrollProxy.scrollTo(id, anchor: anchor)
-                                    }
-                                }
-                            case .comments: commentsTab(song, group: group)
-                            }
-                            }
-                            .padding(18)
-                        }
-                        .coordinateSpace(name: "song-solos-reorder")
-                        .background {
-                            GeometryReader { proxy in
-                                Color.clear.preference(
-                                    key: OrderedUUIDViewportHeightPreferenceKey.self,
-                                    value: proxy.size.height
-                                )
-                            }
-                        }
-                        .onPreferenceChange(OrderedUUIDFramePreferenceKey.self) { frames in
-                            soloRowFrames = frames
-                        }
-                        .onPreferenceChange(OrderedUUIDViewportHeightPreferenceKey.self) { height in
-                            soloViewportHeight = height
-                        }
-                    }
+                    detailContent(group: group, song: song)
                 }
             }
             .navigationTitle(song?.title ?? "")
@@ -133,7 +98,11 @@ struct SongDetailSheet: View {
             }
             .sheet(isPresented: $showCopyToRepertoire) {
                 if let song {
-                    CopySongSheet(song: song, sourceGroupID: groupID)
+                    CopySongSheet(
+                        song: song,
+                        sourceGroupID: groupID,
+                        sourceEventID: sourceEventID
+                    )
                         .presentationDetents([.medium, .large])
                 }
             }
@@ -188,11 +157,76 @@ struct SongDetailSheet: View {
                 }
                 #endif
             }
-            .onChange(of: song?.soloProfileIDs ?? []) { _, ids in
+            .onChange(of: currentSoloProfileIDs) { _, ids in
                 guard soloDragSession.draggingID == nil else { return }
                 soloOrder = ids
             }
         }
+    }
+
+    private func detailContent(group: GroupChat, song: Song) -> some View {
+        ScrollViewReader { scrollProxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    header(song)
+                    tabPicker
+                    selectedTab(group: group, song: song, scrollProxy: scrollProxy)
+                }
+                .padding(18)
+            }
+            .coordinateSpace(name: "song-solos-reorder")
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: OrderedUUIDViewportHeightPreferenceKey.self,
+                        value: proxy.size.height
+                    )
+                }
+            }
+            .onPreferenceChange(OrderedUUIDFramePreferenceKey.self) { frames in
+                soloRowFrames = frames
+            }
+            .onPreferenceChange(OrderedUUIDViewportHeightPreferenceKey.self) { height in
+                soloViewportHeight = height
+            }
+        }
+    }
+
+    private var tabPicker: some View {
+        Picker("", selection: $tab.animation()) {
+            ForEach(Tab.allCases) { option in
+                Text(LocalizedStringKey(option.rawValue)).tag(option)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    @ViewBuilder
+    private func selectedTab(
+        group: GroupChat,
+        song: Song,
+        scrollProxy: ScrollViewProxy
+    ) -> some View {
+        switch tab {
+        case .ireal:
+            irealTab(song)
+        case .scores:
+            scoresTab(song, group: group)
+        case .solos:
+            solosTab(song, group: group) { id, anchor in
+                withAnimation(.snappy(duration: 0.2)) {
+                    scrollProxy.scrollTo(id, anchor: anchor)
+                }
+            }
+        case .comments:
+            commentsTab(song, group: group)
+        }
+    }
+
+    /// Cette valeur nommée évite de faire résoudre à SwiftUI toute la chaîne
+    /// optionnelle dans le générique de `onChange`.
+    private var currentSoloProfileIDs: [UUID] {
+        song?.soloProfileIDs ?? []
     }
 
     // MARK: - Ordre des solos
@@ -306,7 +340,13 @@ struct SongDetailSheet: View {
                             onCommit: { ids in
                                 store.setSongSolos(ids, songID: song.id, in: groupID)
                             }
-                        )
+                        ) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
                     }
                 }
             }
@@ -365,8 +405,13 @@ struct SongDetailSheet: View {
                         .font(JCFont.display(19))
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let key = song.keyBadgeLabel {
-                        Label(key, systemImage: "tuningfork")
+                    let arrangement = [
+                        song.keyBadgeLabel,
+                        song.tempoBPM.map { "\($0) BPM" },
+                        song.form
+                    ].compactMap { $0 }.filter { !$0.isEmpty }
+                    if !arrangement.isEmpty {
+                        Label(arrangement.joined(separator: " · "), systemImage: "metronome")
                             .font(.caption2.weight(.heavy))
                             .foregroundStyle(JC.bronze)
                             .padding(.horizontal, 7)
@@ -376,9 +421,23 @@ struct SongDetailSheet: View {
                     Text(song.artist)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    let recording = [
+                        song.albumTitle,
+                        song.releaseYear.map(String.init),
+                        song.durationMilliseconds.map { milliseconds in
+                            let seconds = milliseconds / 1_000
+                            return String(format: "%d:%02d", seconds / 60, seconds % 60)
+                        }
+                    ].compactMap { $0 }.filter { !$0.isEmpty }
+                    if !recording.isEmpty {
+                        Text(recording.joined(separator: " · "))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 0)
-                if store.groups.contains(where: { $0.id != groupID }) {
+                if hasCopyDestination {
                     Button { showCopyToRepertoire = true } label: {
                         Image(systemName: "rectangle.on.rectangle.angled")
                             .font(.body.weight(.semibold))
@@ -399,6 +458,14 @@ struct SongDetailSheet: View {
                 .buttonStyle(PressableStyle())
                 .accessibilityLabel(Text("Écouter sur…"))
             }
+        }
+    }
+
+    private var hasCopyDestination: Bool {
+        store.groups.contains { candidate in
+            if candidate.id != groupID { return true }
+            if sourceEventID != nil { return true }
+            return !candidate.upcomingEvents.isEmpty
         }
     }
 

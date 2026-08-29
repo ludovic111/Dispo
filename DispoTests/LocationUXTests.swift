@@ -5,7 +5,9 @@ final class LocationUXTests: XCTestCase {
     func testCountryMappingAcceptsSupportedISOCodes() {
         XCTAssertEqual(Country(isoCode: "ch"), .switzerland)
         XCTAssertEqual(Country(isoCode: "FR"), .france)
-        XCTAssertNil(Country(isoCode: "JP"))
+        XCTAssertEqual(Country(isoCode: "JP"), .japan)
+        XCTAssertEqual(Country(isoCode: "KR"), .southKorea)
+        XCTAssertNil(Country(isoCode: "ZA"))
     }
 
     func testPlaceDraftBuildsOneConsistentLabel() {

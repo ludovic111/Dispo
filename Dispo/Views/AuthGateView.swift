@@ -243,10 +243,10 @@ struct AuthForm: View {
             Task {
                 do {
                     let userID = try await backend.signInWithApple(idToken: idToken, nonce: nonce)
-                    if !appleName.isEmpty, store.profile.name.isEmpty {
-                        store.profile.name = appleName
-                    }
-                    await store.didSignIn(userID: userID)
+                    await store.didSignIn(
+                        userID: userID,
+                        suggestedProfileName: appleName.isEmpty ? nil : appleName
+                    )
                 } catch {
                     errorText = store.tr("Connexion Apple refusée par le serveur.")
                 }

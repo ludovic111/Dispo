@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import Dispo
 
 final class SetlistWorkflowTests: XCTestCase {
@@ -137,7 +138,15 @@ final class SetlistWorkflowTests: XCTestCase {
         source.artworkURL = "https://example.com/cover.jpg"
         source.trackURL = "https://example.com/track"
         source.platformLinks = ["spotify": "https://example.com/spotify"]
+        source.catalogID = "apple:123456"
+        source.albumTitle = "Portrait in Jazz"
+        source.durationMilliseconds = 325_000
+        source.releaseYear = 1959
+        source.genre = "Jazz"
+        source.previewURL = "https://example.com/preview.m4a"
         source.key = "Bb"
+        source.tempoBPM = 128
+        source.form = "AABB"
         source.chords = "Cm7 | F7 | Bbmaj7"
         source.irealURL = "irealb://Autumn%20Leaves"
         source.irealDisabled = true
@@ -155,13 +164,38 @@ final class SetlistWorkflowTests: XCTestCase {
         XCTAssertEqual(copy.artworkURL, source.artworkURL)
         XCTAssertEqual(copy.trackURL, source.trackURL)
         XCTAssertEqual(copy.platformLinks, source.platformLinks)
+        XCTAssertEqual(copy.catalogID, source.catalogID)
+        XCTAssertEqual(copy.albumTitle, source.albumTitle)
+        XCTAssertEqual(copy.durationMilliseconds, source.durationMilliseconds)
+        XCTAssertEqual(copy.releaseYear, source.releaseYear)
+        XCTAssertEqual(copy.genre, source.genre)
+        XCTAssertEqual(copy.previewURL, source.previewURL)
         XCTAssertEqual(copy.key, source.key)
+        XCTAssertEqual(copy.tempoBPM, source.tempoBPM)
+        XCTAssertEqual(copy.form, source.form)
         XCTAssertEqual(copy.chords, source.chords)
         XCTAssertEqual(copy.irealURL, source.irealURL)
         XCTAssertEqual(copy.irealDisabled, source.irealDisabled)
         XCTAssertEqual(copy.suggestedBy, "14000000-0000-0000-0000-000000000003")
         XCTAssertFalse(copy.isApproved)
         XCTAssertTrue(copy.soloProfileIDs.isEmpty)
+    }
+
+    func testCatalogIdentityRejectsDifferentTextForTheSameRecording() {
+        var source = song(
+            id: "15000000-0000-0000-0000-000000000010",
+            title: "Song for My Father"
+        )
+        source.artist = "Horace Silver"
+        source.catalogID = "apple:42"
+        var localizedTitle = song(
+            id: "15000000-0000-0000-0000-000000000011",
+            title: "Song for My Father (Remastered)"
+        )
+        localizedTitle.artist = "The Horace Silver Quintet"
+        localizedTitle.catalogID = "APPLE:42"
+
+        XCTAssertTrue(AppStore.containsEquivalentSong(to: source, in: [localizedTitle]))
     }
 
     func testCopiedSongDuplicateIdentityIgnoresCaseAccentsAndExtraSpaces() {
@@ -281,14 +315,14 @@ final class SetlistWorkflowTests: XCTestCase {
         let second = UUID(uuidString: "20500000-0000-0000-0000-000000000002")!
         let third = UUID(uuidString: "20500000-0000-0000-0000-000000000003")!
 
-        let movedDown = OrderedUUIDDragHandle.moving(
+        let movedDown = OrderedUUIDDragHandle<EmptyView>.moving(
             first,
             beforeOrAt: third,
             in: [first, second, third]
         )
         XCTAssertEqual(movedDown, [second, third, first])
 
-        let movedUp = OrderedUUIDDragHandle.moving(
+        let movedUp = OrderedUUIDDragHandle<EmptyView>.moving(
             third,
             beforeOrAt: first,
             in: [first, second, third]

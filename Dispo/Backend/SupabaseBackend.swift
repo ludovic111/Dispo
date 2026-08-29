@@ -2163,10 +2163,13 @@ final class SupabaseBackend: Sendable {
             myID: UUID,
             myName: String,
             nameByID: [UUID: String],
+            photoByID: [UUID: String] = [:],
             reactions: [MessageReaction] = []
         ) -> GroupMessage {
             GroupMessage(
                 id: id,
+                senderID: senderId,
+                senderPhotoURL: photoByID[senderId],
                 sender: senderId == myID ? myName : (nameByID[senderId] ?? "Musicien"),
                 isFromMe: senderId == myID,
                 text: text,
@@ -2184,6 +2187,12 @@ final class SupabaseBackend: Sendable {
         var id: UUID
         var title: String
         var artist: String
+        var catalogID: String?
+        var albumTitle: String?
+        var durationMilliseconds: Int?
+        var releaseYear: Int?
+        var genre: String?
+        var previewURL: String?
         var artworkURL: String?
         var trackURL: String?
         var platformLinks: [String: String]?
@@ -2191,6 +2200,8 @@ final class SupabaseBackend: Sendable {
         var isApproved: Bool
         /// Tonalité réelle, grille d'accords et lien iReal Pro du morceau.
         var key: String?
+        var tempoBPM: Int?
+        var form: String?
         var chords: String?
         var irealURL: String?
         var irealDisabled: Bool?
@@ -2200,7 +2211,13 @@ final class SupabaseBackend: Sendable {
         var solos: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case id, title, artist, key, chords, solos
+            case id, title, artist, genre, key, form, chords, solos
+            case tempoBPM = "tempo_bpm"
+            case catalogID = "catalog_id"
+            case albumTitle = "album_title"
+            case durationMilliseconds = "duration_ms"
+            case releaseYear = "release_year"
+            case previewURL = "preview_url"
             case artworkURL = "artwork_url"
             case trackURL = "track_url"
             case platformLinks = "platform_links"
@@ -2214,12 +2231,20 @@ final class SupabaseBackend: Sendable {
             id = song.id
             title = song.title
             artist = song.artist
+            catalogID = song.catalogID
+            albumTitle = song.albumTitle
+            durationMilliseconds = song.durationMilliseconds
+            releaseYear = song.releaseYear
+            genre = song.genre
+            previewURL = song.previewURL
             artworkURL = song.artworkURL
             trackURL = song.trackURL
             platformLinks = song.platformLinks
             suggestedBy = song.suggestedBy
             isApproved = song.isApproved
             key = song.key
+            tempoBPM = song.tempoBPM
+            form = song.form
             chords = song.chords
             irealURL = song.irealURL
             irealDisabled = song.irealDisabled
@@ -2231,12 +2256,20 @@ final class SupabaseBackend: Sendable {
                 id: id,
                 title: title,
                 artist: artist,
+                catalogID: catalogID,
+                albumTitle: albumTitle,
+                durationMilliseconds: durationMilliseconds,
+                releaseYear: releaseYear,
+                genre: genre,
+                previewURL: previewURL,
                 artworkURL: artworkURL,
                 trackURL: trackURL,
                 platformLinks: platformLinks,
                 suggestedBy: suggestedBy,
                 isApproved: isApproved,
                 key: key,
+                tempoBPM: tempoBPM,
+                form: form,
                 chords: chords,
                 irealURL: irealURL,
                 irealDisabled: irealDisabled,
@@ -2247,7 +2280,12 @@ final class SupabaseBackend: Sendable {
 
     /// Charge les groupes dont je suis membre (RLS), avec membres, événements,
     /// présence, messages, partitions et commentaires.
-    func fetchGroups(myID: UUID, myName: String, nameByID: [UUID: String]) async throws -> [GroupChat] {
+    func fetchGroups(
+        myID: UUID,
+        myName: String,
+        nameByID: [UUID: String],
+        photoByID: [UUID: String] = [:]
+    ) async throws -> [GroupChat] {
         let groupRows: [MusicGroupRow] = try await client.from("music_groups")
             .select()
             .order("created_at", ascending: false)
@@ -2436,6 +2474,7 @@ final class SupabaseBackend: Sendable {
                         myID: myID,
                         myName: myName,
                         nameByID: nameByID,
+                        photoByID: photoByID,
                         reactions: Self.reactionSummaries(
                             reactionsByGroupMessage[$0.id] ?? [],
                             myID: myID
@@ -2521,7 +2560,7 @@ final class SupabaseBackend: Sendable {
                 groupEmoji: groupEmoji,
                 groupPhotoURL: groupPhotoUrl,
                 invitedByName: invitedByName,
-                kind: GroupMemberKind(dbValue: kind) ?? .occasional,
+                kind: GroupMemberKind(dbValue: kind) ?? .specialGuest,
                 date: createdAt
             )
         }

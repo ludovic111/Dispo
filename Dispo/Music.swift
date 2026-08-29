@@ -5,7 +5,7 @@ import Foundation
 /// La tonalité d'un morceau, en hauteur réelle (« concert »). On la note en
 /// lettres (C, B♭, F♯…) : c'est ce qu'il y a sur les grilles d'accords,
 /// dans toutes les langues.
-struct MusicalKey: Hashable {
+struct MusicalKey: Hashable, Sendable {
     /// 0 = C, 1 = C♯/D♭ … 11 = B.
     var pitchClass: Int
     var isMinor: Bool

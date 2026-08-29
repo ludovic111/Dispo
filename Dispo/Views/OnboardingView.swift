@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Onboarding en 4 étapes : langue → concept → pays/ville → profil express.
-/// Tout est réglable plus tard dans le profil ; « Passer » garde les défauts.
+/// Tout est réglable plus tard dans le profil. Aucun contenu utilisateur n'est
+/// prérempli ou publié tant que la personne ne l'a pas choisi elle-même.
 struct OnboardingView: View {
     @EnvironmentObject private var store: AppStore
     @State private var step = 0
@@ -15,6 +16,24 @@ struct OnboardingView: View {
     @State private var city = ""
 
     private let stepCount = 4
+
+    private var isRequiredProfileSetup: Bool {
+        store.liveProfileNeedsSetup || LiveProfileSetupPolicy.requiresSetup(
+            name: name,
+            instrumentCount: instruments.count,
+            city: city,
+            postalCode: postalCode
+        )
+    }
+
+    private var canFinishRequiredLiveSetup: Bool {
+        LiveProfileSetupPolicy.canComplete(
+            name: name,
+            instrumentCount: instruments.count,
+            city: city,
+            postalCode: postalCode
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -64,7 +83,7 @@ struct OnboardingView: View {
             LogoView(markSize: 32, wordmarkColor: JC.laiton)
                 .padding(.leading)
             Spacer()
-            if step > 0 {
+            if step > 0 && !isRequiredProfileSetup {
                 Button("Passer") { finish() }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -111,14 +130,22 @@ struct OnboardingView: View {
             .foregroundStyle(JC.billetInk)
         }
         .buttonStyle(PressableStyle())
-        .disabled(step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete)
-        .opacity(step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete ? 0.55 : 1)
+        .disabled(
+            (step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete)
+                || (step == stepCount - 1 && isRequiredProfileSetup && !canFinishRequiredLiveSetup)
+        )
+        .opacity(
+            (step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete)
+                || (step == stepCount - 1 && isRequiredProfileSetup && !canFinishRequiredLiveSetup)
+                ? 0.55 : 1
+        )
         .padding(.horizontal, 28)
         .padding(.bottom, 36)
     }
 
     /// Applique les choix au profil et termine l'onboarding.
     private func finish() {
+        if isRequiredProfileSetup && !canFinishRequiredLiveSetup { return }
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         if !trimmed.isEmpty { store.profile.name = trimmed }
         if !instruments.isEmpty {

@@ -67,7 +67,7 @@ final class SongSoloReorderingUITests: XCTestCase {
         )
     }
 
-    func testDraggingFirstApprovedSongHandleAfterThirdReordersGroupRepertoire() throws {
+    func testLongPressingFirstSongTileAndDraggingAfterThirdReordersGroupRepertoire() throws {
         let app = XCUIApplication()
         app.launchArguments += [
             "-screenshotRoute", "group-repertoire-reorder",
@@ -92,18 +92,12 @@ final class SongSoloReorderingUITests: XCTestCase {
         XCTAssertLessThan(blueBossa.frame.midY, cantaloupe.frame.midY)
         XCTAssertLessThan(cantaloupe.frame.midY, dolphin.frame.midY)
 
-        let handles = app.buttons.matching(
-            NSPredicate(format: "label == %@", "Déplacer le morceau")
-        )
-        let firstHandle = handles.element(boundBy: 0)
-        let thirdHandle = handles.element(boundBy: 2)
-        XCTAssertTrue(firstHandle.waitForExistence(timeout: 3))
-        XCTAssertTrue(thirdHandle.waitForExistence(timeout: 3))
-        XCTAssertTrue(firstHandle.isHittable)
-        XCTAssertTrue(thirdHandle.isHittable)
-
-        let firstFrame = firstHandle.frame
-        let thirdFrame = thirdHandle.frame
+        // Il n'y a volontairement plus de poignée : le geste commence sur
+        // le contenu de la tuile elle-même.
+        XCTAssertTrue(blueBossa.isHittable)
+        XCTAssertTrue(dolphin.isHittable)
+        let firstFrame = blueBossa.frame
+        let thirdFrame = dolphin.frame
         let appOrigin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
         let start = appOrigin.withOffset(
             CGVector(dx: firstFrame.midX, dy: firstFrame.midY)
@@ -153,7 +147,7 @@ final class SongSoloReorderingUITests: XCTestCase {
         let success = app.alerts["Morceau copié"]
         XCTAssertTrue(success.waitForExistence(timeout: 3))
         XCTAssertTrue(
-            success.staticTexts["Autumn Leaves a été ajouté au répertoire de Copy Destination QA."].exists
+            success.staticTexts["Autumn Leaves a été copié vers Copy Destination QA."].exists
         )
         success.buttons["OK"].tap()
 
@@ -162,7 +156,7 @@ final class SongSoloReorderingUITests: XCTestCase {
         XCTAssertTrue(copyButton.waitForExistence(timeout: 3))
         copyButton.tap()
         XCTAssertTrue(app.navigationBars["Copier le morceau"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Déjà dans ce répertoire"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Déjà dans cette destination"].waitForExistence(timeout: 3))
         let duplicateDestination = app.buttons.matching(
             NSPredicate(format: "label CONTAINS %@", "Copy Destination QA")
         ).firstMatch

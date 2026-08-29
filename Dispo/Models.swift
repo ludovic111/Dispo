@@ -735,6 +735,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
     case italian = "it"
     case mandarin = "zh-Hans"
     case japanese = "ja"
+    case portuguese = "pt"
+    case korean = "ko"
 
     var id: String { rawValue }
 
@@ -748,6 +750,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
         case .italian: return "Italiano"
         case .mandarin: return "中文"
         case .japanese: return "日本語"
+        case .portuguese: return "Português"
+        case .korean: return "한국어"
         }
     }
 
@@ -760,6 +764,8 @@ enum AppLanguage: String, Codable, CaseIterable, Identifiable {
         case .italian: return "🇮🇹"
         case .mandarin: return "🇨🇳"
         case .japanese: return "🇯🇵"
+        case .portuguese: return "🇵🇹"
+        case .korean: return "🇰🇷"
         }
     }
 
@@ -826,6 +832,19 @@ enum Country: String, Codable, CaseIterable, Identifiable {
     case uk = "GB"
     case ireland = "IE"
     case canada = "CA"
+    case denmark = "DK"
+    case sweden = "SE"
+    case norway = "NO"
+    case finland = "FI"
+    case poland = "PL"
+    case czechia = "CZ"
+    case greece = "GR"
+    case australia = "AU"
+    case newZealand = "NZ"
+    case brazil = "BR"
+    case mexico = "MX"
+    case japan = "JP"
+    case southKorea = "KR"
 
     var id: String { rawValue }
 
@@ -852,6 +871,19 @@ enum Country: String, Codable, CaseIterable, Identifiable {
         case .uk: return "🇬🇧"
         case .ireland: return "🇮🇪"
         case .canada: return "🇨🇦"
+        case .denmark: return "🇩🇰"
+        case .sweden: return "🇸🇪"
+        case .norway: return "🇳🇴"
+        case .finland: return "🇫🇮"
+        case .poland: return "🇵🇱"
+        case .czechia: return "🇨🇿"
+        case .greece: return "🇬🇷"
+        case .australia: return "🇦🇺"
+        case .newZealand: return "🇳🇿"
+        case .brazil: return "🇧🇷"
+        case .mexico: return "🇲🇽"
+        case .japan: return "🇯🇵"
+        case .southKorea: return "🇰🇷"
         }
     }
 
@@ -872,6 +904,19 @@ enum Country: String, Codable, CaseIterable, Identifiable {
         case .uk: return "Royaume-Uni"
         case .ireland: return "Irlande"
         case .canada: return "Canada"
+        case .denmark: return "Danemark"
+        case .sweden: return "Suède"
+        case .norway: return "Norvège"
+        case .finland: return "Finlande"
+        case .poland: return "Pologne"
+        case .czechia: return "Tchéquie"
+        case .greece: return "Grèce"
+        case .australia: return "Australie"
+        case .newZealand: return "Nouvelle-Zélande"
+        case .brazil: return "Brésil"
+        case .mexico: return "Mexique"
+        case .japan: return "Japon"
+        case .southKorea: return "Corée du Sud"
         }
     }
 }
@@ -1213,6 +1258,10 @@ struct MessageReaction: Codable, Identifiable, Hashable {
 /// Un message dans un groupe.
 struct GroupMessage: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
+    /// Identité et photo résolues par UUID, jamais par le seul nom affiché.
+    /// Optionnelles pour les caches enregistrés avant la 2.4 (33).
+    var senderID: UUID? = nil
+    var senderPhotoURL: String? = nil
     var sender: String
     var isFromMe: Bool
     var text: String
@@ -1274,21 +1323,40 @@ struct SongComment: Codable, Identifiable, Hashable {
 /// Un morceau du répertoire (du groupe ou d'un événement). Tant que le
 /// leader ne l'a pas validé, c'est une suggestion en attente.
 struct Song: Codable, Identifiable, Hashable {
+    /// Identité de la carte dans un répertoire / une setlist. Une copie reçoit
+    /// un nouvel UUID afin de rester indépendante dans sa destination.
     var id: UUID = UUID()
     var title: String
     var artist: String
+    /// Identité stable de l'enregistrement dans le catalogue musical. Elle est
+    /// conservée lors d'une copie et sert de dédoublonnage prioritaire. Pour
+    /// l'instant : `apple:<trackId>` issu du catalogue Apple/iTunes.
+    var catalogID: String?
+    var albumTitle: String?
+    var durationMilliseconds: Int?
+    var releaseYear: Int?
+    var genre: String?
+    /// Extrait audio officiel utilisé uniquement pour proposer une tonalité.
+    var previewURL: String?
     /// Pochette (iTunes Search) — nil si introuvable, le morceau vit sans.
     var artworkURL: String?
     /// Lien direct Apple Music (iTunes Search) — nil si introuvable.
     var trackURL: String?
     /// Liens directs par plateforme (StreamingPlatform.rawValue → URL),
-    /// résolus via Odesli (song.link). nil → repli sur la recherche.
+    /// résolus via Odesli (song.link). On n'ouvre jamais une recherche à la
+    /// place d'un morceau : si le lien exact manque, la plateforme est masquée.
     var platformLinks: [String: String]?
     var suggestedBy: String
     var isApproved: Bool
     /// Tonalité réelle (« concert ») du morceau, en lettres : « Bb », « F#m ».
     /// Sert à afficher à chacun la tonalité de SON instrument.
     var key: String?
+    /// Tempo de référence en battements par minute. L'analyse de l'extrait le
+    /// propose automatiquement ; le groupe peut le corriger.
+    var tempoBPM: Int?
+    /// Forme jouée par le groupe (AABA, ABAB, AABB…). C'est une donnée
+    /// d'arrangement, donc volontairement éditable.
+    var form: String?
     /// Grille d'accords en toutes lettres — transposée automatiquement pour
     /// chaque instrument transpositeur.
     var chords: String?
@@ -1361,16 +1429,7 @@ enum StreamingPlatform: String, CaseIterable, Identifiable {
         if self == .appleMusic, let track = song.trackURL, let url = URL(string: track) {
             return url
         }
-        let query = "\(song.title) \(song.artist)"
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            return nil
-        }
-        switch self {
-        case .appleMusic: return URL(string: "https://music.apple.com/search?term=\(encoded)")
-        case .spotify: return URL(string: "https://open.spotify.com/search/\(encoded)")
-        case .youtubeMusic: return URL(string: "https://music.youtube.com/search?q=\(encoded)")
-        case .deezer: return URL(string: "https://www.deezer.com/search/\(encoded)")
-        }
+        return nil
     }
 
     /// Vrai si on a un lien direct vers le morceau (pas juste une recherche).
@@ -1542,11 +1601,12 @@ struct PendingGroupInvite: Codable, Identifiable, Hashable {
     var kind: GroupMemberKind
 }
 
-/// Statut d'un membre dans le noyau du groupe : permanent (base fixe) ou
-/// occasionnel (remplaçant / invité ponctuel).
+/// Statut d'un membre dans le groupe : noyau permanent ou Special guest
+/// temporaire. `occasional` reste accepté au décodage pour les anciennes
+/// lignes, mais n'est plus écrit.
 enum GroupMemberKind: String, Codable, CaseIterable, Identifiable {
     case permanent = "Permanent"
-    case occasional = "Occasionnel"
+    case specialGuest = "Special guest"
 
     var id: String { rawValue }
 
@@ -1556,14 +1616,14 @@ enum GroupMemberKind: String, Codable, CaseIterable, Identifiable {
     var dbValue: String {
         switch self {
         case .permanent: return "permanent"
-        case .occasional: return "occasional"
+        case .specialGuest: return "guest"
         }
     }
 
     init?(dbValue: String) {
         switch dbValue {
         case "permanent": self = .permanent
-        case "occasional": self = .occasional
+        case "guest", "occasional": self = .specialGuest
         default: return nil
         }
     }
@@ -1571,8 +1631,30 @@ enum GroupMemberKind: String, Codable, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .permanent: return "person.fill.checkmark"
-        case .occasional: return "person.badge.clock"
+        case .specialGuest: return "sparkles"
         }
+    }
+
+    var badgeText: String {
+        self == .specialGuest ? "🌠 Special guest" : label
+    }
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        switch value {
+        case "Permanent", "permanent": self = .permanent
+        case "Special guest", "guest", "Occasionnel", "occasional": self = .specialGuest
+        default:
+            throw DecodingError.dataCorruptedError(
+                in: try decoder.singleValueContainer(),
+                debugDescription: "Unknown group member kind: \(value)"
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
@@ -1853,7 +1935,7 @@ struct GroupChat: Codable, Identifiable, Hashable {
     /// Contrairement aux dictionnaires historiques indexés par nom, ce champ
     /// conserve correctement deux membres homonymes.
     var rosterProfiles: [SoloistOption]? = nil
-    /// Permanent vs occasionnel, par nom. Absent = permanent (noyau par défaut).
+    /// Permanent vs Special guest, par nom. Absent = permanent (noyau par défaut).
     var memberKinds: [String: GroupMemberKind]?
     /// Version canonique indexée par UUID, utilisée dès qu'elle est présente.
     var memberKindsByProfileID: [String: GroupMemberKind]? = nil
@@ -1991,8 +2073,10 @@ struct GroupChat: Codable, Identifiable, Hashable {
     }
 
     var occasionalMembers: [String] {
-        memberNames.filter { memberKind(for: $0) == .occasional }
+        memberNames.filter { memberKind(for: $0) == .specialGuest }
     }
+
+    var specialGuests: [String] { occasionalMembers }
 }
 
 /// Un groupe public affiché sur le profil d'un musicien (le sien ou celui

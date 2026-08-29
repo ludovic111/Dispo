@@ -410,11 +410,20 @@ struct GroupInvitationCard: View {
                                 .font(.subheadline.weight(.bold))
                                 .lineLimit(1)
                             TagView(text: "Invitation", color: JC.laiton)
+                            if invitation.kind == .specialGuest {
+                                Text(verbatim: "🌠")
+                                    .accessibilityLabel(Text("Special guest"))
+                            }
                         }
                         Text(String(format: store.tr("%@ t'invite à rejoindre ce groupe"), invitation.invitedByName))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
+                        if invitation.kind == .specialGuest {
+                            Text(verbatim: "🌠 Special guest · membre temporaire")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(JC.bronze)
+                        }
                     }
                     Spacer(minLength: 0)
                 }

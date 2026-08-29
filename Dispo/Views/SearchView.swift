@@ -142,6 +142,14 @@ struct SearchMusicianRow: View {
     /// Jour recherché : sert à afficher où le musicien sera ce jour-là.
     var on: Date? = nil
 
+    private var schoolAffiliations: [MusicSchoolAffiliation] {
+        store.musicSchoolAffiliations(for: musician.id)
+    }
+
+    private var sharedSchools: [MusicSchool] {
+        store.sharedMusicSchools(with: musician.id)
+    }
+
     var body: some View {
         JCCard(padding: 12) {
             HStack(alignment: .top, spacing: 12) {
@@ -184,6 +192,13 @@ struct SearchMusicianRow: View {
                             }
                         }
                     }
+                    if !schoolAffiliations.isEmpty {
+                        FlowLayout(spacing: 5) {
+                            ForEach(schoolAffiliations.prefix(3)) { affiliation in
+                                MusicSchoolNameBadge(school: affiliation.school)
+                            }
+                        }
+                    }
                     Text(verbatim: musician.neighborhood)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -196,13 +211,13 @@ struct SearchMusicianRow: View {
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(JC.laiton)
                     }
-                    HStack(spacing: 7) {
-                        if let summary = store.ratingSummary(for: musician) {
-                            RatingBadge(summary: summary)
-                        }
+                    FlowLayout(spacing: 7) {
                         Text("\(store.followerCount(of: musician)) abonnés")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                        if !sharedSchools.isEmpty {
+                            SameMusicSchoolCompactBadge(schools: sharedSchools)
+                        }
                         if store.playedWithAFriend(musician) {
                             PlayedWithFriendCompactBadge(friends: store.friendsWhoPlayedWith(musician))
                         }
@@ -211,6 +226,59 @@ struct SearchMusicianRow: View {
                 Spacer(minLength: 0)
             }
         }
+    }
+}
+
+/// Nom court de l'école uniquement : le rôle reste visible sur la fiche du
+/// profil, sans alourdir les petites tuiles de l'accueil.
+struct MusicSchoolNameBadge: View {
+    let school: MusicSchool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "building.columns.fill")
+                .font(.system(size: 8, weight: .black))
+            Text(verbatim: school.displayName)
+                .font(.caption2.weight(.bold))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(JC.bronze.opacity(0.14), in: Capsule())
+        .overlay(Capsule().stroke(JC.bronze.opacity(0.35), lineWidth: 1))
+        .foregroundStyle(JC.bronze)
+        .accessibilityLabel(Text(verbatim: school.name))
+    }
+}
+
+/// Relation scolaire, dans le même langage visuel que « Relation commune ».
+struct SameMusicSchoolCompactBadge: View {
+    let schools: [MusicSchool]
+
+    private var schoolNames: String {
+        schools.map(\.name).joined(separator: ", ")
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 9, weight: .bold))
+            Text("Même école")
+                .font(.caption2.weight(.bold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(JC.feutrine.opacity(0.14), in: Capsule())
+        .overlay(Capsule().stroke(JC.feutrine.opacity(0.35), lineWidth: 1))
+        .foregroundStyle(JC.feutrine)
+        .contextMenu {
+            ForEach(schools) { school in
+                Label(school.name, systemImage: "building.columns.fill")
+            }
+        }
+        .accessibilityLabel(Text("Même école"))
+        .accessibilityHint(Text(verbatim: schoolNames))
+        .help(schoolNames)
     }
 }
 

@@ -92,7 +92,6 @@ struct MyProfileView: View {
                         availabilityCard
                         videosCard
                         myGroupsCard
-                        if !store.isPremium { premiumCard }
                         footer
                     }
                     .padding(.horizontal, 18)
@@ -293,7 +292,6 @@ struct MyProfileView: View {
             HStack(spacing: 8) {
                 Text(store.profile.name)
                     .font(JCFont.display(21))
-                if store.isPremium { PremiumBadge() }
             }
             HStack(spacing: 8) {
                 Text(verbatim: store.profile.handle)
@@ -669,13 +667,6 @@ struct MyProfileView: View {
         }
     }
 
-    private var premiumCard: some View {
-        JCPromoBanner(
-            icon: "crown.fill",
-            title: "Plus de musique. Moins d'organisation.",
-            subtitle: "Plusieurs groupes, automatisations et 6 vidéos · via l'App Store"
-        ) { store.showPaywall = true }
-    }
 }
 
 // MARK: - Titre & date d'une vidéo de démo

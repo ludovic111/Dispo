@@ -2,7 +2,7 @@ import SwiftUI
 import AuthenticationServices
 
 /// Réglages de l'application — séparés du profil, rangés par catégories :
-/// compte, notifications, préférences, abonnement, aide & infos.
+/// compte, notifications, préférences, projet économique, aide & infos.
 struct SettingsSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -215,84 +215,19 @@ struct SettingsSheet: View {
         }
     }
 
-    // MARK: - Abonnement
+    // MARK: - Modèle économique
 
     private var premiumSection: some View {
-        Section("Abonnement") {
-            if AppStore.isBeta {
-                // Bêta fermée : rien n'est vendu, rien n'est simulé —
-                // tout est simplement ouvert aux testeurs.
-                HStack(spacing: 12) {
-                    settingsIcon("wrench.and.screwdriver.fill", JC.premiumTint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Version bêta — tout est ouvert")
-                            .foregroundStyle(.primary)
-                        Text("Aucun abonnement pendant les tests. Groupes, alertes en avance et 6 vidéos : c'est offert.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+        Section("Projet Premium") {
+            HStack(spacing: 12) {
+                settingsIcon("wrench.and.screwdriver.fill", JC.premiumTint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Premium — en réflexion")
+                        .foregroundStyle(.primary)
+                    Text("Work in progress : le modèle économique n'est pas décidé. Toutes les fonctionnalités sont ouvertes gratuitement aux bêta-testeurs.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-            } else if store.isPremium {
-                HStack(spacing: 12) {
-                    settingsIcon("crown.fill", JC.laiton)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Premium actif")
-                            .foregroundStyle(.primary)
-                        if let plan = store.premiumPlan {
-                            Text(LocalizedStringKey(plan.title))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                if let manageURL = URL(string: "https://apps.apple.com/account/subscriptions") {
-                    Link(destination: manageURL) {
-                        HStack(spacing: 12) {
-                            settingsIcon("gearshape.2.fill", JC.bronze)
-                            Text("Gérer mon abonnement")
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-            } else {
-                Button {
-                    dismiss()
-                    store.showPaywall = true
-                } label: {
-                    HStack(spacing: 12) {
-                        settingsIcon("crown.fill", JC.laiton)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Découvrir Premium")
-                                .foregroundStyle(.primary)
-                            Text("Alertes en avance, groupes, 6 vidéos")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        chevron
-                    }
-                }
-            }
-            // Rien à restaurer tant qu'on ne vend rien.
-            if !AppStore.isBeta {
-                Button {
-                    Task { await store.restorePurchases() }
-                } label: {
-                    HStack(spacing: 12) {
-                        settingsIcon("arrow.clockwise", JC.bronze)
-                        Text("Restaurer mes achats")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if store.purchaseInProgress {
-                            ProgressView().controlSize(.small)
-                        }
-                    }
-                }
-                .disabled(store.purchaseInProgress)
             }
         }
     }

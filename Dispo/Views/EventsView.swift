@@ -434,9 +434,6 @@ struct ApplicantDecisionRow: View {
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(JC.bronze)
                             }
-                            if let summary = store.ratingSummary(for: applicant.musician) {
-                                RatingBadge(summary: summary)
-                            }
                             if applicant.musician.isDemo { DemoAccountBadge() }
                         }
                     }

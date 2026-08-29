@@ -20,6 +20,12 @@ extension Country {
         case .uk: return Self.ukCities
         case .ireland: return Self.irishCities
         case .canada: return Self.canadianCities
+        case .denmark, .sweden, .norway, .finland, .poland, .czechia,
+             .greece, .australia, .newZealand, .brazil, .mexico, .japan,
+             .southKorea:
+            // Le géocodeur système résout les codes postaux de ces nouveaux
+            // pays ; la ville reste toujours modifiable manuellement.
+            return []
         }
     }
 

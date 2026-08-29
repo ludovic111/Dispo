@@ -7,6 +7,36 @@ import AVFoundation
 import StoreKit
 import RevenueCat
 
+/// Règles pures de publication d'un premier profil live. Gardées hors de
+/// `AppStore` pour tester l'isolation sans démarrer Supabase.
+enum LiveProfileSetupPolicy {
+    static func canComplete(
+        name: String,
+        instrumentCount: Int,
+        city: String?,
+        postalCode: String?
+    ) -> Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2
+            && instrumentCount > 0
+            && (city?.trimmingCharacters(in: .whitespacesAndNewlines).count ?? 0) >= 2
+            && (postalCode?.trimmingCharacters(in: .whitespacesAndNewlines).count ?? 0) >= 3
+    }
+
+    static func requiresSetup(
+        name: String,
+        instrumentCount: Int,
+        city: String?,
+        postalCode: String?
+    ) -> Bool {
+        !canComplete(
+            name: name,
+            instrumentCount: instrumentCount,
+            city: city,
+            postalCode: postalCode
+        )
+    }
+}
+
 /// État global de Dispo. Les données de compte viennent de Supabase ; seules
 /// les préférences strictement locales restent dans UserDefaults.
 @MainActor
@@ -75,11 +105,10 @@ final class AppStore: ObservableObject {
     private var liveMyRatings: [UUID: Int] = [:]
     /// Ma propre note agrégée (moyenne + nb d'avis), lue du serveur.
     @Published private(set) var myRatingSummary: RatingSummary?
-    /// Les achats réels sont activés dans ce build TestFlight. Les offres,
-    /// prix et essais viennent de RevenueCat / StoreKit ; aucun droit Premium
-    /// n'est simulé côté client. Repasser temporairement à `true` uniquement
-    /// pour une bêta explicitement non monétisée.
-    static let isBeta = false
+    /// Pendant la bêta, toutes les fonctions Premium sont ouvertes. La base
+    /// applique la même règle afin que les limites serveur et l'interface ne
+    /// divergent pas. Repasser à `false` avec la migration de sortie de bêta.
+    static let isBeta = true
 
     /// Abonnement Premium — RevenueCat en production (StoreKit pur en repli),
     /// état local en démo. Le serveur (webhook RevenueCat) reste seul juge de
@@ -89,7 +118,7 @@ final class AppStore: ObservableObject {
     /// Supabase. Un paiement ne doit pas mener à une première action rejetée.
     @Published private(set) var premiumServerConfirmed = false
     var premiumActivationPending: Bool {
-        isPremium && isLive && !premiumServerConfirmed
+        !Self.isBeta && isPremium && isLive && !premiumServerConfirmed
             && !Self.directStoreKitFallbackEnabled
     }
     /// Plan choisi (mensuel / annuel), nil si non abonné.
@@ -184,6 +213,9 @@ final class AppStore: ObservableObject {
     /// true une fois la restauration de session terminée — évite d'afficher
     /// l'écran de connexion pendant la vérification au lancement.
     @Published var sessionChecked: Bool = false
+    /// Un compte Auth neuf ou incomplet doit renseigner son propre profil.
+    /// Cet état est lié à la session serveur, jamais au cache de démonstration.
+    @Published var liveProfileNeedsSetup: Bool = false
     /// true quand l'app affiche les données du serveur et non la démo locale.
     var isLive: Bool { liveUserID != nil }
     private var messageChannel: RealtimeChannelV2?
@@ -278,7 +310,7 @@ final class AppStore: ObservableObject {
     private static let locationPrecisionKey = "dispo.locationPrecision"
 
     init() {
-        if let rcKey = BackendConfig.revenueCatAPIKey() {
+        if !Self.isBeta, let rcKey = BackendConfig.revenueCatAPIKey() {
             Purchases.logLevel = .warn
             Purchases.configure(withAPIKey: rcKey)
             revenueCatEnabled = true
@@ -314,7 +346,7 @@ final class AppStore: ObservableObject {
                     self?.applyCustomerInfo(info)
                 }
             }
-        } else if Self.directStoreKitFallbackEnabled {
+        } else if !Self.isBeta && Self.directStoreKitFallbackEnabled {
             transactionTask = Task { [weak self] in
                 for await update in Transaction.updates {
                     guard case .verified(let transaction) = update else { continue }
@@ -476,17 +508,25 @@ final class AppStore: ObservableObject {
         if precision.sharesLocation && myCoordinate == nil { requestLocation() }
     }
 
-    /// Profil par défaut de la démo.
+    /// Brouillon local neutre. Aucun nom, instrument, style ou texte de bio
+    /// n'est inventé pour un utilisateur, même hors connexion.
     private static var defaultProfile: MyProfile {
         MyProfile(
-            name: "Ludovic",
-            instruments: [.piano],
-            genres: [.latin, .jazz],
-            level: .avance,
-            bio: "Pianiste latin jazz à Genève. Toujours partant pour une descarga !",
-            availableDates: [Date(), Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()]
+            name: "",
+            instruments: [],
+            genres: [],
+            level: .intermediaire,
+            bio: "",
+            availableDates: [],
+            country: .switzerland,
+            city: nil,
+            postalCode: nil
         )
     }
+
+    /// Brouillon neutre utilisé pendant l'hydratation d'un compte live. Il
+    /// empêche le profil du compte précédent d'être publié sous un autre UUID.
+    private static var emptyLiveProfile: MyProfile { defaultProfile }
 
     // MARK: - Mode live (backend Supabase)
 
@@ -508,7 +548,7 @@ final class AppStore: ObservableObject {
     }
 
     /// À appeler après une connexion réussie (AccountSheet).
-    func didSignIn(userID: UUID) async {
+    func didSignIn(userID: UUID, suggestedProfileName: String? = nil) async {
         guard let backend else { return }
         liveSessionGeneration &+= 1
         invalidateGroupWorkForSessionChange()
@@ -523,6 +563,8 @@ final class AppStore: ObservableObject {
         musicSchoolAffiliationsByProfile = [:]
         notifications = []
         premiumServerConfirmed = false
+        liveProfileNeedsSetup = false
+        profile = Self.emptyLiveProfile
         Self.purgeCachedMessageAttachments()
         liveUserID = userID
         liveEmail = await backend.currentUserEmail()
@@ -542,15 +584,23 @@ final class AppStore: ObservableObject {
         // l'utilisation »), la démo garde la position simulée de Genève.
         requestLocation()
 
-        // Premier passage : si le profil serveur est vide, on pousse le
-        // profil local ; sinon le serveur fait foi. Premium et admin
-        // viennent toujours du serveur.
+        // Le serveur fait toujours foi. Un profil neuf reste neutre jusqu'à
+        // ce que son propriétaire termine l'onboarding : ne jamais pousser
+        // ici le cache global ou le profil de démonstration.
         let initialProfiles = try? await backend.fetchProfiles()
         if let mine = initialProfiles?.first(where: { $0.id == userID }) {
-            if mine.name.isEmpty {
-                try? await backend.saveProfile(profile, userID: userID)
-            } else {
-                applyServerProfile(mine)
+            applyServerProfile(mine)
+            liveProfileNeedsSetup = LiveProfileSetupPolicy.requiresSetup(
+                name: mine.name,
+                instrumentCount: mine.instruments.count,
+                city: mine.city,
+                postalCode: mine.postalCode
+            )
+            if liveProfileNeedsSetup,
+               profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let suggested = suggestedProfileName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !suggested.isEmpty {
+                profile.name = suggested
             }
             // RevenueCat est la source immédiate des droits. Le webhook peut
             // mettre quelques secondes à refléter un achat dans `profiles` :
@@ -564,6 +614,12 @@ final class AppStore: ObservableObject {
             if let precision = mine.locationPrecision.flatMap(LocationPrecision.init(rawValue:)) {
                 locationPrecision = precision
                 UserDefaults.standard.set(precision.rawValue, forKey: Self.locationPrecisionKey)
+            }
+        } else {
+            liveProfileNeedsSetup = true
+            if let suggested = suggestedProfileName?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !suggested.isEmpty {
+                profile.name = suggested
             }
         }
         // Realtime d'abord, snapshot ensuite : aucun message n'est perdu
@@ -658,6 +714,9 @@ final class AppStore: ObservableObject {
             liveFollowersByProfile = Dictionary(grouping: follows, by: \.followingId).mapValues { $0.map(\.followerId) }
             liveCollaborations = Set(collaborations)
             let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
+            let photoByID = Dictionary(uniqueKeysWithValues: profiles.compactMap { row in
+                row.photoUrl.map { (row.id, $0) }
+            })
             following = Set(profiles.filter { liveFollowingIDs.contains($0.id) }.map(\.name))
             liveMyRatings = Dictionary(uniqueKeysWithValues: myRatingRows.map { ($0.ratedId, $0.stars) })
             playedWith = Set(profiles.filter { id in
@@ -688,7 +747,8 @@ final class AppStore: ObservableObject {
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
-                nameByID: nameByID
+                nameByID: nameByID,
+                photoByID: photoByID
             )
             guard Self.isMatchingLiveSession(
                 expectedUserID: userID,
@@ -817,6 +877,7 @@ final class AppStore: ObservableObject {
         liveUserID = nil
         liveEmail = nil
         appleLinked = false
+        liveProfileNeedsSetup = false
         backendError = nil
         liveFollowingIDs = []
         liveFollowerIDs = []
@@ -1223,6 +1284,20 @@ final class AppStore: ObservableObject {
         musicSchoolAffiliationsByProfile[profileID] ?? []
     }
 
+    /// Écoles réellement partagées avec un autre profil. On compare les UUID
+    /// d'établissement, jamais le texte affiché : deux écoles homonymes ne
+    /// doivent pas produire une fausse relation commune.
+    func sharedMusicSchools(with profileID: UUID) -> [MusicSchool] {
+        let mySchoolIDs = Set(myMusicSchoolCommunities.map(\.school.id))
+        var seen = Set<UUID>()
+        return musicSchoolAffiliations(for: profileID)
+            .map(\.school)
+            .filter { mySchoolIDs.contains($0.id) && seen.insert($0.id).inserted }
+            .sorted {
+                $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+            }
+    }
+
     func musicSchoolMembers(schoolID: UUID) -> [MusicSchoolMember] {
         musicSchoolCommunity(schoolID: schoolID)?.members ?? []
     }
@@ -1588,7 +1663,9 @@ final class AppStore: ObservableObject {
         let message = row.asGroupMessage(
             myID: userID,
             myName: profile.name,
-            nameByID: [row.senderId: senderName]
+            nameByID: [row.senderId: senderName],
+            photoByID: musicians.first(where: { $0.id == row.senderId })
+                .flatMap { $0.photo.map { [row.senderId: $0] } } ?? [:]
         )
         withAnimation {
             groups[index].messages.append(message)
@@ -1610,6 +1687,8 @@ final class AppStore: ObservableObject {
             myID: userID,
             myName: profile.name,
             nameByID: [row.senderId: senderName],
+            photoByID: musicians.first(where: { $0.id == row.senderId })
+                .flatMap { $0.photo.map { [row.senderId: $0] } } ?? [:],
             reactions: row.deletedAt == nil ? previous.reactionSummaries : []
         )
         if row.deletedAt != nil, let attachment = previous.attachment {
@@ -1671,12 +1750,16 @@ final class AppStore: ObservableObject {
         do {
             let profiles = try await backend.fetchProfiles()
             let nameByID = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.name) })
+            let photoByID = Dictionary(uniqueKeysWithValues: profiles.compactMap { row in
+                row.photoUrl.map { (row.id, $0) }
+            })
             groupSnapshotRequestGeneration &+= 1
             let groupSnapshotRequest = groupSnapshotRequestGeneration
             let remoteGroups = try await backend.fetchGroups(
                 myID: userID,
                 myName: profile.name,
-                nameByID: nameByID
+                nameByID: nameByID,
+                photoByID: photoByID
             )
             guard Self.canApplyGroupSnapshot(
                 snapshotUserID: userID,
@@ -1821,7 +1904,7 @@ final class AppStore: ObservableObject {
                             id: row.id,
                             profileID: row.profileId,
                             name: name,
-                            kind: GroupMemberKind(dbValue: row.kind) ?? .occasional
+                            kind: GroupMemberKind(dbValue: row.kind) ?? .specialGuest
                         )
                     }
                     .sorted { $0.name < $1.name }
@@ -1990,11 +2073,12 @@ final class AppStore: ObservableObject {
         }
     }
 
-    // MARK: - Social & Premium
+    // MARK: - Social & capacités en bêta
 
     /// Point d'entrée unique des avantages payants. Les vues ne doivent plus
     /// déduire une capacité directement de `isPremium`.
     func canUse(_ capability: PremiumCapability) -> Bool {
+        if Self.isBeta { return true }
         let premiumReady = isPremium
             && (!isLive || premiumServerConfirmed || Self.directStoreKitFallbackEnabled)
         switch capability {
@@ -2663,6 +2747,13 @@ final class AppStore: ObservableObject {
     }
 
     func refreshPurchasedEntitlements() async {
+        if Self.isBeta {
+            isPremium = true
+            premiumPlan = nil
+            premiumServerConfirmed = !isLive || premiumServerConfirmed
+            persistPremiumState()
+            return
+        }
         if revenueCatEnabled {
             if let info = try? await Purchases.shared.customerInfo() {
                 applyCustomerInfo(info)
@@ -2727,6 +2818,18 @@ final class AppStore: ObservableObject {
     }
 
     func completeOnboarding() {
+        if isLive {
+            guard LiveProfileSetupPolicy.canComplete(
+                name: profile.name,
+                instrumentCount: profile.instruments.count,
+                city: profile.city,
+                postalCode: profile.postalCode
+            ) else {
+                liveProfileNeedsSetup = true
+                return
+            }
+            liveProfileNeedsSetup = false
+        }
         hasOnboarded = true
         UserDefaults.standard.set(true, forKey: Self.onboardedKey)
     }
@@ -3289,6 +3392,14 @@ final class AppStore: ObservableObject {
         musicians.first(where: { $0.id == member.id })
     }
 
+    func isSpecialGuest(_ message: GroupMessage, in group: GroupChat) -> Bool {
+        if let senderID = message.senderID,
+           let member = group.rosterProfiles?.first(where: { $0.id == senderID }) {
+            return group.memberKind(for: member) == .specialGuest
+        }
+        return group.memberKinds?[message.sender] == .specialGuest
+    }
+
     func isPremiumMember(_ member: SoloistOption) -> Bool {
         isCurrentProfile(member) ? isPremium : musician(for: member)?.isPremium == true
     }
@@ -3319,7 +3430,7 @@ final class AppStore: ObservableObject {
     /// Invite un musicien. En live, une INVITATION part — il n'apparaît
     /// dans le groupe qu'après avoir accepté. En démo, ajout direct pour
     /// garder le bac à sable vivant.
-    func inviteMember(_ name: String, to group: GroupChat, kind: GroupMemberKind = .occasional) {
+    func inviteMember(_ name: String, to group: GroupChat, kind: GroupMemberKind = .specialGuest) {
         if isLive {
             guard let backend,
                   let userID = liveUserID,
@@ -3387,7 +3498,7 @@ final class AppStore: ObservableObject {
         syncLive { try await backend.deleteGroupInvitation(invite.id) }
     }
 
-    /// Permanent ↔ occasionnel — le noyau fixe du groupe.
+    /// Permanent ↔ Special guest temporaire.
     func setMemberKind(_ member: SoloistOption, _ kind: GroupMemberKind, in group: GroupChat) {
         if let backend, isLive {
             syncLive {
@@ -3465,6 +3576,10 @@ final class AppStore: ObservableObject {
     /// Transfère le leadership. En live, la RPC serveur décide de façon
     /// atomique : Premium, ou aucun autre groupe déjà dirigé.
     func transferLeadership(of group: GroupChat, to member: SoloistOption) {
+        guard group.memberKind(for: member) == .permanent else {
+            backendError = tr("Un Special guest doit devenir membre permanent avant de pouvoir être leader.")
+            return
+        }
         if isLive {
             guard let backend,
                   let expectedUserID = liveUserID
@@ -3540,42 +3655,104 @@ final class AppStore: ObservableObject {
         title: String,
         artist: String,
         key: String? = nil,
+        tempoBPM: Int? = nil,
+        form: String? = nil,
+        catalogMatch: SongCatalogMatch? = nil,
         to groupID: GroupChat.ID,
-        eventID: GroupEvent.ID? = nil
-    ) {
+        eventID: GroupEvent.ID? = nil,
+        completion: ((SongMutationOutcome) -> Void)? = nil
+    ) -> SongMutationOutcome {
+        guard let group = groups.first(where: { $0.id == groupID }) else { return .failed }
         // Le leader valide d'office ; sinon c'est une suggestion en attente.
-        let approved = groups.first(where: { $0.id == groupID }).map(canLead) ?? true
+        let approved = canLead(group)
+        let cleanedForm = form?.trimmingCharacters(in: .whitespacesAndNewlines)
         let song = Song(
             title: title,
             artist: artist,
-            artworkURL: nil,
+            catalogID: catalogMatch?.catalogID,
+            albumTitle: catalogMatch?.albumTitle,
+            durationMilliseconds: catalogMatch?.durationMilliseconds,
+            releaseYear: catalogMatch?.releaseYear,
+            genre: catalogMatch?.genre,
+            previewURL: catalogMatch?.previewURL,
+            artworkURL: catalogMatch?.artworkURL,
+            trackURL: catalogMatch?.appleMusicURL,
             suggestedBy: Self.suggestionAuthorStorageValue(
                 userID: liveUserID,
                 legacyProfileName: profile.name
             ),
             isApproved: approved,
-            key: key?.isEmpty == true ? nil : key
+            key: key?.isEmpty == true ? nil : key,
+            tempoBPM: tempoBPM,
+            form: cleanedForm?.isEmpty == true ? nil : cleanedForm
         )
-        insertSong(song, in: groupID, eventID: eventID)
-        // Pochette + lien d'écoute arrivent en différé (iTunes Search) — le
-        // morceau vit sans.
+        let destinationSongs = eventID.flatMap { id in
+            group.allEvents.first(where: { $0.id == id })?.setlist
+        } ?? (eventID == nil ? group.songs : [])
+        guard !Self.containsEquivalentSong(to: song, in: destinationSongs) else {
+            return .alreadyExists
+        }
+
+        insertSong(
+            song,
+            in: groupID,
+            eventID: eventID,
+            rejectingDuplicateIdentity: Self.normalizedSongIdentity(song)
+        ) { [weak self] outcome in
+            if outcome != .succeeded {
+                self?.updateGroup(groupID) { group in
+                    if let eventID,
+                       let eventIndex = group.events?.firstIndex(where: { $0.id == eventID }) {
+                        group.events?[eventIndex].setlist.removeAll { $0.id == song.id }
+                    } else if eventID == nil {
+                        group.repertoire = group.songs.filter { $0.id != song.id }
+                    }
+                }
+            }
+            completion?(outcome)
+        }
+
+        // Les liens exacts multi-plateformes et les métadonnées d'une saisie
+        // manuelle arrivent en différé. Une sélection d'autocomplétion fournit
+        // déjà la pochette, l'artiste et l'identité stable dès le premier rendu.
         Task { [weak self] in
             guard let self else { return }
-            let info = await Self.fetchTrackInfo(title: title, artist: artist)
-            if info.artworkURL != nil || info.trackURL != nil || info.platformLinks != nil {
-                guard var refreshed = self.localSong(song.id, in: groupID, eventID: eventID) else {
-                    return
-                }
-                refreshed.artworkURL = info.artworkURL
-                refreshed.trackURL = info.trackURL
-                refreshed.platformLinks = info.platformLinks
-                self.updateSong(
-                    .update(refreshed, fields: [.artworkURL, .trackURL, .platformLinks]),
-                    in: groupID,
-                    eventID: eventID
-                )
+            let info = await Self.fetchTrackInfo(
+                title: title,
+                artist: artist,
+                preferredMatch: catalogMatch
+            )
+            guard var refreshed = self.localSong(song.id, in: groupID, eventID: eventID),
+                  info.match != nil || info.platformLinks != nil
+            else { return }
+            if let match = info.match {
+                refreshed.title = match.title
+                refreshed.artist = match.artist
+                refreshed.catalogID = match.catalogID
+                refreshed.albumTitle = match.albumTitle
+                refreshed.durationMilliseconds = match.durationMilliseconds
+                refreshed.releaseYear = match.releaseYear
+                refreshed.genre = match.genre
+                refreshed.previewURL = match.previewURL
+                refreshed.artworkURL = match.artworkURL
+                refreshed.trackURL = match.appleMusicURL
             }
+            refreshed.platformLinks = info.platformLinks
+            if refreshed.key == nil || refreshed.tempoBPM == nil,
+               let analysis = await SongKeyDetector.analyze(from: refreshed.previewURL) {
+                if refreshed.key == nil { refreshed.key = analysis.key?.label }
+                if refreshed.tempoBPM == nil { refreshed.tempoBPM = analysis.tempoBPM }
+            }
+            self.updateSong(
+                .update(refreshed, fields: [
+                    .title, .artist, .catalogMetadata, .artworkURL,
+                    .trackURL, .platformLinks, .key, .arrangementMetadata
+                ]),
+                in: groupID,
+                eventID: eventID
+            )
         }
+        return .succeeded
     }
 
     enum SongCopyResult: Equatable {
@@ -3623,12 +3800,20 @@ final class AppStore: ObservableObject {
         Song(
             title: source.title,
             artist: source.artist,
+            catalogID: source.catalogID,
+            albumTitle: source.albumTitle,
+            durationMilliseconds: source.durationMilliseconds,
+            releaseYear: source.releaseYear,
+            genre: source.genre,
+            previewURL: source.previewURL,
             artworkURL: source.artworkURL,
             trackURL: source.trackURL,
             platformLinks: source.platformLinks,
             suggestedBy: suggestedBy,
             isApproved: isApproved,
             key: source.key,
+            tempoBPM: source.tempoBPM,
+            form: source.form,
             chords: source.chords,
             irealURL: source.irealURL,
             irealDisabled: source.irealDisabled,
@@ -3636,21 +3821,33 @@ final class AppStore: ObservableObject {
         )
     }
 
-    /// Copie un morceau vers un autre groupe. Un leader l'ajoute directement ;
-    /// un membre l'envoie comme suggestion, exactement comme le formulaire
-    /// d'ajout. Une copie au même endroit ou un doublon titre/artiste est refusé.
+    /// Copie un morceau vers le répertoire ou la setlist d'un événement. Un
+    /// leader l'ajoute directement ; un membre l'envoie comme suggestion,
+    /// exactement comme le formulaire d'ajout. Une copie au même endroit ou
+    /// un doublon titre/artiste est refusé.
     @discardableResult
     func copySong(
         _ source: Song,
         from sourceGroupID: GroupChat.ID,
+        sourceEventID: GroupEvent.ID? = nil,
         to destinationGroupID: GroupChat.ID,
+        eventID destinationEventID: GroupEvent.ID? = nil,
         completion: ((SongCopyResult) -> Void)? = nil
     ) -> SongCopyResult {
-        guard sourceGroupID != destinationGroupID,
+        guard sourceGroupID != destinationGroupID || sourceEventID != destinationEventID,
               let destination = groups.first(where: { $0.id == destinationGroupID })
         else { return .unavailable }
 
-        let duplicate = Self.containsEquivalentSong(to: source, in: destination.songs)
+        let destinationSongs: [Song]
+        if let destinationEventID {
+            guard let event = destination.allEvents.first(where: { $0.id == destinationEventID })
+            else { return .unavailable }
+            destinationSongs = event.setlist
+        } else {
+            destinationSongs = destination.songs
+        }
+
+        let duplicate = Self.containsEquivalentSong(to: source, in: destinationSongs)
         guard !duplicate else { return .alreadyExists }
 
         let approved = canLead(destination)
@@ -3665,12 +3862,17 @@ final class AppStore: ObservableObject {
         insertSong(
             copy,
             in: destinationGroupID,
-            eventID: nil,
+            eventID: destinationEventID,
             rejectingDuplicateIdentity: Self.normalizedSongIdentity(source)
         ) { [weak self] outcome in
             if outcome != .succeeded {
                 self?.updateGroup(destinationGroupID) { group in
-                    group.repertoire = group.songs.filter { $0.id != copy.id }
+                    if let destinationEventID,
+                       let eventIndex = group.events?.firstIndex(where: { $0.id == destinationEventID }) {
+                        group.events?[eventIndex].setlist.removeAll { $0.id == copy.id }
+                    } else if destinationEventID == nil {
+                        group.repertoire = group.songs.filter { $0.id != copy.id }
+                    }
                 }
             }
             switch outcome {
@@ -3703,7 +3905,15 @@ final class AppStore: ObservableObject {
         in songs: [Song]
     ) -> Bool {
         let identity = normalizedSongIdentity(song)
-        return songs.contains { normalizedSongIdentity($0) == identity }
+        let catalogID = song.catalogID?.lowercased()
+        return songs.contains {
+            if let catalogID,
+               let candidateCatalogID = $0.catalogID?.lowercased(),
+               catalogID == candidateCatalogID {
+                return true
+            }
+            return normalizedSongIdentity($0) == identity
+        }
     }
 
     /// Modifie l'identité et la tonalité d'un morceau déjà ajouté. Toutes ses
@@ -3713,6 +3923,8 @@ final class AppStore: ObservableObject {
         title: String,
         artist: String,
         key: String?,
+        tempoBPM: Int?,
+        form: String?,
         in group: GroupChat
     ) {
         guard canLead(group) else { return }
@@ -3720,10 +3932,13 @@ final class AppStore: ObservableObject {
         updated.title = title
         updated.artist = artist
         updated.key = key?.isEmpty == true ? nil : key
+        updated.tempoBPM = tempoBPM
+        let cleanedForm = form?.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.form = cleanedForm?.isEmpty == true ? nil : cleanedForm
         let fields = Self.changedSongFields(
             from: song,
             to: updated,
-            candidates: [.title, .artist, .key]
+            candidates: [.title, .artist, .key, .arrangementMetadata]
         )
         guard !fields.isEmpty else { return }
         let mutation = SongCollectionMutation.update(updated, fields: fields)
@@ -3738,12 +3953,25 @@ final class AppStore: ObservableObject {
                   var refreshed = currentGroup.songs.first(where: { $0.id == song.id })
                     ?? currentGroup.allEvents.flatMap(\.setlist).first(where: { $0.id == song.id })
             else { return }
-            refreshed.artworkURL = info.artworkURL
-            refreshed.trackURL = info.trackURL
+            if let match = info.match {
+                refreshed.title = match.title
+                refreshed.artist = match.artist
+                refreshed.catalogID = match.catalogID
+                refreshed.albumTitle = match.albumTitle
+                refreshed.durationMilliseconds = match.durationMilliseconds
+                refreshed.releaseYear = match.releaseYear
+                refreshed.genre = match.genre
+                refreshed.previewURL = match.previewURL
+                refreshed.artworkURL = match.artworkURL
+                refreshed.trackURL = match.appleMusicURL
+            }
             refreshed.platformLinks = info.platformLinks
             let mutation = SongCollectionMutation.update(
                 refreshed,
-                fields: [.artworkURL, .trackURL, .platformLinks]
+                fields: [
+                    .title, .artist, .catalogMetadata, .artworkURL,
+                    .trackURL, .platformLinks
+                ]
             )
             self.applySongMutationEverywhere(mutation, in: group.id)
             self.syncSongEverywhere(mutation, in: group.id)
@@ -3768,6 +3996,9 @@ final class AppStore: ObservableObject {
         static let chords = Self(rawValue: 1 << 7)
         static let irealURL = Self(rawValue: 1 << 8)
         static let irealDisabled = Self(rawValue: 1 << 9)
+        /// Identité catalogue, album, durée, année, genre et extrait.
+        static let catalogMetadata = Self(rawValue: 1 << 10)
+        static let arrangementMetadata = Self(rawValue: 1 << 11)
     }
 
     enum SongCollectionMutation {
@@ -3802,11 +4033,23 @@ final class AppStore: ObservableObject {
                 var merged = current
                 if fields.contains(.title) { merged.title = desired.title }
                 if fields.contains(.artist) { merged.artist = desired.artist }
+                if fields.contains(.catalogMetadata) {
+                    merged.catalogID = desired.catalogID
+                    merged.albumTitle = desired.albumTitle
+                    merged.durationMilliseconds = desired.durationMilliseconds
+                    merged.releaseYear = desired.releaseYear
+                    merged.genre = desired.genre
+                    merged.previewURL = desired.previewURL
+                }
                 if fields.contains(.artworkURL) { merged.artworkURL = desired.artworkURL }
                 if fields.contains(.trackURL) { merged.trackURL = desired.trackURL }
                 if fields.contains(.platformLinks) { merged.platformLinks = desired.platformLinks }
                 if fields.contains(.isApproved) { merged.isApproved = desired.isApproved }
                 if fields.contains(.key) { merged.key = desired.key }
+                if fields.contains(.arrangementMetadata) {
+                    merged.tempoBPM = desired.tempoBPM
+                    merged.form = desired.form
+                }
                 if fields.contains(.chords) { merged.chords = desired.chords }
                 if fields.contains(.irealURL) { merged.irealURL = desired.irealURL }
                 if fields.contains(.irealDisabled) { merged.irealDisabled = desired.irealDisabled }
@@ -3843,6 +4086,15 @@ final class AppStore: ObservableObject {
         var changed: SongMutationFields = []
         if candidates.contains(.title), baseline.title != desired.title { changed.insert(.title) }
         if candidates.contains(.artist), baseline.artist != desired.artist { changed.insert(.artist) }
+        if candidates.contains(.catalogMetadata),
+           baseline.catalogID != desired.catalogID
+            || baseline.albumTitle != desired.albumTitle
+            || baseline.durationMilliseconds != desired.durationMilliseconds
+            || baseline.releaseYear != desired.releaseYear
+            || baseline.genre != desired.genre
+            || baseline.previewURL != desired.previewURL {
+            changed.insert(.catalogMetadata)
+        }
         if candidates.contains(.artworkURL), baseline.artworkURL != desired.artworkURL {
             changed.insert(.artworkURL)
         }
@@ -3856,6 +4108,10 @@ final class AppStore: ObservableObject {
             changed.insert(.isApproved)
         }
         if candidates.contains(.key), baseline.key != desired.key { changed.insert(.key) }
+        if candidates.contains(.arrangementMetadata),
+           baseline.tempoBPM != desired.tempoBPM || baseline.form != desired.form {
+            changed.insert(.arrangementMetadata)
+        }
         if candidates.contains(.chords), baseline.chords != desired.chords { changed.insert(.chords) }
         if candidates.contains(.irealURL), baseline.irealURL != desired.irealURL {
             changed.insert(.irealURL)
@@ -4094,7 +4350,11 @@ final class AppStore: ObservableObject {
                 // L'événement peut avoir été supprimé à distance pendant
                 // l'attente : dans ce cas l'action n'est pas redirigée ailleurs.
                 guard let original = collections.eventSetlists[eventID] else { return }
-                let desired = Self.applyingSongMutation(mutation, to: original)
+                let desired = try Self.applyingRepertoireMutation(
+                    mutation,
+                    to: original,
+                    rejectingDuplicateIdentity: duplicateIdentity
+                )
                 guard desired != original else { return }
                 try await backend.mergeEventSetlistSnapshot(
                     originalSongs: original,
@@ -4219,40 +4479,38 @@ final class AppStore: ObservableObject {
         songMutationTasks[groupID] = task
     }
 
-    /// Cherche la pochette et le lien Apple Music du morceau (iTunes
-    /// Search — gratuit, sans clé). Le lien direct alimente le menu
-    /// « Écouter sur… » ; les autres plateformes passent par leur recherche.
+    struct ResolvedTrackInfo: Sendable {
+        let match: SongCatalogMatch?
+        let platformLinks: [String: String]?
+
+        var artworkURL: String? { match?.artworkURL }
+        var trackURL: String? { match?.appleMusicURL }
+    }
+
+    /// Résout l'enregistrement exact, sa pochette et ses liens directs. Si le
+    /// formulaire a déjà fourni un résultat de catalogue, aucune seconde
+    /// recherche ambiguë n'est effectuée.
     nonisolated static func fetchTrackInfo(
         title: String,
-        artist: String
-    ) async -> (artworkURL: String?, trackURL: String?, platformLinks: [String: String]?) {
-        struct SearchResponse: Decodable {
-            struct Item: Decodable {
-                let artworkUrl100: String?
-                let trackViewUrl: String?
-            }
-            let results: [Item]
+        artist: String,
+        preferredMatch: SongCatalogMatch? = nil
+    ) async -> ResolvedTrackInfo {
+        let match: SongCatalogMatch?
+        if let preferredMatch {
+            match = preferredMatch
+        } else {
+            match = await SongCatalog.exactMatch(title: title, artist: artist)
         }
-        let term = "\(title) \(artist)"
-        guard let encoded = term.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "https://itunes.apple.com/search?term=\(encoded)&media=music&entity=song&limit=1")
-        else { return (nil, nil, nil) }
-        guard let (data, _) = try? await URLSession.shared.data(from: url),
-              let response = try? JSONDecoder().decode(SearchResponse.self, from: data),
-              let item = response.results.first
-        else { return (nil, nil, nil) }
-        // 100 px → 300 px : même CDN, meilleure netteté dans les listes.
-        let artwork = item.artworkUrl100?.replacingOccurrences(of: "100x100", with: "300x300")
-        let trackURL = item.trackViewUrl
-        // Liens directs multi-plateformes (Odesli), à partir du lien Apple Music.
-        let links = await fetchStreamingLinks(appleMusicURL: trackURL)
-        return (artwork, trackURL, links)
+        let links = await fetchStreamingLinks(appleMusicURL: match?.appleMusicURL)
+        return ResolvedTrackInfo(match: match, platformLinks: links)
     }
 
     /// Résout les liens directs par plateforme (Spotify, YouTube Music,
     /// Deezer, Apple Music) via l'API publique song.link / Odesli — gratuite,
     /// sans clé. S'appuie sur un lien Apple Music déjà connu. nil si
-    /// indisponible (introuvable, hors-ligne, quota) → repli sur la recherche.
+    /// indisponible (introuvable, hors-ligne, quota) : la plateforme reste
+    /// masquée, plutôt que d'ouvrir une recherche qui pourrait viser un autre
+    /// enregistrement.
     nonisolated static func fetchStreamingLinks(appleMusicURL: String?) async -> [String: String]? {
         guard let appleMusicURL, !appleMusicURL.isEmpty,
               let encoded = appleMusicURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
@@ -4619,10 +4877,10 @@ final class AppStore: ObservableObject {
     }
 
     /// Invite un musicien dispo à un événement : l'ajoute au groupe en
-    /// occasionnel + message pré-rempli — zéro étape supplémentaire.
+    /// Special guest + message pré-rempli — zéro étape supplémentaire.
     func inviteAvailable(_ musician: Musician, to event: GroupEvent, in group: GroupChat) async {
         if !group.memberNames.contains(musician.name) {
-            inviteMember(musician.name, to: group, kind: .occasional)
+            inviteMember(musician.name, to: group, kind: .specialGuest)
         }
         // Pré-marque dispo (il a indiqué sa dispo sur le calendrier).
         setAttendance(
@@ -4847,6 +5105,8 @@ final class AppStore: ObservableObject {
                         }
                     }
                     let message = GroupMessage(
+                        senderID: userID,
+                        senderPhotoURL: self?.myPhotoReference,
                         sender: self?.profile.name ?? "",
                         isFromMe: true,
                         text: clean,
@@ -4903,6 +5163,8 @@ final class AppStore: ObservableObject {
             }
         }
         let message = GroupMessage(
+            senderID: liveUserID ?? Self.demoCurrentProfileID,
+            senderPhotoURL: myPhotoReference,
             sender: profile.name,
             isFromMe: true,
             text: clean,

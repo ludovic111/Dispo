@@ -47,9 +47,11 @@
 		ABDC5A4D00EC694DC10929E2 /* DispoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E5D5DA476FD4777EE6DBCC /* DispoApp.swift */; };
 		ADF0DE196C538E5DBF0D2845 /* PrivateLocationIntegrityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */; };
 		B0D6FC9FF9B73F6BCC3D0567 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45D10ACFB71CC40CFF3DFAC7 /* ChatView.swift */; };
+		B1991F46C348C2E1DE129B0F /* AccountProfileIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD7CF52A4F76354763893164 /* AccountProfileIsolationTests.swift */; };
 		BC26659ABB42BFBF05B2C5D6 /* AvatarImagePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841C547BDDC7FD6BABB8168E /* AvatarImagePipeline.swift */; };
 		BEA21F1E780745F67196E848 /* MyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1356F17FBA88918A24D6E3 /* MyProfileView.swift */; };
 		C8BB5275D442027AF380E0DB /* MyEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30520EB8A6E15D9BD250814A /* MyEventsView.swift */; };
+		CB3D51B7EEB8C0C7E3ACE736 /* SongCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C2F6C3715825382E7C45CA2 /* SongCatalog.swift */; };
 		D11DDD8DADF839CA686C2611 /* AccountSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B3F83842515BEBAEE6211B /* AccountSheet.swift */; };
 		D4526921E773D3278B4AB38F /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA029833082A56A604FC4F5 /* PaywallView.swift */; };
 		D7DE32D1745AF72A345DF15B /* MusicianDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */; };
@@ -103,6 +105,7 @@
 		5A16E3CB4050DB245D44B20D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		608FA9B8A3CF88C4AD82387D /* Fraunces-Display.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-Display.ttf"; sourceTree = "<group>"; };
 		64946B92A861F1AF7608755A /* MessageControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageControls.swift; sourceTree = "<group>"; };
+		6C2F6C3715825382E7C45CA2 /* SongCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongCatalog.swift; sourceTree = "<group>"; };
 		6CEE8CF8E49314AC43A8F44F /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Secrets.plist; sourceTree = "<group>"; };
 		6F36710D61DB75EC7D736FF8 /* MusicianDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicianDetailView.swift; sourceTree = "<group>"; };
 		6F9726C6D699E4D63934DBB1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -140,6 +143,7 @@
 		E8CA4EDB1E950D6413C83A7D /* FilterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSheet.swift; sourceTree = "<group>"; };
 		F5533270AA3C516AC1B6E955 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F8A91EBF7C4EC255652D99B6 /* SplineSansMono-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SplineSansMono-Medium.ttf"; sourceTree = "<group>"; };
+		FD7CF52A4F76354763893164 /* AccountProfileIsolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountProfileIsolationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -158,6 +162,7 @@
 		06D2EFD08B705EF33DDAE394 /* DispoTests */ = {
 			isa = PBXGroup;
 			children = (
+				FD7CF52A4F76354763893164 /* AccountProfileIsolationTests.swift */,
 				DFEBE9F6A57CB36E57187BFA /* AvatarImagePipelineTests.swift */,
 				077D264F558B81E6720C79C5 /* LocationUXTests.swift */,
 				2F28A73D6185B92D7279DF8D /* PrivateLocationIntegrityTests.swift */,
@@ -267,6 +272,7 @@
 				C8DF3A5D1BE279DBAC813B04 /* Secrets.example.plist */,
 				6CEE8CF8E49314AC43A8F44F /* Secrets.plist */,
 				77246C87C767CBDC463705FA /* SelectionControls.swift */,
+				6C2F6C3715825382E7C45CA2 /* SongCatalog.swift */,
 				407C891F432197F3EDFFC826 /* SVGPath.swift */,
 				368375EE1B1F91410E86F7F5 /* Backend */,
 				CC066F8BC537AC1F0D31F7B1 /* Fonts */,
@@ -370,6 +376,8 @@
 				fr,
 				it,
 				ja,
+				ko,
+				pt,
 				"zh-Hans",
 			);
 			mainGroup = 1A6381FB7A3E91ADB11DC80C;
@@ -413,6 +421,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1991F46C348C2E1DE129B0F /* AccountProfileIsolationTests.swift in Sources */,
 				F4805E734485F404784B6FAE /* AvatarImagePipelineTests.swift in Sources */,
 				28095D0A929D08F4FCFF6982 /* LocationUXTests.swift in Sources */,
 				ADF0DE196C538E5DBF0D2845 /* PrivateLocationIntegrityTests.swift in Sources */,
@@ -462,6 +471,7 @@
 				D84EDF3C9DF396F3799D656C /* SearchView.swift in Sources */,
 				267382C42A44BAE52EBAFD7E /* SelectionControls.swift in Sources */,
 				43B5A63ABAA371B6D2C4DC30 /* SettingsView.swift in Sources */,
+				CB3D51B7EEB8C0C7E3ACE736 /* SongCatalog.swift in Sources */,
 				39B141A839B6A53FE77CDE4D /* SongDetailSheet.swift in Sources */,
 				4AA78401D544BEAE3FC0E7AD /* SupabaseBackend.swift in Sources */,
 			);
@@ -545,7 +555,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -622,7 +632,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 32;
+				CURRENT_PROJECT_VERSION = 33;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 2YBQQ56HH8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

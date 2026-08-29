@@ -12,7 +12,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 2YBQQ56HH8
     MARKETING_VERSION: "2.4"
-    CURRENT_PROJECT_VERSION: "32"
+    CURRENT_PROJECT_VERSION: "33"
 packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
@@ -64,7 +64,7 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleDevelopmentRegion: fr
         # Langues proposées dans l'app (sélecteur onboarding + profil).
-        CFBundleLocalizations: [fr, en, es, de, it, zh-Hans, ja]
+        CFBundleLocalizations: [fr, en, es, de, it, zh-Hans, ja, pt, ko]
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

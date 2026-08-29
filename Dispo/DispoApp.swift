@@ -67,8 +67,6 @@ struct RootView: View {
             }
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
-            .sheet(isPresented: $store.showPaywall) { PaywallView() }
-
             // Connexion obligatoire dès qu'un backend est configuré.
             if store.backend != nil && !store.isLive {
                 if store.sessionChecked {
@@ -87,7 +85,11 @@ struct RootView: View {
                 }
             }
 
-            if !store.hasOnboarded {
+            // Avec Supabase, la connexion précède toujours le profil : un
+            // appareil partagé ne peut pas préparer puis publier le brouillon
+            // du compte précédent. Un compte neuf complète son propre profil.
+            if (store.backend == nil && !store.hasOnboarded)
+                || (store.isLive && store.liveProfileNeedsSetup) {
                 OnboardingView()
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .zIndex(1)
@@ -121,7 +123,7 @@ struct RootView: View {
         }
         // Les nouveautés de la version, une seule fois après la mise à jour.
         // Posée sur le ZStack et non sur la TabView : deux `.sheet` sur la
-        // même vue se marchent dessus (le paywall vit sur la TabView).
+        // même vue se marchent dessus.
         // Jamais par-dessus l'onboarding ni l'écran de connexion.
         .sheet(
             isPresented: Binding(
@@ -257,7 +259,7 @@ struct RootView: View {
         case "profile": store.selectedTab = .profile
         case "paywall", "paywall-prices":
             store.hasOnboarded = true
-            store.showPaywall = true
+            store.selectedTab = .profile
         case "chat":
             if let conversation = store.conversations.first(where: { !$0.messages.isEmpty }) {
                 debugCover = .chat(conversation.id)

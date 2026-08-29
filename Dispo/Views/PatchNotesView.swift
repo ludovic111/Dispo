@@ -19,8 +19,12 @@ struct PatchNote: Identifiable {
                 "Les affiliations restent déclaratives tant que l'établissement ne les a pas vérifiées",
                 "L'adresse exacte d'un SOS n'apparaît qu'à l'organisateur et aux musiciens acceptés",
                 "Pour un événement de groupe, seuls le leader et les participants confirmés voient le rendez-vous exact",
-                "Le premier groupe dirigé reste gratuit ; Premium débloque l'organisation avancée et les groupes supplémentaires",
-                "Premium ne cache plus les niveaux, ne retarde plus les SOS et ne vend jamais une fonction de sécurité"
+                "Toutes les fonctions d'organisation sont ouvertes aux bêta-testeurs, sans paywall ni achat",
+                "Le futur modèle Premium reste en réflexion et apparaît clairement comme work in progress dans les réglages",
+                "Chaque compte crée désormais son propre profil : aucun nom, instrument, ville ou texte de bio n'est prérempli",
+                "Copie un morceau complet entre répertoires et événements : artiste, tonalité, grille iReal Pro et liens d'écoute suivent",
+                "Les écoles apparaissent sur les cartes musiciens, et « Même école » signale immédiatement une communauté partagée",
+                "Toutes les fonctionnalités sont ouvertes gratuitement à tout le monde pendant la bêta"
             ]
         ),
         PatchNote(
@@ -91,7 +95,6 @@ struct PatchNote: Identifiable {
             title: "Tes groupes, sans perdre le fil",
             points: [
                 "Une grille créée dans Dispo s'exporte au vrai format iReal Pro : valide l'import et elle rejoint ta bibliothèque",
-                "Les leaders Premium pilotent leurs groupes depuis l'accueil : prochaine session, membres et création de date",
                 "Une seule prochaine session s'affiche sur l'accueil — la plus proche, tous tes groupes confondus",
                 "La puce SOS ne compte plus tes propres annonces : seulement les nouveaux SOS qui correspondent à ton instrument et ton niveau",
                 "Le leader peut annuler une session ou les dates à venir d'une série, et tous les membres sont prévenus"
@@ -205,14 +208,12 @@ struct PatchNote: Identifiable {
         ),
         PatchNote(
             version: "1.2",
-            title: "Dépannages par poste & essai gratuit",
+            title: "Dépannages par poste",
             points: [
                 "SOS par poste : choisis l'instrument que tu peux tenir, l'organisateur confirme, et le poste pourvu disparaît de l'annonce",
                 "Quand tu postules, un message part tout seul à l'organisateur — plus de candidature dans le vide",
-                "Essai gratuit de 7 jours pour découvrir Premium",
                 "Les liens d'écoute ouvrent enfin le morceau EXACT sur Spotify, YouTube Music et Deezer (fini la simple recherche)",
                 "Vrais logos des plateformes de streaming et des réseaux sociaux",
-                "Premium prend sa couleur : un bleu-vert « velours de coulisses », et une palette un peu plus vivante",
                 "Rôles dans le groupe : donne un instrument à chaque membre — un SOS de groupe cible alors les postes non couverts",
                 "Vois les abonnés et les collaborations de chaque profil, d'un simple tap",
                 "Supprime un groupe quand tu veux (leader)",
@@ -226,7 +227,6 @@ struct PatchNote: Identifiable {
                 "Dispo change de peau : lumière de scène ambrée, laiton et papier de partition — fini le violet",
                 "Les SOS sont maintenant de vrais billets de concert, perforation et talon-date compris",
                 "Nouvelles typographies : les grands titres respirent l'affiche de concert, les dates et cachets l'impression billetterie",
-                "Premium devient le pass backstage — même avantage, plus belle carte",
                 "Nouvelle icône d'app assortie",
                 "Le rouge est désormais réservé aux SOS : le reste de l'app se lit d'un coup d'œil",
                 "Mode clair repensé façon papier de partition"
@@ -277,7 +277,7 @@ struct PatchNote: Identifiable {
                 "Tes vidéos de démo sont maintenant en ligne : les autres musiciens les regardent depuis ton profil",
                 "Ta photo de profil est visible par les autres musiciens",
                 "Ton profil s'affiche comme les autres le voient, avec un bouton pour le modifier",
-                "Nouveaux réglages rangés par catégories : compte, notifications, préférences, abonnement, aide",
+                "Nouveaux réglages rangés par catégories : compte, notifications, préférences et aide",
                 "Coches « reçu / lu » sous tes messages et « en train d'écrire… », comme sur WhatsApp"
             ]
         ),
@@ -287,7 +287,6 @@ struct PatchNote: Identifiable {
             points: [
                 "Géolocalisation réelle : le rayon de recherche et les distances s'appuient sur ta vraie position (arrondie à ~1 km, jamais ton adresse exacte)",
                 "Les profils sans géoloc restent visibles — simplement sans distance affichée",
-                "Abonnements Premium gérés par RevenueCat et validés côté serveur : ton statut te suit sur tous tes appareils",
                 "Notification push quand un message arrive dans un de tes groupes"
             ]
         ),
@@ -298,7 +297,7 @@ struct PatchNote: Identifiable {
                 "Badge « Démo » partout — matchs SOS, groupes et invitations : aucun compte d'exemple ne se confond avec un vrai musicien",
                 "Statistiques de profil honnêtes : notes, abonnés et collabs réels, plus aucun chiffre inventé",
                 "Publication des SOS réparée côté serveur, adhésion aux groupes durcie",
-                "Statut Premium des membres lu depuis le serveur (transfert de leadership fiable)"
+                "Transfert de leadership fiabilisé entre les membres"
             ]
         ),
         PatchNote(
@@ -318,14 +317,14 @@ struct PatchNote: Identifiable {
                 "Profils réels et comptes de démonstration clairement distingués",
                 "Follows, favoris et collaborations synchronisés sur le réseau",
                 "Signalement, blocage et suppression définitive du compte",
-                "Abonnements Premium sécurisés par StoreKit et restaurables"
+                "Authentification et droits de compte sécurisés côté serveur"
             ]
         ),
         PatchNote(
             version: "0.9.0",
             title: "Noyau fixe, présence & invitations",
             points: [
-                "Membres Permanent ou Occasionnel — le leader bascule d'un tap",
+                "Membres permanents ou Special guests 🌠 — le leader choisit clairement le statut",
                 "Confirmation de présence (Dispo / Indispo) sur chaque événement",
                 "Rappel automatique pour confirmer, alerte leader 2 jours avant si indispo",
                 "Sur l'accueil : inviter en un tap les musiciens déjà dispo ce jour-là",
@@ -336,7 +335,7 @@ struct PatchNote: Identifiable {
             version: "0.8.0",
             title: "Vrais groupes, profils façon Insta & invitations",
             points: [
-                "Les groupes deviennent de vrais groupes : leader (Premium), invitations, exclusions, leadership transférable",
+                "Les groupes deviennent de vrais groupes : leader, invitations, exclusions, leadership transférable",
                 "Répertoire validé par le leader — pochettes des morceaux récupérées automatiquement",
                 "Événements (concert, répé, jam) avec setlist et suggestions à valider d'un tap",
                 "Bouton « Inviter » sur chaque match SOS — message pré-rempli envoyé direct",
@@ -348,11 +347,10 @@ struct PatchNote: Identifiable {
             version: "0.7.0",
             title: "Groupes, réseaux sociaux & grand ménage",
             points: [
-                "Groupes (Premium) : messages d'équipe, partitions partagées, agenda des concerts",
+                "Groupes : messages d'équipe, partitions partagées, agenda des concerts",
                 "Un membre lâche ? SOS pré-rempli depuis le concert du groupe",
                 "Tes liens Instagram, TikTok, YouTube et X cliquables sur ton profil",
-                "Nouvel écran profil : réglages regroupés et liste de favoris",
-                "Abonnements Premium gérés et tarifés par l'App Store"
+                "Nouvel écran profil : réglages regroupés et liste de favoris"
             ]
         ),
         PatchNote(
@@ -390,8 +388,8 @@ struct PatchNote: Identifiable {
             points: [
                 "Matching des SOS : les musiciens compatibles s'affichent dès la publication",
                 "Amis & abonnés — tes relations remontent en premier",
-                "Tri par niveau et niveau visible (Premium)",
-                "Photo de profil et vidéos de démo (1 gratuite, 6 en Premium)",
+                "Tri par niveau et niveau visible",
+                "Photo de profil et vidéos de démo",
                 "App en 7 langues + choix du pays et de la ville",
                 "Nouvel onboarding, notifications et patchnotes"
             ]

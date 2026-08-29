@@ -363,6 +363,7 @@ struct GroupChatView: View {
                             }
                             GroupMessageBubble(
                                 message: message,
+                                isSpecialGuest: store.isSpecialGuest(message, in: group),
                                 isAttachmentLoading: downloadingMessageAttachmentID == message.attachment?.id,
                                 onOpenAttachment: openMessageAttachment,
                                 onReact: {
@@ -535,7 +536,7 @@ struct GroupChatView: View {
 
                 SectionHeader(title: "Répertoire du groupe", subtitle: "\(group.approvedSongs.count) morceaux")
                 if isLeader, group.approvedSongs.count > 1, !isSongSearchActive {
-                    Label("Maintiens la poignée puis glisse pour changer l'ordre.", systemImage: "hand.draw")
+                    Label("Maintiens une tuile puis glisse-la pour changer l'ordre.", systemImage: "hand.draw")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -576,16 +577,7 @@ struct GroupChatView: View {
                         .foregroundStyle(.secondary)
                 }
                 ForEach(songs) { song in
-                    HStack(spacing: 8) {
-                        // Le bouton de retrait n'apparaît que pour le leader.
-                        SongRow(
-                            song: song,
-                            isLeader: false,
-                            onApprove: nil,
-                            onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil,
-                            groupID: group.id,
-                            attachedDocs: group.docs(for: song.id).count
-                        )
+                    Group {
                         if isLeader, !isSongSearchActive {
                             OrderedUUIDDragHandle(
                                 id: song.id,
@@ -603,6 +595,23 @@ struct GroupChatView: View {
                                 onCommit: { ids in
                                     store.reorderApprovedRepertoire(ids, in: group.id)
                                 }
+                            ) {
+                                SongRow(
+                                    song: song,
+                                    isLeader: false,
+                                    onApprove: nil,
+                                    onReject: { store.rejectSong(song, in: group.id) },
+                                    groupID: group.id
+                                )
+                            }
+                        } else {
+                            // Le bouton de retrait n'apparaît que pour le leader.
+                            SongRow(
+                                song: song,
+                                isLeader: false,
+                                onApprove: nil,
+                                onReject: isLeader ? { store.rejectSong(song, in: group.id) } : nil,
+                                groupID: group.id
                             )
                         }
                     }
@@ -1015,7 +1024,7 @@ struct OrderedUUIDDragSession {
     }
 }
 
-/// Cadres des lignes dans l'espace du ScrollView. Ils permettent à la poignée
+/// Cadres des lignes dans l'espace du ScrollView. Ils permettent à la tuile
 /// de suivre réellement le doigt sans dépendre d'un `performDrop` aléatoire.
 struct OrderedUUIDFramePreferenceKey: PreferenceKey {
     static var defaultValue: [UUID: CGRect] = [:]
@@ -1046,9 +1055,9 @@ extension View {
     }
 }
 
-/// Poignée 44 pt pilotée par un `DragGesture` local. L'ordre visuel suit le
-/// doigt et la persistance part exactement une fois dans `onEnded`.
-struct OrderedUUIDDragHandle: View {
+/// Surface entière pilotée par un maintien puis glisser. L'ordre visuel suit
+/// le doigt et la persistance part exactement une fois dans `onEnded`.
+struct OrderedUUIDDragHandle<Content: View>: View {
     let id: UUID
     let accessibilityLabel: LocalizedStringKey
     let coordinateSpace: String
@@ -1058,6 +1067,7 @@ struct OrderedUUIDDragHandle: View {
     var viewportHeight: CGFloat = 0
     var onAutoScroll: ((UUID, UnitPoint) -> Void)?
     let onCommit: ([UUID]) -> Void
+    let content: Content
 
     @State private var edgeDirection = 0
     @State private var autoScrollTask: Task<Void, Never>?
@@ -1065,11 +1075,32 @@ struct OrderedUUIDDragHandle: View {
     @State private var initialRowStep: CGFloat = 72
     @State private var didAutoScroll = false
 
+    init(
+        id: UUID,
+        accessibilityLabel: LocalizedStringKey,
+        coordinateSpace: String,
+        orderedIDs: Binding<[UUID]>,
+        session: Binding<OrderedUUIDDragSession>,
+        rowFrames: [UUID: CGRect],
+        viewportHeight: CGFloat = 0,
+        onAutoScroll: ((UUID, UnitPoint) -> Void)? = nil,
+        onCommit: @escaping ([UUID]) -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.id = id
+        self.accessibilityLabel = accessibilityLabel
+        self.coordinateSpace = coordinateSpace
+        _orderedIDs = orderedIDs
+        _session = session
+        self.rowFrames = rowFrames
+        self.viewportHeight = viewportHeight
+        self.onAutoScroll = onAutoScroll
+        self.onCommit = onCommit
+        self.content = content()
+    }
+
     var body: some View {
-        Image(systemName: "line.3.horizontal")
-            .font(.body.weight(.heavy))
-            .foregroundStyle(JC.bronze)
-            .frame(width: 44, height: 48)
+        content
             .contentShape(Rectangle())
             .accessibilityLabel(Text(accessibilityLabel))
             .accessibilityAddTraits(.isButton)
@@ -1085,9 +1116,8 @@ struct OrderedUUIDDragHandle: View {
             }
     }
 
-    /// Le court maintien donne explicitement la priorité à la poignée sur le
-    /// pan vertical du ScrollView. Sans cette séquence, UIKit choisissait
-    /// parfois le scroll lors d'un geste pourtant commencé sur les trois traits.
+    /// Le court maintien donne explicitement la priorité à la tuile sur le
+    /// pan vertical du ScrollView, puis le glissement réordonne directement.
     private var reorderGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.12, maximumDistance: 18)
             .sequenced(before: DragGesture(
@@ -1306,7 +1336,6 @@ struct OrderedUUIDDragHandle: View {
 // MARK: - Ligne d'un morceau (pochette iTunes si trouvée)
 
 struct SongRow: View {
-    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var store: AppStore
     let song: Song
     /// true = montrer les boutons valider / refuser (suggestion + leader).
@@ -1316,11 +1345,11 @@ struct SongRow: View {
     /// Groupe du morceau : ouvre la fiche (partitions, tonalité, commentaires).
     /// nil = ligne d'affichage seule (aperçus, captures).
     let groupID: GroupChat.ID?
-    /// Nombre de partitions rattachées — affiché en pastille sur la ligne.
-    let attachedDocs: Int
+    /// Événement source lorsque la tuile vient d'une setlist. nil signifie
+    /// que le morceau vient du répertoire du groupe.
+    let eventID: GroupEvent.ID?
     @State private var showListen = false
     @State private var showDetail = false
-    @State private var showCopyToRepertoire = false
 
     init(
         song: Song,
@@ -1328,22 +1357,18 @@ struct SongRow: View {
         onApprove: (() -> Void)? = nil,
         onReject: (() -> Void)? = nil,
         groupID: GroupChat.ID? = nil,
-        attachedDocs: Int = 0
+        eventID: GroupEvent.ID? = nil
     ) {
         self.song = song
         self.isLeader = isLeader
         self.onApprove = onApprove
         self.onReject = onReject
         self.groupID = groupID
-        self.attachedDocs = attachedDocs
+        self.eventID = eventID
     }
 
     var body: some View {
         songCard
-            // Appui long sur la tuile : copie du titre et liens d'écoute. Le
-            // drag reste exclusivement sur la poignée voisine.
-            .contextMenu { contextLinks }
-            .accessibilityAction(named: Text("Copier le titre")) { copyTitle() }
             .sheet(isPresented: $showListen) {
                 ListenSheet(song: song)
                     .presentationDetents([.height(380)])
@@ -1351,12 +1376,6 @@ struct SongRow: View {
             .sheet(isPresented: $showDetail) {
                 if let groupID {
                     SongDetailSheet(groupID: groupID, songID: song.id)
-                }
-            }
-            .sheet(isPresented: $showCopyToRepertoire) {
-                if let groupID {
-                    CopySongSheet(song: song, sourceGroupID: groupID)
-                        .presentationDetents([.medium, .large])
                 }
             }
     }
@@ -1390,21 +1409,9 @@ struct SongRow: View {
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(.primary)
                                 .multilineTextAlignment(.leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                            if let key = song.keyBadgeLabel {
-                                hint(icon: "tuningfork", label: key)
-                            }
-                            Text(song.artist)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
-                            if !song.isApproved {
-                                Text("Suggéré par \(store.suggesterName(for: song, in: groupID))")
-                                    .font(.caption2)
-                                    .foregroundStyle(JC.bronze)
-                                    .lineLimit(1)
-                            }
-                            if attachedDocs > 0 { detailHints }
+                                .minimumScaleFactor(0.82)
+                            compactMetadata(song)
                         }
                         Spacer(minLength: 0)
                         // Les trois petits points : ce morceau a une fiche
@@ -1440,7 +1447,10 @@ struct SongRow: View {
                     }
                     .buttonStyle(PressableStyle())
                 } else if !song.isApproved {
-                    TagView(text: "En attente", color: JC.laiton)
+                    Image(systemName: "clock.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(JC.laiton)
+                        .accessibilityLabel(Text("En attente"))
                 } else if let onReject {
                     Button {
                         onReject()
@@ -1453,34 +1463,28 @@ struct SongRow: View {
                     .buttonStyle(PressableStyle())
                 }
             }
+            .frame(minHeight: 48, maxHeight: 48)
         }
     }
 
-    /// La tonalité est une information de jeu immédiate : elle reste visible
-    /// sur la tuile. Les partitions sont comptées sans promettre les autres
-    /// contenus éventuels de la fiche.
     @ViewBuilder
-    private var detailHints: some View {
+    private func compactMetadata(_ song: Song) -> some View {
+        let values = [
+            song.keyBadgeLabel,
+            song.tempoBPM.map { "\($0) BPM" },
+            song.form?.trimmingCharacters(in: .whitespacesAndNewlines)
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
         HStack(spacing: 5) {
-            if attachedDocs > 0 {
-                hint(icon: "doc.richtext.fill", label: "\(attachedDocs)")
-            }
-        }
-    }
-
-    private func hint(icon: String, label: String?) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 8, weight: .bold))
-            if let label {
-                Text(verbatim: label)
-                    .font(.system(size: 9, weight: .bold))
-            }
+            Image(systemName: "metronome")
+                .font(.system(size: 9, weight: .bold))
+            Text(verbatim: values.isEmpty ? "—" : values.joined(separator: " · "))
+                .font(.caption2.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
         }
         .foregroundStyle(JC.bronze)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(JC.bronze.opacity(0.12), in: Capsule())
     }
 
     /// Bouton d'écoute discret : un casque, et une feuille propose le
@@ -1501,44 +1505,6 @@ struct SongRow: View {
         .accessibilityLabel(Text("Écouter ce morceau"))
     }
 
-    /// Liens du menu contextuel — de vrais boutons (Link dans un menu ne
-    /// déclenche pas l'ouverture sur certaines versions d'iOS).
-    @ViewBuilder
-    private var contextLinks: some View {
-        Button { copyTitle() } label: {
-            Label("Copier le titre", systemImage: "doc.on.doc")
-        }
-        if hasCopyDestination {
-            Button { showCopyToRepertoire = true } label: {
-                Label("Copier vers un autre répertoire", systemImage: "rectangle.on.rectangle.angled")
-            }
-        }
-        Divider()
-        ForEach(StreamingPlatform.allCases) { platform in
-            if let url = platform.url(for: song) {
-                Button {
-                    openURL(url)
-                } label: {
-                    Label {
-                        Text(verbatim: platform.label)
-                    } icon: {
-                        Image(systemName: platform.symbol)
-                    }
-                }
-            }
-        }
-    }
-
-    private func copyTitle() {
-        UIPasteboard.general.string = song.title
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-    }
-
-    private var hasCopyDestination: Bool {
-        guard let groupID else { return false }
-        return store.groups.contains { $0.id != groupID }
-    }
-
     private var artworkPlaceholder: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -1550,28 +1516,56 @@ struct SongRow: View {
     }
 }
 
-// MARK: - Copie d'un morceau entre répertoires
+// MARK: - Copie d'un morceau entre répertoires et événements
 
 /// Destination explicite pour éviter l'ancien malentendu entre « copier le
-/// titre » (presse-papiers) et copier réellement le morceau dans un groupe.
+/// titre » (presse-papiers) et copier réellement toute la tuile musicale.
 struct CopySongSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     let song: Song
     let sourceGroupID: GroupChat.ID
+    let sourceEventID: GroupEvent.ID?
 
     @State private var resultMessage: String?
     @State private var copyError: String?
-    @State private var copyingDestinationID: GroupChat.ID?
+    @State private var copyingDestinationID: String?
 
-    private var destinations: [GroupChat] {
+    private struct Destination: Identifiable {
+        let group: GroupChat
+        let event: GroupEvent?
+
+        var id: String {
+            if let event { return "event:\(event.id.uuidString.lowercased())" }
+            return "group:\(group.id.uuidString.lowercased())"
+        }
+
+        var songs: [Song] { event?.setlist ?? group.songs }
+        var title: String { event?.title ?? group.name }
+        var subtitle: String {
+            event == nil ? "Répertoire · \(group.name)" : "Événement · \(group.name)"
+        }
+        var symbol: String { event == nil ? "music.note.list" : "calendar" }
+    }
+
+    private var destinations: [Destination] {
         store.groups
-            .filter { $0.id != sourceGroupID }
             .sorted {
                 if store.canLead($0) != store.canLead($1) {
                     return store.canLead($0) && !store.canLead($1)
                 }
                 return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+            .flatMap { group in
+                var result: [Destination] = []
+                if group.id != sourceGroupID || sourceEventID != nil {
+                    result.append(Destination(group: group, event: nil))
+                }
+                result.append(contentsOf: group.upcomingEvents.compactMap { event in
+                    guard group.id != sourceGroupID || event.id != sourceEventID else { return nil }
+                    return Destination(group: group, event: event)
+                })
+                return result
             }
     }
 
@@ -1599,15 +1593,15 @@ struct CopySongSheet: View {
                             }
                         }
 
-                        Text("Choisis le répertoire de destination. La tonalité et la grille sont copiées ; les solos restent propres à chaque groupe.")
+                        Text("Choisis un répertoire ou un événement. L'identité catalogue, la pochette, l'artiste, la tonalité, le tempo, la forme, la grille et les liens exacts sont copiés ; les solos restent propres à chaque groupe.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
                         if destinations.isEmpty {
                             JCEmptyState(
                                 icon: "rectangle.stack.badge.minus",
-                                title: "Aucun autre répertoire",
-                                message: "Crée ou rejoins un autre groupe pour y copier ce morceau."
+                                title: "Aucune autre destination",
+                                message: "Crée un événement ou rejoins un autre groupe pour y copier ce morceau."
                             )
                         } else {
                             ForEach(destinations) { destination in
@@ -1617,14 +1611,18 @@ struct CopySongSheet: View {
                                 } label: {
                                     JCCard(padding: 12) {
                                         HStack(spacing: 11) {
-                                            Text(destination.emoji)
-                                                .font(.title2)
+                                            Image(systemName: destination.symbol)
+                                                .font(.headline.weight(.bold))
+                                                .foregroundStyle(JC.bronze)
                                                 .frame(width: 40, height: 40)
                                                 .background(JC.inset, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                                             VStack(alignment: .leading, spacing: 3) {
-                                                Text(destination.name)
+                                                Text(destination.title)
                                                     .font(.subheadline.weight(.bold))
                                                     .foregroundStyle(.primary)
+                                                Text(destination.subtitle)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
                                                 Text(copyHint(for: destination, duplicate: duplicate))
                                                     .font(.caption2)
                                                     .foregroundStyle(duplicate ? .secondary : JC.bronze)
@@ -1675,42 +1673,44 @@ struct CopySongSheet: View {
         }
     }
 
-    private func containsSong(in group: GroupChat) -> Bool {
-        group.songs.contains {
+    private func containsSong(in destination: Destination) -> Bool {
+        destination.songs.contains {
             AppStore.normalizedSongIdentity($0) == AppStore.normalizedSongIdentity(song)
         }
     }
 
-    private func copyHint(for group: GroupChat, duplicate: Bool) -> String {
-        if duplicate { return store.tr("Déjà dans ce répertoire") }
-        return store.canLead(group)
+    private func copyHint(for destination: Destination, duplicate: Bool) -> String {
+        if duplicate { return store.tr("Déjà dans cette destination") }
+        return store.canLead(destination.group)
             ? store.tr("Ajouté directement")
             : store.tr("Envoyé comme suggestion")
     }
 
-    private func copy(to destination: GroupChat) {
+    private func copy(to destination: Destination) {
         copyingDestinationID = destination.id
         let immediateResult = store.copySong(
             song,
             from: sourceGroupID,
-            to: destination.id
+            sourceEventID: sourceEventID,
+            to: destination.group.id,
+            eventID: destination.event?.id
         ) { finalResult in
             copyingDestinationID = nil
             switch finalResult {
             case .copied(let approved):
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 let format = approved
-                    ? store.tr("%@ a été ajouté au répertoire de %@.")
-                    : store.tr("%@ a été envoyé au groupe %@ pour validation.")
+                    ? store.tr("%@ a été copié vers %@.")
+                    : store.tr("%@ a été envoyé vers %@ pour validation.")
                 resultMessage = String(
                     format: format,
                     locale: store.language.locale,
                     song.title,
-                    destination.name
+                    destination.title
                 )
             case .alreadyExists:
                 UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                copyError = store.tr("Déjà dans ce répertoire")
+                copyError = store.tr("Déjà dans cette destination")
             case .unavailable:
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
                 copyError = store.tr("Ce répertoire n'est plus disponible.")
@@ -1725,7 +1725,7 @@ struct CopySongSheet: View {
         case .alreadyExists:
             copyingDestinationID = nil
             UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            copyError = store.tr("Déjà dans ce répertoire")
+            copyError = store.tr("Déjà dans cette destination")
         case .unavailable:
             copyingDestinationID = nil
             UINotificationFeedbackGenerator().notificationOccurred(.error)
@@ -1741,7 +1741,7 @@ struct CopySongSheet: View {
 // MARK: - Feuille « Écouter sur… »
 
 /// Le morceau sur chaque plateforme de streaming, avec son logo — un tap
-/// ouvre l'app (ou le site) directement sur le titre ou sa recherche.
+/// ouvre l'app (ou le site) directement sur cet enregistrement précis.
 struct ListenSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -1785,8 +1785,11 @@ struct ListenSheet: View {
                         }
                     }
 
+                    let directPlatforms = StreamingPlatform.allCases.filter {
+                        $0.hasDirectLink(for: song)
+                    }
                     VStack(spacing: 8) {
-                        ForEach(StreamingPlatform.allCases) { platform in
+                        ForEach(directPlatforms) { platform in
                             if let url = platform.url(for: song) {
                                 Button {
                                     openURL(url)
@@ -1797,9 +1800,7 @@ struct ListenSheet: View {
                                         Text(verbatim: platform.label)
                                             .font(.subheadline.weight(.bold))
                                             .foregroundStyle(.primary)
-                                        if platform.hasDirectLink(for: song) {
-                                            TagView(text: store.tr("Lien direct"), color: JC.feutrine)
-                                        }
+                                        TagView(text: store.tr("Lien direct"), color: JC.feutrine)
                                         Spacer(minLength: 0)
                                         Image(systemName: "arrow.up.right")
                                             .font(.caption.weight(.bold))
@@ -1814,6 +1815,14 @@ struct ListenSheet: View {
                                 }
                                 .buttonStyle(PressableStyle())
                             }
+                        }
+                        if directPlatforms.isEmpty {
+                            Text("Aucun lien exact n'est encore disponible pour ce morceau.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(12)
+                                .background(JC.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
                     }
                     Spacer(minLength: 0)
@@ -1835,6 +1844,7 @@ struct ListenSheet: View {
 struct GroupMessageBubble: View {
     @EnvironmentObject private var store: AppStore
     let message: GroupMessage
+    var isSpecialGuest = false
     var isAttachmentLoading = false
     var onOpenAttachment: ((MessageAttachment) -> Void)? = nil
     var onReact: ((String) -> Void)? = nil
@@ -1842,14 +1852,33 @@ struct GroupMessageBubble: View {
     var onDelete: (() -> Void)? = nil
 
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom, spacing: 8) {
             if message.isFromMe { Spacer(minLength: 56) }
+            if !message.isFromMe {
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarView(
+                        name: message.sender,
+                        size: 30,
+                        photo: message.senderPhotoURL
+                    )
+                    if isSpecialGuest {
+                        Text(verbatim: "🌠")
+                            .font(.system(size: 11))
+                            .offset(x: 4, y: 3)
+                            .accessibilityLabel(Text("Special guest"))
+                    }
+                }
+                .padding(.bottom, 22)
+            }
             VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 3) {
                 if !message.isFromMe {
-                    Text(message.sender)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(JC.bronze)
-                        .padding(.leading, 6)
+                    HStack(spacing: 4) {
+                        Text(message.sender)
+                        if isSpecialGuest { Text(verbatim: "🌠") }
+                    }
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(JC.bronze)
+                    .padding(.leading, 6)
                 }
                 VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 6) {
                     if message.deletedAt != nil {
@@ -1913,7 +1942,7 @@ struct GroupMessageBubble: View {
 // MARK: - Membres (invitations, exclusions, leadership)
 
 /// Gestion des membres. Le leader invite, exclut et peut transmettre son
-/// rôle à un membre éligible (Premium, ou qui ne dirige encore aucun groupe).
+/// rôle à un autre membre éligible.
 struct GroupMembersSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -1966,7 +1995,7 @@ struct GroupMembersSheet: View {
                             }
 
                             if isLeader {
-                                Text("Le leadership peut être transmis à un membre Premium, ou à un membre qui ne dirige encore aucun autre groupe. Marque aussi chacun Permanent (noyau) ou Occasionnel.")
+                                Text("Le leadership peut être transmis à un membre permanent. Les Special guests 🌠 restent clairement temporaires jusqu'à ce que tu les passes en permanent ou les retires.")
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                                     .padding(.top, 4)
@@ -2028,6 +2057,11 @@ struct GroupMembersSheet: View {
                     Label("Invitation en attente", systemImage: "hourglass")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(JC.laiton)
+                    if invite.kind == .specialGuest {
+                        Text(verbatim: "🌠 Special guest")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(JC.bronze)
+                    }
                 }
                 Spacer(minLength: 0)
                 if isLeader {
@@ -2057,7 +2091,6 @@ struct GroupMembersSheet: View {
         let name = member.name
         let isMe = store.isCurrentProfile(member)
         let isLeaderRow = store.isLeader(member, in: group)
-        let isPremiumMember = store.isPremiumMember(member)
         let kind = group.memberKind(for: member)
         let role = group.role(for: member)
         let played = instruments(of: member, isMe: isMe)
@@ -2095,16 +2128,17 @@ struct GroupMembersSheet: View {
                                 }
                             }
                             HStack(spacing: 6) {
-                                if isPremiumMember {
-                                    Text("Premium")
-                                        .font(.caption2.weight(.bold))
-                                        .foregroundStyle(JC.laiton)
-                                }
                                 // Le leader est toujours le noyau ; les autres ont un statut.
                                 if !isLeaderRow {
-                                    Label(kind.label, systemImage: kind.symbol)
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(kind == .permanent ? JC.bronze : .secondary)
+                                    if kind == .specialGuest {
+                                        Text(verbatim: "🌠 Special guest")
+                                            .font(.caption2.weight(.bold))
+                                            .foregroundStyle(JC.bronze)
+                                    } else {
+                                        Label(kind.label, systemImage: kind.symbol)
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(JC.bronze)
+                                    }
                                 }
                             }
                             // Ce que joue chaque membre — le rôle tenu dans le
@@ -2134,14 +2168,14 @@ struct GroupMembersSheet: View {
                             Button {
                                 store.setMemberKind(
                                     member,
-                                    kind == .permanent ? .occasional : .permanent,
+                                    kind == .permanent ? .specialGuest : .permanent,
                                     in: group
                                 )
                             } label: {
                                 Label(
-                                    kind == .permanent ? "Passer en occasionnel" : "Passer en permanent",
+                                    kind == .permanent ? "Passer en Special guest 🌠" : "Passer en permanent",
                                     systemImage: kind == .permanent
-                                        ? GroupMemberKind.occasional.symbol
+                                        ? GroupMemberKind.specialGuest.symbol
                                         : GroupMemberKind.permanent.symbol
                                 )
                             }
@@ -2169,10 +2203,12 @@ struct GroupMembersSheet: View {
                                 Label("Rôle dans le groupe", systemImage: "guitars")
                             }
                         }
-                        Button {
-                            pendingLeader = member
-                        } label: {
-                            Label("Nommer leader", systemImage: "crown")
+                        if kind == .permanent {
+                            Button {
+                                pendingLeader = member
+                            } label: {
+                                Label("Nommer leader", systemImage: "crown")
+                            }
                         }
                         Button(role: .destructive) {
                             store.kickMember(member, from: group)
@@ -2351,6 +2387,7 @@ struct InviteMemberSheet: View {
     @Environment(\.dismiss) private var dismiss
     let group: GroupChat
     @State private var query = ""
+    @State private var kind: GroupMemberKind = .specialGuest
 
     private var candidates: [Musician] {
         // Ni les membres actuels, ni les invités en attente de réponse.
@@ -2367,30 +2404,47 @@ struct InviteMemberSheet: View {
 
     var body: some View {
         NavigationStack {
-            List(candidates) { musician in
-                Button {
-                    store.inviteMember(musician.name, to: group)
-                    dismiss()
-                } label: {
-                    HStack(spacing: 10) {
-                        AvatarView(name: musician.name, size: 38, photo: musician.photo)
-                        VStack(alignment: .leading, spacing: 1) {
-                            HStack(spacing: 6) {
-                                Text(musician.name)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                if musician.isDemo { DemoAccountBadge() }
+            List {
+                Section {
+                    Picker("Type d'invitation", selection: $kind) {
+                        Text(verbatim: "🌠 Special guest").tag(GroupMemberKind.specialGuest)
+                        Text("Membre permanent").tag(GroupMemberKind.permanent)
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text(kind == .specialGuest
+                         ? "Le Special guest est identifié par 🌠 et reste un membre temporaire jusqu'à ce que tu le passes en permanent ou le retires."
+                         : "Le membre permanent rejoint le noyau fixe du groupe.")
+                }
+
+                Section("Musiciens") {
+                    ForEach(candidates) { musician in
+                        Button {
+                            store.inviteMember(musician.name, to: group, kind: kind)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 10) {
+                                AvatarView(name: musician.name, size: 38, photo: musician.photo)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    HStack(spacing: 6) {
+                                        Text(musician.name)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                        if musician.isDemo { DemoAccountBadge() }
+                                    }
+                                    Text(verbatim: musician.handle)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if kind == .specialGuest {
+                                    Text(verbatim: "🌠")
+                                        .font(.title3)
+                                        .accessibilityLabel(Text("Special guest"))
+                                }
                             }
-                            Text(verbatim: musician.handle)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        if store.isPremiumMusician(musician.name) {
-                            Text("Premium")
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(JC.laiton)
-                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -2596,14 +2650,14 @@ struct GroupEventSheet: View {
                                         store.approveSong(song, in: groupID, eventID: eventID)
                                     }, onReject: {
                                         store.rejectSong(song, in: groupID, eventID: eventID)
-                                    }, groupID: groupID)
+                                    }, groupID: groupID, eventID: eventID)
                                 }
                             }
 
                             let approved = orderedApprovedSongs(in: event)
                             SectionHeader(title: "Setlist", subtitle: "\(approved.count) morceaux")
                             if isLeader, approved.count > 1 {
-                                Label("Maintiens la poignée puis glisse pour changer l'ordre.", systemImage: "hand.draw")
+                                Label("Maintiens une tuile puis glisse-la pour changer l'ordre.", systemImage: "hand.draw")
                                     .font(.caption2.weight(.semibold))
                                     .foregroundStyle(.secondary)
                             }
@@ -2613,22 +2667,7 @@ struct GroupEventSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             ForEach(Array(approved.enumerated()), id: \.element.id) { index, song in
-                                HStack(spacing: 8) {
-                                    Text(verbatim: "\(index + 1).")
-                                        .font(.caption.weight(.heavy))
-                                        .foregroundStyle(.tertiary)
-                                        .frame(width: 22, alignment: .trailing)
-                                    SongRow(
-                                        song: song,
-                                        isLeader: false,
-                                        onApprove: nil,
-                                        onReject: isLeader ? { store.rejectSong(song, in: groupID, eventID: eventID) } : nil,
-                                        groupID: groupID,
-                                        // En répétition on ouvre la setlist,
-                                        // pas le répertoire : l'indice des
-                                        // partitions doit être là aussi.
-                                        attachedDocs: group.docs(for: song.id).count
-                                    )
+                                Group {
                                     if isLeader {
                                         OrderedUUIDDragHandle(
                                             id: song.id,
@@ -2646,7 +2685,35 @@ struct GroupEventSheet: View {
                                             onCommit: { ids in
                                                 store.reorderApprovedSetlist(ids, eventID: eventID, in: groupID)
                                             }
-                                        )
+                                        ) {
+                                            HStack(spacing: 8) {
+                                                Text(verbatim: "\(index + 1).")
+                                                    .font(.caption.weight(.heavy))
+                                                    .foregroundStyle(.tertiary)
+                                                    .frame(width: 22, alignment: .trailing)
+                                                SongRow(
+                                                    song: song,
+                                                    isLeader: false,
+                                                    onApprove: nil,
+                                                    onReject: { store.rejectSong(song, in: groupID, eventID: eventID) },
+                                                    groupID: groupID,
+                                                    eventID: eventID
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        HStack(spacing: 8) {
+                                            Text(verbatim: "\(index + 1).")
+                                                .font(.caption.weight(.heavy))
+                                                .foregroundStyle(.tertiary)
+                                                .frame(width: 22, alignment: .trailing)
+                                            SongRow(
+                                                song: song,
+                                                isLeader: false,
+                                                groupID: groupID,
+                                                eventID: eventID
+                                            )
+                                        }
                                     }
                                 }
                                 .orderedUUIDFrame(song.id, in: "event-setlist-reorder")
@@ -3136,8 +3203,9 @@ struct GroupEventSheet: View {
 
 // MARK: - Ajouter un morceau
 
-/// Ajout / suggestion d'un morceau — la pochette est cherchée sur iTunes
-/// automatiquement (le morceau vit très bien sans si introuvable).
+/// Ajout / suggestion d'un morceau avec autocomplétion catalogue. Choisir un
+/// résultat remplit l'artiste, l'identifiant stable, la pochette, l'album, la
+/// durée et les liens exacts ; la tonalité est proposée depuis l'extrait.
 struct AddSongSheet: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
@@ -3147,25 +3215,117 @@ struct AddSongSheet: View {
     @State private var title = ""
     @State private var artist = ""
     @State private var key = ""
+    @State private var tempo = ""
+    @State private var form = ""
+    @State private var matches: [SongCatalogMatch] = []
+    @State private var selectedMatch: SongCatalogMatch?
+    @State private var isSearching = false
+    @State private var isDetectingKey = false
+    @State private var isSaving = false
+    @State private var errorMessage: String?
 
     private var isValid: Bool {
-        !title.trimmingCharacters(in: .whitespaces).isEmpty
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSaving
+    }
+
+    private var searchQuery: String {
+        "\(title.trimmingCharacters(in: .whitespacesAndNewlines)) \(artist.trimmingCharacters(in: .whitespacesAndNewlines))"
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Titre — ex. Oye Como Va", text: $title)
-                    TextField("Artiste — ex. Santana", text: $artist)
+                    TextField("Titre", text: $title)
+                        .textInputAutocapitalization(.words)
+                        .onChange(of: title) { _, value in
+                            if value != selectedMatch?.title { selectedMatch = nil }
+                        }
+                    TextField("Artiste", text: $artist)
+                        .textInputAutocapitalization(.words)
+                        .onChange(of: artist) { _, value in
+                            if value != selectedMatch?.artist { selectedMatch = nil }
+                        }
                     Picker("Tonalité", selection: $key) {
                         Text("Non renseignée").tag("")
                         ForEach(MusicalKey.allKeys, id: \.self) { musicalKey in
                             Text(verbatim: musicalKey.label).tag(musicalKey.label)
                         }
                     }
+                    TextField("Tempo (BPM)", text: $tempo)
+                        .keyboardType(.numberPad)
+                    TextField("Forme", text: $form)
+                        .textInputAutocapitalization(.characters)
+                    if isDetectingKey {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                            Text("Analyse de la tonalité…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 } footer: {
-                    Text("La tonalité s'affiche sous le titre. La pochette est récupérée automatiquement si le morceau est trouvé.")
+                    Text("Choisis le bon enregistrement : l'artiste, la pochette, les liens et les métadonnées se remplissent automatiquement. La tonalité proposée reste modifiable.")
+                }
+
+                if isSearching || !matches.isEmpty {
+                    Section("Morceaux trouvés") {
+                        if isSearching && matches.isEmpty {
+                            HStack(spacing: 9) {
+                                ProgressView()
+                                Text("Recherche du morceau…")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        ForEach(matches) { match in
+                            Button { select(match) } label: {
+                                HStack(spacing: 11) {
+                                    if let artwork = match.artworkURL, let url = URL(string: artwork) {
+                                        AsyncImage(url: url) { image in
+                                            image.resizable().scaledToFill()
+                                        } placeholder: {
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .fill(JC.inset)
+                                        }
+                                        .frame(width: 46, height: 46)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(match.title)
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(.primary)
+                                        Text(match.artist)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        Text(metadataLine(for: match))
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: selectedMatch?.id == match.id ? "checkmark.circle.fill" : "plus.circle")
+                                        .foregroundStyle(JC.bronze)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                if let selectedMatch {
+                    Section("Enregistrement sélectionné") {
+                        LabeledContent("ID catalogue", value: selectedMatch.catalogID)
+                        if let album = selectedMatch.albumTitle, !album.isEmpty {
+                            LabeledContent("Album", value: album)
+                        }
+                        if let year = selectedMatch.releaseYear {
+                            LabeledContent("Année", value: String(year))
+                        }
+                        if let duration = selectedMatch.durationLabel {
+                            LabeledContent("Durée", value: duration)
+                        }
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -3178,19 +3338,99 @@ struct AddSongSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") {
-                        store.addSong(
-                            title: title.trimmingCharacters(in: .whitespaces),
-                            artist: artist.trimmingCharacters(in: .whitespaces),
-                            key: key.isEmpty ? nil : key,
-                            to: groupID,
-                            eventID: eventID
-                        )
-                        dismiss()
+                        save()
                     }
                     .font(.headline)
                     .disabled(!isValid)
                 }
             }
+            .task(id: searchQuery) {
+                guard selectedMatch == nil, searchQuery.count >= 2 else {
+                    matches = []
+                    isSearching = false
+                    return
+                }
+                isSearching = true
+                do {
+                    try await Task.sleep(for: .milliseconds(350))
+                    guard !Task.isCancelled else { return }
+                    matches = await SongCatalog.search(searchQuery)
+                } catch {
+                    return
+                }
+                isSearching = false
+            }
+            .alert("Morceau non ajouté", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
+            }
+        }
+    }
+
+    private func select(_ match: SongCatalogMatch) {
+        selectedMatch = match
+        title = match.title
+        artist = match.artist
+        matches = []
+        isSearching = false
+        isDetectingKey = match.previewURL != nil
+        Task {
+            let analysis = await SongKeyDetector.analyze(from: match.previewURL)
+            guard selectedMatch?.id == match.id else { return }
+            if let detected = analysis?.key { key = detected.label }
+            if let detectedTempo = analysis?.tempoBPM { tempo = String(detectedTempo) }
+            isDetectingKey = false
+        }
+    }
+
+    private func metadataLine(for match: SongCatalogMatch) -> String {
+        [
+            match.albumTitle,
+            match.releaseYear.map(String.init),
+            match.durationLabel
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: " · ")
+    }
+
+    private func save() {
+        isSaving = true
+        let immediate = store.addSong(
+                            title: title.trimmingCharacters(in: .whitespaces),
+                            artist: artist.trimmingCharacters(in: .whitespaces),
+                            key: key.isEmpty ? nil : key,
+                            tempoBPM: Int(tempo).flatMap { (30...300).contains($0) ? $0 : nil },
+                            form: form,
+                            catalogMatch: selectedMatch,
+                            to: groupID,
+                            eventID: eventID
+        ) { outcome in
+            isSaving = false
+            switch outcome {
+            case .succeeded:
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                dismiss()
+            case .alreadyExists:
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                errorMessage = store.tr("Ce morceau est déjà dans cette destination.")
+            case .failed:
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+                errorMessage = store.tr("Le morceau n'a pas pu être ajouté. Vérifie le réseau puis réessaie.")
+            }
+        }
+        if immediate == .alreadyExists {
+            isSaving = false
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            errorMessage = store.tr("Ce morceau est déjà dans cette destination.")
+        } else if immediate == .failed {
+            isSaving = false
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            errorMessage = store.tr("Le morceau n'a pas pu être ajouté. Vérifie le réseau puis réessaie.")
         }
     }
 }
@@ -3206,6 +3446,8 @@ struct EditSongSheet: View {
     @State private var title: String
     @State private var artist: String
     @State private var key: String
+    @State private var tempo: String
+    @State private var form: String
 
     init(groupID: GroupChat.ID, song: Song) {
         self.groupID = groupID
@@ -3213,6 +3455,8 @@ struct EditSongSheet: View {
         _title = State(initialValue: song.title)
         _artist = State(initialValue: song.artist)
         _key = State(initialValue: song.keyBadgeLabel ?? "")
+        _tempo = State(initialValue: song.tempoBPM.map(String.init) ?? "")
+        _form = State(initialValue: song.form ?? "")
     }
 
     private var isValid: Bool {
@@ -3231,6 +3475,10 @@ struct EditSongSheet: View {
                             Text(verbatim: musicalKey.label).tag(musicalKey.label)
                         }
                     }
+                    TextField("Tempo (BPM)", text: $tempo)
+                        .keyboardType(.numberPad)
+                    TextField("Forme", text: $form)
+                        .textInputAutocapitalization(.characters)
                 } header: {
                     Text("Morceau")
                 } footer: {
@@ -3253,6 +3501,8 @@ struct EditSongSheet: View {
                             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                             artist: artist.trimmingCharacters(in: .whitespacesAndNewlines),
                             key: key.isEmpty ? nil : key,
+                            tempoBPM: Int(tempo).flatMap { (30...300).contains($0) ? $0 : nil },
+                            form: form,
                             in: group
                         )
                         dismiss()
