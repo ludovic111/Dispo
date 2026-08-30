@@ -2628,6 +2628,28 @@ struct GroupEventSheet: View {
                                 }
                             }
 
+                            if isLeader {
+                                Button {
+                                    editing = true
+                                } label: {
+                                    Label("Modifier la session", systemImage: "pencil")
+                                        .font(.subheadline.weight(.bold))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            JC.primaryAccent.opacity(0.14),
+                                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                .stroke(JC.primaryAccent.opacity(0.34), lineWidth: 1)
+                                        )
+                                        .foregroundStyle(JC.primaryAccent)
+                                }
+                                .buttonStyle(PressableStyle())
+                                .accessibilityIdentifier("event-edit-primary-action")
+                            }
+
                             attendanceCard(event: event, group: group)
 
                             // Des musiciens ont déjà coché ce jour-là : on les
@@ -3939,7 +3961,7 @@ struct EditGroupEventSheet: View {
             }
             .scrollContentBackground(.hidden)
             .background(JC.bg)
-            .navigationTitle("Modifier la date")
+            .navigationTitle("Modifier la session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

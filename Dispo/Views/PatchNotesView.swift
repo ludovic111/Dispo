@@ -24,7 +24,9 @@ struct PatchNote: Identifiable {
                 "Chaque compte crée désormais son propre profil : aucun nom, instrument, ville ou texte de bio n'est prérempli",
                 "Copie un morceau complet entre répertoires et événements : artiste, tonalité, grille iReal Pro et liens d'écoute suivent",
                 "Les écoles apparaissent sur les cartes musiciens, et « Même école » signale immédiatement une communauté partagée",
-                "Toutes les fonctionnalités sont ouvertes gratuitement à tout le monde pendant la bêta"
+                "Toutes les fonctionnalités sont ouvertes gratuitement à tout le monde pendant la bêta",
+                "Le bouton Modifier la session est maintenant visible directement dans chaque date que tu diriges",
+                "Si le mauvais compte ouvre le profil express, Changer de compte ramène immédiatement à la connexion"
             ]
         ),
         PatchNote(

@@ -194,6 +194,48 @@ final class SongSoloReorderingUITests: XCTestCase {
         XCTAssertFalse(duplicateDestination.isEnabled)
     }
 
+    func testLeaderCanSeeAndOpenPrimaryEventEditAction() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-screenshotRoute", "event-detail-edit",
+            "-jamconnect.language", "fr",
+            "-AppleLanguages", "(fr)",
+            "-AppleLocale", "fr_FR"
+        ]
+        app.launch()
+
+        XCTAssertTrue(
+            app.navigationBars["Événement"].waitForExistence(timeout: 8),
+            "La route Debug doit ouvrir la session du responsable."
+        )
+        let editButton = app.buttons["event-edit-primary-action"]
+        XCTAssertTrue(editButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(editButton.isHittable)
+        editButton.tap()
+
+        XCTAssertTrue(app.navigationBars["Modifier la session"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.textFields["Titre"].exists)
+        XCTAssertTrue(app.staticTexts["Date et heure"].exists)
+    }
+
+    func testExistingAccountCanLeaveAccidentalOnboarding() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-screenshotRoute", "onboarding-account-switch",
+            "-jamconnect.language", "fr",
+            "-AppleLanguages", "(fr)",
+            "-AppleLocale", "fr_FR"
+        ]
+        app.launch()
+
+        let switchAccount = app.buttons["onboarding-switch-account"]
+        XCTAssertTrue(
+            switchAccount.waitForExistence(timeout: 8),
+            "Un compte existant coincé dans l’onboarding doit pouvoir revenir à la connexion."
+        )
+        XCTAssertTrue(switchAccount.isHittable)
+    }
+
     private func waitUntil(timeout: TimeInterval, condition: () -> Bool) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {

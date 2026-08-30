@@ -83857,6 +83857,90 @@
         }
       }
     },
+    "Changer de compte" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Konto wechseln" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Switch account" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cambiar de cuenta" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Cambia account" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アカウントを切り替える" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "切换账号" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Mudar de conta" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "계정 변경" } }
+      }
+    },
+    "Le bouton Modifier la session est maintenant visible directement dans chaque date que tu diriges" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Die Schaltfläche „Termin bearbeiten“ ist jetzt direkt in jedem von dir geleiteten Termin sichtbar" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The Edit session button is now visible directly in every session you lead" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El botón Editar sesión ahora aparece directamente en cada sesión que diriges" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Il pulsante Modifica sessione ora è visibile direttamente in ogni sessione che gestisci" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "管理している各セッションに「セッションを編集」ボタンが直接表示されるようになりました" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你负责的每场活动中现在都会直接显示“编辑活动”按钮" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "O botão Editar sessão está agora visível diretamente em cada sessão que diriges" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "내가 관리하는 각 세션에 이제 ‘세션 수정’ 버튼이 바로 표시됩니다" } }
+      }
+    },
+    "Modifier la session" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Termin bearbeiten" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit session" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Editar sesión" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Modifica sessione" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セッションを編集" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "编辑活动" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Editar sessão" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "세션 수정" } }
+      }
+    },
+    "Rester sur ce compte" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bei diesem Konto bleiben" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stay on this account" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Seguir con esta cuenta" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Resta su questo account" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "このアカウントを使い続ける" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续使用此账号" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Manter esta conta" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 계정 계속 사용" } }
+      }
+    },
+    "Se connecter avec un autre compte ?" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Mit einem anderen Konto anmelden?" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sign in with another account?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Iniciar sesión con otra cuenta?" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Accedere con un altro account?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "別のアカウントでサインインしますか？" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用其他账号登录？" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Iniciar sessão com outra conta?" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "다른 계정으로 로그인할까요?" } }
+      }
+    },
+    "Si le mauvais compte ouvre le profil express, Changer de compte ramène immédiatement à la connexion" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Wenn das falsche Konto das Express-Profil öffnet, führt „Konto wechseln“ sofort zurück zur Anmeldung" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "If the wrong account opens the quick profile setup, Switch account takes you straight back to sign-in" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Si la cuenta equivocada abre la configuración rápida del perfil, Cambiar de cuenta te devuelve directamente al inicio de sesión" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Se l’account sbagliato apre la configurazione rapida del profilo, Cambia account riporta subito all’accesso" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "間違ったアカウントで簡単プロフィール設定が開いた場合、「アカウントを切り替える」ですぐログイン画面に戻れます" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "如果错误的账号打开了快速资料设置，“切换账号”会立即带你返回登录界面" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Se a conta errada abrir a configuração rápida do perfil, Mudar de conta leva-te imediatamente ao início de sessão" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "잘못된 계정에서 빠른 프로필 설정이 열리면 ‘계정 변경’으로 바로 로그인 화면으로 돌아갈 수 있습니다" } }
+      }
+    },
+    "Tu reviendras à l'écran de connexion. Aucune donnée de tes comptes ne sera supprimée." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Du kehrst zum Anmeldebildschirm zurück. Es werden keine Daten deiner Konten gelöscht." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "You’ll return to the sign-in screen. No data from either account will be deleted." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Volverás a la pantalla de inicio de sesión. No se eliminará ningún dato de tus cuentas." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Tornerai alla schermata di accesso. Nessun dato dei tuoi account verrà eliminato." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログイン画面に戻ります。どのアカウントのデータも削除されません。" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "你将返回登录界面。任何账号数据都不会被删除。" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Voltarás ao ecrã de início de sessão. Nenhum dado das tuas contas será eliminado." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인 화면으로 돌아갑니다. 계정 데이터는 삭제되지 않습니다." } }
+      }
+    },
     "Work in progress : le modèle économique n'est pas décidé. Toutes les fonctionnalités sont ouvertes gratuitement aux bêta-testeurs." : {
       "localizations" : {
         "de" : {

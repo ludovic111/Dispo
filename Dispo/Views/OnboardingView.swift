@@ -14,6 +14,8 @@ struct OnboardingView: View {
     @State private var country: Country = .switzerland
     @State private var postalCode = ""
     @State private var city = ""
+    @State private var confirmingAccountSwitch = false
+    @State private var isSigningOut = false
 
     private let stepCount = 4
 
@@ -74,6 +76,22 @@ struct OnboardingView: View {
             city = store.profile.city ?? ""
             store.requestLocation()
         }
+        .confirmationDialog(
+            "Se connecter avec un autre compte ?",
+            isPresented: $confirmingAccountSwitch,
+            titleVisibility: .visible
+        ) {
+            Button("Changer de compte", role: .destructive) {
+                isSigningOut = true
+                Task {
+                    await store.signOutLive()
+                    isSigningOut = false
+                }
+            }
+            Button("Rester sur ce compte", role: .cancel) {}
+        } message: {
+            Text("Tu reviendras à l'écran de connexion. Aucune donnée de tes comptes ne sera supprimée.")
+        }
     }
 
     // MARK: - Chrome
@@ -83,7 +101,29 @@ struct OnboardingView: View {
             LogoView(markSize: 32, wordmarkColor: JC.laiton)
                 .padding(.leading)
             Spacer()
-            if step > 0 && !isRequiredProfileSetup {
+            if store.isLive {
+                Button {
+                    confirmingAccountSwitch = true
+                } label: {
+                    HStack(spacing: 6) {
+                        if isSigningOut {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "person.crop.circle.badge.arrow.backward")
+                        }
+                        Text("Changer de compte")
+                    }
+                    .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(JC.primaryAccent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(JC.primaryAccent.opacity(0.12), in: Capsule())
+                .disabled(isSigningOut)
+                .accessibilityIdentifier("onboarding-switch-account")
+                .padding(.trailing, 12)
+            } else if step > 0 && !isRequiredProfileSetup {
                 Button("Passer") { finish() }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -130,6 +170,7 @@ struct OnboardingView: View {
             .foregroundStyle(JC.billetInk)
         }
         .buttonStyle(PressableStyle())
+        .accessibilityIdentifier("onboarding-continue")
         .disabled(
             (step == 2 && !PlaceDraft(country: country, postalCode: postalCode, city: city).isComplete)
                 || (step == stepCount - 1 && isRequiredProfileSetup && !canFinishRequiredLiveSetup)

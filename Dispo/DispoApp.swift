@@ -166,6 +166,8 @@ struct RootView: View {
                     SongDetailSheet(groupID: groupID, songID: songID)
                 case .groupRepertoire(let groupID):
                     GroupChatView(groupID: groupID, initialTab: .repertoire)
+                case .eventDetail(let groupID, let eventID):
+                    GroupEventSheet(groupID: groupID, eventID: eventID)
                 }
             }
         }
@@ -185,6 +187,7 @@ struct RootView: View {
         case songs
         case songDetail(GroupChat.ID, Song.ID)
         case groupRepertoire(GroupChat.ID)
+        case eventDetail(GroupChat.ID, GroupEvent.ID)
         var id: String {
             switch self {
             case .chat: return "chat"
@@ -196,6 +199,7 @@ struct RootView: View {
             case .songs: return "songs"
             case .songDetail: return "song-detail"
             case .groupRepertoire: return "group-repertoire"
+            case .eventDetail: return "event-detail"
             }
         }
     }
@@ -363,6 +367,37 @@ struct RootView: View {
             // Supabase quand `onCommit` persiste l'ordre du répertoire.
             store.liveUserID = nil
             debugCover = .groupRepertoire(groupID)
+        case "event-detail-edit":
+            store.hasOnboarded = true
+            let groupID = UUID(uuidString: "50000000-0000-0000-0000-000000000040")!
+            let eventID = UUID(uuidString: "50000000-0000-0000-0000-000000000041")!
+            let event = GroupEvent(
+                id: eventID,
+                kind: .repetition,
+                title: "Répétition générale",
+                venue: "Studio QA · 1201 Genève",
+                date: Calendar.current.date(byAdding: .day, value: 4, to: Date()) ?? Date()
+            )
+            let group = GroupChat(
+                id: groupID,
+                name: "Blue Notes QA",
+                emoji: "🎷",
+                leaderName: nil,
+                memberNames: [],
+                events: [event]
+            )
+            store.groups.removeAll { $0.id == groupID }
+            store.groups.insert(group, at: 0)
+            // Scénario local : le responsable est représenté par leaderName=nil.
+            store.liveUserID = nil
+            debugCover = .eventDetail(groupID, eventID)
+        case "onboarding-account-switch":
+            store.hasOnboarded = true
+            store.liveUserID = UUID(uuidString: "50000000-0000-0000-0000-000000000050")!
+            store.liveEmail = "raphael.qa@dispoapp.net"
+            store.profile.name = ""
+            store.profile.instruments = []
+            store.liveProfileNeedsSetup = true
         default: break
         }
     }
