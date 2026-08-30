@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Dispo",
+    "slug": "dispo",
+    "version": "2.4.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/dispo/app-icon.png",
+    "scheme": "dispo",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "ch.dispo.app",
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Dispo utilise ta position approximative pour trouver des musiciens et des SOS près de toi.",
+        "NSPhotoLibraryUsageDescription": "Dispo accède aux photos et vidéos que tu choisis pour ton profil et tes messages."
+      }
+    },
+    "android": {
+      "package": "ch.dispo.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#050814",
+        "foregroundImage": "./assets/images/dispo/app-icon.png"
+      },
+      "predictiveBackGestureEnabled": true,
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/dispo/app-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-apple-authentication",
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#050814",
+          "image": "./assets/images/dispo/logo-mark.png",
+          "imageWidth": 112,
+          "dark": {
+            "backgroundColor": "#050814",
+            "image": "./assets/images/dispo/logo-mark.png"
+          }
+        }
+      ],
+      "expo-localization",
+      "expo-image-picker",
+      "expo-sharing",
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

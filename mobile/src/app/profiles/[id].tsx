@@ -1,0 +1,35 @@
+import { useLocalSearchParams } from 'expo-router';
+import { ScrollView, StyleSheet } from 'react-native';
+
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { useAuth } from '@/features/auth/auth-context';
+import { ProfileDetail } from '@/features/profiles/profile-detail';
+import { useProfile } from '@/features/profiles/profile-queries';
+import { spacing } from '@/theme/tokens';
+
+export default function ProfileScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { session } = useAuth();
+  const query = useProfile(id, session?.user.id ?? '');
+  if (query.isLoading)
+    return (
+      <Screen>
+        <LoadingState label="Chargement du profil…" />
+      </Screen>
+    );
+  if (query.isError)
+    return (
+      <Screen>
+        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+      </Screen>
+    );
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={styles.content}>
+        {query.data ? <ProfileDetail profile={query.data} /> : null}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({ content: { padding: spacing.md, paddingBottom: spacing.xxl } });
