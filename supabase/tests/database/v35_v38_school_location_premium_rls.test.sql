@@ -44,6 +44,38 @@ where id in (
   '00000000-0000-4000-8000-0000000000c3'
 );
 
+-- Depuis la beta 2.4, tout nouveau profil est Premium par trigger. On vérifie
+-- d'abord ce contrat courant, puis on neutralise ce seul wrapper dans la
+-- transaction afin de continuer à exercer les garde-fous gratuits v35-v43.
+-- Le ROLLBACK final réactive automatiquement le trigger et annule les profils.
+do $$
+begin
+  if exists (
+    select 1
+    from public.profiles
+    where id in (
+      '00000000-0000-4000-8000-0000000000a1',
+      '00000000-0000-4000-8000-0000000000b2',
+      '00000000-0000-4000-8000-0000000000c3'
+    )
+      and not is_premium
+  ) then
+    raise exception 'Beta Premium trigger did not cover a new profile';
+  end if;
+end;
+$$;
+
+alter table public.profiles
+  disable trigger profiles_00_enforce_beta_premium;
+
+update public.profiles
+set is_premium = false
+where id in (
+  '00000000-0000-4000-8000-0000000000a1',
+  '00000000-0000-4000-8000-0000000000b2',
+  '00000000-0000-4000-8000-0000000000c3'
+);
+
 -- Ecoles supplementaires pour exercer la limite de cinq affiliations.
 insert into public.music_schools(slug, name, short_name, city, country_code)
 values
@@ -783,7 +815,7 @@ $$;
 insert into public.group_members(group_id, profile_id, kind)
 values (
   '10000000-0000-4000-8000-000000000001',
-  '00000000-0000-4000-8000-0000000000b2', 'occasional'
+  '00000000-0000-4000-8000-0000000000b2', 'guest'
 );
 
 select set_config(
@@ -1506,7 +1538,7 @@ begin
     raise exception 'Leadership transfer to a non-member unexpectedly accepted';
   exception
     when sqlstate '22023' then
-      if sqlerrm <> 'new_leader_must_be_group_member' then raise; end if;
+      if sqlerrm <> 'new_leader_must_be_permanent_member' then raise; end if;
   end;
 end;
 $$;
@@ -1591,6 +1623,24 @@ $$;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
 );
+do $$
+begin
+  begin
+    perform public.transfer_group_leadership(
+      '10000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-0000000000b2'
+    );
+    raise exception 'Leadership transfer to a guest unexpectedly accepted';
+  exception
+    when sqlstate '22023' then
+      if sqlerrm <> 'new_leader_must_be_permanent_member' then raise; end if;
+  end;
+end;
+$$;
+update public.group_members
+set kind = 'permanent'
+where group_id = '10000000-0000-4000-8000-000000000001'
+  and profile_id = '00000000-0000-4000-8000-0000000000b2';
 select public.transfer_group_leadership(
   '10000000-0000-4000-8000-000000000001',
   '00000000-0000-4000-8000-0000000000b2'
