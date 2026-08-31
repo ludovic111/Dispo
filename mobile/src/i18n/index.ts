@@ -45,6 +45,7 @@ function deviceLocale(): SupportedLocale {
 }
 
 const i18n = createInstance();
+const languageStorageKey = 'dispo.settings.language';
 
 void i18n.use(initReactI18next).init({
   compatibilityJSON: 'v4',
@@ -54,5 +55,19 @@ void i18n.use(initReactI18next).init({
   resources,
   returnNull: false,
 });
+
+export async function hydrateAppLanguage(): Promise<void> {
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  const saved = await AsyncStorage.getItem(languageStorageKey);
+  if (saved && supportedLocales.includes(saved as SupportedLocale)) {
+    await i18n.changeLanguage(saved);
+  }
+}
+
+export async function setAppLanguage(locale: SupportedLocale): Promise<void> {
+  const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  await AsyncStorage.setItem(languageStorageKey, locale);
+  await i18n.changeLanguage(locale);
+}
 
 export default i18n;

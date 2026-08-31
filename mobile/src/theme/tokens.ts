@@ -1,19 +1,29 @@
 import type { ColorSchemeName, ViewStyle } from 'react-native';
 
 export const spacing = {
+  hairline: 2,
+  xxxs: 3,
   xxs: 4,
+  compact: 5,
+  tight: 6,
   xs: 8,
+  chip: 9,
+  control: 10,
+  section: 11,
   sm: 12,
+  cluster: 14,
   md: 16,
+  gutter: 18,
   lg: 20,
   xl: 24,
   xxl: 32,
 } as const;
 
 export const radii = {
-  chip: 10,
+  chip: 999,
   button: 14,
   ticket: 18,
+  promo: 20,
   card: 22,
   round: 999,
 } as const;

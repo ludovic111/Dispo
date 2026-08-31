@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AppProviders } from '@/providers/app-providers';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -11,27 +12,36 @@ void SplashScreen.preventAutoHideAsync();
 
 function Navigation() {
   const { dark, palette } = useDispoTheme();
+  const { t } = useTranslation();
   return (
     <>
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: palette.background },
-          headerBackTitle: 'Retour',
+          headerBackTitle: t('Retour'),
           headerShadowVisible: false,
           headerStyle: { backgroundColor: palette.background },
           headerTintColor: palette.text,
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="welcome" options={{ gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/update-password" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="profiles/[id]" options={{ title: 'Profil' }} />
-        <Stack.Screen name="gigs/[id]" options={{ title: 'Détail SOS' }} />
+        <Stack.Screen name="profiles/[id]" options={{ title: t('Profil') }} />
+        <Stack.Screen name="gigs/[id]" options={{ title: t('Détail SOS') }} />
         <Stack.Screen
           name="gigs/create"
-          options={{ presentation: 'modal', title: 'Publier un SOS' }}
+          options={{ presentation: 'modal', title: t('Publier un SOS') }}
         />
-        <Stack.Screen name="messages/[id]" options={{ title: 'Conversation' }} />
+        <Stack.Screen name="gigs/matches" options={{ title: t('Matches SOS') }} />
+        <Stack.Screen name="gigs/request" options={{ title: t('Demander un dépannage') }} />
+        <Stack.Screen name="messages/[id]" options={{ title: t('Conversation') }} />
+        <Stack.Screen
+          name="whats-new"
+          options={{ gestureEnabled: false, headerShown: false, presentation: 'modal' }}
+        />
       </Stack>
       <StatusBar style={dark ? 'light' : 'dark'} />
     </>

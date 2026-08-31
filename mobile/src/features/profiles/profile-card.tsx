@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
@@ -23,6 +24,7 @@ export function ProfileCard({
   profile: ProfileSummary;
 }) {
   const { palette } = useDispoTheme();
+  const { t } = useTranslation();
   return (
     <Pressable
       accessibilityRole="button"
@@ -42,20 +44,21 @@ export function ProfileCard({
               ) : null}
             </View>
             <AppText color={palette.electric} numberOfLines={1} style={styles.instrument}>
-              {profile.instruments.join(' · ') || 'Musicien'}
+              {profile.instruments.map((instrument) => t(instrument)).join(' · ') || t('Musicien')}
             </AppText>
             <View style={styles.tags}>
               {relationTags(profile).map((tag) => (
-                <Tag key={tag} label={tag} />
+                <Tag key={tag} label={t(tag)} />
               ))}
               {profile.genres.slice(0, 2).map((genre) => (
-                <Tag color={palette.bronze} key={genre} label={genre} />
+                <Tag color={palette.bronze} key={genre} label={t(genre)} />
               ))}
             </View>
             <View style={styles.meta}>
               <Ionicons color={palette.muted} name="location-outline" size={13} />
               <AppText color={palette.muted} numberOfLines={1} variant="caption">
-                {[profile.city, profile.country].filter(Boolean).join(', ') || 'Lieu non renseigné'}
+                {[profile.city, profile.country].filter(Boolean).join(', ') ||
+                  t('Lieu non renseigné')}
               </AppText>
             </View>
           </View>

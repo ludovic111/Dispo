@@ -48,7 +48,8 @@
       "expo-localization",
       "expo-image-picker",
       "expo-sharing",
-      "expo-video"
+      "expo-video",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

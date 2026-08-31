@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { AppText } from './app-text';
 
@@ -15,7 +16,7 @@ interface DispoButtonProps extends PropsWithChildren {
   icon?: ComponentProps<typeof Ionicons>['name'];
   loading?: boolean;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'signal';
 }
 
 export function DispoButton({
@@ -28,15 +29,18 @@ export function DispoButton({
   variant = 'primary',
 }: DispoButtonProps) {
   const { palette } = useDispoTheme();
+  const reduceMotion = useReducedMotion();
   const inactive = disabled || loading;
+  const foreground =
+    variant === 'primary' ? billetInk : variant === 'signal' ? '#FFFFFF' : palette.text;
   const content = (
     <View style={styles.content}>
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? billetInk : palette.text} />
+        <ActivityIndicator color={foreground} />
       ) : icon ? (
-        <Ionicons color={variant === 'primary' ? billetInk : palette.text} name={icon} size={18} />
+        <Ionicons color={foreground} name={icon} size={18} />
       ) : null}
-      <AppText color={variant === 'primary' ? billetInk : palette.text} style={styles.label}>
+      <AppText color={foreground} style={styles.label}>
         {children}
       </AppText>
     </View>
@@ -53,7 +57,7 @@ export function DispoButton({
       }}
       style={({ pressed }) => [
         styles.pressable,
-        pressed && !inactive && styles.pressed,
+        pressed && !inactive && (reduceMotion ? styles.pressedReduced : styles.pressed),
         inactive && styles.disabled,
       ]}
     >
@@ -66,6 +70,8 @@ export function DispoButton({
         >
           {content}
         </LinearGradient>
+      ) : variant === 'signal' ? (
+        <View style={[styles.surface, { backgroundColor: palette.signal }]}>{content}</View>
       ) : (
         <View
           style={[
@@ -95,7 +101,8 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontWeight: '800' },
   outline: { borderWidth: 1 },
   pressable: { borderRadius: radii.button },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.97 }] },
+  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
+  pressedReduced: { opacity: 0.96 },
   surface: {
     borderRadius: radii.button,
     minHeight: 48,

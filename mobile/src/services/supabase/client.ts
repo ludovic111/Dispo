@@ -1,10 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 
 import type { Database } from './database.types';
 
 import { publicEnvironment } from '@/config/env';
+import { secureSessionStorage } from '@/services/storage/secure-storage';
 
 let client: SupabaseClient<Database> | null = null;
 
@@ -22,7 +22,7 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     publicEnvironment.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       auth: {
-        storage: AsyncStorage,
+        storage: secureSessionStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,

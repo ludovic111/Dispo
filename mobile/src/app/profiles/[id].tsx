@@ -1,20 +1,23 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { profileHandle } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
 import { ProfileDetail } from '@/features/profiles/profile-detail';
 import { useProfile } from '@/features/profiles/profile-queries';
 import { spacing } from '@/theme/tokens';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const query = useProfile(id, session?.user.id ?? '');
   if (query.isLoading)
     return (
       <Screen>
-        <LoadingState label="Chargement du profil…" />
+        <LoadingState label={t('Chargement du profil…')} />
       </Screen>
     );
   if (query.isError)
@@ -25,6 +28,9 @@ export default function ProfileScreen() {
     );
   return (
     <Screen>
+      <Stack.Screen
+        options={{ title: query.data ? profileHandle(query.data.name) : t('Profil') }}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         {query.data ? <ProfileDetail profile={query.data} /> : null}
       </ScrollView>

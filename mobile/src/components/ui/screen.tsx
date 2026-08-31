@@ -23,31 +23,40 @@ interface ScreenHeaderProps {
   action?: ReactNode;
   eyebrow?: string;
   icon?: ComponentProps<typeof Ionicons>['name'];
+  iconColor?: string;
+  subtitle?: string;
   title: string;
 }
 
-export function ScreenHeader({ action, eyebrow, icon, title }: ScreenHeaderProps) {
+export function ScreenHeader({
+  action,
+  eyebrow,
+  icon,
+  iconColor,
+  subtitle,
+  title,
+}: ScreenHeaderProps) {
   const { palette } = useDispoTheme();
+  const detail = subtitle ?? eyebrow;
+  const resolvedIconColor = iconColor ?? palette.electric;
   return (
     <View style={styles.header}>
+      {icon ? (
+        <View style={[styles.icon, { backgroundColor: `${resolvedIconColor}24` }]}>
+          <Ionicons color={resolvedIconColor} name={icon} size={18} />
+        </View>
+      ) : null}
       <View style={styles.headerText}>
-        {eyebrow ? (
-          <AppText color={palette.bronze} variant="label">
-            {eyebrow}
-          </AppText>
-        ) : null}
-        <AppText numberOfLines={1} variant="display">
+        <AppText numberOfLines={1} style={styles.headerTitle} variant="display">
           {title}
         </AppText>
+        {detail ? (
+          <AppText color={palette.muted} style={styles.headerSubtitle}>
+            {detail}
+          </AppText>
+        ) : null}
       </View>
-      {action ??
-        (icon ? (
-          <View
-            style={[styles.icon, { backgroundColor: palette.card, borderColor: palette.border }]}
-          >
-            <Ionicons color={palette.electric} name={icon} size={22} />
-          </View>
-        ) : null)}
+      {action ?? null}
     </View>
   );
 }
@@ -113,18 +122,19 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', gap: spacing.sm, justifyContent: 'center', padding: spacing.xxl },
   centerText: { textAlign: 'center' },
   header: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.cluster,
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.gutter,
     paddingVertical: spacing.sm,
   },
-  headerText: { flex: 1, gap: 2 },
+  headerSubtitle: { fontSize: 15, lineHeight: 20 },
+  headerText: { flex: 1, gap: 4 },
+  headerTitle: { fontSize: 27, lineHeight: 31 },
   icon: {
     alignItems: 'center',
     borderRadius: radii.button,
-    borderWidth: 1,
     height: 44,
     justifyContent: 'center',
     width: 44,

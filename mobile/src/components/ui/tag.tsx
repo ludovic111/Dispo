@@ -27,8 +27,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderRadius: radii.chip,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  text: { fontSize: 10, fontWeight: '800', letterSpacing: 0.25 },
+  text: { fontSize: 12, fontWeight: '600' },
 });

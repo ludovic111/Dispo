@@ -1,20 +1,25 @@
 import type { Session } from '@supabase/supabase-js';
 import {
   createContext,
+  useCallback,
   type PropsWithChildren,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from 'react';
-import { AppState } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { AppState, Linking } from 'react-native';
 
-import { restoreSession } from './auth-service';
+import { handleAuthCallbackUrl, isAuthCallbackUrl, restoreSession } from './auth-service';
 
 import { getSupabaseClient, hasSupabaseConfiguration } from '@/services/supabase/client';
 
 interface AuthState {
+  authCallbackError: string | null;
+  clearPasswordRecovery: () => void;
   configurationReady: boolean;
+  isPasswordRecovery: boolean;
   isLoading: boolean;
   session: Session | null;
 }
@@ -22,9 +27,13 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const { t } = useTranslation();
   const configurationReady = hasSupabaseConfiguration();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(configurationReady);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [authCallbackError, setAuthCallbackError] = useState<string | null>(null);
+  const clearPasswordRecovery = useCallback(() => setIsPasswordRecovery(false), []);
 
   useEffect(() => {
     if (!configurationReady) return;
@@ -33,11 +42,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let active = true;
     let authEventSeen = false;
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
       authEventSeen = true;
       setSession(nextSession);
+      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true);
       setIsLoading(false);
+    });
+
+    const openAuthCallback = async (url: string | null) => {
+      if (!active || !url || !isAuthCallbackUrl(url)) return;
+      setAuthCallbackError(null);
+      try {
+        const result = await handleAuthCallbackUrl(url);
+        if (active && result.recovery) setIsPasswordRecovery(true);
+      } catch {
+        if (active) setAuthCallbackError(t('Lien de connexion invalide ou expiré.'));
+      }
+    };
+
+    void Linking.getInitialURL().then(openAuthCallback);
+    const linking = Linking.addEventListener('url', ({ url }) => {
+      void openAuthCallback(url);
     });
 
     void restoreSession(supabase.auth)
@@ -62,14 +88,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
       data.subscription.unsubscribe();
+      linking.remove();
       appState.remove();
       supabase.auth.stopAutoRefresh();
     };
-  }, [configurationReady]);
+  }, [configurationReady, t]);
 
   const value = useMemo(
-    () => ({ configurationReady, isLoading, session }),
-    [configurationReady, isLoading, session],
+    () => ({
+      authCallbackError,
+      clearPasswordRecovery,
+      configurationReady,
+      isLoading,
+      isPasswordRecovery,
+      session,
+    }),
+    [
+      authCallbackError,
+      clearPasswordRecovery,
+      configurationReady,
+      isLoading,
+      isPasswordRecovery,
+      session,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

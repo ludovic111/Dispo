@@ -1,16 +1,98 @@
 # Migration de Dispo vers Expo / React Native
 
-Dernière mise à jour documentaire : 30 août 2026.
+Dernière mise à jour documentaire : 31 août 2026.
 
 Ce fichier est le contrat de migration de l’application iOS SwiftUI et de
 l’application Android Kotlin vers une application Expo commune. Il décrit ce
 qui existe dans mobile/, ce qui reste à porter et les preuves attendues.
 
-Les validations techniques acquises sont consignées ci-dessous avec leur portée
-exacte. Elles prouvent le socle JavaScript, la génération native, les builds
-Debug, un build Release non signé pour simulateur iOS et les lancements observés
-sur les deux plateformes ; elles ne prouvent ni la parité métier de la Phase 2,
-ni une archive signée, ni une livraison.
+La section suivante est la source de vérité au 31 août 2026. Les matrices plus
+bas conservent la photographie détaillée du socle du 30 août et la cible finale ;
+en cas d’écart de statut, l’état du 31 août prévaut. Aucune présence de code
+n’est assimilée à une validation métier, visuelle ou sur appareil.
+
+## État faisant autorité — 31 août 2026
+
+### Surfaces désormais présentes dans le client Expo
+
+- Authentification et compte : restauration de session, connexion/création,
+  reset et retour de lien, onboarding, stockage SecureStore, réglages, thème,
+  langues, préférences de notifications, nouveautés et écran Premium de la
+  bêta. Les parcours Apple/Google existent dans le code mais restent à prouver
+  avec leur configuration native réelle.
+- Découverte et profils : Accueil, recherche et filtres, centre de
+  notifications, profil public et personnel, édition, relations sociales,
+  notes, abonnements, blocage/signalement, followers, joué-avec, portfolio
+  photo/vidéo, disponibilités, localisation postale et affiliations/annuaire
+  des écoles.
+- SOS et Sessions : feed, détail, création structurée, candidature/retrait,
+  décisions hôte, matching, demande directe, états d’adresse privée et agenda
+  futur/passé avec réponses de présence. Le détail d’un événement propose une
+  carte intégrée sur iOS, une ouverture d’itinéraire sur les deux plateformes
+  et une carte Android lorsque la clé Google Maps restreinte est fournie.
+- Messages : conversations directes et de groupe paginées, Realtime filtré,
+  unread, typing éphémère, réactions, édition/suppression et pièces jointes
+  photo, vidéo ou fichier.
+- Groupes : liste, création, invitations, membres, réglages, répertoire,
+  détails/copie de morceau, documents, événements nouveaux/édités/récurrents,
+  présence, invités acceptés, rôles manquants, SOS liés et préremplis,
+  candidats disponibles le jour même, adresse privée, rappels locaux et
+  setlist avec suggestion, validation et réorganisation.
+- Internationalisation : neuf catalogues sont branchés et leur cohérence est
+  testée. La présence d’une traduction ne prouve pas encore son rendu sans
+  débordement sur chaque écran et chaque plateforme.
+
+Ces surfaces sont implémentées structurellement et couvertes par des tests
+ciblés ; elles ne sont pas déclarées « pixel perfect » ni validées de bout en
+bout avec des comptes authentifiés.
+
+### Validations réellement observées
+
+- `npm run format:check` : réussi sur l’état courant.
+- `npm run validate` : réussi d’un seul tenant le 31 août, avec TypeScript,
+  ESLint sans avertissement et 28 suites / 172 tests Jest réussis.
+- `npx expo-doctor` : 21/21 contrôles réussis le 31 août.
+- Les contrôles ciblés du détail d’événement de groupe ont aussi passé
+  Prettier, ESLint, `git diff --check` et 7 suites Jest (54 tests).
+- La suite SQL transactionnelle locale v35-v43 a été exécutée jusqu’au
+  `ROLLBACK`, puis `supabase db lint --local --level error` n’a remonté aucune
+  erreur. Le premier essai avec `supabase test db` a été écarté : ce fichier
+  d’assertions SQL documente explicitement qu’il ne s’agit pas de pgTAP.
+- Après le prébuild CNG final, CocoaPods et `xcodebuild` Debug simulateur iOS
+  ont réussi ; `assembleDebug` Android a aussi réussi (458 tâches). Ces builds
+  prouvent la compilation native, pas les parcours authentifiés complets.
+
+### État Pixel et iOS
+
+| Cible                     | État vérifié                                                                                                                                        | Ce que cela ne prouve pas                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Google Pixel physique     | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.      | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.  |
+| Expo Android émulateur    | APK final JDK 17 signé v2, installé sur l’AVD API 36 ; activité, PID, bundle Metro, écran de connexion sombre et absence d’erreur fatale contrôlés. | Les parcours authentifiés, les données réelles et la carte Android avec clé restreinte restent à exercer.   |
+| Expo iOS simulateur       | Prebuild CNG, CocoaPods et build final `DispoDev` réussis ; app signée localement avec ses entitlements et installée sur un simulateur temporaire.  | macOS verrouillé a empêché la dernière ouverture/capture ; aucun parcours authentifié final n’est consigné. |
+| iPhone physique / Expo Go | Aucun test effectué pour le lot courant.                                                                                                            | Expo Go ne couvre pas toutes les intégrations natives ; la preuve finale exige un development build.        |
+| Référence SwiftUI         | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                       | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                 |
+
+### Limites et gates restants
+
+- Conserver `npm run validate` et `expo-doctor` verts après toute modification
+  supplémentaire ; le gate actuel est acquis sur le lot figé du 31 août.
+- Exécuter sur deux comptes de test les droits propriétaire/membre,
+  leader/invité, hôte/candidat, blocage, confidentialité des adresses, mutations
+  et Realtime ; aucune de ces preuves ne doit utiliser les comptes de
+  production comme fixtures automatisées.
+- Refaire les builds après gel du JavaScript, puis parcourir les écrans sur
+  Pixel et iOS en clair/sombre, dans les langues cibles et avec les principaux
+  états ; comparer aux références SwiftUI et Kotlin sur des données identiques.
+- Valider sur development builds les intégrations natives : Apple/Google,
+  APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
+  documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
+  achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
+- Aucun build Release signé, upload TestFlight/Play, publication ni soumission
+  App Review n’est acquis pour Expo.
+- Le backend et la production sont inchangés : aucun `db push`, déploiement
+  d’Edge Function, changement Auth/RLS/secret, compte ou donnée de production
+  n’a été réalisé par ce portage. La migration locale
+  `20260830173725_fix_song_catalog_trigger_privileges.sql` reste non appliquée.
 
 ## 1. Références et règles
 
@@ -110,7 +192,12 @@ maintenant validé, mais la Phase 2 reste EN COURS tant que l’i18n réelle, le
 parcours Supabase à deux comptes, les états de sécurité et les comparaisons
 visuelles ne sont pas terminés.
 
-## 4. État réel de mobile/
+## 4. Photographie historique de mobile/ au 30 août 2026
+
+Cette section décrit le socle avant le portage fonctionnel massif du 31 août.
+Elle est conservée pour retracer la migration et ne doit pas être utilisée
+comme inventaire courant ; l’état faisant autorité est celui du début de ce
+document.
 
 ### Fondation
 
@@ -355,7 +442,7 @@ Géométrie de référence :
 - puces : padding horizontal 9–12, vertical 5 et forme capsule ;
 - cible tactile minimale : 44 points.
 
-### Écarts actuels de mobile/ à corriger
+### Écarts constatés le 30 août 2026 (historique)
 
 | Élément         | Écart observé                                                                                                                                                                                                              |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -484,7 +571,7 @@ EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 Ne jamais y mettre service_role, APNs, RevenueCat secret, clé privée ou
 credential de store.
 
-### Validations JavaScript exécutées
+### Validations JavaScript exécutées le 30 août 2026 (historique)
 
 ```bash
 npm run typecheck
@@ -606,7 +693,7 @@ Les seuils de diff ne doivent être fixés qu’après une première baseline
 validée : Android et iOS n’ont pas le même rasterizer de texte ni les mêmes
 symboles.
 
-## 11. Phases 1 à 4
+## 11. Plan de phases initial — photographie du 30 août 2026
 
 ### Phase 1 — Fondation et contrat
 

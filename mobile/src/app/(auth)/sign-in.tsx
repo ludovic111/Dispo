@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
@@ -23,6 +24,8 @@ import { Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import {
   requestPasswordReset,
+  signInWithApple,
+  signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
 } from '@/features/auth/auth-service';
@@ -71,13 +74,15 @@ function AuthField({ error, label, style, ...props }: AuthFieldProps) {
 }
 
 export default function SignInScreen() {
-  const { configurationReady } = useAuth();
+  const { authCallbackError, configurationReady } = useAuth();
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const [registering, setRegistering] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [infoText, setInfoText] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
+  const [appleWorking, setAppleWorking] = useState(false);
+  const [googleWorking, setGoogleWorking] = useState(false);
   const schema = useMemo(
     () =>
       z.object({
@@ -142,6 +147,43 @@ export default function SignInScreen() {
     }
   };
 
+  const authenticateWithApple = async () => {
+    if (!configurationReady || appleWorking || formState.isSubmitting || resetting) return;
+    setAppleWorking(true);
+    setServerError(null);
+    setInfoText(null);
+    try {
+      await signInWithApple();
+      router.replace('/');
+    } catch (error) {
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+      if (code !== 'ERR_REQUEST_CANCELED') {
+        setServerError(t('Connexion Apple impossible — réessaie.'));
+      }
+    } finally {
+      setAppleWorking(false);
+    }
+  };
+
+  const authenticateWithGoogle = async () => {
+    if (!configurationReady || googleWorking || formState.isSubmitting || resetting) return;
+    setGoogleWorking(true);
+    setServerError(null);
+    setInfoText(null);
+    try {
+      await signInWithGoogle();
+      router.replace('/');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message !== 'oauth_cancelled') {
+        setServerError(t('Connexion Google impossible — réessaie.'));
+      }
+    } finally {
+      setGoogleWorking(false);
+    }
+  };
+
   return (
     <Screen>
       <KeyboardAvoidingView
@@ -155,7 +197,7 @@ export default function SignInScreen() {
         >
           <View style={styles.content}>
             <View style={styles.hero}>
-              <View accessibilityLabel="Dispo" style={styles.brand}>
+              <View accessibilityLabel={t('Dispo')} style={styles.brand}>
                 <Image
                   accessibilityIgnoresInvertColors
                   contentFit="contain"
@@ -177,13 +219,51 @@ export default function SignInScreen() {
             </View>
 
             <View style={styles.authBlock}>
-              <View style={styles.separator}>
-                <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
-                <AppText color={palette.muted} style={styles.separatorText} variant="caption">
-                  {t('ou par e-mail')}
-                </AppText>
-                <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
-              </View>
+              {Platform.OS === 'ios' ? (
+                <>
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonStyle={
+                      palette.background === '#050814'
+                        ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                        : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                    }
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                    cornerRadius={16}
+                    onPress={() => void authenticateWithApple()}
+                    style={[styles.appleButton, appleWorking && styles.disabled]}
+                  />
+                  <View style={styles.separator}>
+                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                    <AppText color={palette.muted} style={styles.separatorText} variant="caption">
+                      {t('ou par e-mail')}
+                    </AppText>
+                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                  </View>
+                </>
+              ) : null}
+
+              {Platform.OS === 'android' ? (
+                <>
+                  <DispoButton
+                    disabled={
+                      !configurationReady || googleWorking || formState.isSubmitting || resetting
+                    }
+                    icon="logo-google"
+                    loading={googleWorking}
+                    onPress={() => void authenticateWithGoogle()}
+                    variant="secondary"
+                  >
+                    {t('Se connecter avec Google')}
+                  </DispoButton>
+                  <View style={styles.separator}>
+                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                    <AppText color={palette.muted} style={styles.separatorText} variant="caption">
+                      {t('ou par e-mail')}
+                    </AppText>
+                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                  </View>
+                </>
+              ) : null}
 
               <Card padding={spacing.md} style={styles.card}>
                 <View
@@ -234,8 +314,9 @@ export default function SignInScreen() {
                     ]}
                   >
                     <AppText color={palette.signal}>
-                      Configuration Supabase manquante. Copie `.env.example` vers `.env.local` et
-                      renseigne uniquement les valeurs publiques.
+                      {t(
+                        'Configuration Supabase manquante. Copie `.env.example` vers `.env.local` et renseigne uniquement les valeurs publiques.',
+                      )}
                     </AppText>
                   </View>
                 ) : null}
@@ -310,15 +391,15 @@ export default function SignInScreen() {
                     ]}
                   >
                     <AppText color={palette.muted} variant="caption">
-                      {resetting ? 'Envoi…' : t('Mot de passe oublié ?')}
+                      {resetting ? t('Envoi…') : t('Mot de passe oublié ?')}
                     </AppText>
                   </Pressable>
                 ) : null}
               </Card>
 
-              {serverError ? (
+              {serverError || authCallbackError ? (
                 <AppText color={palette.error} style={styles.status} variant="caption">
-                  {serverError}
+                  {serverError ?? authCallbackError}
                 </AppText>
               ) : null}
               {infoText ? (
@@ -339,6 +420,7 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
+  appleButton: { height: 50, width: '100%' },
   authBlock: { gap: spacing.md, width: '100%' },
   brand: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   card: { gap: 14, width: '100%' },
