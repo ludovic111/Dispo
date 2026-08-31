@@ -15,6 +15,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       ...config.ios,
       bundleIdentifier: production ? 'ch.dispo.app' : 'ch.dispo.app.dev',
+      entitlements: {
+        ...config.ios?.entitlements,
+        'aps-environment': production ? 'production' : 'development',
+      },
     },
     android: {
       ...config.android,
