@@ -102,15 +102,22 @@ export interface GroupSong {
   artist: string;
   artworkUrl: string | null;
   catalogId: string | null;
+  canonicalSongId: string | null;
   chords: string | null;
+  composer: string | null;
   durationMilliseconds: number | null;
   form: string | null;
   genre: string | null;
+  genres: string[];
   id: string;
   irealDisabled: boolean;
   irealUrl: string | null;
+  isrc: string | null;
   isApproved: boolean;
   key: string | null;
+  metadataSource: string | null;
+  metadataUpdatedAt: string | null;
+  platformIds: Record<string, string>;
   platformLinks: Record<string, string>;
   previewUrl: string | null;
   releaseYear: number | null;
@@ -282,20 +289,29 @@ export function groupSongFromJson(value: unknown): GroupSong | null {
   const id = nullableString(source.id);
   const title = nullableString(source.title);
   if (!id || !title) return null;
+  const genre = nullableString(source.genre);
+  const genres = stringArray(source.genres);
   return {
     albumTitle: nullableString(source.album_title),
     artist: stringValue(source.artist, i18n.t('Artiste inconnu')),
     artworkUrl: nullableString(source.artwork_url),
     catalogId: nullableString(source.catalog_id),
+    canonicalSongId: nullableString(source.canonical_song_id)?.toLowerCase() ?? null,
     chords: nullableString(source.chords),
+    composer: nullableString(source.composer),
     durationMilliseconds: nullableNumber(source.duration_ms),
     form: nullableString(source.form),
-    genre: nullableString(source.genre),
+    genre,
+    genres: genres.length ? genres : genre ? [genre] : [],
     id: id.toLowerCase(),
     irealDisabled: source.ireal_disabled === true,
     irealUrl: nullableString(source.ireal_url),
+    isrc: nullableString(source.isrc),
     isApproved: source.is_approved === true,
     key: nullableString(source.key),
+    metadataSource: nullableString(source.metadata_source),
+    metadataUpdatedAt: nullableString(source.metadata_updated_at),
+    platformIds: links(source.platform_ids),
     platformLinks: links(source.platform_links),
     previewUrl: nullableString(source.preview_url),
     releaseYear: nullableNumber(source.release_year),
@@ -318,15 +334,22 @@ export function groupSongToJson(song: GroupSong): Record<string, unknown> {
     artist: song.artist,
     artwork_url: song.artworkUrl,
     catalog_id: song.catalogId,
+    canonical_song_id: song.canonicalSongId,
     chords: song.chords,
+    composer: song.composer,
     duration_ms: song.durationMilliseconds,
     form: song.form,
     genre: song.genre,
+    genres: song.genres,
     id: song.id.toLowerCase(),
     ireal_disabled: song.irealDisabled,
     ireal_url: song.irealUrl,
+    isrc: song.isrc,
     is_approved: song.isApproved,
     key: song.key,
+    metadata_source: song.metadataSource,
+    metadata_updated_at: song.metadataUpdatedAt,
+    platform_ids: song.platformIds,
     platform_links: song.platformLinks,
     preview_url: song.previewUrl,
     release_year: song.releaseYear,

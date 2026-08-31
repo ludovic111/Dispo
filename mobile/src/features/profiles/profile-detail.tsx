@@ -67,13 +67,116 @@ function SectionTitle({
   );
 }
 
-function MyProfileControls() {
+function ProfileManagementRow({
+  color,
+  icon,
+  onPress,
+  subtitle,
+  title,
+}: {
+  color: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  onPress: () => void;
+  subtitle: string;
+  title: string;
+}) {
   const { palette } = useDispoTheme();
-  const { t } = useTranslation();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.managementRow, pressed && styles.pressed]}
+    >
+      <View style={[styles.managementIcon, { backgroundColor: `${color}18` }]}>
+        <Ionicons color={color} name={icon} size={19} />
+      </View>
+      <View style={styles.managementCopy}>
+        <AppText style={styles.sectionHeading} variant="subheadline">
+          {title}
+        </AppText>
+        <AppText color={palette.muted} numberOfLines={2} variant="caption">
+          {subtitle}
+        </AppText>
+      </View>
+      <Ionicons color={palette.muted} name="chevron-forward" size={17} />
+    </Pressable>
+  );
+}
+
+function MyProfileControls({
+  availableDates,
+  demoCount,
+  tripCount,
+}: {
+  availableDates: string[];
+  demoCount: number;
+  tripCount: number;
+}) {
+  const { palette } = useDispoTheme();
+  const { i18n, t } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const schools = useMySchoolAffiliations();
   const affiliations = schools.data ?? [];
+  const nextDate = availableDates[0]
+    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', weekday: 'short' }).format(
+        new Date(`${availableDates[0]}T12:00:00`),
+      )
+    : null;
+  const availabilitySubtitle = nextDate
+    ? availableDates.length === 1
+      ? t('1 date cochée · {{date}}', { date: nextDate })
+      : t('{{count}} dates cochées · prochaine {{date}}', {
+          count: availableDates.length,
+          date: nextDate,
+        })
+    : t('Aucune date cochée — ajoute les jours où tu peux dépanner.');
   return (
     <View style={styles.selfControls}>
+      <Card padding={0}>
+        <ProfileManagementRow
+          color={palette.bronze}
+          icon="pencil"
+          onPress={() => router.push('/profile/edit' as never)}
+          subtitle={t('Photo, bio, instruments, styles et réseaux sociaux')}
+          title={t('Modifier mon profil')}
+        />
+        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
+        <ProfileManagementRow
+          color={palette.jam}
+          icon="flash"
+          onPress={() => router.push('/profile/availability' as never)}
+          subtitle={availabilitySubtitle}
+          title={t('Mes disponibilités')}
+        />
+        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
+        <ProfileManagementRow
+          color={palette.electric}
+          icon="airplane-outline"
+          onPress={() => router.push('/profile/travel' as never)}
+          subtitle={
+            tripCount
+              ? tripCount === 1
+                ? t('1 voyage enregistré')
+                : t('{{count}} voyages enregistrés', { count: tripCount })
+              : t('Ajoute tes prochains déplacements, séparément de tes dates.')
+          }
+          title={t('Mes voyages')}
+        />
+        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
+        <ProfileManagementRow
+          color={palette.bronze}
+          icon="play-circle-outline"
+          onPress={() => router.push('/profile/demos' as never)}
+          subtitle={
+            demoCount
+              ? demoCount === 1
+                ? t('1 vidéo sur ton profil')
+                : t('{{count}} vidéos sur ton profil', { count: demoCount })
+              : t('Ajoute une vidéo pour montrer ce que tu joues.')
+          }
+          title={t('Mes démos')}
+        />
+      </Card>
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push('/schools' as never)}
@@ -109,16 +212,6 @@ function MyProfileControls() {
           ) : null}
         </Card>
       </Pressable>
-      <DispoButton icon="pencil" onPress={() => router.push('/profile/edit' as never)}>
-        {t('Modifier mon profil')}
-      </DispoButton>
-      <DispoButton
-        icon="videocam"
-        onPress={() => router.push('/profile/portfolio' as never)}
-        variant="secondary"
-      >
-        {t('Portfolio & séjours')}
-      </DispoButton>
     </View>
   );
 }
@@ -148,10 +241,10 @@ export function ProfileDetail({
   const hasPlayedWith = social.data?.hasPlayedWith ?? false;
   const myRating = social.data?.myRating ?? null;
   const firstName = profile.name.split(/\s+/)[0] || profile.name;
-  const upcomingDates = profile.availableDates
+  const futureDates = profile.availableDates
     .filter((date) => date.slice(0, 10) >= todayKey())
-    .sort()
-    .slice(0, 4);
+    .sort();
+  const upcomingDates = futureDates.slice(0, 4);
   const upcomingTrips = (profile.availabilityPlaces ?? [])
     .filter((trip) => trip.to >= todayKey())
     .sort((left, right) => left.from.localeCompare(right.from));
@@ -346,7 +439,11 @@ export function ProfileDetail({
       </View>
 
       {self ? (
-        <MyProfileControls />
+        <MyProfileControls
+          availableDates={futureDates}
+          demoCount={profile.demoVideos?.length ?? 0}
+          tripCount={upcomingTrips.length}
+        />
       ) : (
         <View style={styles.actions}>
           {upcomingDates.length > 0 ? (
@@ -579,7 +676,7 @@ export function ProfileDetail({
           {self ? (
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push('/profile/portfolio' as never)}
+              onPress={() => router.push('/profile/demos' as never)}
               style={({ pressed }) => pressed && styles.pressed}
             >
               <AppText color={palette.electric} style={styles.manageLabel} variant="caption">
@@ -672,6 +769,23 @@ const styles = StyleSheet.create({
   groupText: { flex: 1, gap: 2 },
   headerStats: { flex: 1, flexDirection: 'row' },
   identity: { alignItems: 'flex-start', gap: 7 },
+  managementCopy: { flex: 1, gap: spacing.xxxs },
+  managementDivider: { height: StyleSheet.hairlineWidth, marginLeft: 62 },
+  managementIcon: {
+    alignItems: 'center',
+    borderRadius: 13,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  managementRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 66,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
   manageLabel: { fontWeight: '800' },
   name: { flexShrink: 1 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },

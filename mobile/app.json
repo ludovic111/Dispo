@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "36",
+      "buildNumber": "37",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {

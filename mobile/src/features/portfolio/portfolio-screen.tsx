@@ -168,11 +168,21 @@ function ModalHeader({
   const { t } = useTranslation();
   return (
     <View style={[styles.modalHeader, { borderBottomColor: palette.border }]}>
-      <Pressable disabled={saving} onPress={onCancel}>
+      <Pressable
+        accessibilityRole="button"
+        disabled={saving}
+        onPress={onCancel}
+        style={[styles.modalHeaderAction, styles.modalHeaderActionStart]}
+      >
         <AppText color={palette.muted}>{t('Annuler')}</AppText>
       </Pressable>
       <AppText variant="title2">{title}</AppText>
-      <Pressable disabled={saving} onPress={onSave}>
+      <Pressable
+        accessibilityRole="button"
+        disabled={saving}
+        onPress={onSave}
+        style={[styles.modalHeaderAction, styles.modalHeaderActionEnd]}
+      >
         <AppText color={palette.electric} style={styles.saveLabel}>
           {saving ? t('Envoi…') : t('OK')}
         </AppText>
@@ -181,7 +191,7 @@ function ModalHeader({
   );
 }
 
-export function PortfolioScreen() {
+export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'trips' }) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const query = usePortfolio(userId);
@@ -195,6 +205,7 @@ export function PortfolioScreen() {
   const [tripDraft, setTripDraft] = useState<AvailabilityTripDraft | null>(null);
   const [countryModal, setCountryModal] = useState(false);
   const locale = i18n.resolvedLanguage ?? 'fr';
+  const screenTitle = section === 'demos' ? t('Mes démos') : t('Mes voyages');
   const localizedDemoTitle = (video: DemoVideo, index: number) =>
     video.title ?? formatSwiftPlaceholders(t('Vidéo %lld'), index + 1);
   const selectedCountry = useMemo(
@@ -392,7 +403,7 @@ export function PortfolioScreen() {
   if (query.isLoading) {
     return (
       <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Mes vidéos de démo')} />
+        <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
         <LoadingState />
       </Screen>
     );
@@ -400,7 +411,7 @@ export function PortfolioScreen() {
   if (query.isError) {
     return (
       <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Mes vidéos de démo')} />
+        <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
@@ -408,7 +419,7 @@ export function PortfolioScreen() {
   if (!query.data) {
     return (
       <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Mes vidéos de démo')} />
+        <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
         <LoadingState />
       </Screen>
     );
@@ -419,7 +430,7 @@ export function PortfolioScreen() {
   const uploading = busy === 'upload';
   return (
     <Screen>
-      <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Portfolio & séjours')} />
+      <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {errorText ? (
           <View style={[styles.errorBanner, { backgroundColor: `${palette.signal}18` }]}>
@@ -427,187 +438,210 @@ export function PortfolioScreen() {
             <AppText color={palette.signal} style={styles.flex} variant="caption">
               {errorText}
             </AppText>
-            <Pressable accessibilityLabel={t('Fermer')} onPress={() => setErrorText(null)}>
+            <Pressable
+              accessibilityLabel={t('Fermer')}
+              accessibilityRole="button"
+              hitSlop={12}
+              onPress={() => setErrorText(null)}
+            >
               <Ionicons color={palette.signal} name="close" size={18} />
             </Pressable>
           </View>
         ) : null}
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeadingWithAction}>
-            <SectionHeader title={t('Mes démos')} />
-            <View style={styles.sectionHeadingAction}>
-              <AppText
-                color={palette.muted}
-                variant="caption"
-              >{`${portfolio.videos.length}/${limit}`}</AppText>
+        {section === 'demos' ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeadingWithAction}>
+              <SectionHeader title={t('Mes démos')} />
+              <View style={styles.sectionHeadingAction}>
+                <AppText
+                  color={palette.muted}
+                  variant="caption"
+                >{`${portfolio.videos.length}/${limit}`}</AppText>
+              </View>
             </View>
-          </View>
-          <Card style={styles.card}>
-            <AppText color={palette.muted} variant="caption">
-              {t(
-                "C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.",
-              )}
-            </AppText>
-            <View style={[styles.publicNotice, { backgroundColor: `${palette.electric}12` }]}>
-              <Ionicons color={palette.electric} name="globe-outline" size={16} />
-              <AppText color={palette.electric} style={styles.flex} variant="caption2">
-                {t('Tes vidéos sont visibles par les autres musiciens sur ton profil.')}
+            <Card style={styles.card}>
+              <AppText color={palette.muted} variant="caption">
+                {t(
+                  "C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.",
+                )}
               </AppText>
-            </View>
+              <View style={[styles.publicNotice, { backgroundColor: `${palette.electric}12` }]}>
+                <Ionicons color={palette.electric} name="globe-outline" size={16} />
+                <AppText color={palette.electric} style={styles.flex} variant="caption2">
+                  {t('Tes vidéos sont visibles par les autres musiciens sur ton profil.')}
+                </AppText>
+              </View>
 
-            {portfolio.videos.map((video, index) => (
-              <View key={video.id} style={[styles.videoRow, { borderTopColor: palette.border }]}>
-                <Pressable
-                  accessibilityLabel={localizedDemoTitle(video, index)}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    router.push({
-                      pathname: '/profiles/[id]/video',
-                      params: { id: userId, url: video.url },
-                    } as never)
-                  }
-                  style={({ pressed }) => [styles.videoPreview, pressed && styles.pressed]}
-                >
-                  {video.thumbUrl ? (
-                    <Image
-                      contentFit="cover"
-                      source={{ uri: video.thumbUrl }}
-                      style={styles.thumb}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.thumb,
-                        styles.thumbFallback,
-                        { backgroundColor: palette.inset },
-                      ]}
-                    >
-                      <Ionicons color={palette.bronze} name="videocam" size={22} />
+              {portfolio.videos.map((video, index) => (
+                <View key={video.id} style={[styles.videoRow, { borderTopColor: palette.border }]}>
+                  <Pressable
+                    accessibilityLabel={localizedDemoTitle(video, index)}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/profiles/[id]/video',
+                        params: { id: userId, url: video.url },
+                      } as never)
+                    }
+                    style={({ pressed }) => [styles.videoPreview, pressed && styles.pressed]}
+                  >
+                    {video.thumbUrl ? (
+                      <Image
+                        contentFit="cover"
+                        source={{ uri: video.thumbUrl }}
+                        style={styles.thumb}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.thumb,
+                          styles.thumbFallback,
+                          { backgroundColor: palette.inset },
+                        ]}
+                      >
+                        <Ionicons color={palette.bronze} name="videocam" size={22} />
+                      </View>
+                    )}
+                    <View style={styles.playBadge}>
+                      <Ionicons color="#FFFFFF" name="play" size={11} />
                     </View>
-                  )}
-                  <View style={styles.playBadge}>
-                    <Ionicons color="#FFFFFF" name="play" size={11} />
-                  </View>
-                </Pressable>
-                <View style={styles.videoCopy}>
-                  <AppText numberOfLines={1} variant="subheadline">
-                    {localizedDemoTitle(video, index)}
-                  </AppText>
-                  {video.date ? (
-                    <View style={styles.metaRow}>
-                      <Ionicons color={palette.muted} name="calendar-outline" size={12} />
+                  </Pressable>
+                  <View style={styles.videoCopy}>
+                    <AppText numberOfLines={1} variant="subheadline">
+                      {localizedDemoTitle(video, index)}
+                    </AppText>
+                    {video.date ? (
+                      <View style={styles.metaRow}>
+                        <Ionicons color={palette.muted} name="calendar-outline" size={12} />
+                        <AppText color={palette.muted} variant="caption2">
+                          {formatDay(video.date, locale)}
+                        </AppText>
+                      </View>
+                    ) : (
                       <AppText color={palette.muted} variant="caption2">
-                        {formatDay(video.date, locale)}
+                        {t('Titre et date : bouton crayon')}
                       </AppText>
-                    </View>
-                  ) : (
-                    <AppText color={palette.muted} variant="caption2">
-                      {t('Titre et date : bouton crayon')}
-                    </AppText>
-                  )}
-                </View>
-                <Pressable
-                  accessibilityLabel={t('Modifier le titre et la date')}
-                  onPress={() => editVideo(video)}
-                  style={[styles.roundAction, { backgroundColor: `${palette.bronze}18` }]}
-                >
-                  <Ionicons color={palette.bronze} name="pencil" size={15} />
-                </Pressable>
-                <Pressable
-                  accessibilityLabel={t('Supprimer')}
-                  disabled={Boolean(busy)}
-                  onPress={() => confirmRemoveVideo(video)}
-                  style={styles.roundAction}
-                >
-                  <Ionicons color={palette.muted} name="trash-outline" size={16} />
-                </Pressable>
-              </View>
-            ))}
-
-            {canAddDemoVideo(portfolio.videos.length, expandedPortfolio) ? (
-              <DispoButton
-                icon="add-circle"
-                loading={uploading}
-                onPress={() => void pickVideo()}
-                variant="secondary"
-              >
-                {uploading ? t('Envoi en cours…') : t('Ajouter une vidéo')}
-              </DispoButton>
-            ) : !expandedPortfolio ? (
-              <View style={[styles.premiumLock, { backgroundColor: `${palette.electric}12` }]}>
-                <Ionicons color={palette.electric} name="sparkles" size={16} />
-                <AppText color={palette.electric} style={styles.flex} variant="caption">
-                  {t("Jusqu'à 6 vidéos avec Premium")}
-                </AppText>
-                <Ionicons color={palette.electric} name="lock-closed" size={14} />
-              </View>
-            ) : null}
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeadingWithAction}>
-            <SectionHeader title={t('Je suis ailleurs')} />
-            <Pressable onPress={newTrip} style={styles.inlineAction}>
-              <Ionicons color={palette.electric} name="add-circle" size={17} />
-              <AppText color={palette.electric} variant="caption">
-                {t('Ajouter')}
-              </AppText>
-            </Pressable>
-          </View>
-          <Card style={styles.card}>
-            <AppText color={palette.muted} variant="caption">
-              {t(
-                'Pendant ton séjour, les musiciens et les groupes de cette ville te trouvent dans leurs recherches.',
-              )}
-            </AppText>
-            {portfolio.trips.length === 0 ? (
-              <View style={styles.emptyTrip}>
-                <Ionicons color={palette.bronze} name="airplane-outline" size={25} />
-                <AppText color={palette.muted} style={styles.center} variant="caption">
-                  {formatSwiftPlaceholders(
-                    t("Rien pour l'instant — tu es cherché·e autour de %@."),
-                    [portfolio.postalCode, portfolio.city].filter(Boolean).join(' ') ||
-                      t('ta ville'),
-                  )}
-                </AppText>
-              </View>
-            ) : (
-              portfolio.trips.map((trip) => (
-                <Pressable
-                  key={trip.id}
-                  accessibilityRole="button"
-                  onPress={() => editTrip(trip)}
-                  style={({ pressed }) => [
-                    styles.tripRow,
-                    { borderTopColor: palette.border },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Ionicons color={palette.electric} name="location-outline" size={18} />
-                  <View style={styles.flex}>
-                    <AppText variant="caption">{availabilityTripLabel(trip)}</AppText>
-                    <AppText color={palette.muted} variant="caption2">
-                      {`${formatDay(trip.from, locale)} → ${formatDay(trip.to, locale)}`}
-                    </AppText>
+                    )}
                   </View>
                   <Pressable
+                    accessibilityLabel={t('Modifier le titre et la date')}
+                    accessibilityRole="button"
+                    onPress={() => editVideo(video)}
+                    style={[styles.roundAction, { backgroundColor: `${palette.bronze}18` }]}
+                  >
+                    <Ionicons color={palette.bronze} name="pencil" size={15} />
+                  </Pressable>
+                  <Pressable
                     accessibilityLabel={t('Supprimer')}
+                    accessibilityRole="button"
                     disabled={Boolean(busy)}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      confirmRemoveTrip(trip);
-                    }}
+                    onPress={() => confirmRemoveVideo(video)}
                     style={styles.roundAction}
                   >
-                    <Ionicons color={palette.muted} name="close-circle" size={19} />
+                    <Ionicons color={palette.muted} name="trash-outline" size={16} />
                   </Pressable>
-                </Pressable>
-              ))
-            )}
-          </Card>
-        </View>
+                </View>
+              ))}
+
+              {canAddDemoVideo(portfolio.videos.length, expandedPortfolio) ? (
+                <DispoButton
+                  icon="add-circle"
+                  loading={uploading}
+                  onPress={() => void pickVideo()}
+                  variant="secondary"
+                >
+                  {uploading ? t('Envoi en cours…') : t('Ajouter une vidéo')}
+                </DispoButton>
+              ) : !expandedPortfolio ? (
+                <View style={[styles.premiumLock, { backgroundColor: `${palette.electric}12` }]}>
+                  <Ionicons color={palette.electric} name="sparkles" size={16} />
+                  <AppText color={palette.electric} style={styles.flex} variant="caption">
+                    {t("Jusqu'à 6 vidéos avec Premium")}
+                  </AppText>
+                  <Ionicons color={palette.electric} name="lock-closed" size={14} />
+                </View>
+              ) : null}
+            </Card>
+          </View>
+        ) : null}
+
+        {section === 'trips' ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeadingWithAction}>
+              <SectionHeader title={t('Mes voyages')} />
+              <Pressable accessibilityRole="button" onPress={newTrip} style={styles.inlineAction}>
+                <Ionicons color={palette.electric} name="add-circle" size={17} />
+                <AppText color={palette.electric} variant="caption">
+                  {t('Ajouter')}
+                </AppText>
+              </Pressable>
+            </View>
+            <Card style={styles.card}>
+              <AppText color={palette.muted} variant="caption">
+                {t(
+                  'Pendant cette période, les musiciens et les groupes de cette ville te trouvent dans leurs recherches — pas ceux de chez toi.',
+                )}
+              </AppText>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/profile/availability' as never)}
+                style={[styles.availabilityLink, { backgroundColor: `${palette.jam}12` }]}
+              >
+                <Ionicons color={palette.jam} name="calendar-outline" size={16} />
+                <AppText color={palette.jam} style={styles.flex} variant="caption">
+                  {t('Gérer mes disponibilités')}
+                </AppText>
+                <Ionicons color={palette.jam} name="chevron-forward" size={15} />
+              </Pressable>
+              {portfolio.trips.length === 0 ? (
+                <View style={styles.emptyTrip}>
+                  <Ionicons color={palette.bronze} name="airplane-outline" size={25} />
+                  <AppText color={palette.muted} style={styles.center} variant="caption">
+                    {formatSwiftPlaceholders(
+                      t("Rien pour l'instant — tu es cherché·e autour de %@."),
+                      [portfolio.postalCode, portfolio.city].filter(Boolean).join(' ') ||
+                        t('ta ville'),
+                    )}
+                  </AppText>
+                </View>
+              ) : (
+                portfolio.trips.map((trip) => (
+                  <Pressable
+                    key={trip.id}
+                    accessibilityRole="button"
+                    onPress={() => editTrip(trip)}
+                    style={({ pressed }) => [
+                      styles.tripRow,
+                      { borderTopColor: palette.border },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons color={palette.electric} name="location-outline" size={18} />
+                    <View style={styles.flex}>
+                      <AppText variant="caption">{availabilityTripLabel(trip)}</AppText>
+                      <AppText color={palette.muted} variant="caption2">
+                        {`${formatDay(trip.from, locale)} → ${formatDay(trip.to, locale)}`}
+                      </AppText>
+                    </View>
+                    <Pressable
+                      accessibilityLabel={t('Supprimer')}
+                      accessibilityRole="button"
+                      disabled={Boolean(busy)}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        confirmRemoveTrip(trip);
+                      }}
+                      style={styles.roundAction}
+                    >
+                      <Ionicons color={palette.muted} name="close-circle" size={19} />
+                    </Pressable>
+                  </Pressable>
+                ))
+              )}
+            </Card>
+          </View>
+        ) : null}
       </ScrollView>
 
       <Modal
@@ -785,7 +819,11 @@ export function PortfolioScreen() {
       >
         <Screen>
           <View style={[styles.modalHeader, { borderBottomColor: palette.border }]}>
-            <Pressable onPress={() => setCountryModal(false)}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setCountryModal(false)}
+              style={[styles.modalHeaderAction, styles.modalHeaderActionStart]}
+            >
               <AppText color={palette.electric}>{t('Fermer')}</AppText>
             </Pressable>
             <AppText variant="title2">{t('Pays')}</AppText>
@@ -822,6 +860,14 @@ export function PortfolioScreen() {
 }
 
 const styles = StyleSheet.create({
+  availabilityLink: {
+    alignItems: 'center',
+    borderRadius: radii.button,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
   card: { gap: spacing.sm },
   center: { textAlign: 'center' },
   content: {
@@ -857,7 +903,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },
-  dateDone: { alignSelf: 'flex-end', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  dateDone: {
+    alignSelf: 'flex-end',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
   dateField: { gap: spacing.xs },
   emptyTrip: { alignItems: 'center', gap: spacing.xs, padding: spacing.md },
   errorBanner: {
@@ -868,11 +919,12 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   flex: { flex: 1 },
-  headerSpacer: { width: 42 },
+  headerSpacer: { width: 64 },
   inlineAction: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.xxs,
+    minHeight: 44,
     padding: spacing.xs,
   },
   metaRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
@@ -886,6 +938,9 @@ const styles = StyleSheet.create({
     minHeight: 58,
     paddingHorizontal: spacing.gutter,
   },
+  modalHeaderAction: { justifyContent: 'center', minHeight: 44, minWidth: 64 },
+  modalHeaderActionEnd: { alignItems: 'flex-end' },
+  modalHeaderActionStart: { alignItems: 'flex-start' },
   playBadge: {
     alignItems: 'center',
     backgroundColor: 'rgba(5,8,20,0.72)',
@@ -913,9 +968,9 @@ const styles = StyleSheet.create({
   roundAction: {
     alignItems: 'center',
     borderRadius: radii.round,
-    height: 34,
+    height: 44,
     justifyContent: 'center',
-    width: 34,
+    width: 44,
   },
   saveLabel: { fontWeight: '800' },
   section: { gap: spacing.sm },

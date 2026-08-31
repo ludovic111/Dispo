@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import type { GroupDocument, GroupSong, MusicGroup } from './group-model';
 import {
@@ -13,13 +13,11 @@ import {
   useUploadGroupDocument,
 } from './group-queries';
 import { openGroupDocument } from './group-repository';
+import { GroupSongRow } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { FormField } from '@/components/ui/form-field';
-import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
-import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
@@ -48,72 +46,38 @@ function SongCard({
     [next[index], next[target]] = [next[target]!, next[index]!];
     reorder.mutate({ groupId: group.id, songIds: next.map((item) => item.id) });
   };
+  const chooseMove = () => {
+    const actions: Parameters<typeof Alert.alert>[2] = [];
+    if (index > 0) actions.push({ onPress: () => move(-1), text: t('Monter') });
+    if (index < total - 1) actions.push({ onPress: () => move(1), text: t('Descendre') });
+    actions.push({ style: 'cancel', text: t('Annuler') });
+    Alert.alert(t('Déplacer le morceau'), song.title, actions);
+  };
   return (
-    <Pressable
+    <GroupSongRow
       accessibilityHint={t('Un appui long permet de copier le morceau')}
-      accessibilityLabel={`${t('Ouvrir')} ${song.title}`}
-      accessibilityRole="button"
       onLongPress={() => router.push(`/groups/${group.id}/songs/${song.id}/copy` as never)}
       onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
-      style={({ pressed }) => pressed && styles.pressed}
-    >
-      <Card padding={12}>
-        <View style={styles.songRow}>
-          <View style={[styles.songNumber, { backgroundColor: `${palette.bronze}22` }]}>
-            <AppText color={palette.bronze} style={styles.songNumberText}>
-              {index + 1}
-            </AppText>
-          </View>
-          <View style={styles.songCopy}>
-            <AppText numberOfLines={1} style={styles.songTitle}>
-              {song.title}
-            </AppText>
-            <AppText color={palette.muted} numberOfLines={1} variant="caption">
-              {song.artist}
-            </AppText>
-            <View style={styles.tags}>
-              {song.key ? <Tag color={palette.electric} label={song.key} /> : null}
-              {song.tempoBpm ? <Tag color={palette.bronze} label={`${song.tempoBpm} BPM`} /> : null}
-              {song.form ? <Tag color={palette.jam} label={song.form} /> : null}
-              {song.solos.length ? (
-                <Tag
-                  color={palette.rehearsal}
-                  label={t('{{count}} solos', { count: song.solos.length })}
-                />
-              ) : null}
-            </View>
-          </View>
-          {isLeader ? (
-            <View style={styles.orderButtons}>
-              <Pressable
-                accessibilityLabel={t('Monter')}
-                disabled={index === 0}
-                onPress={() => move(-1)}
-              >
-                <Ionicons
-                  color={index === 0 ? palette.border : palette.bronze}
-                  name="chevron-up"
-                  size={20}
-                />
-              </Pressable>
-              <Pressable
-                accessibilityLabel={t('Descendre')}
-                disabled={index === total - 1}
-                onPress={() => move(1)}
-              >
-                <Ionicons
-                  color={index === total - 1 ? palette.border : palette.bronze}
-                  name="chevron-down"
-                  size={20}
-                />
-              </Pressable>
-            </View>
-          ) : (
-            <Ionicons color={palette.muted} name="chevron-forward" size={16} />
-          )}
-        </View>
-      </Card>
-    </Pressable>
+      song={song}
+      trailing={
+        isLeader ? (
+          <Pressable
+            accessibilityLabel={t('Déplacer le morceau')}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: total < 2 || reorder.isPending }}
+            disabled={total < 2 || reorder.isPending}
+            onPress={chooseMove}
+            style={styles.songActionButton}
+          >
+            <Ionicons
+              color={reorder.isPending ? palette.border : palette.bronze}
+              name="swap-vertical"
+              size={18}
+            />
+          </Pressable>
+        ) : null
+      }
+    />
   );
 }
 
@@ -128,32 +92,35 @@ function PendingSongCard({ group, song }: { group: MusicGroup; song: GroupSong }
     save.mutate({ desired, groupId: group.id, original: group.repertoire });
   };
   return (
-    <Card padding={12} style={{ borderColor: `${palette.signal}55` }}>
-      <View style={styles.pendingTop}>
-        <View style={styles.songCopy}>
-          <AppText style={styles.songTitle}>{song.title}</AppText>
-          <AppText color={palette.muted} variant="caption">
-            {song.artist}
-          </AppText>
-          <AppText color={palette.bronze} variant="caption2">
-            {t('Suggestion d’un membre')}
-          </AppText>
+    <GroupSongRow
+      cardStyle={{ borderColor: `${palette.signal}55` }}
+      onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
+      song={song}
+      trailing={
+        <View style={styles.pendingActions}>
+          <Pressable
+            accessibilityLabel={t('Accepter')}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: save.isPending }}
+            disabled={save.isPending}
+            onPress={() => decide(true)}
+            style={styles.songActionButton}
+          >
+            <Ionicons color={palette.jam} name="checkmark-circle" size={24} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel={t('Refuser')}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: save.isPending }}
+            disabled={save.isPending}
+            onPress={() => decide(false)}
+            style={styles.songActionButton}
+          >
+            <Ionicons color={palette.muted} name="close-circle" size={24} />
+          </Pressable>
         </View>
-        <Tag color={palette.signal} label={t('À valider')} />
-      </View>
-      <View style={styles.pendingActions}>
-        <View style={styles.flex}>
-          <DispoButton disabled={save.isPending} icon="checkmark" onPress={() => decide(true)}>
-            {t('Accepter')}
-          </DispoButton>
-        </View>
-        <View style={styles.flex}>
-          <DispoButton disabled={save.isPending} onPress={() => decide(false)} variant="secondary">
-            {t('Refuser')}
-          </DispoButton>
-        </View>
-      </View>
-    </Card>
+      }
+    />
   );
 }
 
@@ -167,7 +134,11 @@ function DocumentRow({ document, isLeader }: { document: GroupDocument; isLeader
         <View style={[styles.documentIcon, { backgroundColor: `${palette.electric}20` }]}>
           <Ionicons color={palette.electric} name="document-text" size={18} />
         </View>
-        <Pressable onPress={() => void openGroupDocument(document)} style={styles.songCopy}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void openGroupDocument(document)}
+          style={styles.documentOpen}
+        >
           <AppText numberOfLines={1} style={styles.documentTitle}>
             {document.title}
           </AppText>
@@ -179,6 +150,7 @@ function DocumentRow({ document, isLeader }: { document: GroupDocument; isLeader
         {isLeader ? (
           <Pressable
             accessibilityLabel={t('Supprimer le document')}
+            accessibilityRole="button"
             onPress={() =>
               Alert.alert(t('Supprimer le document ?'), undefined, [
                 { style: 'cancel', text: t('Annuler') },
@@ -189,6 +161,7 @@ function DocumentRow({ document, isLeader }: { document: GroupDocument; isLeader
                 },
               ])
             }
+            style={styles.documentAction}
           >
             <Ionicons color={palette.signal} name="trash-outline" size={18} />
           </Pressable>
@@ -207,6 +180,7 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
   const upload = useUploadGroupDocument();
   const [search, setSearch] = useState('');
   const isLeader = group.leaderId === userId;
+  const approvedSongs = group.repertoire.filter((song) => song.isApproved);
   const approved = useMemo(() => {
     const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
     const needle = search.trim().toLocaleLowerCase(locale);
@@ -238,24 +212,24 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
   };
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={styles.sectionHeading}>
-        <SectionHeader
-          subtitle={t('{{count}} morceaux validés', {
-            count: group.repertoire.filter((song) => song.isApproved).length,
-          })}
-          title={t('Répertoire')}
-        />
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
-          style={[styles.addButton, { backgroundColor: `${palette.electric}20` }]}
-        >
-          <Ionicons color={palette.electric} name="add-circle" size={18} />
-          <AppText color={palette.electric} style={styles.addLabel}>
-            {isLeader ? t('Ajouter') : t('Suggérer')}
-          </AppText>
-        </Pressable>
-      </View>
+      <SectionHeader
+        subtitle={t('{{count}} morceaux validés', { count: approvedSongs.length })}
+        title={t('Répertoire')}
+      />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
+        style={({ pressed }) => [
+          styles.addButton,
+          { backgroundColor: `${palette.bronze}1F` },
+          pressed && styles.addPressed,
+        ]}
+      >
+        <Ionicons color={palette.bronze} name="add-circle" size={18} />
+        <AppText color={palette.bronze} style={styles.addLabel}>
+          {isLeader ? t('Ajouter') : t('Suggérer')}
+        </AppText>
+      </Pressable>
       {isLeader && pending.length ? (
         <View style={styles.stack}>
           <AppText color={palette.signal} variant="label">
@@ -266,25 +240,46 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           ))}
         </View>
       ) : null}
-      {group.repertoire.filter((song) => song.isApproved).length > 8 ? (
-        <FormField
-          label={t('Chercher un morceau')}
-          onChangeText={setSearch}
-          placeholder={t('Titre ou artiste')}
-          value={search}
-        />
+      {approvedSongs.length > 8 ? (
+        <View style={[styles.search, { backgroundColor: palette.inset }]}>
+          <Ionicons color={palette.muted} name="search" size={15} />
+          <TextInput
+            accessibilityLabel={t('Chercher un morceau')}
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={setSearch}
+            placeholder={t('Titre ou artiste')}
+            placeholderTextColor={palette.muted}
+            returnKeyType="search"
+            style={[styles.searchInput, { color: palette.text }]}
+            value={search}
+          />
+          {search ? (
+            <Pressable
+              accessibilityLabel={t('Effacer')}
+              accessibilityRole="button"
+              onPress={() => setSearch('')}
+              style={styles.searchClear}
+            >
+              <Ionicons color={palette.muted} name="close-circle" size={16} />
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
       {approved.length ? (
-        approved.map((song, index) => (
-          <SongCard
-            group={group}
-            index={index}
-            isLeader={isLeader}
-            key={song.id}
-            song={song}
-            total={approved.length}
-          />
-        ))
+        approved.map((song) => {
+          const orderIndex = approvedSongs.findIndex((item) => item.id === song.id);
+          return (
+            <SongCard
+              group={group}
+              index={orderIndex}
+              isLeader={isLeader}
+              key={song.id}
+              song={song}
+              total={approvedSongs.length}
+            />
+          );
+        })
       ) : (
         <View style={styles.empty}>
           <Ionicons color={palette.bronze} name="musical-notes-outline" size={34} />
@@ -297,6 +292,8 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
       <View style={styles.sectionHeading}>
         <SectionHeader subtitle={t('PDF, grilles et partitions libres')} title={t('Documents')} />
         <Pressable
+          accessibilityLabel={t('Ajouter un document')}
+          accessibilityRole="button"
           onPress={() => void pickDocument()}
           style={[styles.iconButton, { borderColor: palette.border }]}
         >
@@ -318,12 +315,15 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
 const styles = StyleSheet.create({
   addButton: {
     alignItems: 'center',
-    borderRadius: radii.round,
+    borderRadius: radii.button,
     flexDirection: 'row',
     gap: spacing.tight,
+    justifyContent: 'center',
+    minHeight: 44,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
   },
+  addPressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   addLabel: { fontSize: 13, fontWeight: '800' },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   documentIcon: {
@@ -333,35 +333,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 38,
   },
+  documentAction: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
+  documentOpen: { flex: 1, gap: 2, justifyContent: 'center', minHeight: 44 },
   documentRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.control },
   documentTitle: { fontWeight: '700' },
   empty: { alignItems: 'center', gap: spacing.xs, padding: spacing.xl },
   emptyText: { textAlign: 'center' },
-  flex: { flex: 1 },
   iconButton: {
     alignItems: 'center',
-    borderRadius: 19,
+    borderRadius: 22,
     borderWidth: 1,
-    height: 38,
+    height: 44,
     justifyContent: 'center',
-    width: 38,
+    width: 44,
   },
-  orderButtons: { gap: spacing.xs },
-  pendingActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
-  pendingTop: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
-  pressed: { opacity: 0.76 },
-  sectionHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  songCopy: { flex: 1, gap: 2 },
-  songNumber: {
+  pendingActions: { flexDirection: 'row', gap: spacing.xxs },
+  search: {
     alignItems: 'center',
-    borderRadius: 16,
-    height: 32,
-    justifyContent: 'center',
-    width: 32,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.chip,
   },
-  songNumberText: { fontFamily: 'SplineSansMonoSemibold', fontSize: 12 },
-  songRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.control },
-  songTitle: { fontWeight: '800' },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  searchClear: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
+  sectionHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  songActionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 44,
+  },
   stack: { gap: spacing.xs },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs, marginTop: spacing.xxs },
 });

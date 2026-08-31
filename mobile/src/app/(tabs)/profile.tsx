@@ -23,22 +23,22 @@ export default function MyProfileScreen() {
   );
   if (query.isLoading)
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ScreenHeader action={settings} eyebrow={t('Compte')} title={t('Profil')} />
         <LoadingState />
       </Screen>
     );
   if (query.isError)
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ScreenHeader action={settings} eyebrow={t('Compte')} title={t('Profil')} />
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
   return (
-    <Screen>
+    <Screen nativeTabRoot>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader action={settings} eyebrow={t('Compte')} title={t('Profil')} />
+        <ScreenHeader action={settings} eyebrow={t('Compte')} inset={false} title={t('Profil')} />
         {query.data ? <ProfileDetail profile={query.data} self /> : null}
       </ScrollView>
     </Screen>

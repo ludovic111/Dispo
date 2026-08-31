@@ -22,15 +22,22 @@ function song(overrides: Partial<GroupSong> = {}): GroupSong {
     artist: 'Miles Davis',
     artworkUrl: 'https://example.com/cover.jpg',
     catalogId: 'apple:123',
+    canonicalSongId: null,
     chords: '| Dm7 |',
+    composer: 'Miles Davis',
     durationMilliseconds: 545_000,
     form: 'AABA',
     genre: 'Jazz',
+    genres: ['Jazz'],
     id: 'song-source',
     irealDisabled: false,
     irealUrl: 'irealbook://so-what',
+    isrc: 'USSM15900123',
     isApproved: true,
     key: 'Dm',
+    metadataSource: 'apple-itunes-search',
+    metadataUpdatedAt: '2026-08-31T12:00:00.000Z',
+    platformIds: { appleMusic: '123' },
     platformLinks: { spotify: 'https://open.spotify.com/track/1' },
     previewUrl: 'https://example.com/preview.m4a',
     releaseYear: 1959,
@@ -90,15 +97,22 @@ function jsonSong(value: GroupSong): Record<string, unknown> {
     artist: value.artist,
     artwork_url: value.artworkUrl,
     catalog_id: value.catalogId,
+    canonical_song_id: value.canonicalSongId,
     chords: value.chords,
+    composer: value.composer,
     duration_ms: value.durationMilliseconds,
     form: value.form,
     genre: value.genre,
+    genres: value.genres,
     id: value.id,
     ireal_disabled: value.irealDisabled,
     ireal_url: value.irealUrl,
+    isrc: value.isrc,
     is_approved: value.isApproved,
     key: value.key,
+    metadata_source: value.metadataSource,
+    metadata_updated_at: value.metadataUpdatedAt,
+    platform_ids: value.platformIds,
     platform_links: value.platformLinks,
     preview_url: value.previewUrl,
     release_year: value.releaseYear,
@@ -115,7 +129,25 @@ beforeEach(() => {
 });
 
 describe('modèle de copie d’un morceau', () => {
-  it('déduplique par catalogue puis par titre et artiste normalisés', () => {
+  it('déduplique par identité canonique, ISRC, catalogue puis texte normalisé', () => {
+    expect(
+      groupSongsMatch(
+        song({ canonicalSongId: 'aaaaaaaa-0000-4000-8000-000000000001' }),
+        song({
+          artist: 'Autre',
+          canonicalSongId: 'AAAAAAAA-0000-4000-8000-000000000001',
+          catalogId: null,
+          isrc: null,
+          title: 'Autre',
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      groupSongsMatch(
+        song({ canonicalSongId: null, catalogId: null, isrc: 'US-SM1-59-00123' }),
+        song({ artist: 'Autre', canonicalSongId: null, catalogId: null, title: 'X' }),
+      ),
+    ).toBe(true);
     expect(
       groupSongsMatch(song(), song({ artist: 'Autre', catalogId: 'APPLE:123', title: 'X' })),
     ).toBe(true);
@@ -136,13 +168,17 @@ describe('modèle de copie d’un morceau', () => {
     });
     expect(copy).toEqual({
       ...source,
+      genres: ['Jazz'],
       id: 'copy-id',
       isApproved: false,
+      platformIds: { appleMusic: '123' },
       platformLinks: { spotify: 'https://open.spotify.com/track/1' },
       solos: [],
       suggestedBy: 'member-9',
     });
     expect(copy.platformLinks).not.toBe(source.platformLinks);
+    expect(copy.platformIds).not.toBe(source.platformIds);
+    expect(copy.genres).not.toBe(source.genres);
     expect(source.solos).toEqual(['profile-1', 'profile-2']);
   });
 
@@ -215,7 +251,12 @@ describe('modèle de copie d’un morceau', () => {
 
 describe('persistance de la copie via les RPC existants', () => {
   it('relit le répertoire, fusionne la copie complète et ignore une destination répétée', async () => {
-    const current = song({ id: 'existing', title: 'Footprints', catalogId: 'apple:456' });
+    const current = song({
+      id: 'existing',
+      title: 'Footprints',
+      catalogId: 'apple:456',
+      isrc: null,
+    });
     const single = jest.fn(async () => ({
       data: { id: 'group-1', repertoire: [jsonSong(current)] },
       error: null,
@@ -254,8 +295,8 @@ describe('persistance de la copie via les RPC existants', () => {
   });
 
   it('fusionne aussi une setlist d’événement sans perdre son ordre existant', async () => {
-    const first = song({ id: 'first', title: 'Footprints', catalogId: 'apple:456' });
-    const second = song({ id: 'second', title: 'Nardis', catalogId: 'apple:789' });
+    const first = song({ id: 'first', title: 'Footprints', catalogId: 'apple:456', isrc: null });
+    const second = song({ id: 'second', title: 'Nardis', catalogId: 'apple:789', isrc: null });
     const single = jest.fn(async () => ({
       data: { group_id: 'group-1', setlist: [jsonSong(first), jsonSong(second)] },
       error: null,

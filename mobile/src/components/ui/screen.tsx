@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from './app-text';
@@ -9,10 +9,16 @@ import { DispoBackground } from './dispo-background';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
-export function Screen({ children }: PropsWithChildren) {
+const screenEdges = ['top', 'bottom'] as const;
+const nativeTabScreenEdges = Platform.OS === 'android' ? (['top'] as const) : screenEdges;
+
+export function Screen({
+  children,
+  nativeTabRoot = false,
+}: PropsWithChildren<{ nativeTabRoot?: boolean }>) {
   return (
     <DispoBackground>
-      <SafeAreaView edges={['top']} style={styles.safe}>
+      <SafeAreaView edges={nativeTabRoot ? nativeTabScreenEdges : screenEdges} style={styles.safe}>
         {children}
       </SafeAreaView>
     </DispoBackground>
@@ -24,6 +30,7 @@ interface ScreenHeaderProps {
   eyebrow?: string;
   icon?: ComponentProps<typeof Ionicons>['name'];
   iconColor?: string;
+  inset?: boolean;
   subtitle?: string;
   title: string;
 }
@@ -33,6 +40,7 @@ export function ScreenHeader({
   eyebrow,
   icon,
   iconColor,
+  inset = true,
   subtitle,
   title,
 }: ScreenHeaderProps) {
@@ -40,7 +48,7 @@ export function ScreenHeader({
   const detail = subtitle ?? eyebrow;
   const resolvedIconColor = iconColor ?? palette.electric;
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, !inset && styles.headerWithoutInset]}>
       {icon ? (
         <View style={[styles.icon, { backgroundColor: `${resolvedIconColor}24` }]}>
           <Ionicons color={resolvedIconColor} name={icon} size={18} />
@@ -132,6 +140,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 15, lineHeight: 20 },
   headerText: { flex: 1, gap: 4 },
   headerTitle: { fontSize: 27, lineHeight: 31 },
+  headerWithoutInset: { paddingHorizontal: 0 },
   icon: {
     alignItems: 'center',
     borderRadius: radii.button,

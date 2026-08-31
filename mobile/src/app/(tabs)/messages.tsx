@@ -117,7 +117,7 @@ export default function MessagesScreen() {
 
   if (segment === 'conversations') {
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <FlashList
           contentContainerStyle={styles.directContent}
           data={conversations}
@@ -179,7 +179,7 @@ export default function MessagesScreen() {
   const hasInvitations = (invitationsQuery.data?.length ?? 0) > 0;
 
   return (
-    <Screen>
+    <Screen nativeTabRoot>
       <ScrollView
         contentContainerStyle={styles.groupContent}
         refreshControl={

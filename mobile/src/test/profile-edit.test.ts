@@ -8,7 +8,6 @@ import {
 } from '@/features/profiles/profile-edit-model';
 
 const draft: EditableProfile = {
-  availableDates: ['2026-09-12', '2026-09-12', '2026-09-03'],
   bio: '  Pianiste jazz  ',
   city: '  Genève  ',
   country: 'ch',
@@ -28,7 +27,6 @@ const draft: EditableProfile = {
 describe('édition du profil', () => {
   it('normalise toutes les valeurs sans jamais inclure Premium ou des coordonnées', () => {
     expect(normalizeEditableProfile(draft)).toEqual({
-      available_dates: ['2026-09-03', '2026-09-12'],
       bio: 'Pianiste jazz',
       city: 'Genève',
       country: 'CH',

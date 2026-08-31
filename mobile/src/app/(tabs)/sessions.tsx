@@ -57,7 +57,7 @@ export default function SessionsScreen() {
 
   if (query.isLoading) {
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ScreenHeader eyebrow={t('Agenda')} icon="calendar-outline" title={t('Sessions')} />
         <LoadingState label={t('Chargement de ton agenda…')} />
       </Screen>
@@ -65,7 +65,7 @@ export default function SessionsScreen() {
   }
   if (query.isError) {
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ScreenHeader eyebrow={t('Agenda')} icon="calendar-outline" title={t('Sessions')} />
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
@@ -83,7 +83,7 @@ export default function SessionsScreen() {
   const mutationError = attendanceMutation.error ?? directMutation.error;
 
   return (
-    <Screen>
+    <Screen nativeTabRoot>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -96,7 +96,12 @@ export default function SessionsScreen() {
         }
       >
         <View>
-          <ScreenHeader eyebrow={t('Agenda')} icon="calendar-outline" title={t('Sessions')} />
+          <ScreenHeader
+            eyebrow={t('Agenda')}
+            icon="calendar-outline"
+            inset={false}
+            title={t('Sessions')}
+          />
           <AppText color={palette.muted} style={styles.headerSubtitle} variant="caption">
             {subtitle}
           </AppText>
@@ -203,7 +208,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingHorizontal: spacing.md,
   },
-  headerSubtitle: { marginTop: -spacing.xs, paddingHorizontal: spacing.md },
+  headerSubtitle: { marginTop: -spacing.xs },
   month: { gap: spacing.sm },
   monthLabel: { letterSpacing: 1.3 },
   mutationError: { fontWeight: '700', textAlign: 'center' },

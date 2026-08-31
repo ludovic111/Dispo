@@ -134,8 +134,3 @@ export function useTabBadgeCounts(): TabBadgeCounts {
         : 0,
   };
 }
-
-export function tabBadgeValue(count: number): number | string | undefined {
-  if (count <= 0) return undefined;
-  return count > 99 ? '99+' : count;
-}

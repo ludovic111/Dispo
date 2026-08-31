@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { randomUUID } from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { GroupSong } from './group-model';
 import {
@@ -17,6 +16,7 @@ import {
   useUploadGroupDocument,
 } from './group-queries';
 import { openGroupDocument, searchSongCatalog, type SongCatalogResult } from './group-repository';
+import { SongArtwork, SongListenSheet } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -25,8 +25,9 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { SectionHeader } from '@/components/ui/section';
+import { HeaderAction, SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
+import { irealDestination } from '@/domain/song';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -37,15 +38,22 @@ function emptySong(userId: string, approved: boolean): GroupSong {
     artist: '',
     artworkUrl: null,
     catalogId: null,
+    canonicalSongId: null,
     chords: null,
+    composer: null,
     durationMilliseconds: null,
     form: null,
     genre: null,
+    genres: [],
     id: randomUUID().toLowerCase(),
     irealDisabled: false,
     irealUrl: null,
+    isrc: null,
     isApproved: approved,
     key: null,
+    metadataSource: null,
+    metadataUpdatedAt: null,
+    platformIds: {},
     platformLinks: {},
     previewUrl: null,
     releaseYear: null,
@@ -55,6 +63,12 @@ function emptySong(userId: string, approved: boolean): GroupSong {
     title: '',
     trackUrl: null,
   };
+}
+
+function durationLabel(milliseconds: number | null): string | null {
+  if (!milliseconds || milliseconds < 0) return null;
+  const seconds = Math.floor(milliseconds / 1_000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
 export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: string }) {
@@ -78,6 +92,10 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
   const [catalogResults, setCatalogResults] = useState<SongCatalogResult[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [listenVisible, setListenVisible] = useState(false);
+  const backAction = (
+    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+  );
   const baseDraft = existing ?? { ...blankSong, isApproved: isLeader === true };
   const draft = draftOverride ?? baseDraft;
   const documents = useMemo(
@@ -91,18 +109,21 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
   if (query.isLoading)
     return (
       <Screen>
+        <ScreenHeader action={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
         <LoadingState label={t('Chargement du morceau…')} />
       </Screen>
     );
   if (query.error)
     return (
       <Screen>
+        <ScreenHeader action={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
         <ErrorState message={t('Le morceau n’a pas pu être chargé.')} />
       </Screen>
     );
   if (!group || (!isNew && !existing))
     return (
       <Screen>
+        <ScreenHeader action={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />
       </Screen>
     );
@@ -126,8 +147,16 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
       artist: item.artist,
       artworkUrl: item.artworkUrl,
       catalogId: item.catalogId,
+      canonicalSongId: item.canonicalSongId,
+      composer: item.composer,
       durationMilliseconds: item.durationMilliseconds,
       genre: item.genre,
+      genres: item.genres,
+      isrc: item.isrc,
+      metadataSource: item.metadataSource,
+      metadataUpdatedAt: item.metadataUpdatedAt,
+      platformIds: item.platformIds,
+      platformLinks: item.platformLinks,
       previewUrl: item.previewUrl,
       releaseYear: item.releaseYear,
       title: item.title,
@@ -178,10 +207,55 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
       userId,
     });
   };
+  const arrangement = [
+    draft.key?.trim(),
+    draft.tempoBpm ? `${draft.tempoBpm} BPM` : null,
+    draft.form?.trim(),
+  ].filter((value): value is string => Boolean(value));
+  const recording = [
+    draft.albumTitle,
+    draft.releaseYear?.toString(),
+    durationLabel(draft.durationMilliseconds),
+  ].filter((value): value is string => Boolean(value));
+  const ireal = irealDestination(draft);
+  const updateIRealUrl = (value: string) => {
+    const cleaned = value.trim() || null;
+    setDraftOverride((current) => {
+      const source = current ?? baseDraft;
+      return {
+        ...source,
+        irealDisabled: cleaned ? false : Boolean(source.irealUrl),
+        irealUrl: cleaned,
+      };
+    });
+  };
+  const openIReal = async () => {
+    if (!ireal) return;
+    try {
+      if (await Linking.canOpenURL(ireal.url)) {
+        await Linking.openURL(ireal.url);
+        return;
+      }
+    } catch {
+      // La même issue de secours s'applique si la vérification native échoue.
+    }
+    const storeUrl =
+      Platform.OS === 'android'
+        ? 'https://play.google.com/store/apps/details?id=com.massimobiolcati.irealb'
+        : 'https://apps.apple.com/app/ireal-pro/id409035833';
+    Alert.alert(t('iReal Pro'), undefined, [
+      { style: 'cancel', text: t('Annuler') },
+      {
+        onPress: () => void Linking.openURL(storeUrl),
+        text: Platform.OS === 'android' ? t('Ouvrir') : t("Voir dans l'App Store"),
+      },
+    ]);
+  };
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenHeader
+          action={backAction}
           icon="musical-notes"
           subtitle={group.name}
           title={
@@ -203,6 +277,8 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                 />
               </View>
               <Pressable
+                accessibilityLabel={t('Rechercher')}
+                accessibilityRole="button"
                 disabled={catalogLoading || catalogTerm.trim().length < 2}
                 onPress={() => void searchCatalog()}
                 style={[styles.searchButton, { backgroundColor: palette.electric }]}
@@ -216,11 +292,7 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                 onPress={() => chooseCatalog(item)}
                 style={[styles.catalogRow, { borderBottomColor: palette.border }]}
               >
-                {item.artworkUrl ? (
-                  <Image source={{ uri: item.artworkUrl }} style={styles.artworkSmall} />
-                ) : (
-                  <View style={[styles.artworkSmall, { backgroundColor: palette.inset }]} />
-                )}
+                <SongArtwork artworkUrl={item.artworkUrl} radius={8} size={42} />
                 <View style={styles.flex}>
                   <AppText numberOfLines={1} style={styles.bold}>
                     {item.title}
@@ -243,42 +315,66 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
         ) : null}
         <Card style={styles.card}>
           <View style={styles.songHero}>
-            {draft.artworkUrl ? (
-              <Image source={{ uri: draft.artworkUrl }} style={styles.artwork} />
-            ) : (
-              <View
-                style={[styles.artwork, styles.artworkFallback, { backgroundColor: palette.inset }]}
-              >
-                <Ionicons color={palette.bronze} name="musical-notes" size={32} />
-              </View>
-            )}
-            <View style={styles.flex}>
+            <SongArtwork artworkUrl={draft.artworkUrl} radius={10} size={54} />
+            <View style={styles.heroCopy}>
+              <AppText numberOfLines={2} style={styles.heroTitle} variant="title3">
+                {draft.title || t('Titre')}
+              </AppText>
+              {arrangement.length ? (
+                <View style={[styles.arrangementChip, { backgroundColor: `${palette.bronze}1F` }]}>
+                  <Ionicons color={palette.bronze} name="speedometer-outline" size={10} />
+                  <AppText
+                    color={palette.bronze}
+                    numberOfLines={1}
+                    style={styles.arrangementText}
+                    variant="caption2"
+                  >
+                    {arrangement.join(' · ')}
+                  </AppText>
+                </View>
+              ) : null}
+              <AppText color={palette.muted} numberOfLines={1} variant="caption">
+                {draft.artist || t('Artiste')}
+              </AppText>
+              {recording.length ? (
+                <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                  {recording.join(' · ')}
+                </AppText>
+              ) : null}
+            </View>
+            <Pressable
+              accessibilityLabel={t('Écouter ce morceau')}
+              accessibilityRole="button"
+              hitSlop={4}
+              onPress={() => setListenVisible(true)}
+              style={[styles.heroAction, { backgroundColor: palette.inset }]}
+            >
+              <Ionicons color={palette.bronze} name="headset" size={18} />
+            </Pressable>
+          </View>
+          {!draft.isApproved ? (
+            <Tag color={palette.signal} label={t('Suggestion à valider')} />
+          ) : null}
+          {canEdit ? (
+            <View style={styles.editorFields}>
               <FormField
-                editable={canEdit}
                 label={t('Titre')}
                 onChangeText={(value) => patch('title', value)}
                 value={draft.title}
               />
               <FormField
-                editable={canEdit}
                 label={t('Artiste')}
                 onChangeText={(value) => patch('artist', value)}
                 value={draft.artist}
               />
             </View>
-          </View>
-          {!draft.isApproved ? (
-            <Tag color={palette.signal} label={t('Suggestion à valider')} />
-          ) : null}
-          {draft.trackUrl ? (
-            <Pressable onPress={() => void Linking.openURL(draft.trackUrl!)} style={styles.link}>
-              <Ionicons color={palette.electric} name="logo-apple" size={16} />
-              <AppText color={palette.electric} variant="caption">
-                {t('Ouvrir dans Apple Music')}
-              </AppText>
-            </Pressable>
           ) : null}
         </Card>
+        <SongListenSheet
+          onClose={() => setListenVisible(false)}
+          song={draft}
+          visible={listenVisible}
+        />
         <Card style={styles.card}>
           <SectionHeader subtitle={t('Arrangement partagé avec le groupe')} title={t('Repères')} />
           <View style={styles.fieldsRow}>
@@ -318,14 +414,25 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
             style={styles.multiline}
             value={draft.chords ?? ''}
           />
-          <FormField
-            autoCapitalize="none"
-            editable={canEdit}
-            label={t('Lien iReal Pro')}
-            onChangeText={(value) => patch('irealUrl', value.trim() || null)}
-            placeholder={t('irealbook://…')}
-            value={draft.irealUrl ?? ''}
-          />
+        </Card>
+        <Card style={styles.card}>
+          <SectionHeader subtitle={t('Ouvrir dans iReal Pro')} title={t('iReal Pro')} />
+          {canEdit ? (
+            <FormField
+              autoCapitalize="none"
+              label={t('Lien iReal Pro')}
+              onChangeText={updateIRealUrl}
+              placeholder={t('irealbook://…')}
+              value={draft.irealUrl ?? ''}
+            />
+          ) : null}
+          <DispoButton
+            disabled={!ireal}
+            icon={ireal?.kind === 'direct' ? 'open-outline' : 'search'}
+            onPress={() => void openIReal()}
+          >
+            {ireal?.kind === 'direct' ? t('Ouvrir dans iReal Pro') : t('Chercher dans iReal Pro')}
+          </DispoButton>
         </Card>
         {!isNew ? (
           <Card style={styles.card}>
@@ -355,6 +462,8 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
             <View style={styles.sectionRow}>
               <SectionHeader subtitle={t('Partitions liées au morceau')} title={t('Documents')} />
               <Pressable
+                accessibilityLabel={t('Ajouter un document')}
+                accessibilityRole="button"
                 onPress={() => void pickDocument()}
                 style={[styles.roundButton, { borderColor: palette.border }]}
               >
@@ -380,7 +489,12 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                   </View>
                 </Pressable>
                 {isLeader ? (
-                  <Pressable onPress={() => deleteDocument.mutate(document)}>
+                  <Pressable
+                    accessibilityLabel={t('Supprimer le document')}
+                    accessibilityRole="button"
+                    onPress={() => deleteDocument.mutate(document)}
+                    style={styles.iconAction}
+                  >
                     <Ionicons color={palette.signal} name="trash-outline" size={17} />
                   </Pressable>
                 ) : null}
@@ -406,7 +520,12 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                   <AppText>{item.text}</AppText>
                 </View>
                 {isLeader || item.authorId === userId ? (
-                  <Pressable onPress={() => deleteComment.mutate(item.id)}>
+                  <Pressable
+                    accessibilityLabel={t('Supprimer')}
+                    accessibilityRole="button"
+                    onPress={() => deleteComment.mutate(item.id)}
+                    style={styles.iconAction}
+                  >
                     <Ionicons color={palette.signal} name="trash-outline" size={16} />
                   </Pressable>
                 ) : null}
@@ -422,6 +541,8 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                 />
               </View>
               <Pressable
+                accessibilityLabel={t('Envoyer')}
+                accessibilityRole="button"
                 disabled={!commentText.trim()}
                 onPress={() =>
                   comment.mutate(
@@ -474,9 +595,17 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
 }
 
 const styles = StyleSheet.create({
-  artwork: { borderRadius: 16, height: 112, width: 112 },
-  artworkFallback: { alignItems: 'center', justifyContent: 'center' },
-  artworkSmall: { borderRadius: 8, height: 42, width: 42 },
+  arrangementChip: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: spacing.compact,
+    maxWidth: '100%',
+    paddingHorizontal: 7,
+    paddingVertical: spacing.xxs,
+  },
+  arrangementText: { flexShrink: 1, fontWeight: '800' },
   bold: { fontWeight: '700' },
   card: { gap: spacing.sm },
   catalogRow: {
@@ -490,7 +619,13 @@ const styles = StyleSheet.create({
   commentComposer: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
   commentRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  documentOpen: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.xs },
+  documentOpen: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+  },
   documentRow: {
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -498,28 +633,38 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.xs,
   },
+  editorFields: { gap: spacing.sm },
   fieldsRow: { flexDirection: 'row', gap: spacing.xs },
   flex: { flex: 1 },
-  link: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  heroAction: {
+    alignItems: 'center',
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  heroCopy: { flex: 1, gap: spacing.xxxs, minWidth: 0 },
+  heroTitle: { fontSize: 19, lineHeight: 23 },
+  iconAction: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   multiline: { minHeight: 100, textAlignVertical: 'top' },
   roundButton: {
     alignItems: 'center',
-    borderRadius: 19,
+    borderRadius: 22,
     borderWidth: 1,
-    height: 38,
+    height: 44,
     justifyContent: 'center',
-    width: 38,
+    width: 44,
   },
   searchButton: {
     alignItems: 'center',
-    borderRadius: 21,
-    height: 42,
+    borderRadius: 22,
+    height: 44,
     justifyContent: 'center',
     marginBottom: 3,
-    width: 42,
+    width: 44,
   },
   searchRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
   sectionRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  songHero: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
+  songHero: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

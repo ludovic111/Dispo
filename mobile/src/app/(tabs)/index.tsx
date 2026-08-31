@@ -159,14 +159,14 @@ export default function DiscoveryScreen() {
 
   if (profilesQuery.isLoading || meQuery.isLoading) {
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <LoadingState label={t('On cherche les musiciens…')} />
       </Screen>
     );
   }
   if (profilesQuery.isError) {
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ErrorState message={profilesQuery.error.message} onRetry={() => void refresh()} />
       </Screen>
     );
@@ -324,7 +324,7 @@ export default function DiscoveryScreen() {
   );
 
   return (
-    <Screen>
+    <Screen nativeTabRoot>
       <FlashList
         contentContainerStyle={styles.listContent}
         data={visible}

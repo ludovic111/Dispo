@@ -139,7 +139,7 @@ export default function GigsScreen() {
 
   if (query.isLoading || profile.isLoading) {
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ScreenHeader
           action={add}
           icon="flash"
@@ -153,7 +153,7 @@ export default function GigsScreen() {
   if (query.isError || profile.isError) {
     const message = query.error?.message ?? profile.error?.message ?? t('Chargement impossible.');
     return (
-      <Screen>
+      <Screen nativeTabRoot>
         <ScreenHeader
           action={add}
           icon="flash"
@@ -169,7 +169,7 @@ export default function GigsScreen() {
   }
 
   return (
-    <Screen>
+    <Screen nativeTabRoot>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -184,6 +184,7 @@ export default function GigsScreen() {
         <ScreenHeader
           action={add}
           icon="flash"
+          inset={false}
           subtitle={
             segment === 'feed'
               ? formatSwiftPlaceholders(t('%lld concerts cherchent un musicien'), visible.length)

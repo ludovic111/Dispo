@@ -22,6 +22,7 @@ import {
   useSetGroupAttendance,
 } from './group-queries';
 import { containsGroupSong, copiedGroupSong } from './group-song-copy';
+import { GroupSongRow } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -29,7 +30,7 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { SectionHeader } from '@/components/ui/section';
+import { HeaderAction, SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import type { GigApplication, GigDetail } from '@/features/gigs/gig-model';
@@ -195,16 +196,21 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   });
   const [approvedOrderOverride, setApprovedOrderOverride] = useState<string[] | null>(null);
   const [invitingProfileId, setInvitingProfileId] = useState<string | null>(null);
+  const backAction = (
+    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+  );
 
   if (query.isLoading)
     return (
       <Screen>
+        <ScreenHeader action={backAction} eyebrow={t('Sessions')} title={t('Session')} />
         <LoadingState label={t('Chargement de la date…')} />
       </Screen>
     );
   if (query.error)
     return (
       <Screen>
+        <ScreenHeader action={backAction} eyebrow={t('Sessions')} title={t('Session')} />
         <ErrorState
           message={t('Cette date n’a pas pu être chargée.')}
           onRetry={() => void query.refetch()}
@@ -214,6 +220,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   if (!group || !event)
     return (
       <Screen>
+        <ScreenHeader action={backAction} eyebrow={t('Sessions')} title={t('Session')} />
         <ErrorState message={t('Cette date n’est plus accessible.')} />
       </Screen>
     );
@@ -289,6 +296,17 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
       { onError: () => setApprovedOrderOverride(null) },
     );
   };
+  const chooseApprovedSongMove = (song: GroupSong, index: number) => {
+    const actions: Parameters<typeof Alert.alert>[2] = [];
+    if (index > 0) {
+      actions.push({ onPress: () => moveApprovedSong(index, -1), text: t('Monter') });
+    }
+    if (index < approvedSongs.length - 1) {
+      actions.push({ onPress: () => moveApprovedSong(index, 1), text: t('Descendre') });
+    }
+    actions.push({ style: 'cancel', text: t('Annuler') });
+    Alert.alert(t('Déplacer le morceau'), song.title, actions);
+  };
   const publishSos = () =>
     router.push({
       params: {
@@ -305,7 +323,12 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader icon="calendar" subtitle={group.name} title={event.title} />
+        <ScreenHeader
+          action={backAction}
+          icon="calendar"
+          subtitle={group.name}
+          title={event.title}
+        />
         <Card style={styles.card}>
           <View style={styles.titleLine}>
             <Tag
@@ -605,7 +628,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         ) : null}
 
         {pendingSongs.length ? (
-          <Card style={styles.card}>
+          <View style={styles.songStack}>
             <SectionHeader
               subtitle={
                 isLeader ? t('À valider — c’est toi qui décides') : t('En attente du leader')
@@ -613,94 +636,82 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               title={t('Suggestions')}
             />
             {pendingSongs.map((song) => (
-              <View key={song.id} style={[styles.songRow, { borderBottomColor: palette.border }]}>
-                <View style={styles.flex}>
-                  <AppText style={styles.strong}>{song.title}</AppText>
-                  <AppText color={palette.muted} variant="caption2">
-                    {song.artist}
-                  </AppText>
-                </View>
-                {isLeader ? (
-                  <View style={styles.songActions}>
-                    <Pressable
-                      accessibilityLabel={t('Refuser')}
-                      onPress={() => saveSuggestion(song, false)}
-                    >
-                      <Ionicons color={palette.signal} name="close-circle" size={25} />
-                    </Pressable>
-                    <Pressable
-                      accessibilityLabel={t('Accepter')}
-                      onPress={() => saveSuggestion(song, true)}
-                    >
-                      <Ionicons color={palette.jam} name="checkmark-circle" size={25} />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <Tag color={palette.bronze} label={t('En attente')} />
-                )}
-              </View>
+              <GroupSongRow
+                cardStyle={{ borderColor: `${palette.signal}55` }}
+                key={song.id}
+                song={song}
+                trailing={
+                  isLeader ? (
+                    <View style={styles.songActions}>
+                      <Pressable
+                        accessibilityLabel={t('Refuser')}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: saveSetlist.isPending }}
+                        disabled={saveSetlist.isPending}
+                        onPress={() => saveSuggestion(song, false)}
+                        style={styles.songActionButton}
+                      >
+                        <Ionicons color={palette.muted} name="close-circle" size={24} />
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel={t('Accepter')}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: saveSetlist.isPending }}
+                        disabled={saveSetlist.isPending}
+                        onPress={() => saveSuggestion(song, true)}
+                        style={styles.songActionButton}
+                      >
+                        <Ionicons color={palette.jam} name="checkmark-circle" size={24} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Tag color={palette.bronze} label={t('En attente')} />
+                  )
+                }
+              />
             ))}
-          </Card>
+          </View>
         ) : null}
 
-        <Card style={styles.card}>
+        <View style={styles.songStack}>
           <SectionHeader
             subtitle={t('{{count}} morceaux', { count: approvedSongs.length })}
             title={t('Setlist')}
           />
-          {isLeader && approvedSongs.length > 1 ? (
-            <AppText color={palette.muted} variant="caption">
-              {t('Utilise les flèches pour changer l’ordre.')}
-            </AppText>
-          ) : null}
           {approvedSongs.length ? (
             approvedSongs.map((song, index) => (
-              <Pressable
-                accessibilityHint={t('Un appui long permet de copier le morceau')}
-                key={song.id}
-                onLongPress={() => openSongCopy(song)}
-                style={[styles.songRow, { borderBottomColor: palette.border }]}
-              >
-                <View style={[styles.songNumber, { backgroundColor: `${palette.bronze}22` }]}>
-                  <AppText color={palette.bronze} variant="caption2">
-                    {index + 1}
-                  </AppText>
-                </View>
+              <View key={song.id} style={styles.numberedSongRow}>
+                <AppText color={palette.muted} style={styles.songIndex} variant="caption">
+                  {index + 1}.
+                </AppText>
                 <View style={styles.flex}>
-                  <AppText style={styles.strong}>{song.title}</AppText>
-                  <AppText color={palette.muted} variant="caption2">
-                    {song.artist}
-                  </AppText>
+                  <GroupSongRow
+                    accessibilityHint={t('Un appui long permet de copier le morceau')}
+                    onLongPress={() => openSongCopy(song)}
+                    song={song}
+                    trailing={
+                      isLeader ? (
+                        <Pressable
+                          accessibilityLabel={t('Déplacer le morceau')}
+                          accessibilityRole="button"
+                          accessibilityState={{
+                            disabled: approvedSongs.length < 2 || reorderSetlist.isPending,
+                          }}
+                          disabled={approvedSongs.length < 2 || reorderSetlist.isPending}
+                          onPress={() => chooseApprovedSongMove(song, index)}
+                          style={styles.songActionButton}
+                        >
+                          <Ionicons
+                            color={reorderSetlist.isPending ? palette.border : palette.electric}
+                            name="swap-vertical"
+                            size={18}
+                          />
+                        </Pressable>
+                      ) : null
+                    }
+                  />
                 </View>
-                {isLeader ? (
-                  <View style={styles.songActions}>
-                    <Pressable
-                      accessibilityLabel={t('Monter le morceau')}
-                      disabled={index === 0 || reorderSetlist.isPending}
-                      onPress={() => moveApprovedSong(index, -1)}
-                    >
-                      <Ionicons
-                        color={index === 0 ? palette.border : palette.electric}
-                        name="chevron-up-circle"
-                        size={25}
-                      />
-                    </Pressable>
-                    <Pressable
-                      accessibilityLabel={t('Descendre le morceau')}
-                      disabled={index === approvedSongs.length - 1 || reorderSetlist.isPending}
-                      onPress={() => moveApprovedSong(index, 1)}
-                    >
-                      <Ionicons
-                        color={
-                          index === approvedSongs.length - 1 ? palette.border : palette.electric
-                        }
-                        name="chevron-down-circle"
-                        size={25}
-                      />
-                    </Pressable>
-                  </View>
-                ) : null}
-              </Pressable>
+              </View>
             ))
           ) : (
             <AppText color={palette.muted} variant="caption">
@@ -712,7 +723,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               {t('L’ordre n’a pas pu être enregistré.')}
             </AppText>
           ) : null}
-        </Card>
+        </View>
 
         {repertoireChoices.length ? (
           <Card style={styles.card}>
@@ -816,16 +827,17 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   memberRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  numberedSongRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   privateAddress: { borderRadius: radii.button, padding: spacing.sm },
   sectionTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   songActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  songNumber: {
+  songActionButton: {
     alignItems: 'center',
-    borderRadius: 14,
-    height: 28,
     justifyContent: 'center',
-    width: 28,
+    minHeight: 44,
+    minWidth: 44,
   },
+  songIndex: { fontWeight: '800', textAlign: 'right', width: 22 },
   songRow: {
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -833,6 +845,7 @@ const styles = StyleSheet.create({
     gap: spacing.control,
     paddingVertical: spacing.xs,
   },
+  songStack: { gap: spacing.xs },
   sos: { borderRadius: radii.button, borderWidth: 1, gap: spacing.sm, padding: spacing.sm },
   strong: { fontWeight: '700' },
   summaryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },

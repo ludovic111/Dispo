@@ -40,8 +40,19 @@ function normalizedCatalogId(value: string | null): string | null {
   return cleaned || null;
 }
 
-/** Même identité que Swift : identifiant catalogue prioritaire, puis titre + artiste. */
+function normalizedIsrc(value: string | null): string | null {
+  const cleaned = value?.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  return cleaned || null;
+}
+
+/** Identité canonique, ISRC, identifiant fournisseur, puis titre + artiste. */
 export function groupSongsMatch(left: GroupSong, right: GroupSong): boolean {
+  const leftCanonicalId = normalizedCatalogId(left.canonicalSongId);
+  const rightCanonicalId = normalizedCatalogId(right.canonicalSongId);
+  if (leftCanonicalId && rightCanonicalId && leftCanonicalId === rightCanonicalId) return true;
+  const leftIsrc = normalizedIsrc(left.isrc);
+  const rightIsrc = normalizedIsrc(right.isrc);
+  if (leftIsrc && rightIsrc && leftIsrc === rightIsrc) return true;
   const leftCatalogId = normalizedCatalogId(left.catalogId);
   const rightCatalogId = normalizedCatalogId(right.catalogId);
   if (leftCatalogId && rightCatalogId && leftCatalogId === rightCatalogId) return true;
@@ -66,8 +77,10 @@ export function copiedGroupSong(
 ): GroupSong {
   return {
     ...source,
+    genres: [...source.genres],
     id: (input.id ?? randomUUID()).toLowerCase(),
     isApproved: input.approved,
+    platformIds: { ...source.platformIds },
     platformLinks: { ...source.platformLinks },
     solos: [],
     suggestedBy: input.suggestedBy,

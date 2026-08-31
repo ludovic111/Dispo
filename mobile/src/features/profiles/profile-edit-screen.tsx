@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { toggleProfileValue, type EditableProfile } from './profile-edit-model';
 import {
@@ -37,19 +36,11 @@ const socialNetworks = [
   { icon: 'at' as const, key: 'x', label: 'X' },
 ] as const;
 
-function dayKey(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 export function ProfileEditScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const { palette } = useDispoTheme();
-  const { i18n, t } = useTranslation();
-  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const query = useQuery({
     enabled: Boolean(userId),
@@ -61,8 +52,6 @@ export function ProfileEditScreen() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(Platform.OS === 'ios');
-  const [calendarDate, setCalendarDate] = useState(new Date());
   const allGenres = useMemo(() => GIG_GENRE_GROUPS.flatMap((group) => group.values), []);
   const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
 
@@ -255,56 +244,6 @@ export function ProfileEditScreen() {
                   label={t(genre)}
                   onPress={() => update({ genres: toggleProfileValue(value.genres, genre) })}
                   selected={value.genres.includes(genre)}
-                />
-              ))}
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader title={t('Mes dates de dispo')} />
-          <Card style={styles.card}>
-            <AppText color={palette.muted} variant="caption">
-              {t('Coche les jours où tu peux dépanner un concert.')}
-            </AppText>
-            {Platform.OS === 'ios' || calendarVisible ? (
-              <DateTimePicker
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                minimumDate={new Date()}
-                mode="date"
-                onChange={(_event, date) => {
-                  if (Platform.OS === 'android') setCalendarVisible(false);
-                  if (date) {
-                    setCalendarDate(date);
-                    update({
-                      availableDates: toggleProfileValue(value.availableDates, dayKey(date)),
-                    });
-                  }
-                }}
-                value={calendarDate}
-              />
-            ) : (
-              <DispoButton
-                icon="calendar"
-                onPress={() => setCalendarVisible(true)}
-                variant="secondary"
-              >
-                {t('Ajouter une date')}
-              </DispoButton>
-            )}
-            <View style={styles.choices}>
-              {value.availableDates.map((date) => (
-                <ChoiceChip
-                  key={date}
-                  label={new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-                    new Date(`${date}T12:00:00`),
-                  )}
-                  onPress={() =>
-                    update({
-                      availableDates: value.availableDates.filter((item) => item !== date),
-                    })
-                  }
-                  selected
                 />
               ))}
             </View>

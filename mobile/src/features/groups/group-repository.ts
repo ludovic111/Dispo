@@ -70,8 +70,16 @@ export interface SongCatalogResult {
   artist: string;
   artworkUrl: string | null;
   catalogId: string;
+  canonicalSongId: string | null;
+  composer: string | null;
   durationMilliseconds: number | null;
   genre: string | null;
+  genres: string[];
+  isrc: string | null;
+  metadataSource: string;
+  metadataUpdatedAt: string;
+  platformIds: Record<string, string>;
+  platformLinks: Record<string, string>;
   previewUrl: string | null;
   releaseYear: number | null;
   title: string;
@@ -167,10 +175,13 @@ export async function searchSongCatalog(
   const response = await fetch(url, signal ? { signal } : undefined);
   if (!response.ok) throw new Error('song_catalog_unavailable');
   const payload = (await response.json()) as { results?: unknown[] };
+  const metadataUpdatedAt = new Date().toISOString();
   return (payload.results ?? []).flatMap((raw) => {
     if (typeof raw !== 'object' || raw === null) return [];
     const row = raw as Record<string, unknown>;
     if (typeof row.trackId !== 'number' || typeof row.trackName !== 'string') return [];
+    const genre = typeof row.primaryGenreName === 'string' ? row.primaryGenreName : null;
+    const trackUrl = typeof row.trackViewUrl === 'string' ? row.trackViewUrl : null;
     return [
       {
         albumTitle: typeof row.collectionName === 'string' ? row.collectionName : null,
@@ -180,13 +191,21 @@ export async function searchSongCatalog(
             ? row.artworkUrl100.replace('100x100bb', '600x600bb')
             : null,
         catalogId: `apple:${row.trackId}`,
+        canonicalSongId: null,
+        composer: typeof row.composerName === 'string' ? row.composerName : null,
         durationMilliseconds: typeof row.trackTimeMillis === 'number' ? row.trackTimeMillis : null,
-        genre: typeof row.primaryGenreName === 'string' ? row.primaryGenreName : null,
+        genre,
+        genres: genre ? [genre] : [],
+        isrc: null,
+        metadataSource: 'apple-itunes-search',
+        metadataUpdatedAt,
+        platformIds: { appleMusic: String(row.trackId) },
+        platformLinks: trackUrl && /^https:\/\//i.test(trackUrl) ? { appleMusic: trackUrl } : {},
         previewUrl: typeof row.previewUrl === 'string' ? row.previewUrl : null,
         releaseYear:
           typeof row.releaseDate === 'string' ? new Date(row.releaseDate).getUTCFullYear() : null,
         title: row.trackName,
-        trackUrl: typeof row.trackViewUrl === 'string' ? row.trackViewUrl : null,
+        trackUrl,
       },
     ];
   });

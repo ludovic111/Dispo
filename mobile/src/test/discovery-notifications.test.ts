@@ -14,7 +14,7 @@ import {
   searchTokens,
 } from '@/features/discovery/discovery-model';
 import type { GigSummary } from '@/features/gigs/gig-model';
-import { messageTabBadgeCount } from '@/features/navigation/tab-badge-model';
+import { messageTabBadgeCount, tabBadgeValue } from '@/features/navigation/tab-badge-model';
 import {
   localizedNotificationText,
   notificationData,
@@ -167,6 +167,9 @@ describe('centre de notifications', () => {
   it('additionne les invitations en attente au badge Messages', () => {
     expect(messageTabBadgeCount(2, 3, 1)).toBe(6);
     expect(messageTabBadgeCount(0, 0, -1)).toBe(0);
+    expect(tabBadgeValue(0)).toBeUndefined();
+    expect(tabBadgeValue(7)).toBe('7');
+    expect(tabBadgeValue(127)).toBe('99+');
   });
 
   it('normalise les catégories et rejette les données structurées inutiles', () => {

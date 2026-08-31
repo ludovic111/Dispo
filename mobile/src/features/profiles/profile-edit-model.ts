@@ -1,7 +1,6 @@
 import type { Json } from '@/services/supabase/database.types';
 
 export interface EditableProfile {
-  availableDates: string[];
   bio: string;
   city: string;
   country: string;
@@ -73,7 +72,6 @@ export function normalizeEditableProfile(profile: EditableProfile) {
     }),
   );
   return {
-    available_dates: [...new Set(profile.availableDates)].sort(),
     bio: profile.bio.trim(),
     city,
     country: profile.country.trim().toUpperCase(),

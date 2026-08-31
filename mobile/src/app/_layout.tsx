@@ -1,8 +1,8 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AppProviders } from '@/providers/app-providers';
@@ -13,8 +13,23 @@ void SplashScreen.preventAutoHideAsync();
 function Navigation() {
   const { dark, palette } = useDispoTheme();
   const { t } = useTranslation();
+  const navigationTheme = useMemo(() => {
+    const systemTheme = dark ? DarkTheme : DefaultTheme;
+    return {
+      ...systemTheme,
+      colors: {
+        ...systemTheme.colors,
+        background: palette.background,
+        border: palette.border,
+        card: palette.card,
+        notification: palette.signal,
+        primary: palette.electric,
+        text: palette.text,
+      },
+    };
+  }, [dark, palette]);
   return (
-    <>
+    <ThemeProvider value={navigationTheme}>
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: palette.background },
@@ -44,7 +59,7 @@ function Navigation() {
         />
       </Stack>
       <StatusBar style={dark ? 'light' : 'dark'} />
-    </>
+    </ThemeProvider>
   );
 }
 
