@@ -8,6 +8,7 @@ import {
   optimisticMessageReactions,
   patchDirectMessageCache,
   receiptForMessage,
+  relativeMessageDate,
   sortConversationActivityCache,
   type DirectMessage,
 } from './message-model';
@@ -34,6 +35,13 @@ function message(
 }
 
 describe('présentation des messages directs', () => {
+  it('formate les dates relatives sans dépendre de RelativeTimeFormat', () => {
+    const now = new Date('2026-08-31T11:00:00.000Z');
+    expect(relativeMessageDate('2026-08-31T10:00:00.000Z', now, 'en')).toBe('1 hr ago');
+    expect(relativeMessageDate('2026-08-31T10:00:00.000Z', now, 'fr')).toBe('il y a 1 h');
+    expect(relativeMessageDate('date-invalide', now, 'fr')).toBe('');
+  });
+
   it('place un séparateur au-dessus de chaque jour dans une liste inversée', () => {
     const timeline = buildMessageTimeline([
       message('newest', '2026-08-31T18:00:00+02:00'),

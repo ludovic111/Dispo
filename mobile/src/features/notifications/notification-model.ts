@@ -2,6 +2,7 @@ import type { InfiniteData } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 
 import { formatSwiftPlaceholders } from '@/i18n/format';
+import { formatRelativeTime, type RelativeTimeUnit } from '@/i18n/relative-time';
 import type { Json } from '@/services/supabase/database.types';
 
 export type NotificationCategory = 'groups' | 'messages' | 'sos' | 'unknown';
@@ -153,16 +154,15 @@ export function relativeNotificationDate(value: string, locale: string, now = ne
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  const units: { divisor: number; unit: Intl.RelativeTimeFormatUnit }[] = [
+  const units: { divisor: number; unit: RelativeTimeUnit }[] = [
     { divisor: 86_400, unit: 'day' },
     { divisor: 3_600, unit: 'hour' },
     { divisor: 60, unit: 'minute' },
   ];
   for (const item of units) {
     if (Math.abs(seconds) >= item.divisor || item.unit === 'minute') {
-      return formatter.format(Math.round(seconds / item.divisor), item.unit);
+      return formatRelativeTime(seconds / item.divisor, item.unit, locale);
     }
   }
-  return formatter.format(0, 'minute');
+  return formatRelativeTime(0, 'minute', locale);
 }

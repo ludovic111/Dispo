@@ -25,6 +25,7 @@ import { HeaderAction } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
+import { formatRelativeTime } from '@/i18n/relative-time';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -32,11 +33,10 @@ function relativeDate(value: string, locale: string): string {
   const date = new Date(value);
   const delta = date.getTime() - Date.now();
   const minutes = Math.round(delta / 60_000);
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  if (Math.abs(minutes) < 60) return formatter.format(minutes, 'minute');
+  if (Math.abs(minutes) < 60) return formatRelativeTime(minutes, 'minute', locale);
   const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return formatter.format(hours, 'hour');
-  return formatter.format(Math.round(hours / 24), 'day');
+  if (Math.abs(hours) < 24) return formatRelativeTime(hours, 'hour', locale);
+  return formatRelativeTime(hours / 24, 'day', locale);
 }
 
 export function InvitationCard({ invitation }: { invitation: PendingGroupInvitation }) {

@@ -2,6 +2,7 @@ import type { InfiniteData } from '@tanstack/react-query';
 
 import type { ChatMessage } from '@/domain/message';
 import type { Page } from '@/domain/pagination';
+import { formatRelativeTime } from '@/i18n/relative-time';
 
 export const MESSAGE_MAX_LENGTH = 4000;
 export const MESSAGE_ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024;
@@ -208,16 +209,18 @@ export function messageAttachmentLabel(
 }
 
 export function relativeMessageDate(value: string, now = new Date(), locale = 'fr'): string {
-  const differenceSeconds = (new Date(value).getTime() - now.getTime()) / 1000;
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const differenceSeconds = (date.getTime() - now.getTime()) / 1000;
   if (Math.abs(differenceSeconds) < 60)
-    return formatter.format(Math.round(differenceSeconds), 'second');
+    return formatRelativeTime(differenceSeconds, 'second', locale, 'short');
   const differenceMinutes = differenceSeconds / 60;
   if (Math.abs(differenceMinutes) < 60)
-    return formatter.format(Math.round(differenceMinutes), 'minute');
+    return formatRelativeTime(differenceMinutes, 'minute', locale, 'short');
   const differenceHours = differenceMinutes / 60;
-  if (Math.abs(differenceHours) < 24) return formatter.format(Math.round(differenceHours), 'hour');
-  return formatter.format(Math.round(differenceHours / 24), 'day');
+  if (Math.abs(differenceHours) < 24)
+    return formatRelativeTime(differenceHours, 'hour', locale, 'short');
+  return formatRelativeTime(differenceHours / 24, 'day', locale, 'short');
 }
 
 export function formatAttachmentBytes(byteCount: number, locale = 'fr'): string {

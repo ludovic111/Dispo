@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 
 import {
   notificationData,
@@ -45,7 +46,9 @@ export function NativeNotificationBridge() {
   const handled = useRef(new Set<string>());
 
   useEffect(() => {
-    if (unreadQuery.data === undefined) return;
+    // Pixel Launcher owns Android notification dots and rejects numeric badge
+    // broadcasts. Explicit badge counts are supported only on iOS here.
+    if (Platform.OS !== 'ios' || unreadQuery.data === undefined) return;
     void Notifications.setBadgeCountAsync(unreadQuery.data).catch(() => undefined);
   }, [unreadQuery.data]);
 

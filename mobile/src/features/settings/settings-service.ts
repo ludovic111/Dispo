@@ -18,7 +18,7 @@ export type SettingsProfile = Pick<
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: Platform.OS === 'ios',
     shouldShowBanner: true,
     shouldShowList: true,
   }),
@@ -214,7 +214,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 export async function disableLocalNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  await Notifications.setBadgeCountAsync(0);
+  if (Platform.OS === 'ios') await Notifications.setBadgeCountAsync(0);
 }
 
 export async function registerPushDevice(
