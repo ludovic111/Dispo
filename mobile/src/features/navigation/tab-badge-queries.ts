@@ -21,6 +21,7 @@ import {
 import { useProfile } from '@/features/profiles/profile-queries';
 import { useSessions } from '@/features/sessions/session-queries';
 import { getSupabaseClient } from '@/services/supabase/client';
+import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 const tabBadgeKeys = {
   directMessages: (userId: string) => ['tab-badges', 'direct-messages', userId] as const,
@@ -102,7 +103,7 @@ export function useTabBadgeCounts(): TabBadgeCounts {
     if (!userId) return;
     const supabase = getSupabaseClient();
     const channel = supabase
-      .channel(`tab-badges:${userId}`)
+      .channel(uniqueRealtimeTopic(`tab-badges:${userId}`))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },

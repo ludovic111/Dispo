@@ -15,6 +15,7 @@ import { markNotificationRead } from './notification-repository';
 import { useAuth } from '@/features/auth/auth-context';
 import { getSupabaseClient } from '@/services/supabase/client';
 import type { Json } from '@/services/supabase/database.types';
+import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 function responseDestination(response: Notifications.NotificationResponse): string {
   const raw = response.notification.request.content.data as Json;
@@ -53,7 +54,7 @@ export function NativeNotificationBridge() {
     if (!userId) return;
     const supabase = getSupabaseClient();
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(uniqueRealtimeTopic(`notifications:${userId}`))
       .on(
         'postgres_changes',
         {

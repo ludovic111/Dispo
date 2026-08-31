@@ -20,6 +20,8 @@ import {
 import { pageRange, type Page } from '@/domain/pagination';
 import { getSupabaseClient } from '@/services/supabase/client';
 import type { Database } from '@/services/supabase/database.types';
+import { subscribeToRealtimeBroadcast } from '@/services/supabase/realtime-broadcast';
+import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 type ConversationRow = Database['public']['Tables']['conversations']['Row'];
 type MessageRow = Database['public']['Tables']['messages']['Row'];
@@ -476,7 +478,7 @@ export function subscribeToConversation(
       RealtimePostgresInsertPayload<ReactionRow> | RealtimePostgresUpdatePayload<ReactionRow>,
   ) => onReaction(payload.new.message_id);
   const channel = supabase
-    .channel(`messages:${conversationId}`)
+    .channel(uniqueRealtimeTopic(`messages:${conversationId}`))
     .on(
       'postgres_changes',
       {
@@ -520,7 +522,7 @@ export function subscribeToInbox(userId: string, onMessage: (message: DirectMess
     payload: RealtimePostgresInsertPayload<MessageRow> | RealtimePostgresUpdatePayload<MessageRow>,
   ) => onMessage(mapMessage(payload.new));
   const channel = supabase
-    .channel(`messages-inbox:${userId}`)
+    .channel(uniqueRealtimeTopic(`messages-inbox:${userId}`))
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, handleMessage)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, handleMessage)
     .subscribe();
@@ -539,11 +541,10 @@ export function subscribeToTyping(
   userId: string,
   onContactTyping: () => void,
 ): TypingChannelController {
-  const supabase = getSupabaseClient();
-  let subscribed = false;
-  const channel = supabase
-    .channel(`typing-${conversationId}`)
-    .on('broadcast', { event: 'typing' }, ({ payload }) => {
+  const controller = subscribeToRealtimeBroadcast(
+    `typing-${conversationId}`,
+    'typing',
+    (payload) => {
       if (
         payload &&
         typeof payload === 'object' &&
@@ -551,21 +552,10 @@ export function subscribeToTyping(
         payload.user_id !== userId
       )
         onContactTyping();
-    })
-    .subscribe((status) => {
-      subscribed = status === 'SUBSCRIBED';
-    });
+    },
+  );
   return {
-    send: () => {
-      if (!subscribed) return;
-      void channel.send({
-        event: 'typing',
-        payload: { user_id: userId },
-        type: 'broadcast',
-      });
-    },
-    unsubscribe: () => {
-      void supabase.removeChannel(channel);
-    },
+    send: () => controller.send({ user_id: userId }),
+    unsubscribe: controller.unsubscribe,
   };
 }

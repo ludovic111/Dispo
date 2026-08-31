@@ -5,7 +5,7 @@ import {
   enqueueGroupEventReminderReconciliation,
   pruneGroupEventRemindersForAccount,
 } from './group-event-reminders';
-import { useGroups } from './group-queries';
+import { useGroupRealtimeSync, useGroups } from './group-queries';
 
 import { useAuth } from '@/features/auth/auth-context';
 import { subscribeToNotificationSettings } from '@/features/settings/settings-storage';
@@ -17,6 +17,8 @@ export function GroupEventReminderBridge() {
   const previousUserId = useRef<string | null | undefined>(undefined);
   const [settingsRevision, bumpSettingsRevision] = useReducer((value) => value + 1, 0);
   const [foregroundRevision, bumpForegroundRevision] = useReducer((value) => value + 1, 0);
+
+  useGroupRealtimeSync(groups.data);
 
   useEffect(() => subscribeToNotificationSettings(bumpSettingsRevision), []);
 

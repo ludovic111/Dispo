@@ -56,6 +56,7 @@ import {
   setGroupMessageReaction,
   subscribeToGroupMessages,
   subscribeToGroupMessageSummaries,
+  subscribeToGroupTyping,
   subscribeToGroups,
   transferGroupLeadership,
   updateGroupMember,
@@ -251,13 +252,19 @@ export function useReorderGroupEventSetlist() {
 export function useGroups() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const queryClient = useQueryClient();
-  const query = useQuery({
+  return useQuery({
     enabled: Boolean(userId),
     queryFn: ({ signal }) => fetchGroups(userId, signal),
     queryKey: groupKeys.list(userId),
   });
-  const groupIdSignature = (query.data ?? [])
+}
+
+/** Owns the account-wide group streams once, independently from query consumers. */
+export function useGroupRealtimeSync(groups: readonly MusicGroup[] | undefined) {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
+  const groupIdSignature = (groups ?? [])
     .map((group) => group.id)
     .sort()
     .join(',');
@@ -281,7 +288,6 @@ export function useGroups() {
       });
     });
   }, [groupIdSignature, queryClient, userId]);
-  return query;
 }
 
 export function useGroupUnreadState(groups: readonly MusicGroup[]) {
@@ -349,7 +355,7 @@ export function useGroupMessages(groupId: string, active = true) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const queryClient = useQueryClient();
-  const channel = useRef<ReturnType<typeof subscribeToGroupMessages> | null>(null);
+  const typingChannel = useRef<ReturnType<typeof subscribeToGroupTyping> | null>(null);
   const typingExpiries = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const lastTypingPingAt = useRef(0);
   const [typingMembers, setTypingMembers] = useState<Set<string>>(new Set());
@@ -391,7 +397,7 @@ export function useGroupMessages(groupId: string, active = true) {
       }));
       void markGroupSeen(userId, groupId, new Date(at)).catch(() => undefined);
     };
-    channel.current = subscribeToGroupMessages(
+    const messagesChannel = subscribeToGroupMessages(
       groupId,
       userId,
       messageIdSignature ? messageIdSignature.split(',') : [],
@@ -446,29 +452,36 @@ export function useGroupMessages(groupId: string, active = true) {
           })
           .catch(() => undefined);
       },
-      (profileId) => {
-        setTypingMembers((current) => new Set(current).add(profileId));
-        const previous = typingExpiries.current.get(profileId);
-        if (previous) clearTimeout(previous);
-        typingExpiries.current.set(
-          profileId,
-          setTimeout(() => {
-            typingExpiries.current.delete(profileId);
-            setTypingMembers((current) => {
-              const next = new Set(current);
-              next.delete(profileId);
-              return next;
-            });
-          }, 4000),
-        );
-      },
     );
     return () => {
       cancelled = true;
-      channel.current?.unsubscribe();
-      channel.current = null;
+      messagesChannel.unsubscribe();
     };
   }, [active, groupId, messageIdSignature, queryClient, queryKey, userId]);
+
+  useEffect(() => {
+    if (!userId || !groupId || !active) return;
+    typingChannel.current = subscribeToGroupTyping(groupId, userId, (profileId) => {
+      setTypingMembers((current) => new Set(current).add(profileId));
+      const previous = typingExpiries.current.get(profileId);
+      if (previous) clearTimeout(previous);
+      typingExpiries.current.set(
+        profileId,
+        setTimeout(() => {
+          typingExpiries.current.delete(profileId);
+          setTypingMembers((current) => {
+            const next = new Set(current);
+            next.delete(profileId);
+            return next;
+          });
+        }, 4000),
+      );
+    });
+    return () => {
+      typingChannel.current?.unsubscribe();
+      typingChannel.current = null;
+    };
+  }, [active, groupId, userId]);
 
   useEffect(
     () => () => {
@@ -482,7 +495,7 @@ export function useGroupMessages(groupId: string, active = true) {
     const now = Date.now();
     if (now - lastTypingPingAt.current <= 2000) return;
     lastTypingPingAt.current = now;
-    channel.current?.sendTyping();
+    typingChannel.current?.sendTyping();
   }, []);
 
   return { ...query, pingTyping, someoneIsTyping: typingMembers.size > 0 };

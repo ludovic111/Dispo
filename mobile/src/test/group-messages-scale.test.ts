@@ -10,6 +10,7 @@ import {
   fetchGroupMessagesPage,
   subscribeToGroupMessages,
   subscribeToGroupMessageSummaries,
+  subscribeToGroupTyping,
   subscribeToGroups,
 } from '@/features/groups/group-repository';
 import { getSupabaseClient } from '@/services/supabase/client';
@@ -149,14 +150,13 @@ describe('repository paginé des messages de groupe', () => {
       return channel;
     });
     const removeChannel = jest.fn(async () => 'ok');
-    const createChannel = jest.fn(() => channel);
+    const createChannel = jest.fn<(topic: string) => typeof channel>(() => channel);
     mockedClient.mockReturnValue({ channel: createChannel, removeChannel } as never);
 
     const controller = subscribeToGroupMessages(
       'group-1',
       'profile-me',
       ['message-2', 'message-1', 'message-1'],
-      jest.fn(),
       jest.fn(),
       jest.fn(),
     );
@@ -180,15 +180,18 @@ describe('repository paginé des messages de groupe', () => {
         (config) => config.table !== 'group_message_reactions' || Boolean(config.filter),
       ),
     ).toBe(true);
-    expect(createChannel).toHaveBeenCalledWith('group-messages:group-1');
-    controller.sendTyping();
+    expect(createChannel.mock.calls[0]?.[0]).toMatch(/^group-messages-db:group-1:client-/);
+    const typing = subscribeToGroupTyping('group-1', 'profile-me', jest.fn());
+    expect(createChannel).toHaveBeenLastCalledWith('group-messages:group-1');
+    typing.sendTyping();
     expect(channel.send).toHaveBeenCalledWith({
       event: 'typing',
       payload: { user_id: 'profile-me' },
       type: 'broadcast',
     });
+    typing.unsubscribe();
     controller.unsubscribe();
-    expect(removeChannel).toHaveBeenCalledWith(channel);
+    expect(removeChannel).toHaveBeenCalledTimes(1);
   });
 
   it('filtre aussi les résumés par groupe et retire les messages du flux global', () => {
@@ -232,6 +235,49 @@ describe('repository paginé des messages de groupe', () => {
     expect(globalTables).not.toContain('group_message_reactions');
     stopGroups();
     expect(removeChannel).toHaveBeenCalledTimes(2);
+  });
+
+  it('isole les topics Postgres quand deux consommateurs se montent ensemble', () => {
+    const makeChannel = () => {
+      const channel = {
+        on: jest.fn<(type: string) => unknown>(),
+        subscribe: jest.fn<() => unknown>(),
+        subscribed: false,
+      };
+      channel.on.mockImplementation((type) => {
+        if (type === 'postgres_changes' && channel.subscribed)
+          throw new Error(`cannot add ${type} callbacks after subscribe().`);
+        return channel;
+      });
+      channel.subscribe.mockImplementation(() => {
+        channel.subscribed = true;
+        return channel;
+      });
+      return channel;
+    };
+    const channels = new Map<string, ReturnType<typeof makeChannel>>();
+    const createChannel = jest.fn<(topic: string) => ReturnType<typeof makeChannel>>((topic) => {
+      const existing = channels.get(topic);
+      if (existing) return existing;
+      const channel = makeChannel();
+      channels.set(topic, channel);
+      return channel;
+    });
+    mockedClient.mockReturnValue({
+      channel: createChannel,
+      removeChannel: jest.fn(async () => 'ok'),
+    } as never);
+
+    const stopFirst = subscribeToGroups('profile-me', jest.fn());
+    const stopSecond = subscribeToGroups('profile-me', jest.fn());
+    const [firstTopic, secondTopic] = createChannel.mock.calls.map(([topic]) => topic);
+
+    expect(firstTopic).toMatch(/^groups:profile-me:client-/);
+    expect(secondTopic).toMatch(/^groups:profile-me:client-/);
+    expect(firstTopic).not.toBe(secondTopic);
+
+    stopFirst();
+    stopSecond();
   });
 });
 

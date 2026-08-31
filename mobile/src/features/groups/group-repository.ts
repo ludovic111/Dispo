@@ -43,6 +43,8 @@ import {
 import i18n from '@/i18n';
 import { getSupabaseClient } from '@/services/supabase/client';
 import type { Database, Json } from '@/services/supabase/database.types';
+import { subscribeToRealtimeBroadcast } from '@/services/supabase/realtime-broadcast';
+import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 type GroupRow = Database['public']['Tables']['music_groups']['Row'];
 type MemberRow = Database['public']['Tables']['group_members']['Row'];
@@ -1252,7 +1254,7 @@ export function subscribeToGroups(userId: string, onChange: () => void): () => v
     'group_docs',
     'song_comments',
   ] as const;
-  let channel = supabase.channel(`groups:${userId}`);
+  let channel = supabase.channel(uniqueRealtimeTopic(`groups:${userId}`));
   for (const table of tables) {
     channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, onChange);
   }
@@ -1265,6 +1267,10 @@ export function subscribeToGroups(userId: string, onChange: () => void): () => v
 export type GroupMessageRealtimeEvent = 'insert' | 'update';
 
 export interface GroupMessageChannelController {
+  unsubscribe: () => void;
+}
+
+export interface GroupTypingChannelController {
   sendTyping: () => void;
   unsubscribe: () => void;
 }
@@ -1293,7 +1299,7 @@ export function subscribeToGroupMessageSummaries(
   const ids = [...new Set(groupIds.filter(Boolean))].sort();
   if (!userId || ids.length === 0) return () => undefined;
   const supabase = getSupabaseClient();
-  let channel = supabase.channel(`group-message-summaries:${userId}`);
+  let channel = supabase.channel(uniqueRealtimeTopic(`group-message-summaries:${userId}`));
   const handleInsert = (payload: RealtimePostgresInsertPayload<MessageRow>) =>
     onMessage(payload.new, 'insert');
   const handleUpdate = (payload: RealtimePostgresUpdatePayload<MessageRow>) =>
@@ -1320,8 +1326,7 @@ export function subscribeToGroupMessageSummaries(
 
 /**
  * One active group thread: messages are filtered by `group_id`; reactions are
- * filtered by the IDs actually loaded in the paginated cache. Typing stays an
- * ephemeral broadcast and therefore needs no database migration.
+ * filtered by the IDs actually loaded in the paginated cache.
  */
 export function subscribeToGroupMessages(
   groupId: string,
@@ -1329,11 +1334,9 @@ export function subscribeToGroupMessages(
   loadedMessageIds: readonly string[],
   onMessage: (row: MessageRow, event: GroupMessageRealtimeEvent) => void,
   onReaction: (messageId: string) => void,
-  onMemberTyping: (profileId: string) => void,
 ): GroupMessageChannelController {
-  if (!groupId || !userId) return { sendTyping: () => undefined, unsubscribe: () => undefined };
+  if (!groupId || !userId) return { unsubscribe: () => undefined };
   const supabase = getSupabaseClient();
-  let subscribed = false;
   const messageFilter = equalityFilter('group_id', [groupId]);
   const handleInsert = (payload: RealtimePostgresInsertPayload<MessageRow>) =>
     onMessage(payload.new, 'insert');
@@ -1344,8 +1347,7 @@ export function subscribeToGroupMessages(
       RealtimePostgresInsertPayload<ReactionRow> | RealtimePostgresUpdatePayload<ReactionRow>,
   ) => onReaction(payload.new.message_id);
   let channel = supabase
-    // Every member must share the topic for ephemeral typing broadcasts.
-    .channel(`group-messages:${groupId}`)
+    .channel(uniqueRealtimeTopic(`group-messages-db:${groupId}`))
     .on(
       'postgres_changes',
       {
@@ -1365,17 +1367,7 @@ export function subscribeToGroupMessages(
         table: 'group_messages',
       },
       handleUpdate,
-    )
-    .on('broadcast', { event: 'typing' }, ({ payload }) => {
-      if (
-        payload &&
-        typeof payload === 'object' &&
-        'user_id' in payload &&
-        typeof payload.user_id === 'string' &&
-        payload.user_id !== userId
-      )
-        onMemberTyping(payload.user_id);
-    });
+    );
   const messageIds = [...new Set(loadedMessageIds.filter(Boolean))].sort();
   for (const batch of chunks(messageIds, 100)) {
     const filter = equalityFilter('message_id', batch);
@@ -1401,20 +1393,37 @@ export function subscribeToGroupMessages(
         handleReaction,
       );
   }
-  channel.subscribe((status) => {
-    subscribed = status === 'SUBSCRIBED';
-  });
+  channel.subscribe();
   return {
-    sendTyping: () => {
-      if (!subscribed) return;
-      void channel.send({
-        event: 'typing',
-        payload: { user_id: userId },
-        type: 'broadcast',
-      });
-    },
     unsubscribe: () => {
       void supabase.removeChannel(channel);
     },
+  };
+}
+
+/** Typing stays on the shared cross-platform topic used by every group member. */
+export function subscribeToGroupTyping(
+  groupId: string,
+  userId: string,
+  onMemberTyping: (profileId: string) => void,
+): GroupTypingChannelController {
+  if (!groupId || !userId) return { sendTyping: () => undefined, unsubscribe: () => undefined };
+  const controller = subscribeToRealtimeBroadcast(
+    `group-messages:${groupId}`,
+    'typing',
+    (payload) => {
+      if (
+        payload &&
+        typeof payload === 'object' &&
+        'user_id' in payload &&
+        typeof payload.user_id === 'string' &&
+        payload.user_id !== userId
+      )
+        onMemberTyping(payload.user_id);
+    },
+  );
+  return {
+    sendTyping: () => controller.send({ user_id: userId }),
+    unsubscribe: controller.unsubscribe,
   };
 }
