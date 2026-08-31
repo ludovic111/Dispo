@@ -12,6 +12,9 @@
       "buildNumber": "36",
       "supportsTablet": false,
       "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Dispo utilise ta position approximative pour trouver des musiciens et des SOS près de toi.",
         "NSPhotoLibraryUsageDescription": "Dispo accède aux photos et vidéos que tu choisis pour ton profil et tes messages."
