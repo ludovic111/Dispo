@@ -82,6 +82,8 @@ export function notificationDestination(notification: AppNotification): string {
   if (gigId) return `/gigs/${gigId}`;
   const conversationId = notification.data.conversation_id;
   if (conversationId) return `/messages/${conversationId}`;
+  const schoolId = notification.data.school_id;
+  if (schoolId) return `/schools/${schoolId}/community`;
   const groupId = notification.data.group_id;
   const isGroupInvitation =
     notification.data.source_table === 'group_invitations' ||

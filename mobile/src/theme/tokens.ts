@@ -1,4 +1,7 @@
-import type { ColorSchemeName, ViewStyle } from 'react-native';
+import { Platform, type ColorSchemeName, type ViewStyle } from 'react-native';
+
+/** Taille tactile native minimale : 44 pt sur iOS, 48 dp sur Android. */
+export const minimumTouchTarget = Platform.OS === 'android' ? 48 : 44;
 
 export const spacing = {
   hairline: 2,

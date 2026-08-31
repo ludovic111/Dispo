@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { disconnectWithBestEffortPushCleanup } from './account-session';
-import { SettingsShell, SheetHeader } from './settings-components';
+import { SettingsShell } from './settings-components';
 import { deleteCurrentAccount, unregisterPushDevice } from './settings-service';
 import { clearPushToken, loadPushToken } from './settings-storage';
 
@@ -78,9 +78,7 @@ export function AccountScreen() {
   };
 
   return (
-    <SettingsShell>
-      <SheetHeader onClose={() => router.back()} title={t('Mon compte')} />
-
+    <SettingsShell nativeHeader>
       <View style={styles.header}>
         <View style={[styles.cloudIcon, { backgroundColor: `${palette.bronze}20` }]}>
           <Ionicons

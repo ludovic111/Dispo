@@ -16,6 +16,8 @@ import {
 } from '@/features/groups/group-queries';
 import { ConversationCard } from '@/features/messages/conversation-card';
 import { useConversations } from '@/features/messages/message-queries';
+import { SchoolCommunityRow } from '@/features/schools/school-community-row';
+import { useSchoolCommunities, useSchoolUnreadState } from '@/features/schools/school-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -76,7 +78,9 @@ export default function MessagesScreen() {
   const conversationsQuery = useConversations(session?.user.id ?? '');
   const groupsQuery = useGroups();
   const invitationsQuery = useGroupInvitations();
+  const schoolsQuery = useSchoolCommunities();
   const groupUnread = useGroupUnreadState(groupsQuery.data ?? []);
+  const schoolUnread = useSchoolUnreadState(schoolsQuery.data ?? []);
   const conversations = conversationsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   const changeSegment = (value: MessageSegment) => {
@@ -172,11 +176,14 @@ export default function MessagesScreen() {
   const refreshGroups = () => {
     void groupsQuery.refetch();
     void invitationsQuery.refetch();
+    void schoolsQuery.refetch();
   };
-  const groupLoading = groupsQuery.isLoading || invitationsQuery.isLoading;
-  const groupError = groupsQuery.error ?? invitationsQuery.error;
+  const groupLoading =
+    groupsQuery.isLoading || invitationsQuery.isLoading || schoolsQuery.isLoading;
+  const groupError = groupsQuery.error ?? invitationsQuery.error ?? schoolsQuery.error;
   const hasGroups = (groupsQuery.data?.length ?? 0) > 0;
   const hasInvitations = (invitationsQuery.data?.length ?? 0) > 0;
+  const hasSchools = (schoolsQuery.data?.length ?? 0) > 0;
 
   return (
     <Screen nativeTabRoot>
@@ -186,7 +193,9 @@ export default function MessagesScreen() {
           <RefreshControl
             colors={[palette.electric]}
             onRefresh={refreshGroups}
-            refreshing={groupsQuery.isRefetching || invitationsQuery.isRefetching}
+            refreshing={
+              groupsQuery.isRefetching || invitationsQuery.isRefetching || schoolsQuery.isRefetching
+            }
             tintColor={palette.electric}
           />
         }
@@ -201,6 +210,36 @@ export default function MessagesScreen() {
         ) : null}
         {!groupLoading && !groupError ? (
           <>
+            {hasSchools ? (
+              <View style={styles.sectionHeading}>
+                <View style={styles.sectionHeadingTitle}>
+                  <Ionicons color={palette.bronze} name="school" size={17} />
+                  <AppText style={styles.sectionHeadingText} variant="subheadline">
+                    {t('Écoles')}
+                  </AppText>
+                </View>
+              </View>
+            ) : null}
+            {schoolsQuery.data?.map((community) => (
+              <SchoolCommunityRow
+                community={community}
+                key={community.affiliation.school.id}
+                onPress={() =>
+                  router.push(`/schools/${community.affiliation.school.id}/community` as never)
+                }
+                unread={schoolUnread.countFor(community.affiliation.school.id)}
+              />
+            ))}
+            {(hasInvitations || hasGroups) && hasSchools ? (
+              <View style={styles.sectionHeading}>
+                <View style={styles.sectionHeadingTitle}>
+                  <Ionicons color={palette.bronze} name="people" size={17} />
+                  <AppText style={styles.sectionHeadingText} variant="subheadline">
+                    {t('Groupes')}
+                  </AppText>
+                </View>
+              </View>
+            ) : null}
             {invitationsQuery.data?.map((invitation) => (
               <InvitationCard invitation={invitation} key={invitation.id} />
             ))}
@@ -212,7 +251,7 @@ export default function MessagesScreen() {
                 userId={session?.user.id ?? ''}
               />
             ))}
-            {!hasGroups && !hasInvitations ? (
+            {!hasSchools && !hasGroups && !hasInvitations ? (
               <EmptyState
                 icon="people-circle-outline"
                 message={t(
@@ -265,5 +304,14 @@ const styles = StyleSheet.create({
     minHeight: 34,
     paddingHorizontal: spacing.xs,
   },
+  sectionHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    paddingTop: spacing.xs,
+  },
+  sectionHeadingText: { fontWeight: '800' },
+  sectionHeadingTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   separator: { height: spacing.sm },
 });

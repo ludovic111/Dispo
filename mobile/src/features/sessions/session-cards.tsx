@@ -15,9 +15,17 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, gradients, radii, spacing, type DispoPalette } from '@/theme/tokens';
+import {
+  billetInk,
+  gradients,
+  minimumTouchTarget,
+  radii,
+  spacing,
+  type DispoPalette,
+} from '@/theme/tokens';
 
 function dateParts(value: string, locale: string) {
   const date = new Date(value);
@@ -545,18 +553,8 @@ export function SessionsSegmentedControl({
 }
 
 export function SessionsSectionHeading({ subtitle, title }: { subtitle?: string; title: string }) {
-  const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  return (
-    <View style={styles.sectionHeading}>
-      <AppText variant="title">{t(title)}</AppText>
-      {subtitle ? (
-        <AppText color={palette.muted} variant="caption">
-          {t(subtitle)}
-        </AppText>
-      ) : null}
-    </View>
-  );
+  return <SectionHeader title={t(title)} {...(subtitle ? { subtitle: t(subtitle) } : {})} />;
 }
 
 const styles = StyleSheet.create({
@@ -602,7 +600,6 @@ const styles = StyleSheet.create({
   rowContent: { flex: 1, gap: 3, paddingVertical: spacing.sm },
   rowTicketWrap: { paddingLeft: spacing.sm, paddingRight: spacing.sm },
   rowTitle: { fontSize: 14, fontWeight: '800' },
-  sectionHeading: { gap: 3 },
   segment: {
     borderRadius: radii.button,
     borderWidth: 1,
@@ -615,6 +612,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 1,
     flex: 1,
+    minHeight: minimumTouchTarget,
     paddingVertical: 8,
   },
   segmentText: { fontSize: 13, fontWeight: '800' },

@@ -1,11 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+  NestableDraggableFlatList,
+  NestableScrollContainer,
+  ScaleDecorator,
+  type RenderItemParams,
+} from 'react-native-draggable-flatlist';
 
-import type { GroupDocument, GroupSong, MusicGroup } from './group-model';
+import { reorderSongs, type GroupDocument, type GroupSong, type MusicGroup } from './group-model';
 import {
   useDeleteGroupDocument,
   useReorderGroupRepertoire,
@@ -23,39 +30,39 @@ import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
 function SongCard({
+  drag,
   group,
   index,
+  isActive,
   isLeader,
+  onMove,
+  reorderPending,
   song,
   total,
 }: {
+  drag?: () => void;
   group: MusicGroup;
   index: number;
+  isActive: boolean;
   isLeader: boolean;
+  onMove: (index: number, offset: -1 | 1) => void;
+  reorderPending: boolean;
   song: GroupSong;
   total: number;
 }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  const reorder = useReorderGroupRepertoire();
-  const approved = group.repertoire.filter((item) => item.isApproved);
-  const move = (offset: -1 | 1) => {
-    const next = [...approved];
-    const target = index + offset;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target]!, next[index]!];
-    reorder.mutate({ groupId: group.id, songIds: next.map((item) => item.id) });
-  };
   const chooseMove = () => {
     const actions: Parameters<typeof Alert.alert>[2] = [];
-    if (index > 0) actions.push({ onPress: () => move(-1), text: t('Monter') });
-    if (index < total - 1) actions.push({ onPress: () => move(1), text: t('Descendre') });
+    if (index > 0) actions.push({ onPress: () => onMove(index, -1), text: t('Monter') });
+    if (index < total - 1) actions.push({ onPress: () => onMove(index, 1), text: t('Descendre') });
     actions.push({ style: 'cancel', text: t('Annuler') });
     Alert.alert(t('Déplacer le morceau'), song.title, actions);
   };
   return (
     <GroupSongRow
       accessibilityHint={t('Un appui long permet de copier le morceau')}
+      {...(isActive ? { cardStyle: { borderColor: palette.bronze } } : {})}
       onLongPress={() => router.push(`/groups/${group.id}/songs/${song.id}/copy` as never)}
       onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
       song={song}
@@ -64,15 +71,22 @@ function SongCard({
           <Pressable
             accessibilityLabel={t('Déplacer le morceau')}
             accessibilityRole="button"
-            accessibilityState={{ disabled: total < 2 || reorder.isPending }}
-            disabled={total < 2 || reorder.isPending}
+            accessibilityHint={
+              drag
+                ? t("Maintiens la poignée puis glisse pour changer l'ordre.")
+                : t('Déplacer le morceau')
+            }
+            accessibilityState={{ disabled: total < 2 || reorderPending }}
+            delayLongPress={180}
+            disabled={total < 2 || reorderPending}
+            onLongPress={drag}
             onPress={chooseMove}
-            style={styles.songActionButton}
+            style={[styles.songActionButton, isActive && styles.songActionActive]}
           >
             <Ionicons
-              color={reorder.isPending ? palette.border : palette.bronze}
-              name="swap-vertical"
-              size={18}
+              color={reorderPending ? palette.border : palette.bronze}
+              name="reorder-three"
+              size={22}
             />
           </Pressable>
         ) : null
@@ -124,10 +138,22 @@ function PendingSongCard({ group, song }: { group: MusicGroup; song: GroupSong }
   );
 }
 
-function DocumentRow({ document, isLeader }: { document: GroupDocument; isLeader: boolean }) {
+function DocumentRow({ canDelete, document }: { canDelete: boolean; document: GroupDocument }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
+  const [opening, setOpening] = useState(false);
   const remove = useDeleteGroupDocument();
+  const open = async () => {
+    if (opening) return;
+    setOpening(true);
+    try {
+      await openGroupDocument(document);
+    } catch {
+      Alert.alert(t("La partition n'a pas pu être ouverte — vérifie le réseau."));
+    } finally {
+      setOpening(false);
+    }
+  };
   return (
     <Card padding={11}>
       <View style={styles.documentRow}>
@@ -136,7 +162,9 @@ function DocumentRow({ document, isLeader }: { document: GroupDocument; isLeader
         </View>
         <Pressable
           accessibilityRole="button"
-          onPress={() => void openGroupDocument(document)}
+          accessibilityState={{ busy: opening, disabled: opening }}
+          disabled={opening}
+          onPress={() => void open()}
           style={styles.documentOpen}
         >
           <AppText numberOfLines={1} style={styles.documentTitle}>
@@ -147,7 +175,7 @@ function DocumentRow({ document, isLeader }: { document: GroupDocument; isLeader
             {document.addedBy ? ` · ${document.addedBy}` : ''}
           </AppText>
         </Pressable>
-        {isLeader ? (
+        {canDelete ? (
           <Pressable
             accessibilityLabel={t('Supprimer le document')}
             accessibilityRole="button"
@@ -178,40 +206,104 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const upload = useUploadGroupDocument();
+  const reorder = useReorderGroupRepertoire();
   const [search, setSearch] = useState('');
+  const [documentError, setDocumentError] = useState<string | null>(null);
+  const [approvedOrderOverride, setApprovedOrderOverride] = useState<string[] | null>(null);
+  const lastPlaceholderIndex = useRef<number | null>(null);
   const isLeader = group.leaderId === userId;
-  const approvedSongs = group.repertoire.filter((song) => song.isApproved);
+  const serverApprovedIds = group.repertoire
+    .filter((song) => song.isApproved)
+    .map((song) => song.id);
+  const approvedSongs = reorderSongs(
+    group.repertoire,
+    approvedOrderOverride ?? serverApprovedIds,
+  ).filter((song) => song.isApproved);
+  const searchActive = Boolean(search.trim());
+  const dragEnabled = isLeader && !searchActive && approvedSongs.length > 1;
   const approved = useMemo(() => {
     const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
     const needle = search.trim().toLocaleLowerCase(locale);
-    return group.repertoire.filter(
+    return approvedSongs.filter(
       (song) =>
-        song.isApproved &&
-        (!needle || `${song.title} ${song.artist}`.toLocaleLowerCase(locale).includes(needle)),
+        !needle || `${song.title} ${song.artist}`.toLocaleLowerCase(locale).includes(needle),
     );
-  }, [group.repertoire, i18n.language, i18n.resolvedLanguage, search]);
+  }, [approvedSongs, i18n.language, i18n.resolvedLanguage, search]);
   const pending = group.repertoire.filter((song) => !song.isApproved);
   const looseDocuments = group.documents.filter((document) => document.songId === null);
+  const persistApprovedOrder = (songIds: string[]) => {
+    if (reorder.isPending || songIds.join('|') === serverApprovedIds.join('|')) {
+      setApprovedOrderOverride(null);
+      return;
+    }
+    reorder.reset();
+    setApprovedOrderOverride(songIds);
+    reorder.mutate(
+      { groupId: group.id, songIds },
+      {
+        onError: () => setApprovedOrderOverride(null),
+        onSuccess: () => setApprovedOrderOverride(null),
+      },
+    );
+  };
+  const moveApprovedSong = (index: number, offset: -1 | 1) => {
+    const destination = index + offset;
+    if (reorder.isPending || destination < 0 || destination >= approvedSongs.length) return;
+    const ids = approvedSongs.map((song) => song.id);
+    [ids[index], ids[destination]] = [ids[destination]!, ids[index]!];
+    void Haptics.selectionAsync();
+    persistApprovedOrder(ids);
+  };
+  const renderDraggableSong = ({ drag, getIndex, isActive, item }: RenderItemParams<GroupSong>) => (
+    <ScaleDecorator activeScale={1.015}>
+      <SongCard
+        {...(!reorder.isPending ? { drag } : {})}
+        group={group}
+        index={getIndex() ?? approvedSongs.findIndex((song) => song.id === item.id)}
+        isActive={isActive}
+        isLeader={isLeader}
+        onMove={moveApprovedSong}
+        reorderPending={reorder.isPending}
+        song={item}
+        total={approvedSongs.length}
+      />
+    </ScaleDecorator>
+  );
   const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    const asset = result.assets?.[0];
-    if (!asset || !session?.user.id) return;
-    upload.mutate({
-      contentType: asset.mimeType ?? 'application/octet-stream',
-      extension: asset.name.split('.').pop() ?? 'pdf',
-      groupId: group.id,
-      instrument: null,
-      songId: null,
-      title: asset.name.replace(/\.[^.]+$/, ''),
-      uri: asset.uri,
-      userId: session.user.id,
-    });
+    setDocumentError(null);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'],
+      });
+      const asset = result.assets?.[0];
+      if (!asset || !session?.user.id) return;
+      upload.mutate(
+        {
+          contentType: asset.mimeType ?? 'application/octet-stream',
+          extension: asset.name.split('.').pop() ?? 'pdf',
+          groupId: group.id,
+          instrument: null,
+          songId: null,
+          title: asset.name.replace(/\.[^.]+$/, ''),
+          uri: asset.uri,
+          userId: session.user.id,
+        },
+        {
+          onError: () =>
+            setDocumentError(t("La partition n'a pas pu être envoyée — vérifie le réseau.")),
+        },
+      );
+    } catch {
+      setDocumentError(t("Le document n'a pas pu être importé."));
+    }
   };
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <NestableScrollContainer
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <SectionHeader
         subtitle={t('{{count}} morceaux validés', { count: approvedSongs.length })}
         title={t('Répertoire')}
@@ -266,20 +358,58 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           ) : null}
         </View>
       ) : null}
+      {dragEnabled ? (
+        <View style={styles.dragInstruction}>
+          <Ionicons color={palette.muted} name="hand-left-outline" size={15} />
+          <AppText color={palette.muted} style={styles.dragInstructionText} variant="caption2">
+            {t("Maintiens la poignée puis glisse pour changer l'ordre.")}
+          </AppText>
+        </View>
+      ) : null}
       {approved.length ? (
-        approved.map((song) => {
-          const orderIndex = approvedSongs.findIndex((item) => item.id === song.id);
-          return (
-            <SongCard
-              group={group}
-              index={orderIndex}
-              isLeader={isLeader}
-              key={song.id}
-              song={song}
-              total={approvedSongs.length}
-            />
-          );
-        })
+        dragEnabled ? (
+          <NestableDraggableFlatList
+            activationDistance={8}
+            animationConfig={{ damping: 22, mass: 0.25, stiffness: 180 }}
+            autoscrollSpeed={180}
+            autoscrollThreshold={72}
+            data={approvedSongs}
+            ItemSeparatorComponent={() => <View style={styles.songSeparator} />}
+            keyExtractor={(song) => song.id}
+            onDragBegin={(index) => {
+              lastPlaceholderIndex.current = index;
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+            onDragEnd={({ data, from, to }) => {
+              lastPlaceholderIndex.current = null;
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (from !== to) persistApprovedOrder(data.map((song) => song.id));
+            }}
+            onPlaceholderIndexChange={(index) => {
+              if (lastPlaceholderIndex.current === index) return;
+              lastPlaceholderIndex.current = index;
+              void Haptics.selectionAsync();
+            }}
+            renderItem={renderDraggableSong}
+          />
+        ) : (
+          approved.map((song) => {
+            const orderIndex = approvedSongs.findIndex((item) => item.id === song.id);
+            return (
+              <SongCard
+                group={group}
+                index={orderIndex}
+                isActive={false}
+                isLeader={isLeader}
+                key={song.id}
+                onMove={moveApprovedSong}
+                reorderPending={reorder.isPending}
+                song={song}
+                total={approvedSongs.length}
+              />
+            );
+          })
+        )
       ) : (
         <View style={styles.empty}>
           <Ionicons color={palette.bronze} name="musical-notes-outline" size={34} />
@@ -289,6 +419,11 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           </AppText>
         </View>
       )}
+      {reorder.isError ? (
+        <AppText color={palette.signal} style={styles.emptyText} variant="caption">
+          {t('L’ordre n’a pas pu être enregistré.')}
+        </AppText>
+      ) : null}
       <View style={styles.sectionHeading}>
         <SectionHeader subtitle={t('PDF, grilles et partitions libres')} title={t('Documents')} />
         <Pressable
@@ -301,14 +436,23 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
         </Pressable>
       </View>
       {looseDocuments.map((document) => (
-        <DocumentRow document={document} isLeader={isLeader} key={document.id} />
+        <DocumentRow
+          canDelete={isLeader || document.addedById === userId}
+          document={document}
+          key={document.id}
+        />
       ))}
+      {documentError ? (
+        <AppText color={palette.error} style={styles.emptyText} variant="caption">
+          {documentError}
+        </AppText>
+      ) : null}
       {!looseDocuments.length ? (
         <AppText color={palette.muted} style={styles.emptyText} variant="caption">
           {t('Aucun document libre pour l’instant.')}
         </AppText>
       ) : null}
-    </ScrollView>
+    </NestableScrollContainer>
   );
 }
 
@@ -337,6 +481,8 @@ const styles = StyleSheet.create({
   documentOpen: { flex: 1, gap: 2, justifyContent: 'center', minHeight: 44 },
   documentRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.control },
   documentTitle: { fontWeight: '700' },
+  dragInstruction: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  dragInstructionText: { flex: 1, fontWeight: '600' },
   empty: { alignItems: 'center', gap: spacing.xs, padding: spacing.xl },
   emptyText: { textAlign: 'center' },
   iconButton: {
@@ -366,5 +512,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     minWidth: 44,
   },
+  songActionActive: { opacity: 0.72 },
+  songSeparator: { height: spacing.xs },
   stack: { gap: spacing.xs },
 });

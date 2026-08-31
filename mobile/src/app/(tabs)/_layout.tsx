@@ -1,7 +1,6 @@
 import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
-import { Platform } from 'react-native';
 
 import { LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
@@ -27,7 +26,7 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs minimizeBehavior="automatic" tintColor={palette.electric}>
-      <NativeTabs.Trigger disableAutomaticContentInsets={Platform.OS === 'ios'} name="index">
+      <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon
           md={{ default: 'home', selected: 'home_filled' }}
           sf={{ default: 'house', selected: 'house.fill' }}
@@ -35,7 +34,7 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>{t('Accueil')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger disableAutomaticContentInsets={Platform.OS === 'ios'} name="sessions">
+      <NativeTabs.Trigger name="sessions">
         <NativeTabs.Trigger.Icon
           md={{ default: 'calendar_month', selected: 'event_available' }}
           sf={{ default: 'calendar', selected: 'calendar.badge.checkmark' }}
@@ -46,7 +45,7 @@ export default function TabsLayout() {
         )}
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger disableAutomaticContentInsets={Platform.OS === 'ios'} name="sos">
+      <NativeTabs.Trigger name="sos">
         <NativeTabs.Trigger.Icon
           md={{ default: 'bolt', selected: 'electric_bolt' }}
           sf={{ default: 'bolt', selected: 'bolt.fill' }}
@@ -57,7 +56,7 @@ export default function TabsLayout() {
         )}
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger disableAutomaticContentInsets={Platform.OS === 'ios'} name="messages">
+      <NativeTabs.Trigger name="messages">
         <NativeTabs.Trigger.Icon
           md={{ default: 'chat', selected: 'forum' }}
           sf={{
@@ -71,7 +70,7 @@ export default function TabsLayout() {
         )}
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger disableAutomaticContentInsets={Platform.OS === 'ios'} name="profile">
+      <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Icon
           md={{ default: 'person', selected: 'account_circle' }}
           sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }}

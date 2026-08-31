@@ -44,6 +44,24 @@ export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void
                 {t(gig.genre)}
               </AppText>
               {gig.isFresh ? <Tag color="#B33D17" label={t('Nouveau')} /> : null}
+              {(gig.pendingApplicantCount ?? 0) > 0 ? (
+                <Tag
+                  color="#B33D17"
+                  label={t('{{count}} à traiter', { count: gig.pendingApplicantCount })}
+                />
+              ) : null}
+              {gig.targetId ? (
+                <Tag
+                  color="#475569"
+                  label={
+                    gig.targetStatus === 'accepted'
+                      ? t('Demande acceptée')
+                      : gig.targetStatus === 'declined'
+                        ? t('Demande refusée')
+                        : t('Réponse en attente')
+                  }
+                />
+              ) : null}
             </View>
             <AppText color={billetInk} numberOfLines={2} variant="title">
               {gig.title}

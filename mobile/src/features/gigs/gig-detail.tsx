@@ -11,6 +11,7 @@ import {
   GIG_PAYMENT_METHODS,
   gigViewerAction,
   openGigInstruments,
+  unslottedGigApplicants,
   type GigApplication,
   type GigDetail,
 } from './gig-model';
@@ -275,6 +276,7 @@ function OrganizerPanel({
   const remove = useDeleteGig();
   const open = openGigInstruments(gig);
   const accepted = gig.applicants.filter((applicant) => applicant.status === 'accepted');
+  const unslotted = unslottedGigApplicants(gig);
   return (
     <Card style={styles.section}>
       <AppText color={palette.bronze} variant="label">
@@ -339,6 +341,14 @@ function OrganizerPanel({
               );
             })
           )}
+          {unslotted.length > 0 ? (
+            <View style={styles.applicantGroup}>
+              <AppText variant="title">{t('Autre')}</AppText>
+              {unslotted.map((applicant) => (
+                <ApplicantRow applicant={applicant} gigId={gig.id} key={applicant.id} />
+              ))}
+            </View>
+          ) : null}
           <DispoButton onPress={onShowMatches} variant="secondary">
             {t('Voir les profils compatibles')}
           </DispoButton>
@@ -455,6 +465,18 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
       <Card style={styles.section}>
         <Tag color={status.color} label={status.label} />
         <AppText color={palette.muted}>{status.message}</AppText>
+        {action === 'application-declined' ? (
+          <DispoButton
+            loading={withdraw.isPending}
+            onPress={() => withdraw.mutate({ gigId: gig.id, musicianId: userId })}
+            variant="secondary"
+          >
+            {t('Retirer ma candidature')}
+          </DispoButton>
+        ) : null}
+        {action === 'application-declined' && withdraw.error ? (
+          <AppText color={palette.error}>{t('La candidature n’a pas pu être retirée.')}</AppText>
+        ) : null}
       </Card>
     );
   }

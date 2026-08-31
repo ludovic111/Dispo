@@ -39,6 +39,9 @@ import { useAuth } from '@/features/auth/auth-context';
 import { signOut } from '@/features/auth/auth-service';
 import { PostalPlaceField } from '@/features/location';
 import { profileKeys } from '@/features/profiles/profile-queries';
+import { disconnectWithBestEffortPushCleanup } from '@/features/settings/account-session';
+import { unregisterPushDevice } from '@/features/settings/settings-service';
+import { clearPushToken, loadPushToken } from '@/features/settings/settings-storage';
 import i18n, { setAppLanguage, type SupportedLocale } from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing, typography } from '@/theme/tokens';
@@ -166,7 +169,12 @@ export function OnboardingScreen() {
           text: t('Changer de compte'),
           style: 'destructive',
           onPress: () => {
-            void signOut().then(() => router.replace('/(auth)/sign-in'));
+            void disconnectWithBestEffortPushCleanup({
+              clearPushToken,
+              loadPushToken,
+              signOut,
+              unregisterPushDevice,
+            }).then(() => router.replace('/(auth)/sign-in'));
           },
         },
       ],

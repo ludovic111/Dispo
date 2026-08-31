@@ -20,13 +20,14 @@ import type { GroupSong } from './group-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { Tag } from '@/components/ui/tag';
 import {
   directStreamingDestinations,
   streamingSearchFallbacks,
   type StreamingPlatformId,
 } from '@/domain/song';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
 
 const platformLabels: Record<StreamingPlatformId, string> = {
   amazonMusic: 'Amazon Music',
@@ -83,9 +84,13 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
     return (
       <View
         accessible={false}
-        style={[styles.logoSurface, { backgroundColor: '#25D1DA', height: size, width: size }]}
+        style={[styles.logoSurface, { backgroundColor: '#172235', height: size, width: size }]}
       >
-        <Ionicons color="#050814" name="musical-notes" size={size * 0.55} />
+        <Ionicons color="#FFFFFF" name="logo-amazon" size={size * 0.58} />
+        <Svg height={size * 0.22} style={styles.amazonSmile} viewBox="0 0 24 6" width={size * 0.68}>
+          <Path d="M2 1.5c5.8 3.7 12.3 3.8 19.6.1" fill="none" stroke="#25D1DA" strokeWidth="2" />
+          <Path d="m18.7.5 3.2 1-1.1 3" fill="none" stroke="#25D1DA" strokeWidth="1.6" />
+        </Svg>
       </View>
     );
   }
@@ -166,124 +171,149 @@ export function SongListenSheet({
   };
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       onRequestClose={close}
-      presentationStyle="pageSheet"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      transparent
       visible={visible}
     >
-      <SafeAreaView style={[styles.sheet, { backgroundColor: palette.background }]}>
-        <View style={[styles.sheetNavigation, { borderBottomColor: palette.border }]}>
-          <View style={styles.navigationSpacer} />
-          <AppText numberOfLines={1} style={styles.sheetTitle} variant="headline">
-            {t('Écouter sur…')}
-          </AppText>
-          <Pressable
-            accessibilityLabel={t('Fermer')}
-            accessibilityRole="button"
-            hitSlop={10}
-            onPress={close}
-            style={[styles.closeButton, { backgroundColor: palette.inset }]}
-          >
-            <Ionicons color={palette.text} name="close" size={18} />
-          </Pressable>
-        </View>
-        <ScrollView contentContainerStyle={styles.sheetContent}>
-          <View style={styles.sheetSong}>
-            <SongArtwork artworkUrl={song.artworkUrl} radius={12} size={54} />
-            <View style={styles.flex}>
-              <AppText numberOfLines={2} style={styles.sheetSongTitle} variant="headline">
-                {song.title}
-              </AppText>
-              <AppText color={palette.muted} numberOfLines={1} variant="subheadline">
-                {song.artist}
-              </AppText>
-            </View>
+      <View style={styles.sheetOverlay}>
+        <Pressable
+          accessibilityLabel={t('Fermer')}
+          accessibilityRole="button"
+          onPress={close}
+          style={styles.sheetBackdrop}
+        />
+        <SafeAreaView
+          edges={['bottom']}
+          style={[
+            styles.sheet,
+            { backgroundColor: palette.background, borderColor: palette.border },
+          ]}
+        >
+          <View style={[styles.sheetHandle, { backgroundColor: palette.border }]} />
+          <View style={[styles.sheetNavigation, { borderBottomColor: palette.border }]}>
+            <View style={styles.navigationSpacer} />
+            <AppText numberOfLines={1} style={styles.sheetTitle} variant="headline">
+              {t('Écouter sur…')}
+            </AppText>
+            <Pressable
+              accessibilityLabel={t('Fermer')}
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={close}
+              style={[styles.closeButton, { backgroundColor: palette.inset }]}
+            >
+              <Ionicons color={palette.text} name="close" size={18} />
+            </Pressable>
           </View>
-          <View style={styles.destinationStack}>
-            {directDestinations.map((destination) => (
-              <Pressable
-                accessibilityLabel={`${t('Ouvrir')} ${platformLabels[destination.platform]}`}
-                accessibilityRole="link"
-                key={`direct-${destination.platform}`}
-                onPress={() => void open(destination.url)}
-                style={({ pressed }) => [
-                  styles.destination,
-                  { backgroundColor: palette.card, borderColor: palette.border },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <StreamingLogo platform={destination.platform} />
-                <AppText numberOfLines={1} style={styles.destinationLabel} variant="subheadline">
-                  {platformLabels[destination.platform]}
+          <ScrollView contentContainerStyle={styles.sheetContent}>
+            <View style={styles.sheetSong}>
+              <SongArtwork artworkUrl={song.artworkUrl} radius={12} size={54} />
+              <View style={styles.flex}>
+                <AppText numberOfLines={2} style={styles.sheetSongTitle} variant="headline">
+                  {song.title}
                 </AppText>
-                <Ionicons color={palette.muted} name="arrow-up-outline" size={15} />
-              </Pressable>
-            ))}
-            {!directDestinations.length ? (
-              <AppText color={palette.muted} style={styles.emptyDestinations} variant="subheadline">
-                {t("Aucun lien exact n'est encore disponible pour ce morceau.")}
-              </AppText>
-            ) : null}
-            {searchFallbacks.length ? (
-              <>
+                {song.artist ? (
+                  <AppText color={palette.muted} numberOfLines={1} variant="subheadline">
+                    {song.artist}
+                  </AppText>
+                ) : null}
+              </View>
+            </View>
+            <View style={styles.destinationStack}>
+              {directDestinations.map((destination) => (
                 <Pressable
-                  accessibilityLabel={t('Rechercher sur un autre service')}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: searchesVisible }}
-                  onPress={() => setSearchesVisible((current) => !current)}
+                  accessibilityLabel={`${t('Ouvrir')} ${platformLabels[destination.platform]}`}
+                  accessibilityRole="link"
+                  key={`direct-${destination.platform}`}
+                  onPress={() => void open(destination.url)}
                   style={({ pressed }) => [
-                    styles.searchToggle,
-                    { backgroundColor: palette.inset },
+                    styles.destination,
+                    { backgroundColor: palette.card, borderColor: palette.border },
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Ionicons color={palette.muted} name="search" size={18} />
-                  <AppText style={styles.searchToggleLabel} variant="subheadline">
-                    {t('Rechercher sur un autre service')}
+                  <StreamingLogo platform={destination.platform} />
+                  <AppText numberOfLines={1} style={styles.destinationLabel} variant="subheadline">
+                    {platformLabels[destination.platform]}
                   </AppText>
-                  <Ionicons
-                    color={palette.muted}
-                    name={searchesVisible ? 'chevron-up' : 'chevron-down'}
-                    size={16}
-                  />
+                  <Tag color={palette.jam} label={t('Lien direct')} />
+                  <Ionicons color={palette.muted} name="arrow-up-outline" size={15} />
                 </Pressable>
-                {searchesVisible ? (
-                  <View style={styles.searchStack}>
-                    {searchFallbacks.map((destination) => {
-                      const label = t('Rechercher sur {{service}}', {
-                        service: platformLabels[destination.platform],
-                      });
-                      return (
-                        <Pressable
-                          accessibilityLabel={label}
-                          accessibilityRole="link"
-                          key={`search-${destination.platform}`}
-                          onPress={() => void open(destination.url)}
-                          style={({ pressed }) => [
-                            styles.destination,
-                            { backgroundColor: palette.card, borderColor: palette.border },
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <StreamingLogo platform={destination.platform} />
-                          <AppText
-                            numberOfLines={1}
-                            style={styles.destinationLabel}
-                            variant="subheadline"
+              ))}
+              {!directDestinations.length ? (
+                <AppText
+                  color={palette.muted}
+                  style={styles.emptyDestinations}
+                  variant="subheadline"
+                >
+                  {t("Aucun lien exact n'est encore disponible pour ce morceau.")}
+                </AppText>
+              ) : null}
+              {searchFallbacks.length ? (
+                <>
+                  <Pressable
+                    accessibilityLabel={t('Rechercher sur un autre service')}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: searchesVisible }}
+                    onPress={() => setSearchesVisible((current) => !current)}
+                    style={({ pressed }) => [
+                      styles.searchToggle,
+                      { backgroundColor: palette.inset },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons color={palette.muted} name="search" size={18} />
+                    <AppText style={styles.searchToggleLabel} variant="subheadline">
+                      {t('Rechercher sur un autre service')}
+                    </AppText>
+                    <Ionicons
+                      color={palette.muted}
+                      name={searchesVisible ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                    />
+                  </Pressable>
+                  {searchesVisible ? (
+                    <View style={styles.searchStack}>
+                      {searchFallbacks.map((destination) => {
+                        const label = t('Rechercher sur {{service}}', {
+                          service: platformLabels[destination.platform],
+                        });
+                        return (
+                          <Pressable
+                            accessibilityLabel={label}
+                            accessibilityRole="link"
+                            key={`search-${destination.platform}`}
+                            onPress={() => void open(destination.url)}
+                            style={({ pressed }) => [
+                              styles.destination,
+                              styles.searchDestination,
+                              { backgroundColor: palette.inset, borderColor: 'transparent' },
+                              pressed && styles.pressed,
+                            ]}
                           >
-                            {label}
-                          </AppText>
-                          <Ionicons color={palette.muted} name="search" size={16} />
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ) : null}
-              </>
-            ) : null}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+                            <StreamingLogo platform={destination.platform} size={30} />
+                            <AppText
+                              numberOfLines={1}
+                              style={styles.destinationLabel}
+                              variant="subheadline"
+                            >
+                              {label}
+                            </AppText>
+                            <Ionicons color={palette.muted} name="search" size={16} />
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -403,14 +433,15 @@ export function GroupSongRow({
 }
 
 const styles = StyleSheet.create({
+  amazonSmile: { bottom: 4, position: 'absolute' },
   artworkFallback: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   cardSurface: { height: 68 },
   closeButton: {
     alignItems: 'center',
     borderRadius: 16,
-    height: 32,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 32,
+    width: minimumTouchTarget,
   },
   deezerBars: { alignItems: 'flex-end', flexDirection: 'row', gap: 1 },
   destination: {
@@ -437,9 +468,9 @@ const styles = StyleSheet.create({
   listenButton: {
     alignItems: 'center',
     borderRadius: 15,
-    height: 30,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 30,
+    width: minimumTouchTarget,
   },
   logoSurface: {
     alignItems: 'center',
@@ -453,6 +484,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   pressedReduced: { opacity: 0.96 },
   searchStack: { gap: spacing.xs },
+  searchDestination: { minHeight: 52, opacity: 0.82 },
   searchToggle: {
     alignItems: 'center',
     borderRadius: radii.button,
@@ -462,7 +494,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   searchToggleLabel: { flex: 1, fontWeight: '700' },
-  sheet: { flex: 1 },
+  sheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    maxHeight: '82%',
+    overflow: 'hidden',
+  },
+  sheetBackdrop: {
+    backgroundColor: 'rgba(5, 8, 20, 0.58)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
   sheetContent: { gap: spacing.cluster, padding: spacing.gutter, paddingBottom: spacing.xxl },
   sheetNavigation: {
     alignItems: 'center',
@@ -472,6 +518,14 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: spacing.gutter,
   },
+  sheetHandle: {
+    alignSelf: 'center',
+    borderRadius: 2,
+    height: 5,
+    marginTop: spacing.xs,
+    width: 38,
+  },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
   sheetSong: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   sheetSongTitle: { fontWeight: '800' },
   sheetTitle: { flex: 1, fontWeight: '800', textAlign: 'center' },

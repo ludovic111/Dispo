@@ -530,41 +530,34 @@ export function ProfileDetail({
         <Card style={styles.section}>
           <SectionTitle icon="people" title={t('Groupes')} />
           {social.data.publicGroups.map((group) => (
-            <Pressable
-              key={group.id}
-              onPress={() => router.push(`/groups/${group.id}` as never)}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <View style={styles.groupRow}>
-                {group.photoUrl ? (
-                  <Image source={{ uri: group.photoUrl }} style={styles.groupAvatar} />
-                ) : (
-                  <View
-                    style={[
-                      styles.groupAvatar,
-                      styles.groupFallback,
-                      { backgroundColor: `${palette.bronze}24` },
-                    ]}
-                  >
-                    <AppText>{group.emoji}</AppText>
-                  </View>
-                )}
-                <View style={styles.groupText}>
-                  <View style={styles.nameRow}>
-                    <AppText numberOfLines={1} style={styles.sectionHeading} variant="subheadline">
-                      {group.name}
-                    </AppText>
-                    {group.isLeader ? (
-                      <Ionicons color={palette.bronze} name="diamond" size={11} />
-                    ) : null}
-                  </View>
-                  <AppText color={palette.muted} variant="caption2">
-                    {formatSwiftPlaceholders(t('%lld membres'), group.memberCount)}
-                  </AppText>
+            <View key={group.id} style={styles.groupRow}>
+              {group.photoUrl ? (
+                <Image source={{ uri: group.photoUrl }} style={styles.groupAvatar} />
+              ) : (
+                <View
+                  style={[
+                    styles.groupAvatar,
+                    styles.groupFallback,
+                    { backgroundColor: `${palette.bronze}24` },
+                  ]}
+                >
+                  <AppText>{group.emoji}</AppText>
                 </View>
-                <Ionicons color={palette.muted} name="chevron-forward" size={15} />
+              )}
+              <View style={styles.groupText}>
+                <View style={styles.nameRow}>
+                  <AppText numberOfLines={1} style={styles.sectionHeading} variant="subheadline">
+                    {group.name}
+                  </AppText>
+                  {group.isLeader ? (
+                    <Ionicons color={palette.bronze} name="diamond" size={11} />
+                  ) : null}
+                </View>
+                <AppText color={palette.muted} variant="caption2">
+                  {formatSwiftPlaceholders(t('%lld membres'), group.memberCount)}
+                </AppText>
               </View>
-            </Pressable>
+            </View>
           ))}
         </Card>
       ) : null}

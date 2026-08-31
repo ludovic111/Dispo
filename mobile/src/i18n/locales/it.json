@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "Non è stato possibile salvare la tua disponibilità — controlla la connessione.",
   "1 date cochée": "1 data selezionata",
   "1 voyage enregistré": "1 viaggio salvato",
-  "1 vidéo sur ton profil": "1 video sul tuo profilo"
+  "1 vidéo sur ton profil": "1 video sul tuo profilo",
+  "Renseigne un pays, une ville et un code postal valides.": "Inserisci un paese, una città e un codice postale validi.",
+  "Impossible d'enregistrer cette région.": "Non è stato possibile salvare questa regione.",
+  "Enregistrement…": "Salvataggio…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "Il paese, il codice postale e la città vengono utilizzati per le ricerche locali."
 }

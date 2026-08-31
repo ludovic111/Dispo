@@ -10,12 +10,13 @@ import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigCard } from '@/features/gigs/gig-card';
-import { openGigInstruments, type GigSummary } from '@/features/gigs/gig-model';
+import { openGigInstruments, triageHostedGigs, type GigSummary } from '@/features/gigs/gig-model';
 import {
   countUnopenedCompatibleGigs,
   gigMatchesBadgeViewer,
   readOpenedGigIds,
 } from '@/features/gigs/gig-opened-store';
+import { loadSosShowAll, saveSosShowAll } from '@/features/gigs/gig-preferences';
 import { useGigs } from '@/features/gigs/gig-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -83,9 +84,13 @@ export default function GigsScreen() {
     useCallback(() => {
       let active = true;
       if (userId) {
-        void readOpenedGigIds(userId).then((ids) => {
-          if (active) setOpened(ids);
-        });
+        void Promise.all([readOpenedGigIds(userId), loadSosShowAll(userId)]).then(
+          ([ids, savedShowAll]) => {
+            if (!active) return;
+            setOpened(ids);
+            setShowAll(savedShowAll);
+          },
+        );
       }
       return () => {
         active = false;
@@ -93,11 +98,20 @@ export default function GigsScreen() {
     }, [userId]),
   );
 
+  const changeShowAll = useCallback(
+    (next: boolean) => {
+      setShowAll(next);
+      if (userId) void saveSosShowAll(userId, next);
+    },
+    [userId],
+  );
+
   const gigs = useMemo(
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data?.pages],
   );
   const mine = useMemo(() => gigs.filter((gig) => gig.hostId === userId), [gigs, userId]);
+  const hosting = useMemo(() => triageHostedGigs(mine), [mine]);
   const publicFeed = useMemo(
     () =>
       gigs.filter(
@@ -150,7 +164,7 @@ export default function GigsScreen() {
       </Screen>
     );
   }
-  if (query.isError || profile.isError) {
+  if (query.isExhaustiveError || profile.isError) {
     const message = query.error?.message ?? profile.error?.message ?? t('Chargement impossible.');
     return (
       <Screen nativeTabRoot>
@@ -201,7 +215,7 @@ export default function GigsScreen() {
             selected={segment === 'feed'}
           />
           <SegmentButton
-            count={0}
+            count={hosting.pendingApplicantCount}
             label={t('Mes SOS')}
             onPress={() => setSegment('hosting')}
             selected={segment === 'hosting'}
@@ -218,7 +232,7 @@ export default function GigsScreen() {
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                     key={String(all)}
-                    onPress={() => setShowAll(all)}
+                    onPress={() => changeShowAll(all)}
                     style={({ pressed }) => [
                       styles.scope,
                       {
@@ -277,7 +291,20 @@ export default function GigsScreen() {
             )}
           </>
         ) : mine.length > 0 ? (
-          <GigList gigs={mine} opened={opened} />
+          <View style={styles.hostingSections}>
+            {hosting.hosted.length > 0 ? <GigList gigs={hosting.hosted} opened={opened} /> : null}
+            {hosting.sentDirect.length > 0 ? (
+              <View style={styles.directSection}>
+                <AppText color={palette.bronze} variant="title">
+                  {t('Demandes envoyées')}
+                </AppText>
+                <AppText color={palette.muted} variant="caption">
+                  {t('Un musicien précis, à qui tu as demandé de dépanner')}
+                </AppText>
+                <GigList gigs={hosting.sentDirect} opened={opened} />
+              </View>
+            ) : null}
+          </View>
         ) : (
           <EmptyState
             icon="megaphone-outline"
@@ -311,6 +338,8 @@ const styles = StyleSheet.create({
   },
   addText: { fontWeight: '900' },
   content: { gap: spacing.md, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
+  directSection: { gap: spacing.sm },
+  hostingSections: { gap: spacing.lg },
   list: { gap: spacing.md },
   mineHint: { alignItems: 'center', flexDirection: 'row', gap: 7, paddingVertical: 9 },
   mineHintText: { flex: 1, fontWeight: '700' },

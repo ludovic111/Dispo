@@ -20,6 +20,10 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
+import {
+  mergeNativeDateTimePart,
+  NativeDateTimeField,
+} from '@/components/ui/native-date-time-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -54,12 +58,20 @@ interface GigFormProps {
   targetName?: string;
 }
 
-function inputDateParts(value?: string): { day: string; time: string } {
-  if (!value) return defaultGigDate();
+function inputDate(value?: string): Date {
+  if (!value) {
+    const fallback = defaultGigDate();
+    return new Date(combineGigDate(fallback.day, fallback.time));
+  }
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return defaultGigDate();
-  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000);
-  return { day: local.toISOString().slice(0, 10), time: local.toISOString().slice(11, 16) };
+  if (!Number.isNaN(parsed.getTime())) return parsed;
+  const fallback = defaultGigDate();
+  return new Date(combineGigDate(fallback.day, fallback.time));
+}
+
+function localDay(value: Date): string {
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
 }
 
 function errorLabel(code: string, t: TFunction): string {
@@ -159,12 +171,15 @@ export function GigForm({
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const directDefaultTitle = t('Dépannage');
-  const initialDate = inputDateParts(initial?.date);
+  const initialDate = inputDate(initial?.date);
+  const initialPaymentMethod = initial?.paymentMethod?.trim() ?? '';
+  const initialPaymentIsKnown = GIG_PAYMENT_METHODS.some(
+    (method) => method.value === initialPaymentMethod,
+  );
   const [title, setTitle] = useState(
     initial?.title ?? (mode === 'direct' ? directDefaultTitle : ''),
   );
-  const [day, setDay] = useState(initialDate.day);
-  const [time, setTime] = useState(initialDate.time);
+  const [date, setDate] = useState(initialDate);
   const [genre, setGenre] = useState(initial?.genre ?? defaults.genres[0] ?? 'Jazz');
   const [publicPlace, setPublicPlace] = useState(initial?.publicPlace ?? '');
   const [countryCode, setCountryCode] = useState(defaults.countryCode || 'CH');
@@ -178,7 +193,15 @@ export function GigForm({
     initial?.fee === 0 ? 'none' : initial?.fee ? 'amount' : 'negotiable',
   );
   const [feeAmount, setFeeAmount] = useState(initial?.fee ? String(initial.fee) : '');
-  const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod ?? '');
+  const [paymentMethod, setPaymentMethod] = useState(
+    initialPaymentIsKnown ? initialPaymentMethod : '',
+  );
+  const [customPaymentMethod, setCustomPaymentMethod] = useState(
+    initialPaymentIsKnown ? '' : initialPaymentMethod,
+  );
+  const [usesCustomPaymentMethod, setUsesCustomPaymentMethod] = useState(
+    Boolean(initialPaymentMethod && !initialPaymentIsKnown),
+  );
   const [description, setDescription] = useState(initial?.description ?? '');
   const [localError, setLocalError] = useState('');
 
@@ -204,11 +227,10 @@ export function GigForm({
 
   const submit = () => {
     try {
-      const date = combineGigDate(day, time);
       const input: GigCreateInput = {
         city,
         countryCode,
-        date,
+        date: date.toISOString(),
         description,
         exactAddress,
         eventId,
@@ -219,7 +241,11 @@ export function GigForm({
         hostId,
         latitude: resolvedPlace?.latitude ?? null,
         longitude: resolvedPlace?.longitude ?? null,
-        paymentMethod: defaults.isProfessional ? paymentMethod : '',
+        paymentMethod: defaults.isProfessional
+          ? usesCustomPaymentMethod
+            ? customPaymentMethod
+            : paymentMethod
+          : '',
         postalCode,
         publicPlace,
         targetId,
@@ -242,7 +268,10 @@ export function GigForm({
     }
   };
 
-  const chooseAvailableDate = (value: string) => setDay(value.slice(0, 10));
+  const chooseAvailableDate = (value: string) => {
+    const picked = new Date(`${value.slice(0, 10)}T12:00:00`);
+    setDate((current) => mergeNativeDateTimePart(current, picked, 'date'));
+  };
   const selectedGenre = genre ? [genre] : [];
   const feeModes: { label: string; value: FeeMode }[] = [
     { label: t('À discuter'), value: 'negotiable' },
@@ -264,26 +293,13 @@ export function GigForm({
           placeholder={t('Cherche pianiste, soirée salsa')}
           value={title}
         />
-        <View style={styles.twoColumns}>
-          <View style={styles.column}>
-            <FormField
-              autoCapitalize="none"
-              label={t('Date')}
-              onChangeText={setDay}
-              placeholder={t('AAAA-MM-JJ')}
-              value={day}
-            />
-          </View>
-          <View style={styles.timeColumn}>
-            <FormField
-              autoCapitalize="none"
-              label={t('Heure')}
-              onChangeText={setTime}
-              placeholder="20:00"
-              value={time}
-            />
-          </View>
-        </View>
+        <NativeDateTimeField
+          dateLabel={t('Date')}
+          minimumDate={new Date()}
+          onChange={setDate}
+          timeLabel={t('Heure')}
+          value={date}
+        />
         {mode === 'direct' && availableDates.length > 0 ? (
           <View style={styles.choiceSection}>
             <AppText color={palette.muted} variant="caption">
@@ -302,7 +318,7 @@ export function GigForm({
                       weekday: 'short',
                     }).format(new Date(`${value.slice(0, 10)}T12:00:00`))}
                     onPress={() => chooseAvailableDate(value)}
-                    selected={day === value.slice(0, 10)}
+                    selected={localDay(date) === value.slice(0, 10)}
                   />
                 ))}
               </View>
@@ -466,13 +482,31 @@ export function GigForm({
                   <ChoiceChip
                     key={method.value}
                     label={t(method.label)}
-                    onPress={() =>
-                      setPaymentMethod((current) => (current === method.value ? '' : method.value))
-                    }
-                    selected={paymentMethod === method.value}
+                    onPress={() => {
+                      setUsesCustomPaymentMethod(false);
+                      setPaymentMethod((current) => (current === method.value ? '' : method.value));
+                    }}
+                    selected={!usesCustomPaymentMethod && paymentMethod === method.value}
                   />
                 ))}
+                <ChoiceChip
+                  label={t('Autre…')}
+                  onPress={() => {
+                    setUsesCustomPaymentMethod((current) => !current);
+                    setPaymentMethod('');
+                  }}
+                  selected={usesCustomPaymentMethod}
+                />
               </View>
+              {usesCustomPaymentMethod ? (
+                <FormField
+                  label={t('Autre…')}
+                  maxLength={40}
+                  onChangeText={setCustomPaymentMethod}
+                  placeholder={t('Ex. PayPal, Revolut…')}
+                  value={customPaymentMethod}
+                />
+              ) : null}
             </View>
           ) : null}
           <AppText color={palette.muted} variant="caption">
@@ -517,13 +551,10 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: '700' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   choiceSection: { gap: spacing.xs },
-  column: { flex: 1 },
   form: { gap: spacing.md },
   horizontalChips: { flexDirection: 'row', gap: spacing.xs, paddingVertical: 2 },
   privateTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   section: { gap: spacing.md },
   textarea: { minHeight: 112, textAlignVertical: 'top' },
   textareaSmall: { minHeight: 84, textAlignVertical: 'top' },
-  timeColumn: { width: 112 },
-  twoColumns: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
 });

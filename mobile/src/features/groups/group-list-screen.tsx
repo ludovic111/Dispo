@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -19,9 +19,9 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
-import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -181,43 +181,41 @@ export function GroupListScreen() {
   const invitations = useGroupInvitations();
   const unread = useGroupUnreadState(groups.data ?? []);
   const refreshing = groups.isRefetching || invitations.isRefetching;
-  const leave = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)/messages?segment=groups' as never);
-  };
-  const backAction = <HeaderAction icon="chevron-back" label={t('Retour')} onPress={leave} />;
+  const nativeHeader = (
+    <Stack.Screen
+      options={{
+        headerRight: () => (
+          <NativeHeaderButton
+            icon="add"
+            label={t('Nouveau groupe')}
+            onPress={() => router.push('/groups/new' as never)}
+          />
+        ),
+        title: t('Groupes'),
+      }}
+    />
+  );
   const retry = () => {
     void groups.refetch();
     void invitations.refetch();
   };
   if (groups.isLoading || invitations.isLoading)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Messages')} title={t('Groupes')} />
+      <Screen nativeHeader>
+        {nativeHeader}
         <LoadingState label={t('Chargement des groupes…')} />
       </Screen>
     );
   if (groups.error || invitations.error)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Messages')} title={t('Groupes')} />
+      <Screen nativeHeader>
+        {nativeHeader}
         <ErrorState message={t('Tes groupes n’ont pas pu être chargés.')} onRetry={retry} />
       </Screen>
     );
   return (
-    <Screen>
-      <ScreenHeader
-        action={
-          <HeaderAction
-            icon="add"
-            label={t('Nouveau groupe')}
-            onPress={() => router.push('/groups/new' as never)}
-          />
-        }
-        leadingAction={backAction}
-        subtitle={t('Messages, répertoire et prochaines dates')}
-        title={t('Groupes')}
-      />
+    <Screen nativeHeader>
+      {nativeHeader}
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl onRefresh={retry} refreshing={refreshing} />}

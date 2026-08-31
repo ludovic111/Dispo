@@ -8,11 +8,35 @@ export interface PushPreferences {
   sos: boolean;
 }
 
+export interface ProfileRegionDraft {
+  city: string;
+  country: string;
+  postalCode: string;
+}
+
+export function normalizeProfileRegion(value: ProfileRegionDraft): ProfileRegionDraft {
+  const region = {
+    city: value.city.trim().replace(/\s+/g, ' '),
+    country: value.country.trim().toUpperCase(),
+    postalCode: value.postalCode.trim().toUpperCase(),
+  };
+  if (region.country.length !== 2 || region.postalCode.length < 3 || region.city.length < 2) {
+    throw new Error('profile_region_incomplete');
+  }
+  return region;
+}
+
 export const defaultPushPreferences: PushPreferences = {
   groups: true,
   messages: true,
   sos: true,
 };
+
+export function permissionAllowsDelivery(
+  permission: 'denied' | 'ephemeral' | 'granted' | 'provisional' | 'undetermined',
+): boolean {
+  return permission === 'granted' || permission === 'provisional' || permission === 'ephemeral';
+}
 
 export const appearanceOptions: readonly {
   icon: 'contrast-outline' | 'moon' | 'sunny';

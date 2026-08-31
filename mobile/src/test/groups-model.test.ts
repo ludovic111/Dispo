@@ -149,7 +149,7 @@ describe('réactions, ordre et messages', () => {
       reorderSongs([song('a'), song('pending', false), song('b')], ['b', 'a']).map(
         (item) => item.id,
       ),
-    ).toEqual(['b', 'a', 'pending']);
+    ).toEqual(['b', 'pending', 'a']);
   });
 
   it('accepte texte ou pièce jointe, jamais un message vide ou trop long', () => {

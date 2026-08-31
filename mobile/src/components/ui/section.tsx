@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, gradients, radii, spacing } from '@/theme/tokens';
+import { billetInk, gradients, minimumTouchTarget, radii, spacing } from '@/theme/tokens';
 
 export function SectionHeader({ subtitle, title }: { subtitle?: string; title: string }) {
   const { palette } = useDispoTheme();
@@ -161,9 +161,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 22,
     borderWidth: 1,
-    height: 44,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 44,
+    width: minimumTouchTarget,
   },
   notificationBadge: {
     alignItems: 'center',
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: 6,
-    minHeight: 40,
+    minHeight: minimumTouchTarget,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },

@@ -1,17 +1,18 @@
 # Migration de Dispo vers Expo / React Native
 
-Dernière mise à jour documentaire : 31 août 2026.
+Dernière mise à jour documentaire : 1er septembre 2026.
 
 Ce fichier est le contrat de migration de l’application iOS SwiftUI et de
 l’application Android Kotlin vers une application Expo commune. Il décrit ce
 qui existe dans mobile/, ce qui reste à porter et les preuves attendues.
 
-La section suivante est la source de vérité au 31 août 2026. Les matrices plus
-bas conservent la photographie détaillée du socle du 30 août et la cible finale ;
-en cas d’écart de statut, l’état du 31 août prévaut. Aucune présence de code
-n’est assimilée à une validation métier, visuelle ou sur appareil.
+La section suivante est la source de vérité au 1er septembre 2026. Les matrices
+plus bas conservent la photographie détaillée du socle du 30 août et la cible
+finale ; en cas d’écart de statut, l’état du 1er septembre prévaut. Aucune
+présence de code n’est assimilée à une validation métier, visuelle ou sur
+appareil.
 
-## État faisant autorité — 31 août 2026
+## État faisant autorité — 1er septembre 2026
 
 ### Surfaces désormais présentes dans le client Expo
 
@@ -28,8 +29,11 @@ n’est assimilée à une validation métier, visuelle ou sur appareil.
 - Authentification et compte : restauration de session, connexion/création,
   reset et retour de lien, onboarding, stockage SecureStore, réglages, thème,
   langues, préférences de notifications, nouveautés et écran Premium de la
-  bêta. Les parcours Apple/Google existent dans le code mais restent à prouver
-  avec leur configuration native réelle.
+  bêta. Une migration non destructive reprend au premier lancement la session
+  Keychain SwiftUI ou Supabase-KT/SharedPreferences et les préférences locales
+  compatibles ; elle conserve les anciennes valeurs pour permettre un retour
+  arrière. Les parcours Apple/Google existent dans le code mais restent à
+  prouver avec leur configuration native réelle.
 - Découverte et profils : Accueil, recherche et filtres, centre de
   notifications, profil public et personnel, édition, relations sociales,
   notes, abonnements, blocage/signalement, followers, joué-avec, portfolio
@@ -42,9 +46,10 @@ n’est assimilée à une validation métier, visuelle ou sur appareil.
   futur/passé avec réponses de présence. Le détail d’un événement propose une
   carte intégrée sur iOS, une ouverture d’itinéraire sur les deux plateformes
   et une carte Android lorsque la clé Google Maps restreinte est fournie.
-- Messages : conversations directes et de groupe paginées, Realtime filtré,
-  unread, typing éphémère, réactions, édition/suppression et pièces jointes
-  photo, vidéo ou fichier.
+- Messages : conversations directes, de groupe et d'école paginées, Realtime
+  filtré, unread, typing éphémère, réactions, édition/suppression, signalement,
+  blocage et pièces jointes photo, vidéo ou fichier. Le chat d'école a été
+  rétabli pour supprimer une régression certaine face au build SwiftUI 35.
 - Groupes : liste, création, invitations, membres, réglages, répertoire,
   détails/copie de morceau, documents, événements nouveaux/édités/récurrents,
   présence, invités acceptés, rôles manquants, SOS liés et préremplis,
@@ -60,10 +65,13 @@ n’est assimilée à une validation métier, visuelle ou sur appareil.
   service » ; une recherche n’est jamais présentée comme un lien direct.
   La recherche d’ajout interroge le catalogue canonique Supabase puis fusionne
   son résultat avec le repli Apple, en privilégiant les métadonnées et liens
-  canoniques lorsque le RPC est disponible.
+  canoniques lorsque le RPC est disponible. L'analyse locale de fichier audio
+  est portée par un module Expo natif AVFoundation/Accelerate sur iOS et
+  MediaCodec sur Android pour estimer tonalité et tempo sans envoyer le média.
 - Internationalisation : neuf catalogues sont branchés et leur cohérence est
-  testée. La présence d’une traduction ne prouve pas encore son rendu sans
-  débordement sur chaque écran et chaque plateforme.
+  testée. Langue, pays/région, code postal et ville disposent d'un parcours
+  dédié et persistant. La présence d’une traduction ne prouve pas encore son
+  rendu sans débordement sur chaque écran et chaque plateforme.
 
 Ces surfaces sont implémentées structurellement et couvertes par des tests
 ciblés ; elles ne sont pas déclarées « pixel perfect » ni validées de bout en
@@ -72,9 +80,9 @@ bout avec des comptes authentifiés.
 ### Validations réellement observées
 
 - `npm run format:check` : réussi sur l’état courant.
-- `npm run validate` : réussi d’un seul tenant le 31 août après le lot
-  répertoire/profil/navigation, avec TypeScript, ESLint sans avertissement et
-  33 suites / 216 tests Jest réussis.
+- `npm run validate` : réussi d’un seul tenant le 1er septembre après le gel de
+  parité, avec TypeScript, ESLint sans avertissement et 46 suites / 286 tests
+  Jest réussis.
 - Les tests ciblés couvrent aussi la politique de barre de navigation, les
   marges sûres des écrans à titre natif, la sérialisation rétrocompatible, la
   déduplication, la copie, iReal Pro, la fusion catalogue canonique/Apple et la
@@ -93,26 +101,32 @@ bout avec des comptes authentifiés.
   erreur. Le premier essai avec `supabase test db` a été écarté : ce fichier
   d’assertions SQL documente explicitement qu’il ne s’agit pas de pgTAP.
 - La migration du catalogue a été rejouée localement après un reset au
-  `20260830173725` avec un harness comprenant un morceau manuel privé et deux
+  `20260831204619` avec un harness comprenant un morceau manuel privé et deux
   titres portant le même Apple ID : une seule identité, un seul lien et aucun
   morceau manuel exposé. Le test transactionnel complet a atteint `ROLLBACK` et
   `supabase db lint --local --level error` a terminé sans erreur. Supabase et
   Colima ont ensuite été arrêtés.
-- Le lot navigation/streaming courant a été reconstruit en Debug sur simulateur
-  iOS 26.5 (`Build Succeeded`, zéro erreur et un warning de linkage bénin) et en
-  APK Debug Android avec JDK 17 (`BUILD SUCCESSFUL`, 613 tâches). L’APK a été
-  installé et lancé à froid sur l’AVD Android 16/API 36 ; aucun crash, erreur JS
-  fatale ni sortie récente n’a été relevé.
+- Le lot final a été prébuildé en configuration production CNG avec les
+  identités `ch.dispo.app`, version 2.4, build/versionCode 38. Le build Release
+  iOS simulateur a réussi avec son `main.jsbundle`, a été installé et lancé sur
+  iOS 26.5 ; l’APK Android Release complet (`:app:assembleRelease`),
+  `:app:compileReleaseKotlin` et les tests Kotlin ont réussi sous JDK 17.
+- Les 26 tests Deno de `song-enrichment` ont réussi. Les cinq migrations du
+  catalogue/enrichissement sont appliquées en production et la fonction Edge
+  v1 est active. Le contrôle final de production compte 20 jobs terminés sur
+  20, aucun job en attente, aucun morceau sans lien exact, 20 liens Apple
+  Music, 20 Deezer, 19 Tidal et 19 Amazon Music. Spotify et YouTube Music sont
+  proposés comme recherches explicites lorsqu'aucune URL exacte n'est fournie.
 
 ### État Pixel et iOS
 
-| Cible                     | État vérifié                                                                                                                                                                      | Ce que cela ne prouve pas                                                                                                                       |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Google Pixel physique     | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                    | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                      |
-| Expo Android émulateur    | APK courant compilé, installé et lancé sur Android 16/API 36 ; Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset. PID stable, logs fatals vides. | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.          |
-| Expo iOS simulateur       | Build Debug courant réussi et installé sur iOS 26.5 ; les trois routes signalées n’affichent plus le slug natif ni le double titre, et Recherche conserve un seul header Stack.   | Aucun parcours authentifié, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.      |
-| iPhone physique / Expo Go | Aucun test physique effectué pour ce correctif ; le build 37 TestFlight antérieur ne le contient pas.                                                                             | Expo Go ne couvre pas toutes les intégrations natives ; la preuve finale physique exige le prochain development build ou un nouveau TestFlight. |
-| Référence SwiftUI         | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                     | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                     |
+| Cible                     | État vérifié                                                                                                                                                                                          | Ce que cela ne prouve pas                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Pixel physique     | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                        | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                      |
+| Expo Android émulateur    | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; build Kotlin Release final également réussi. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset. | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.          |
+| Expo iOS simulateur       | Build Release 2.4 (38) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; les trois routes signalées n’affichent plus le slug natif ni le double titre.                                    | Aucun parcours authentifié, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.      |
+| iPhone physique / Expo Go | Aucun test physique effectué pour ce correctif ; le build 37 TestFlight antérieur ne le contient pas.                                                                                                 | Expo Go ne couvre pas toutes les intégrations natives ; la preuve finale physique exige le prochain development build ou un nouveau TestFlight. |
+| Référence SwiftUI         | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                                         | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                     |
 
 ### Limites et gates restants
 
@@ -131,19 +145,16 @@ bout avec des comptes authentifiés.
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
 - Le build 37 Expo antérieur est valide et disponible côté Apple, sans
-  soumission App Review. Le correctif courant n’est pas encore dans un build 38
-  Release/TestFlight ; aucune publication Google Play n’a eu lieu.
-- Le backend et la production sont inchangés : aucun `db push`, déploiement
-  d’Edge Function, changement Auth/RLS/secret, compte ou donnée de production
-  n’a été réalisé par ce portage. La migration locale
-  `20260830173725_fix_song_catalog_trigger_privileges.sql` reste non appliquée,
-  tout comme `20260831172807_song_catalog_and_streaming_links.sql`.
-- Tant que cette migration n’est pas approuvée et appliquée, la production ne
-  fournit pas le RPC canonique ni son cache de liens. Le repli Apple reste
-  fonctionnel, mais une couverture automatique en liens exacts pour Apple
-  Music, Spotify, YouTube Music, Deezer, Tidal et Amazon Music nécessite encore
-  un fournisseur de métadonnées approuvé et ses identifiants serveur ; aucun
-  fournisseur ni abonnement n’a été créé implicitement.
+  soumission App Review. Le build 38 Release est prêt à être archivé et livré ;
+  aucune publication Google Play n’a eu lieu.
+- Le backend de production contient désormais le catalogue canonique, sa file
+  d'enrichissement privée, les alias Apple par storefront et la fonction Edge
+  protégée par son authentification applicative. Aucun compte, secret Auth,
+  abonnement fournisseur ou droit utilisateur n'a été modifié.
+- La production fournit les liens exacts réellement résolus par Odesli ; elle
+  ne fabrique jamais de destination Spotify ou YouTube Music. L'interface
+  distingue donc les liens directs des recherches de secours, service par
+  service.
 
 ## 1. Références et règles
 
@@ -214,9 +225,10 @@ fonctionnement sur simulateur/appareil.
 - Les neuf langues de l’app iOS sont la cible : français, anglais, espagnol,
   allemand, italien, chinois simplifié, japonais, portugais et coréen.
 - Les affiliations et badges d’école restent visibles.
-- Les discussions d’école ne sont pas portées dans la nouvelle interface,
-  conformément au nouveau prompt. Les groupes musicaux et conversations
-  directes restent visibles.
+- Les discussions d’école sont conservées : leur absence dans le premier port
+  Expo constituait une régression certaine face au build SwiftUI 35. Elles
+  apparaissent dans Messages avec unread, pagination, Realtime et contrôles de
+  modération, aux côtés des groupes musicaux et conversations directes.
 - Les relations principales sont Ami, Même école, joué avec et notes 1–5.
   L’ancien enum Appreciation reste un artefact de seed et ne doit pas guider
   le nouveau modèle.
@@ -307,7 +319,7 @@ document.
 - stack Supabase local démarré sous Colima, suite SQL transactionnelle exécutée
   jusqu’au ROLLBACK, zéro fixture résiduelle et db lint local à zéro erreur ;
 - le test local a révélé puis fait versionner
-  20260830173725_fix_song_catalog_trigger_privileges.sql ; cette migration
+  20260831204619_fix_song_catalog_trigger_privileges.sql ; cette migration
   n’a pas été appliquée à la production ;
 - scan des fichiers ajoutables sans secret détecté ; npm audit ne remonte aucun
   niveau high/critical, mais 12 avis modérés transitifs dans l’outillage Expo.
@@ -322,64 +334,64 @@ des écrans Phase 2.
 Les chemins RN proposés deviennent les propriétaires des parcours. Un composant
 partagé ne doit pas absorber la logique métier de plusieurs features.
 
-| SwiftUI / fonctionnalité              | Cible Expo / RN                             | Statut        | Parité ou travail restant                                                                                                                                                                                                                         |
-| ------------------------------------- | ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DispoApp + RootView                   | src/app/_layout.tsx, src/app/index.tsx      | EN COURS      | Session et shell présents ; politique globale de header enregistrée avant rendu pour séparer routes à `ScreenHeader` et routes à titre natif. Validation visuelle du correctif encore requise.                                                    |
-| TabView 5 onglets                     | src/app/(tabs)/_layout.tsx                  | EN COURS      | `NativeTabs` système, ordre, badges et safe area présents ; validation visuelle authentifiée iOS/Android encore requise.                                                                                                                          |
-| AuthGateView / AuthForm               | src/app/(auth)/sign-in.tsx, features/auth   | EN COURS      | Hiérarchie, copies, sélecteur, champs, CTA et mentions Swift portés ; login/signup et demande de reset e-mail présents. Callback de récupération, Apple, Google Android et parcours réels restent à prouver.                                      |
-| OnboardingView                        | src/app/(auth)/onboarding/*                 | À FAIRE       | Quatre étapes, profil express, région et changement de compte.                                                                                                                                                                                    |
-| HomeView                              | src/app/(tabs)/index.tsx                    | EN COURS      | Feed profils présent ; greeting/logo, réseau, notifications, recherche, groupes, trois scopes de disponibilité et actions manquent.                                                                                                               |
-| SearchView                            | src/app/search.tsx, features/search         | EN COURS      | Logique Ami/Même école/AMR présente dans domain/profile ; écran et recherche SOS manquent.                                                                                                                                                        |
-| FilterSheet                           | src/app/filters.tsx, features/search        | EN COURS      | Type relationship filter présent ; instruments, genres, date, pays/postal/ville, rayon, niveaux et gating Premium manquent.                                                                                                                       |
-| NotificationsCenterView               | src/app/notifications.tsx                   | À FAIRE       | Feed, lecture, navigation cible et états vides.                                                                                                                                                                                                   |
-| MusicianDetailView                    | src/app/profiles/[id].tsx                   | EN COURS      | Résumé, écoles, rating et contact présents ; follow, SOS direct, groupes, vidéos, réseaux, joué-avec, followers, report/block manquent.                                                                                                           |
-| PlayedWithSheet                       | src/app/profiles/[id]/played-with.tsx       | À FAIRE       | Pagination et navigation profil.                                                                                                                                                                                                                  |
-| FollowersSheet                        | src/app/profiles/[id]/followers.tsx         | À FAIRE       | Followers/following, relation mutuelle.                                                                                                                                                                                                           |
-| VideoPlayerSheet                      | features/media/profile-video.tsx            | À FAIRE       | Player, état de chargement, erreur et analytics local uniquement.                                                                                                                                                                                 |
-| EventsView                            | src/app/(tabs)/sos.tsx                      | EN COURS      | Feed public présent ; segments SOS/Mes SOS, compatibilité, demandes directes et gestion hôte manquent.                                                                                                                                            |
-| EventCard                             | features/gigs/gig-card.tsx                  | EN COURS      | Carte présente, mais forme de billet, perforation, code-barres et couleurs exactes manquent.                                                                                                                                                      |
-| CreateEventView                       | src/app/gigs/create.tsx                     | EN COURS      | Mutation minimale présente ; contrôles structurés, récurrence, Premium, lieu privé et validations UX manquent.                                                                                                                                    |
-| SOSMatchView                          | src/app/gigs/[id]/matches.tsx               | À FAIRE       | Classement et profils compatibles.                                                                                                                                                                                                                |
-| SOSRequestSheet                       | src/app/gigs/request/[profileId].tsx        | À FAIRE       | Instrument, dates du musicien, lieu, cachet et message.                                                                                                                                                                                           |
-| EventDetailView                       | src/app/gigs/[id].tsx                       | EN COURS      | Détail/candidature simple ; état candidature, retrait, hôte, sécurité, demandes et line-up manquent.                                                                                                                                              |
-| GigPrivateLocationCard                | features/locations/private-gig-location.tsx | BLOQUÉ        | À implémenter uniquement via RPC privé autorisé et carte native ; aucune adresse exacte dans le feed.                                                                                                                                             |
-| MyEventsView                          | src/app/(tabs)/sessions.tsx                 | À FAIRE       | Futur/passé, synthèse, groupes et SOS, badges de réponse.                                                                                                                                                                                         |
-| AgendaRow / NextDateCard / AnswerCard | features/sessions/components/*              | À FAIRE       | Cartes, regroupement mensuel et réponse oui/non.                                                                                                                                                                                                  |
-| ChatListView                          | src/app/(tabs)/messages.tsx                 | EN COURS      | Direct présent ; groupes musicaux, invitations et unread manquent ; discussions école volontairement exclues.                                                                                                                                     |
-| ChatView                              | src/app/messages/[id].tsx                   | EN COURS      | Texte, pagination et Realtime présents ; delivered/read, typing, edit/delete, réactions et scroll fin manquent.                                                                                                                                   |
-| MessageAttachment*                    | features/messages/attachments/*             | À FAIRE       | Photo, vidéo, fichier, brouillon, upload privé, téléchargement et aperçu.                                                                                                                                                                         |
-| MessageControls                       | features/messages/message-actions.tsx       | À FAIRE       | Jour, réactions, menu, édition, suppression, confirmations.                                                                                                                                                                                       |
-| GroupChatView — Messages              | src/app/groups/[id]/index.tsx               | À FAIRE       | Messages de groupe, unread, typing, réactions et pièces jointes.                                                                                                                                                                                  |
-| GroupChatView — Répertoire            | src/app/groups/[id]/songs.tsx               | EN COURS      | Liste, recherche, ajout/suggestion et réordonnancement présents ; comparaison visuelle authentifiée avec Swift encore requise.                                                                                                                    |
-| SongRow / drag                        | features/groups/group-song-row.tsx          | EN COURS      | Ligne partagée de 68 pt, pochette 46 × 46, méta compacte, écoute et actions 44 pt présentes dans répertoire/setlist ; drag, haptique et auto-scroll restent à porter.                                                                             |
-| SongDetailSheet                       | src/app/groups/[id]/songs/[songId].tsx      | EN COURS      | En-tête avec pochette, écoute, iReal direct ou recherche, partitions, solos et commentaires présents ; onglets/gestes et validation visuelle Swift restent à terminer.                                                                            |
-| AddSongSheet / EditSongSheet          | src/app/groups/[id]/songs/[songId].tsx      | EN COURS      | Création/édition, tonalité, catalogue et validation présents dans la fiche ; enrichissement canonique serveur et parcours leader/membre restent à valider.                                                                                        |
-| CopySongSheet                         | features/songs/copy-song.tsx                | EN COURS      | Tri, libellé complet et déduplication testables présents ; mutation/UI manquent.                                                                                                                                                                  |
-| ListenSheet                           | features/groups/group-song-row.tsx          | EN COURS      | Liens directs vérifiés affichés en premier ; services manquants repliés sous « Rechercher sur un autre service » et libellés comme recherches. Couverture exacte des six services dépendante d’un fournisseur approuvé et de credentials serveur. |
-| GroupChatView — Événements            | src/app/groups/[id]/events.tsx              | À FAIRE       | Cartes, création, édition, annulation et réponses.                                                                                                                                                                                                |
-| GroupEventSheet                       | src/app/groups/[id]/events/[eventId].tsx    | À FAIRE       | Détail, présence, setlist, invités, SOS et lieu privé.                                                                                                                                                                                            |
-| Add/EditGroupEventSheet               | features/groups/events/forms/*              | À FAIRE       | Types concert/répétition/jam, récurrence et atomicité lieu privé.                                                                                                                                                                                 |
-| GroupMembersSheet                     | src/app/groups/[id]/members.tsx             | À FAIRE       | Membres, rôles et profils.                                                                                                                                                                                                                        |
-| InviteMemberSheet                     | src/app/groups/[id]/invite.tsx              | À FAIRE       | Recherche, invitation, Premium et états.                                                                                                                                                                                                          |
-| GroupSettingsSheet                    | src/app/groups/[id]/settings.tsx            | À FAIRE       | Nom/photo, leadership, sortie/suppression.                                                                                                                                                                                                        |
-| NewGroupSheet                         | src/app/groups/create.tsx                   | À FAIRE       | Création et limite de groupes dirigés.                                                                                                                                                                                                            |
-| DocPreview / QuickLook                | features/documents/document-preview.tsx     | BLOQUÉ        | Pas d’équivalent QuickLook exact ; choisir PDF viewer ou module natif et fallback partage.                                                                                                                                                        |
-| MusicSchoolDirectoryView              | src/app/schools/index.tsx                   | À FAIRE       | Annuaire et affiliations uniquement.                                                                                                                                                                                                              |
-| MusicSchoolJoinSheet                  | src/app/schools/[id]/join.tsx               | À FAIRE       | Rôle, instrument, statut et école principale.                                                                                                                                                                                                     |
-| MusicSchoolCommunityView              | aucune route publique                       | NE PAS PORTER | Discussions école explicitement masquées ; conserver seulement affiliation/badge si décision maintenue.                                                                                                                                           |
-| MusicSchoolMembersSheet               | src/app/schools/[id]/members.tsx            | À FAIRE       | À décider séparément du chat école.                                                                                                                                                                                                               |
-| MyProfileView                         | src/app/(tabs)/profile.tsx                  | EN COURS      | Lecture et accès séparés à l’édition, aux disponibilités, aux voyages et aux démos présents ; parcours authentifié et stats détaillées restent à valider.                                                                                         |
-| EditProfileSheet                      | src/app/profile/edit.tsx                    | EN COURS      | Édition profil présente ; parcours authentifié et comparaison Swift restent à valider.                                                                                                                                                            |
-| VideoDetailsSheet                     | src/app/profile/videos/[id].tsx             | À FAIRE       | Titre, suppression et upload/transcodage.                                                                                                                                                                                                         |
-| LanguageRegionSheet                   | src/app/settings/language-region.tsx        | À FAIRE       | Choix persistant parmi neuf langues et pays/région.                                                                                                                                                                                               |
-| AvailabilityPlaceSheet                | src/app/profile/travel.tsx                  | EN COURS      | Voyage/lieu séparé des démos ; les dates de disponibilité vivent dans `/profile/availability`. Validation authentifiée et visuelle encore requise.                                                                                                |
-| SettingsSheet                         | src/app/settings/index.tsx                  | À FAIRE       | Navigation réglages, thème, localisation, support et confidentialité.                                                                                                                                                                             |
-| AccountSheet                          | src/app/settings/account.tsx                | À FAIRE       | E-mail, déconnexion, suppression, isolation de compte et changement de compte.                                                                                                                                                                    |
-| NotificationsSettingsView             | src/app/settings/notifications.tsx          | À FAIRE       | Catégories, permission système, token et badge.                                                                                                                                                                                                   |
-| LinkAppleSheet                        | src/app/settings/link-apple.tsx             | BLOQUÉ        | Capability/config Apple et parcours de liaison à valider sur development build.                                                                                                                                                                   |
-| PaywallView                           | src/app/paywall.tsx                         | BLOQUÉ        | Point de montage produit à décider, SDK RevenueCat absent et stores non configurés pour la cible commune.                                                                                                                                         |
-| WhatsNewSheet / PatchNotesView        | src/app/whats-new.tsx                       | À FAIRE       | Présentation une fois par version et historique.                                                                                                                                                                                                  |
-| CityPickerSheet                       | aucune                                      | NE PAS PORTER | Vue Swift apparemment orpheline ; utiliser pays + postal + résolution de ville et correction manuelle.                                                                                                                                            |
+| SwiftUI / fonctionnalité              | Cible Expo / RN                             | Statut                              | Parité ou travail restant                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------- | ------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DispoApp + RootView                   | src/app/_layout.tsx, src/app/index.tsx      | FAIT — validé techniquement         | Session, shell et politique globale de header présents ; build Release iOS et compilation Release Android réussis. Validation authentifiée sur appareils encore requise.                                                                                                                                                                                       |
+| TabView 5 onglets                     | src/app/(tabs)/_layout.tsx                  | FAIT — validation métier en attente | `NativeTabs` système, ordre, badges et safe area présents ; la barre basse ne masque plus la fin des listes. Validation visuelle authentifiée iOS/Android encore requise.                                                                                                                                                                                      |
+| AuthGateView / AuthForm               | src/app/(auth)/sign-in.tsx, features/auth   | EN COURS                            | Hiérarchie, copies, sélecteur, champs, CTA et mentions Swift portés ; login/signup et demande de reset e-mail présents. Callback de récupération, Apple, Google Android et parcours réels restent à prouver.                                                                                                                                                   |
+| OnboardingView                        | src/app/(auth)/onboarding/*                 | FAIT — validation métier en attente | Quatre étapes, profil express, région et changement de compte présents et couverts par tests. Parcours Apple/Google réel restant.                                                                                                                                                                                                                              |
+| HomeView                              | src/app/(tabs)/index.tsx                    | FAIT — validation métier en attente | Greeting/logo, réseau, notifications, recherche, groupes, trois scopes, filtres et feed sont portés. Le tri relation/niveau/urgence/distance, les cinq états de disponibilité et les voyages à la date du scope suivent le build SwiftUI 35 ; comparaison appareil encore requise.                                                                             |
+| SearchView                            | src/app/search.tsx, features/discovery      | FAIT — validation métier en attente | Recherche profils et SOS avec nom/@pseudo, lieux/quartiers, disponibilités, traductions, alias d’instruments et familles de genres. Les badges Ami/Même école/AMR/relation commune sont présents ; validation multilingue sur appareil encore requise.                                                                                                         |
+| FilterSheet                           | src/app/filters.tsx, features/discovery     | FAIT — validation métier en attente | Instruments et styles regroupés avec effacement par section, date, pays/code postal/ville séparés, rayon, niveaux, relations et Bien notés (≥ 4 avec ≥ 3 avis). Feuille iOS medium/large et modal Android ; validation visuelle encore requise.                                                                                                                |
+| NotificationsCenterView               | src/app/notifications.tsx                   | FAIT — validation métier en attente | Feed paginé, lecture, Tout lire, navigation cible, états vides et Realtime présents.                                                                                                                                                                                                                                                                           |
+| MusicianDetailView                    | src/app/profiles/[id].tsx                   | FAIT — validation métier en attente | Résumé, écoles, rating, contact, follow, SOS direct, groupes, portfolio, réseaux, joué-avec, followers, report et blocage présents.                                                                                                                                                                                                                            |
+| PlayedWithSheet                       | src/app/profiles/[id]/played-with.tsx       | FAIT — validation métier en attente | Pagination exhaustive et navigation profil présentes.                                                                                                                                                                                                                                                                                                          |
+| FollowersSheet                        | src/app/profiles/[id]/followers.tsx         | FAIT — validation métier en attente | Followers/following et relation mutuelle présents.                                                                                                                                                                                                                                                                                                             |
+| VideoPlayerSheet                      | features/media/profile-video.tsx            | FAIT — validation métier en attente | Player plein écran bord à bord, lecture automatique, contrôles natifs, chargement, erreurs et fermeture superposée présents ; son/codec à prouver sur appareils.                                                                                                                                                                                               |
+| EventsView                            | src/app/(tabs)/sos.tsx                      | FAIT — validation métier en attente | Segments SOS/Mes SOS, compatibilité, badge des candidatures en attente, triage hôte et demandes directes envoyées présents ; preuve à deux comptes requise.                                                                                                                                                                                                    |
+| EventCard                             | features/gigs/gig-card.tsx                  | FAIT — validation métier en attente | Billet, perforation, code-barres, nouveau, candidatures à traiter et état des demandes directes présents ; comparaison physique restante.                                                                                                                                                                                                                      |
+| CreateEventView                       | src/app/gigs/create.tsx                     | FAIT — validation métier en attente | Formulaire structuré, sélecteurs date/heure natifs, zone publique, adresse privée, niveaux, cachet et moyen de paiement libre présents.                                                                                                                                                                                                                        |
+| SOSMatchView                          | src/app/gigs/matches.tsx                    | FAIT — validation métier en attente | Classement et profils compatibles présents ; les pages candidates sont chargées jusqu’au bout avant le filtrage final.                                                                                                                                                                                                                                         |
+| SOSRequestSheet                       | src/app/gigs/request.tsx                    | FAIT — validation métier en attente | Instrument, dates du musicien, sélecteurs natifs, lieu, cachet, moyen de paiement libre et message présents.                                                                                                                                                                                                                                                   |
+| EventDetailView                       | src/app/gigs/[id].tsx                       | FAIT — validation métier en attente | États candidature/direct, retrait après refus, décisions hôte, candidatures historiques sous Autre, adresse privée et line-up présents.                                                                                                                                                                                                                        |
+| GigPrivateLocationCard                | features/locations/private-gig-location.tsx | FAIT — validation métier en attente | Adresse via RPC privé autorisé, carte iOS et itinéraire multiplateforme ; aucune adresse exacte dans le feed.                                                                                                                                                                                                                                                  |
+| MyEventsView                          | src/app/(tabs)/sessions.tsx                 | FAIT — validation métier en attente | Futur/passé, synthèse, groupes, SOS et badges de réponse présents, pagination exhaustive et Realtime ajoutés.                                                                                                                                                                                                                                                  |
+| AgendaRow / NextDateCard / AnswerCard | features/sessions/components/*              | FAIT — validation métier en attente | Cartes, regroupement et réponse oui/non présents.                                                                                                                                                                                                                                                                                                              |
+| ChatListView                          | src/app/(tabs)/messages.tsx                 | FAIT — validation métier en attente | Direct, groupes musicaux, écoles, invitations, unread et pagination présents.                                                                                                                                                                                                                                                                                  |
+| ChatView                              | src/app/messages/[id].tsx                   | FAIT — validation métier en attente | Texte, pagination, Realtime, delivered/read, typing, édition/suppression, réactions et reprise présents.                                                                                                                                                                                                                                                       |
+| MessageAttachment*                    | features/messages/attachments/*             | EN COURS                            | Photo, vidéo, fichier, brouillon et upload privé présents. Les objets privés s’ouvrent via une URL signée courte dans le navigateur intégré ; cache local, vrai Quick Look et Save to Files natifs restent à porter.                                                                                                                                           |
+| MessageControls                       | features/messages/message-actions.tsx       | FAIT — validation métier en attente | Jour, réactions, menu, édition, suppression et confirmations présents.                                                                                                                                                                                                                                                                                         |
+| GroupChatView — Messages              | src/app/groups/[id]/index.tsx               | FAIT — validation métier en attente | Messages de groupe, unread, typing, réactions, pièces jointes, pagination et Realtime présents.                                                                                                                                                                                                                                                                |
+| GroupChatView — Répertoire            | src/app/groups/[id]/songs.tsx               | FAIT — validation appareil requise  | Liste, recherche, ajout/suggestion, réordonnancement optimiste avec rollback, documents libres et droits leader/auteur présents ; comparaison visuelle authentifiée avec Swift encore requise.                                                                                                                                                                 |
+| SongRow / drag                        | features/groups/group-song-row.tsx          | FAIT — validation appareil requise  | Ligne partagée de 68 pt, pochette 46 × 46, méta compacte, écoute et actions 44 pt. Le répertoire et les setlists validées utilisent un drag continu Reanimated/Gesture Handler avec auto-scroll, poignée dédiée, haptique à chaque changement de rang, commandes accessibles et rollback serveur testé ; le geste doit encore être prouvé sur iPhone et Pixel. |
+| SongDetailSheet                       | src/app/groups/[id]/songs/[songId].tsx      | EN COURS                            | En-tête avec pochette, écoute, iReal direct ou recherche, partitions, solos et commentaires présents pour le répertoire comme pour les morceaux propres aux setlists ; onglets segmentés/drag des solos et validation visuelle Swift restent à terminer.                                                                                                       |
+| AddSongSheet / EditSongSheet          | src/app/groups/[id]/songs/[songId].tsx      | EN COURS                            | Création/édition, tonalité, catalogue et validation présents dans la fiche ; enrichissement canonique serveur et parcours leader/membre restent à valider.                                                                                                                                                                                                     |
+| CopySongSheet                         | features/groups/group-song-copy-screen.tsx  | FAIT — validation métier en attente | UI multi-destination, tri, libellé complet, déduplication, copie répertoire/setlist, suggestion membre, retours partiels et haptique présents et testés ; parcours à deux comptes encore requis.                                                                                                                                                               |
+| ListenSheet                           | features/groups/group-song-row.tsx          | FAIT — validation métier en attente | Liens exacts production vérifiés pour 20/20 morceaux ; Apple 20, Deezer 20, Tidal 19, Amazon 19. Spotify/YouTube restent des recherches explicitement libellées en l'absence d'URL exacte.                                                                                                                                                                     |
+| GroupChatView — Événements            | src/app/groups/[id]/events.tsx              | FAIT — validation métier en attente | Cartes, création, édition, annulation et réponses présentes.                                                                                                                                                                                                                                                                                                   |
+| GroupEventSheet                       | src/app/groups/[id]/events/[eventId].tsx    | FAIT — validation métier en attente | Détail, présence, setlist, invités, SOS, lieu privé et ouverture des fiches de morceaux propres à l’événement présents.                                                                                                                                                                                                                                        |
+| Add/EditGroupEventSheet               | features/groups/events/forms/*              | FAIT — validation métier en attente | Concert/répétition/jam, récurrence et atomicité du lieu privé présentes.                                                                                                                                                                                                                                                                                       |
+| GroupMembersSheet                     | src/app/groups/[id]/members.tsx             | FAIT — validation métier en attente | Membres, rôles et profils présents.                                                                                                                                                                                                                                                                                                                            |
+| InviteMemberSheet                     | src/app/groups/[id]/invite.tsx              | FAIT — validation métier en attente | Recherche, invitation, Premium et états présents.                                                                                                                                                                                                                                                                                                              |
+| GroupSettingsSheet                    | src/app/groups/[id]/settings.tsx            | FAIT — validation métier en attente | Nom/photo, leadership, sortie et suppression présents.                                                                                                                                                                                                                                                                                                         |
+| NewGroupSheet                         | src/app/groups/create.tsx                   | FAIT — validation métier en attente | Création et limite de groupes dirigés présentes.                                                                                                                                                                                                                                                                                                               |
+| DocPreview / QuickLook                | repositories groupes/messages               | EN COURS — fallback                 | PDF/JPEG/PNG/TXT privés consultables via URL signée courte dans le navigateur intégré. Un module natif reste requis pour égaler Quick Look : fichier local, rendu MIME, partage/Save to Files et cache hors ligne.                                                                                                                                             |
+| MusicSchoolDirectoryView              | src/app/schools/index.tsx                   | FAIT — validation métier en attente | Annuaire, recherche, détail et affiliations présents.                                                                                                                                                                                                                                                                                                          |
+| MusicSchoolJoinSheet                  | src/app/schools/[id]/join.tsx               | FAIT — validation métier en attente | Rôle, instrument, statut et école principale présents.                                                                                                                                                                                                                                                                                                         |
+| MusicSchoolCommunityView              | src/app/schools/[id]/community.tsx          | FAIT — validation métier en attente | Chat école rétabli avec pagination, Realtime, unread, édition/suppression, signalement et blocage.                                                                                                                                                                                                                                                             |
+| MusicSchoolMembersSheet               | src/app/schools/[id]/members.tsx            | FAIT — validation métier en attente | Membres et navigation profil présents.                                                                                                                                                                                                                                                                                                                         |
+| MyProfileView                         | src/app/(tabs)/profile.tsx                  | EN COURS                            | Lecture et accès séparés à l’édition, aux disponibilités, aux voyages et aux démos présents ; parcours authentifié et stats détaillées restent à valider.                                                                                                                                                                                                      |
+| EditProfileSheet                      | src/app/profile/edit.tsx                    | EN COURS                            | Édition profil présente ; parcours authentifié et comparaison Swift restent à valider.                                                                                                                                                                                                                                                                         |
+| VideoDetailsSheet                     | features/portfolio/portfolio-screen.tsx     | FAIT — validation appareil requise  | Ajout, limite 3 min/50 Mo sur le MP4 final, miniature, titre, date, lecture et suppression présents. Le module Expo local encode en H.264 720p ~2 Mbit/s sur iOS (AVAssetReader/Writer) et Android (Media3), conserve orientation/audio, annule et purge son cache ; fichiers caméra réels à exercer.                                                          |
+| LanguageRegionSheet                   | src/app/settings/language-region.tsx        | FAIT — validation métier en attente | Choix persistant parmi neuf langues, pays/région, code postal et ville présent.                                                                                                                                                                                                                                                                                |
+| AvailabilityPlaceSheet                | src/app/profile/travel.tsx                  | EN COURS                            | Voyage/lieu séparé des démos ; les dates de disponibilité vivent dans `/profile/availability`. Validation authentifiée et visuelle encore requise.                                                                                                                                                                                                             |
+| SettingsSheet                         | src/app/settings/index.tsx                  | FAIT — validation métier en attente | Navigation réglages, thème, localisation, support et confidentialité présents.                                                                                                                                                                                                                                                                                 |
+| AccountSheet                          | src/app/settings/account.tsx                | FAIT — validation métier en attente | E-mail, déconnexion, suppression, isolation et changement de compte présents ; reprise de session native ajoutée.                                                                                                                                                                                                                                              |
+| NotificationsSettingsView             | src/app/settings/notifications.tsx          | FAIT — validation métier en attente | Catégories, permission système, token natif et badge présents ; APNs/FCM réels restent à exercer.                                                                                                                                                                                                                                                              |
+| LinkAppleSheet                        | features/settings/settings-screen.tsx       | FAIT — validation appareil requise  | Liaison d’identité Apple avec nonce natif, bouton Réglages et entitlement Sign in with Apple présents ; compte signé réel à exercer.                                                                                                                                                                                                                           |
+| PaywallView                           | src/app/premium.tsx                         | FAIT — parité bêta                  | Le build SwiftUI 35 active la bêta ouverte : écran Premium informatif et capacités débloquées sont reproduits. RevenueCat/StoreKit/Play Billing restent un chantier post-bêta, pas une régression de ce build de référence.                                                                                                                                    |
+| WhatsNewSheet / PatchNotesView        | src/app/whats-new.tsx                       | FAIT — validation métier en attente | Présentation versionnée et historique présents, avec migration de préférence native.                                                                                                                                                                                                                                                                           |
+| CityPickerSheet                       | aucune                                      | NE PAS PORTER                       | Vue Swift apparemment orpheline ; utiliser pays + postal + résolution de ville et correction manuelle.                                                                                                                                                                                                                                                         |
 
 ## 6. Contrat Supabase et performance
 
@@ -427,7 +439,7 @@ Data API :
 - les écrans complexes devront évoluer vers des RPC à curseur stable,
   particulièrement notifications, sessions, groupes et recherches combinées.
 
-Le lot répertoire ajoute localement, sans `db push`, un modèle non destructif :
+Le lot répertoire déploie en production un modèle non destructif :
 
 - `song_catalog` conserve identité canonique, ISRC, compositeur, genres,
   identifiants fournisseurs et métadonnées ; les snapshots JSONB historiques
@@ -446,12 +458,13 @@ Le lot répertoire ajoute localement, sans `db push`, un modèle non destructif 
   au `service_role` ;
 - le repository interroge ce RPC canonique et Apple en parallèle, déduplique par
   ISRC, identifiant Apple ou couple artiste/titre et laisse gagner les données
-  canoniques. En production actuelle, l’absence de la migration est tolérée et
-  déclenche le repli Apple sans rendre la recherche indisponible ;
-- le cache peut stocker les six plateformes, mais son remplissage automatique
-  en liens exacts reste conditionné à un fournisseur autorisé et à des
-  identifiants conservés côté serveur ; aucune clé fournisseur n’est présente
-  dans le client ;
+  canoniques. L’absence temporaire du RPC reste tolérée et déclenche le repli
+  Apple sans rendre la recherche indisponible ;
+- une file privée bornée enrichit les morceaux via une Edge Function avec
+  authentification applicative, quota SQL, backoff et cache négatif. Odesli est
+  le résolveur public primaire ; Musicfetch est optionnel côté serveur. Les IDs
+  Apple variant selon le storefront sont rattachés au morceau canonique sans
+  dupliquer les cartes ; aucune clé fournisseur n’est présente dans le client ;
 - aucun catalogue public iReal Pro n’est interrogé : l’app ouvre un lien iReal
   valide ou la recherche locale officielle `irealb://search?...`.
 
@@ -567,30 +580,30 @@ moteur typographique iOS.
 
 ## 8. Intégrations natives
 
-| Intégration iOS actuelle       | Cible Expo / Android                            | Statut / règle                                                                                                                                    |
-| ------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NavigationStack / sheets       | Expo Router Stack, Tabs et routes modales       | EN COURS ; conserver deep links, restauration et historique.                                                                                      |
-| ultraThinMaterial              | expo-blur avec fallback opaque                  | À FAIRE ; comparer performances Android.                                                                                                          |
-| Sign in with Apple             | expo-apple-authentication                       | BLOQUÉ par câblage, capability et preuve en development build ; aucun bouton factice n’est affiché sur AuthGate.                                  |
-| Google Android                 | expo-auth-session ou fournisseur natif approuvé | BLOQUÉ : absent des apps natives, nécessite provider Supabase, OAuth, SHA et stratégie de liaison de compte.                                      |
-| Reset / dispo://login-callback | Supabase Auth + Expo Linking / Router           | EN COURS ; envoi e-mail explicite présent et testé unitairement, mais consommation du callback et mise à jour du mot de passe restent à faire.    |
-| RevenueCat / StoreKit          | react-native-purchases + Play Billing           | BLOQUÉ : dépendance et configuration stores absentes ; webhook reste autoritaire.                                                                 |
-| APNs                           | expo-notifications avec token natif             | À FAIRE ; push_devices accepte déjà APNs et FCM. Utiliser getDevicePushTokenAsync, pas Expo Push Service.                                         |
-| FCM Android                    | expo-notifications avec token natif             | À FAIRE ; credentials et development/release build requis.                                                                                        |
-| Notifications locales          | expo-notifications                              | À FAIRE ; rappels présence, badge et catégories.                                                                                                  |
-| CoreLocation                   | expo-location                                   | À FAIRE ; foreground, précision/arrondi et retrait de localisation.                                                                               |
-| MapKit adresse privée          | expo-maps ou module natif                       | BLOQUÉ jusqu’à validation du rendu et de la confidentialité RPC.                                                                                  |
-| PhotosPicker                   | expo-image-picker                               | Dépendance présente, parcours à faire.                                                                                                            |
-| AVAssetReader/Writer           | module natif ou service approuvé                | BLOQUÉ pour la parité compression/transcodage 720p et audio.                                                                                      |
-| AVPlayer                       | expo-video                                      | Dépendance présente, UI et erreurs à faire.                                                                                                       |
-| DocumentPicker                 | expo-document-picker                            | Dépendance présente, upload privé et taille/type à faire.                                                                                         |
-| QuickLook                      | PDF viewer/module natif + partage fallback      | BLOQUÉ par choix technique.                                                                                                                       |
-| Analyse de tonalité audio      | module natif ou backend                         | BLOQUÉ ; aucun équivalent Expo standard.                                                                                                          |
-| iReal Pro schemes/HTML         | Expo Linking + queries Android/iOS              | EN COURS ; CNG ajoute `irealb`/`irealbook`, lien direct valide sinon recherche locale, puis store si l’app manque. Test development build requis. |
-| UIKit haptics                  | expo-haptics                                    | Dépendance présente, politique sémantique à reproduire.                                                                                           |
-| URLSession/NSCache avatars     | expo-image + politique de cache                 | EN COURS ; retry borné, coalescence et invalidation après upload à prouver.                                                                       |
-| UserDefaults                   | stockage local versionné                        | À FAIRE pour thème, langue et nouveautés.                                                                                                         |
-| Keychain/session               | adaptateur SecureStore évalué                   | À FAIRE avant release.                                                                                                                            |
+| Intégration iOS actuelle       | Cible Expo / Android                            | Statut / règle                                                                                                                                               |
+| ------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| NavigationStack / sheets       | Expo Router Stack, Tabs et routes modales       | EN COURS ; conserver deep links, restauration et historique.                                                                                                 |
+| ultraThinMaterial              | expo-blur avec fallback opaque                  | À FAIRE ; comparer performances Android.                                                                                                                     |
+| Sign in with Apple             | expo-apple-authentication                       | EN COURS ; bouton natif, capability et entitlement production présents ; connexion réelle à prouver sur le build signé.                                      |
+| Google Android                 | expo-auth-session ou fournisseur natif approuvé | BLOQUÉ : absent des apps natives, nécessite provider Supabase, OAuth, SHA et stratégie de liaison de compte.                                                 |
+| Reset / dispo://login-callback | Supabase Auth + Expo Linking / Router           | FAIT — validation métier en attente ; envoi, callback et mise à jour sont présents, à exercer avec un vrai e-mail.                                           |
+| RevenueCat / StoreKit          | react-native-purchases + Play Billing           | BLOQUÉ : dépendance et configuration stores absentes ; webhook reste autoritaire.                                                                            |
+| APNs                           | expo-notifications avec token natif             | EN COURS ; enregistrement natif, préférences, deep links et entitlement production présents ; réception réelle à prouver.                                    |
+| FCM Android                    | expo-notifications avec token natif             | EN COURS ; enregistrement natif et Firebase présents ; réception Release réelle à prouver.                                                                   |
+| Notifications locales          | expo-notifications                              | EN COURS ; rappels de présence, badge et catégories présents ; preuve appareil requise.                                                                      |
+| CoreLocation                   | expo-location                                   | EN COURS ; foreground, précision/arrondi, synchronisation et retrait présents ; preuve appareil requise.                                                     |
+| MapKit adresse privée          | expo-maps / itinéraire système                  | EN COURS ; carte iOS, carte Android conditionnelle et RPC privé présents ; confidentialité à deux comptes à prouver.                                         |
+| PhotosPicker                   | expo-image-picker                               | Parcours photo/vidéo présent ; permissions et média réel à prouver.                                                                                          |
+| AVAssetReader/Writer           | module Expo local `dispo-video-transcoder`      | FAIT — builds natifs validés ; H.264 720p ~2 Mbit/s, orientation/audio, annulation et purge cache présents sur iOS/Android ; preuve caméra appareil requise. |
+| AVPlayer                       | expo-video                                      | Dépendance présente, UI et erreurs à faire.                                                                                                                  |
+| DocumentPicker                 | expo-document-picker                            | Upload privé, validation taille/type, téléchargement et aperçu présents ; preuve appareil à faire.                                                           |
+| QuickLook                      | ouverture système + partage fallback            | EN COURS ; ouverture native/fallback présents, rendu de chaque type à prouver.                                                                               |
+| Analyse de tonalité audio      | module Expo natif iOS/Android                   | FAIT — validation métier en attente ; AVFoundation/Accelerate iOS et MediaCodec Android estiment tonalité et BPM localement.                                 |
+| iReal Pro schemes/HTML         | Expo Linking + queries Android/iOS              | EN COURS ; CNG ajoute `irealb`/`irealbook`, lien direct valide sinon recherche locale, puis store si l’app manque. Test development build requis.            |
+| UIKit haptics                  | expo-haptics                                    | Dépendance présente, politique sémantique à reproduire.                                                                                                      |
+| URLSession/NSCache avatars     | expo-image + politique de cache                 | EN COURS ; retry borné, coalescence et invalidation après upload à prouver.                                                                                  |
+| UserDefaults                   | stockage local versionné + pont legacy          | FAIT — validation métier en attente ; thème, langue, nouveautés, rappels et dates de lecture sont migrés sans supprimer les anciennes valeurs.               |
+| Keychain/session               | SecureStore + pont legacy natif                 | FAIT — validation métier en attente ; reprise Swift Keychain et Supabase-KT validée unitairement, preuve finale via mise à jour signée requise.              |
 
 L’application Android Kotlin couvre déjà une grande partie du produit et
 possède neuf catalogues de traduction, mais n’offre ni Google OAuth ni
@@ -884,24 +897,24 @@ Gate :
 
 ## 12. Risques prioritaires
 
-| Priorité | Risque                                              | Réponse                                                                                                           |
-| -------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| P0       | Fuite d’adresse exacte                              | Accès uniquement par RPC privé et tests propriétaire/participant/intrus.                                          |
-| P0       | Contournement Premium                               | Lire is_premium serveur ; webhook seul auteur ; ignorer user_metadata.                                            |
-| P0       | Requêtes globales reproduites du Swift              | Pagination, colonnes explicites, Realtime filtré et RPC curseur.                                                  |
-| P0       | Session de plusieurs comptes mélangée               | Purge ciblée du cache Query/session lors de logout et tests d’isolation.                                          |
-| P1       | Socle natif vert mais parcours métier non prouvés   | Exécuter Phase 2 à deux comptes, avec backend de test et captures comparatives.                                   |
-| P1       | Variables Java/Android non forcément persistées     | Réexporter JAVA_HOME, ANDROID_HOME et PATH dans toute nouvelle session ; CocoaPods 1.17 et JDK 17 sont installés. |
-| P1       | Expo Go utilisé comme preuve                        | Utiliser development builds CNG.                                                                                  |
-| P1       | AsyncStorage pour session                           | Évaluer/adopter un stockage sécurisé avant release.                                                               |
-| P1       | Paywall Swift orphelin et RevenueCat absent         | Décider montage produit, installer SDK, puis sandbox + webhook.                                                   |
-| P1       | QuickLook/transcodage/analyse audio sans équivalent | Module natif ou changement produit explicite, jamais imitation silencieuse.                                       |
-| P1       | i18n seulement exportée                             | Remplacer toutes les chaînes/formatters en dur et tester neuf locales.                                            |
-| P1       | Rendu Android divergent                             | Golden tests, table d’icônes, fallback blur/shadow et tolérance approuvée.                                        |
-| P1       | Correctif triggers morceaux local uniquement        | Revoir puis appliquer la migration 20260830173725 en production avec confirmation explicite.                      |
-| P2       | Avis npm modérés dans l’outillage Expo              | Attendre une résolution compatible SDK 57 ; ne pas utiliser npm audit fix --force qui rétrograde Expo.            |
-| P2       | Assets de scaffold Expo conservés localement        | Ils ne sont pas référencés et sont exclus de Git ; ne versionner que l’identité Dispo.                            |
-| P2       | Vingt pfp legacy iOS probablement morts             | Ne pas les recopier sans preuve d’usage.                                                                          |
+| Priorité | Risque                                            | Réponse                                                                                                             |
+| -------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| P0       | Fuite d’adresse exacte                            | Accès uniquement par RPC privé et tests propriétaire/participant/intrus.                                            |
+| P0       | Contournement Premium                             | Lire is_premium serveur ; webhook seul auteur ; ignorer user_metadata.                                              |
+| P0       | Requêtes globales reproduites du Swift            | Pagination, colonnes explicites, Realtime filtré et RPC curseur.                                                    |
+| P0       | Session de plusieurs comptes mélangée             | Purge ciblée du cache Query/session lors de logout et tests d’isolation.                                            |
+| P1       | Socle natif vert mais parcours métier non prouvés | Exécuter Phase 2 à deux comptes, avec backend de test et captures comparatives.                                     |
+| P1       | Variables Java/Android non forcément persistées   | Réexporter JAVA_HOME, ANDROID_HOME et PATH dans toute nouvelle session ; CocoaPods 1.17 et JDK 17 sont installés.   |
+| P1       | Expo Go utilisé comme preuve                      | Utiliser development builds CNG.                                                                                    |
+| P1       | AsyncStorage pour session                         | Évaluer/adopter un stockage sécurisé avant release.                                                                 |
+| P1       | Monétisation post-bêta non intégrée               | Avant de fermer la bêta ouverte, intégrer StoreKit/Play Billing ou RevenueCat puis valider sandbox + webhook.       |
+| P1       | QuickLook et médias réels non prouvés             | Finaliser aperçu/partage système et valider le transcodage natif sur vidéos caméra iOS/Android.                     |
+| P1       | i18n seulement exportée                           | Remplacer toutes les chaînes/formatters en dur et tester neuf locales.                                              |
+| P1       | Rendu Android divergent                           | Golden tests, table d’icônes, fallback blur/shadow et tolérance approuvée.                                          |
+| P1       | Enrichissement fournisseur incomplet ou trompeur  | N'afficher comme directs que les hôtes exacts vérifiés ; conserver les autres services comme recherches explicites. |
+| P2       | Avis npm modérés dans l’outillage Expo            | Attendre une résolution compatible SDK 57 ; ne pas utiliser npm audit fix --force qui rétrograde Expo.              |
+| P2       | Assets de scaffold Expo conservés localement      | Ils ne sont pas référencés et sont exclus de Git ; ne versionner que l’identité Dispo.                              |
+| P2       | Vingt pfp legacy iOS probablement morts           | Ne pas les recopier sans preuve d’usage.                                                                            |
 
 ## 13. Discipline de mise à jour
 

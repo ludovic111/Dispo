@@ -48,6 +48,7 @@ type ApplicationProjection = Pick<
   ApplicationRow,
   'created_at' | 'id' | 'instrument' | 'message' | 'musician_id' | 'status'
 >;
+type PendingApplicationProjection = Pick<ApplicationRow, 'gig_id'>;
 type ApplicantProfileProjection = Pick<ProfileRow, 'id' | 'name' | 'photo_url'>;
 type MatchProfileProjection = Pick<
   ProfileRow,
@@ -198,6 +199,7 @@ export async function fetchGigsPage(
   page: number,
   pageSize = 20,
   signal?: AbortSignal,
+  hostingUserId?: string,
 ): Promise<Page<GigSummary>> {
   const { from, to } = pageRange(page, pageSize);
   const query = getSupabaseClient()
@@ -210,8 +212,32 @@ export async function fetchGigsPage(
   const result = await (signal ? query.abortSignal(signal) : query);
   if (result.error) throw result.error;
   const rows = result.data.slice(0, pageSize) as GigProjection[];
+  const mapped = await mapGigs(rows, signal);
+  const hostedIds = hostingUserId
+    ? mapped.filter((gig) => gig.hostId === hostingUserId).map((gig) => gig.id)
+    : [];
+  const pendingCounts = new Map<string, number>();
+  if (hostedIds.length > 0) {
+    const applicationsQuery = getSupabaseClient()
+      .from('gig_applications')
+      .select('gig_id')
+      .in('gig_id', hostedIds)
+      .eq('status', 'pending');
+    const applicationsResult = await (signal
+      ? applicationsQuery.abortSignal(signal)
+      : applicationsQuery);
+    if (applicationsResult.error) throw applicationsResult.error;
+    for (const application of applicationsResult.data as PendingApplicationProjection[]) {
+      pendingCounts.set(application.gig_id, (pendingCounts.get(application.gig_id) ?? 0) + 1);
+    }
+  }
   return {
-    items: await mapGigs(rows, signal),
+    items: mapped.map((gig) => ({
+      ...gig,
+      ...(gig.hostId === hostingUserId
+        ? { pendingApplicantCount: pendingCounts.get(gig.id) ?? 0 }
+        : {}),
+    })),
     nextPage: result.data.length > pageSize ? page + 1 : null,
   };
 }

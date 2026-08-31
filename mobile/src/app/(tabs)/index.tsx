@@ -15,9 +15,10 @@ import { useAuth } from '@/features/auth/auth-context';
 import { useDiscoveryState } from '@/features/discovery/discovery-context';
 import {
   activeFilterCount,
-  isAvailableOn,
+  dateForAvailabilityScope,
   matchesDiscoveryFilters,
   openingScope,
+  profileAvailability,
   profilesForScope,
   rankProfiles,
   type AvailabilityScope,
@@ -110,13 +111,13 @@ export default function DiscoveryScreen() {
     () => profilesQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [profilesQuery.data?.pages],
   );
-  const filtered = useMemo(
-    () =>
-      profiles
-        .filter((profile) => matchesDiscoveryFilters(profile, filters, meQuery.data ?? null))
-        .sort(rankProfiles),
-    [filters, meQuery.data, profiles],
-  );
+  const filtered = useMemo(() => {
+    const referenceProfile = meQuery.data ?? null;
+    const rankingDate = new Date();
+    return profiles
+      .filter((profile) => matchesDiscoveryFilters(profile, filters, referenceProfile))
+      .sort((left, right) => rankProfiles(left, right, referenceProfile, rankingDate));
+  }, [filters, meQuery.data, profiles]);
   const visible = useMemo(() => profilesForScope(filtered, scope), [filtered, scope]);
   const scopeCounts = useMemo(
     () => ({
@@ -136,6 +137,16 @@ export default function DiscoveryScreen() {
 
   const unread = notificationsQuery.data ?? 0;
   const now = new Date();
+  const myAvailability = meQuery.data ? profileAvailability(meQuery.data, now) : null;
+  const myAvailabilityColor =
+    myAvailability?.kind === 'today'
+      ? palette.jam
+      : myAvailability?.kind === 'thisWeek'
+        ? palette.electric
+        : myAvailability?.kind === 'weekend'
+          ? palette.rehearsal
+          : palette.bronze;
+  const selectedScopeDate = dateForAvailabilityScope(scope, filters.neededDate, now);
   const greeting = t(now.getHours() >= 17 || now.getHours() < 5 ? 'Bonsoir' : 'Salut');
   const firstName = meQuery.data?.name.split(/\s+/)[0] || t('musicien');
   const groups = useMemo(
@@ -164,10 +175,13 @@ export default function DiscoveryScreen() {
       </Screen>
     );
   }
-  if (profilesQuery.isError) {
+  if (profilesQuery.isExhaustiveError) {
     return (
       <Screen nativeTabRoot>
-        <ErrorState message={profilesQuery.error.message} onRetry={() => void refresh()} />
+        <ErrorState
+          message={profilesQuery.error?.message ?? t('Chargement impossible.')}
+          onRetry={() => void refresh()}
+        />
       </Screen>
     );
   }
@@ -226,11 +240,11 @@ export default function DiscoveryScreen() {
                 size={48}
                 uri={meQuery.data?.photoUrl ?? null}
               />
-              {meQuery.data && isAvailableOn(meQuery.data, now) ? (
+              {myAvailability && myAvailability.kind !== 'unavailable' ? (
                 <View
                   style={[
                     styles.availableDot,
-                    { backgroundColor: palette.jam, borderColor: palette.background },
+                    { backgroundColor: myAvailabilityColor, borderColor: palette.background },
                   ]}
                 />
               ) : null}
@@ -387,7 +401,11 @@ export default function DiscoveryScreen() {
           />
         }
         renderItem={({ item }) => (
-          <DiscoveryProfileRow neededDate={filters.neededDate} profile={item} />
+          <DiscoveryProfileRow
+            profile={item}
+            referenceProfile={meQuery.data ?? null}
+            scopeDate={selectedScopeDate}
+          />
         )}
       />
     </Screen>

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 import type { GroupMessage } from '@/features/groups/group-model';
 import {
+  groupRefreshFilters,
   groupKeys,
   patchGroupMessageCache,
   type GroupMessageCache,
@@ -13,6 +14,7 @@ import {
   subscribeToGroupTyping,
   subscribeToGroups,
 } from '@/features/groups/group-repository';
+import { sessionKeys } from '@/features/sessions/session-queries';
 import { getSupabaseClient } from '@/services/supabase/client';
 
 jest.mock('@/services/supabase/client', () => ({ getSupabaseClient: jest.fn() }));
@@ -333,5 +335,14 @@ describe('cache de query isolé et dédupliqué', () => {
       false,
     );
     expect(patched?.pages[0]?.items.map((item) => item.id)).toEqual(['visible']);
+  });
+});
+
+describe('fraîcheur Sessions après les mutations de groupe', () => {
+  it('ajoute toute la famille Sessions aux invalidations des mutations concernées', () => {
+    expect(groupRefreshFilters('profile-me')).not.toContainEqual({ queryKey: sessionKeys.all });
+    expect(groupRefreshFilters('profile-me', true)).toContainEqual({
+      queryKey: sessionKeys.all,
+    });
   });
 });

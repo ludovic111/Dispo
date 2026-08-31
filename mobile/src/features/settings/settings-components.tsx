@@ -6,11 +6,14 @@ import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { AppText } from '@/components/ui/app-text';
 import { Screen } from '@/components/ui/screen';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
 
-export function SettingsShell({ children }: PropsWithChildren) {
+export function SettingsShell({
+  children,
+  nativeHeader = false,
+}: PropsWithChildren<{ nativeHeader?: boolean }>) {
   return (
-    <Screen>
+    <Screen nativeHeader={nativeHeader}>
       <ScrollView contentContainerStyle={styles.shell} showsVerticalScrollIndicator={false}>
         {children}
       </ScrollView>
@@ -167,7 +170,13 @@ export function SelectionDot({ active, color }: { active: boolean; color: string
 
 const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 58 },
-  doneButton: { alignItems: 'flex-end', minWidth: 48, paddingVertical: spacing.xs },
+  doneButton: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minHeight: minimumTouchTarget,
+    minWidth: minimumTouchTarget,
+    paddingVertical: spacing.xs,
+  },
   doneText: { fontSize: 16, fontWeight: '800' },
   header: {
     alignItems: 'center',
@@ -189,7 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 12,
-    minHeight: 54,
+    minHeight: Math.max(54, minimumTouchTarget),
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -204,5 +213,10 @@ const styles = StyleSheet.create({
   },
   sectionFooter: { lineHeight: 17, paddingHorizontal: 14 },
   sectionTitle: { paddingHorizontal: 14 },
-  shell: { gap: spacing.lg, paddingBottom: spacing.xxl, paddingHorizontal: spacing.md },
+  shell: {
+    gap: spacing.lg,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
 });

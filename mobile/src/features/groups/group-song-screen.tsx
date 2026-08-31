@@ -1,21 +1,41 @@
 import { Ionicons } from '@expo/vector-icons';
 import { randomUUID } from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
+import { router, Stack } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+
+import { analyzeSongPreview } from '../../../modules/dispo-song-analysis';
 
 import type { GroupSong } from './group-model';
 import {
   useDeleteGroupDocument,
   useDeleteSongComment,
   useGroup,
+  useSaveEventSetlist,
   useSaveGroupRepertoire,
   useSongComment,
   useUploadGroupDocument,
 } from './group-queries';
-import { openGroupDocument, searchSongCatalog, type SongCatalogResult } from './group-repository';
+import {
+  enrichSongCatalogResult,
+  openGroupDocument,
+  searchSongCatalog,
+  type SongCatalogResult,
+} from './group-repository';
 import { SongArtwork, SongListenSheet } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
@@ -23,14 +43,15 @@ import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { irealDestination } from '@/domain/song';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { minimumTouchTarget, spacing } from '@/theme/tokens';
 
 function emptySong(userId: string, approved: boolean): GroupSong {
   return {
@@ -71,12 +92,70 @@ function durationLabel(milliseconds: number | null): string | null {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: string }) {
+function mergeCatalogEnrichment(song: GroupSong, item: SongCatalogResult): GroupSong {
+  return {
+    ...song,
+    albumTitle: item.albumTitle,
+    artworkUrl: item.artworkUrl,
+    canonicalSongId: item.canonicalSongId,
+    composer: item.composer,
+    durationMilliseconds: item.durationMilliseconds,
+    genre: item.genre,
+    genres: item.genres,
+    isrc: item.isrc,
+    key: song.key?.trim() ? song.key : item.key,
+    metadataSource: item.metadataSource,
+    metadataUpdatedAt: item.metadataUpdatedAt,
+    platformIds: item.platformIds,
+    platformLinks: item.platformLinks,
+    previewUrl: item.previewUrl,
+    releaseYear: item.releaseYear,
+    tempoBpm: song.tempoBpm ?? item.tempoBpm,
+    trackUrl: item.trackUrl,
+  };
+}
+
+function songCatalogSource(song: GroupSong): SongCatalogResult | null {
+  if (!song.catalogId || !song.canonicalSongId) return null;
+  return {
+    albumTitle: song.albumTitle,
+    artist: song.artist,
+    artworkUrl: song.artworkUrl,
+    catalogId: song.catalogId,
+    canonicalSongId: song.canonicalSongId,
+    composer: song.composer,
+    durationMilliseconds: song.durationMilliseconds,
+    genre: song.genre,
+    genres: song.genres,
+    isrc: song.isrc,
+    key: song.key,
+    metadataSource: song.metadataSource ?? 'canonical',
+    metadataUpdatedAt: song.metadataUpdatedAt ?? new Date(0).toISOString(),
+    platformIds: song.platformIds,
+    platformLinks: song.platformLinks,
+    previewUrl: song.previewUrl,
+    releaseYear: song.releaseYear,
+    tempoBpm: song.tempoBpm,
+    title: song.title,
+    trackUrl: song.trackUrl,
+  };
+}
+
+export function GroupSongScreen({
+  groupId,
+  songId,
+  sourceEventId,
+}: {
+  groupId: string;
+  songId: string;
+  sourceEventId: string | null;
+}) {
   const { session } = useAuth();
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   const query = useGroup(groupId);
-  const save = useSaveGroupRepertoire();
+  const saveRepertoire = useSaveGroupRepertoire();
+  const saveSetlist = useSaveEventSetlist();
   const comment = useSongComment();
   const deleteComment = useDeleteSongComment();
   const upload = useUploadGroupDocument();
@@ -84,18 +163,25 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
   const group = query.data;
   const userId = session?.user.id ?? '';
   const isNew = songId === 'new';
-  const existing = group?.repertoire.find((song) => song.id === songId);
+  const sourceEvent = sourceEventId
+    ? group?.events.find((event) => event.id === sourceEventId)
+    : undefined;
+  const collection = sourceEventId ? (sourceEvent?.setlist ?? []) : (group?.repertoire ?? []);
+  const existing = collection.find((song) => song.id === songId);
   const isLeader = group?.leaderId === userId;
   const [blankSong] = useState<GroupSong>(() => emptySong(userId, false));
   const [draftOverride, setDraftOverride] = useState<GroupSong | null>(null);
   const [catalogTerm, setCatalogTerm] = useState('');
   const [catalogResults, setCatalogResults] = useState<SongCatalogResult[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogAnalyzing, setCatalogAnalyzing] = useState(false);
+  const analysisRequestRef = useRef(0);
+  const enrichedExistingRef = useRef(new Set<string>());
   const [commentText, setCommentText] = useState('');
   const [listenVisible, setListenVisible] = useState(false);
-  const backAction = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
-  );
+  const [irealAdvancedVisible, setIrealAdvancedVisible] = useState(false);
+  const [documentInstrument, setDocumentInstrument] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
   const baseDraft = existing ?? { ...blankSong, isApproved: isLeader === true };
   const draft = draftOverride ?? baseDraft;
   const documents = useMemo(
@@ -106,41 +192,92 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
     () => group?.comments.filter((item) => item.songId === draft.id) ?? [],
     [draft.id, group?.comments],
   );
+  const documentInstruments = useMemo(
+    () =>
+      [...new Set(group?.members.flatMap((member) => member.instruments) ?? [])].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [group?.members],
+  );
+
+  useEffect(() => {
+    const term = catalogTerm.trim();
+    if (!isNew || term.length < 2) return;
+    let active = true;
+    const timeout = setTimeout(() => {
+      setCatalogLoading(true);
+      void searchSongCatalog(term)
+        .then((results) => {
+          if (active) setCatalogResults(results);
+        })
+        .catch(() => {
+          if (active) setCatalogResults([]);
+        })
+        .finally(() => {
+          if (active) setCatalogLoading(false);
+        });
+    }, 350);
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
+  }, [catalogTerm, isNew]);
+
+  useEffect(() => {
+    if (!existing || draftOverride || enrichedExistingRef.current.has(existing.id)) return;
+    const source = songCatalogSource(existing);
+    const incomplete =
+      source &&
+      (!source.artworkUrl ||
+        !source.previewUrl ||
+        !source.isrc ||
+        Object.keys(source.platformLinks).length < 6);
+    if (!source || !incomplete) return;
+    enrichedExistingRef.current.add(existing.id);
+    void enrichSongCatalogResult(source)
+      .then(({ refreshed }) => {
+        if (!refreshed) return;
+        setDraftOverride((current) => {
+          const selected = current ?? existing;
+          if (selected.catalogId !== source.catalogId) return selected;
+          return mergeCatalogEnrichment(selected, refreshed);
+        });
+      })
+      .catch(() => {
+        // Enrichissement opportuniste : la fiche reste utilisable hors ligne.
+      });
+  }, [draftOverride, existing]);
+
   if (query.isLoading)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement du morceau…')} />
       </Screen>
     );
   if (query.error)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
+      <Screen nativeHeader>
         <ErrorState message={t('Le morceau n’a pas pu être chargé.')} />
       </Screen>
     );
   if (!group || (!isNew && !existing))
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
+      <Screen nativeHeader>
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />
       </Screen>
     );
   const canEdit = isNew || isLeader;
-  const patch = <K extends keyof GroupSong>(key: K, value: GroupSong[K]) =>
-    setDraftOverride((current) => ({ ...(current ?? baseDraft), [key]: value }));
-  const searchCatalog = async () => {
-    setCatalogLoading(true);
-    try {
-      setCatalogResults(await searchSongCatalog(catalogTerm));
-    } catch {
+  const updateCatalogTerm = (value: string) => {
+    setCatalogTerm(value);
+    if (value.trim().length < 2) {
       setCatalogResults([]);
-    } finally {
       setCatalogLoading(false);
     }
   };
-  const chooseCatalog = (item: SongCatalogResult) =>
+  const patch = <K extends keyof GroupSong>(key: K, value: GroupSong[K]) =>
+    setDraftOverride((current) => ({ ...(current ?? baseDraft), [key]: value }));
+  const chooseCatalog = (item: SongCatalogResult) => {
+    const analysisRequest = ++analysisRequestRef.current;
     setDraftOverride((current) => ({
       ...(current ?? baseDraft),
       albumTitle: item.albumTitle,
@@ -162,50 +299,160 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
       title: item.title,
       trackUrl: item.trackUrl,
     }));
+    if (!item.previewUrl) {
+      setCatalogAnalyzing(false);
+    } else {
+      setCatalogAnalyzing(true);
+      void analyzeSongPreview(item.previewUrl)
+        .then((analysis) => {
+          setDraftOverride((current) => {
+            const source = current ?? baseDraft;
+            if (
+              analysisRequestRef.current !== analysisRequest ||
+              source.catalogId !== item.catalogId
+            )
+              return source;
+            return {
+              ...source,
+              key: source.key?.trim() ? source.key : analysis.key,
+              tempoBpm: source.tempoBpm ?? analysis.tempoBpm,
+            };
+          });
+        })
+        .finally(() => {
+          if (analysisRequestRef.current === analysisRequest) setCatalogAnalyzing(false);
+        });
+    }
+    void enrichSongCatalogResult(item)
+      .then(({ refreshed }) => {
+        if (!refreshed || analysisRequestRef.current !== analysisRequest) return;
+        setDraftOverride((current) => {
+          const source = current ?? baseDraft;
+          if (source.catalogId !== item.catalogId) return source;
+          return mergeCatalogEnrichment(source, refreshed);
+        });
+      })
+      .catch(() => {
+        // Les liens connus restent visibles si l'enrichissement réseau échoue.
+      });
+  };
   const submit = () => {
     const cleaned = { ...draft, artist: draft.artist.trim(), title: draft.title.trim() };
     const desired = isNew
-      ? [...group.repertoire, cleaned]
-      : group.repertoire.map((song) => (song.id === cleaned.id ? cleaned : song));
-    save.mutate(
-      { desired, groupId: group.id, original: group.repertoire },
-      { onSuccess: () => router.back() },
-    );
+      ? [...collection, cleaned]
+      : collection.map((song) => (song.id === cleaned.id ? cleaned : song));
+    if (sourceEvent) {
+      saveSetlist.mutate(
+        { desired, eventId: sourceEvent.id, original: sourceEvent.setlist },
+        { onSuccess: () => router.back() },
+      );
+    } else {
+      saveRepertoire.mutate(
+        { desired, groupId: group.id, original: group.repertoire },
+        { onSuccess: () => router.back() },
+      );
+    }
   };
   const removeSong = () =>
-    Alert.alert(t('Retirer ce morceau ?'), t('Il disparaîtra du répertoire du groupe.'), [
-      { style: 'cancel', text: t('Annuler') },
+    Alert.alert(
+      t('Retirer ce morceau ?'),
+      sourceEvent ? undefined : t('Il disparaîtra du répertoire du groupe.'),
+      [
+        { style: 'cancel', text: t('Annuler') },
+        {
+          onPress: () => {
+            const desired = collection.filter((song) => song.id !== draft.id);
+            if (sourceEvent) {
+              saveSetlist.mutate(
+                { desired, eventId: sourceEvent.id, original: sourceEvent.setlist },
+                { onSuccess: () => router.back() },
+              );
+            } else {
+              saveRepertoire.mutate(
+                { desired, groupId: group.id, original: group.repertoire },
+                { onSuccess: () => router.back() },
+              );
+            }
+          },
+          style: 'destructive',
+          text: t('Retirer'),
+        },
+      ],
+    );
+  const uploadDocument = (asset: {
+    contentType: string;
+    extension: string;
+    name: string;
+    uri: string;
+  }) => {
+    setDocumentError(null);
+    upload.mutate(
       {
-        onPress: () =>
-          save.mutate(
-            {
-              desired: group.repertoire.filter((song) => song.id !== draft.id),
-              groupId: group.id,
-              original: group.repertoire,
-            },
-            { onSuccess: () => router.back() },
-          ),
-        style: 'destructive',
-        text: t('Retirer'),
+        contentType: asset.contentType,
+        extension: asset.extension,
+        groupId: group.id,
+        instrument: documentInstrument,
+        songId: draft.id,
+        title: asset.name.replace(/\.[^.]+$/, ''),
+        uri: asset.uri,
+        userId,
       },
-    ]);
+      {
+        onError: () =>
+          setDocumentError(t("La partition n'a pas pu être envoyée — vérifie le réseau.")),
+      },
+    );
+  };
   const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    const asset = result.assets?.[0];
-    if (!asset) return;
-    upload.mutate({
-      contentType: asset.mimeType ?? 'application/octet-stream',
-      extension: asset.name.split('.').pop() ?? 'pdf',
-      groupId: group.id,
-      instrument: null,
-      songId: draft.id,
-      title: asset.name.replace(/\.[^.]+$/, ''),
-      uri: asset.uri,
-      userId,
-    });
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: ['application/pdf', 'image/jpeg', 'image/png', 'text/plain'],
+      });
+      const asset = result.assets?.[0];
+      if (!asset) return;
+      uploadDocument({
+        contentType: asset.mimeType ?? 'application/octet-stream',
+        extension: asset.name.split('.').pop() ?? 'pdf',
+        name: asset.name,
+        uri: asset.uri,
+      });
+    } catch {
+      setDocumentError(t("Le document n'a pas pu être importé."));
+    }
+  };
+  const pickPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsMultipleSelection: false,
+        mediaTypes: ['images'],
+        quality: 0.82,
+      });
+      const asset = result.assets?.[0];
+      if (!asset) return;
+      const jpeg = await manipulateAsync(asset.uri, [], {
+        compress: 0.85,
+        format: SaveFormat.JPEG,
+      });
+      const name = `${asset.fileName?.replace(/\.[^.]+$/, '') || t('Photo')}.jpg`;
+      uploadDocument({
+        contentType: 'image/jpeg',
+        extension: 'jpg',
+        name,
+        uri: jpeg.uri,
+      });
+    } catch {
+      setDocumentError(t("Le document n'a pas pu être importé."));
+    }
+  };
+  const openDocument = async (document: (typeof documents)[number]) => {
+    setDocumentError(null);
+    try {
+      await openGroupDocument(document);
+    } catch {
+      setDocumentError(t("La partition n'a pas pu être ouverte — vérifie le réseau."));
+    }
   };
   const arrangement = [
     draft.key?.trim(),
@@ -251,16 +498,34 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
       },
     ]);
   };
+  const moveSolo = (index: number, offset: number) => {
+    const destination = index + offset;
+    if (destination < 0 || destination >= draft.solos.length) return;
+    const next = [...draft.solos];
+    [next[index], next[destination]] = [next[destination]!, next[index]!];
+    void Haptics.selectionAsync();
+    patch('solos', next);
+  };
   return (
-    <Screen>
+    <Screen nativeHeader>
+      <Stack.Screen
+        options={{
+          headerRight: () =>
+            canEdit ? (
+              <NativeHeaderButton
+                disabled={!draft.title.trim() || saveRepertoire.isPending || saveSetlist.isPending}
+                label={isNew ? t('Ajouter') : t('Enregistrer')}
+                onPress={submit}
+              />
+            ) : null,
+          title: isNew
+            ? isLeader
+              ? t('Ajouter un morceau')
+              : t('Suggérer un morceau')
+            : draft.title,
+        }}
+      />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ScreenHeader
-          leadingAction={backAction}
-          subtitle={group.name}
-          title={
-            isNew ? (isLeader ? t('Ajouter un morceau') : t('Suggérer un morceau')) : draft.title
-          }
-        />
         {isNew ? (
           <Card style={styles.card}>
             <AppText variant="title">{t('Catalogue musical')}</AppText>
@@ -268,22 +533,19 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
               <View style={styles.flex}>
                 <FormField
                   label={t('Chercher')}
-                  onChangeText={setCatalogTerm}
-                  onSubmitEditing={() => void searchCatalog()}
+                  onChangeText={updateCatalogTerm}
                   placeholder={t('Titre ou artiste')}
                   returnKeyType="search"
                   value={catalogTerm}
                 />
               </View>
-              <Pressable
-                accessibilityLabel={t('Rechercher')}
-                accessibilityRole="button"
-                disabled={catalogLoading || catalogTerm.trim().length < 2}
-                onPress={() => void searchCatalog()}
-                style={[styles.searchButton, { backgroundColor: palette.electric }]}
-              >
-                <Ionicons color="#050814" name="search" size={19} />
-              </Pressable>
+              <View style={[styles.searchButton, { backgroundColor: palette.inset }]}>
+                {catalogLoading ? (
+                  <ActivityIndicator color={palette.electric} />
+                ) : (
+                  <Ionicons color={palette.muted} name="search" size={19} />
+                )}
+              </View>
             </View>
             {catalogResults.map((item) => (
               <Pressable
@@ -310,9 +572,18 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                 />
               </Pressable>
             ))}
+            {catalogAnalyzing ? (
+              <View accessibilityLiveRegion="polite" style={styles.analysisRow}>
+                <ActivityIndicator color={palette.electric} size="small" />
+                <AppText color={palette.muted} variant="caption">
+                  {t('Analyse de la tonalité…')}
+                </AppText>
+              </View>
+            ) : null}
           </Card>
         ) : null}
         <Card style={styles.card}>
+          <SectionHeader subtitle={group.name} title={t('Identité')} />
           <View style={styles.songHero}>
             <SongArtwork artworkUrl={draft.artworkUrl} radius={10} size={54} />
             <View style={styles.heroCopy}>
@@ -332,9 +603,11 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                   </AppText>
                 </View>
               ) : null}
-              <AppText color={palette.muted} numberOfLines={1} variant="caption">
-                {draft.artist || t('Artiste')}
-              </AppText>
+              {draft.artist ? (
+                <AppText color={palette.muted} numberOfLines={1} variant="caption">
+                  {draft.artist}
+                </AppText>
+              ) : null}
               {recording.length ? (
                 <AppText color={palette.muted} numberOfLines={1} variant="caption2">
                   {recording.join(' · ')}
@@ -417,13 +690,36 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
         <Card style={styles.card}>
           <SectionHeader subtitle={t('Ouvrir dans iReal Pro')} title={t('iReal Pro')} />
           {canEdit ? (
-            <FormField
-              autoCapitalize="none"
-              label={t('Lien iReal Pro')}
-              onChangeText={updateIRealUrl}
-              placeholder={t('irealbook://…')}
-              value={draft.irealUrl ?? ''}
-            />
+            <>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIrealAdvancedVisible((visible) => !visible)}
+                style={({ pressed }) => [
+                  styles.advancedAction,
+                  { borderColor: palette.border },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons color={palette.muted} name="options-outline" size={17} />
+                <AppText color={palette.muted} variant="caption">
+                  {t('Modifier')}
+                </AppText>
+                <Ionicons
+                  color={palette.muted}
+                  name={irealAdvancedVisible ? 'chevron-up' : 'chevron-down'}
+                  size={15}
+                />
+              </Pressable>
+              {irealAdvancedVisible ? (
+                <FormField
+                  autoCapitalize="none"
+                  label={t('Lien iReal Pro')}
+                  onChangeText={updateIRealUrl}
+                  placeholder={t('irealbook://…')}
+                  value={draft.irealUrl ?? ''}
+                />
+              ) : null}
+            </>
           ) : null}
           <DispoButton
             disabled={!ireal}
@@ -436,48 +732,103 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
         {!isNew ? (
           <Card style={styles.card}>
             <SectionHeader subtitle={t('Ordre de passage')} title={t('Solos')} />
-            <View style={styles.wrap}>
-              {group.members.map((member) => (
-                <ChoiceChip
-                  key={member.id}
-                  label={member.name}
-                  onPress={() => {
-                    if (!isLeader) return;
-                    patch(
-                      'solos',
-                      draft.solos.includes(member.id)
-                        ? draft.solos.filter((id) => id !== member.id)
-                        : [...draft.solos, member.id],
-                    );
-                  }}
-                  selected={draft.solos.includes(member.id)}
-                />
-              ))}
-            </View>
+            {draft.solos.map((memberId, index) => {
+              const member = group.members.find((item) => item.id === memberId);
+              return (
+                <View key={memberId} style={[styles.soloRow, { borderColor: palette.border }]}>
+                  <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
+                    <AppText style={styles.bold} variant="caption">
+                      {index + 1}
+                    </AppText>
+                  </View>
+                  <AppText style={styles.flex}>{member?.name ?? memberId}</AppText>
+                  {isLeader ? (
+                    <>
+                      <Pressable
+                        accessibilityLabel={t('Monter')}
+                        accessibilityRole="button"
+                        disabled={index === 0}
+                        onPress={() => moveSolo(index, -1)}
+                        style={styles.iconAction}
+                      >
+                        <Ionicons color={palette.text} name="chevron-up" size={18} />
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel={t('Descendre')}
+                        accessibilityRole="button"
+                        disabled={index === draft.solos.length - 1}
+                        onPress={() => moveSolo(index, 1)}
+                        style={styles.iconAction}
+                      >
+                        <Ionicons color={palette.text} name="chevron-down" size={18} />
+                      </Pressable>
+                    </>
+                  ) : null}
+                </View>
+              );
+            })}
+            {isLeader ? (
+              <View style={styles.wrap}>
+                {group.members.map((member) => (
+                  <ChoiceChip
+                    key={member.id}
+                    label={member.name}
+                    onPress={() => {
+                      if (!isLeader) return;
+                      patch(
+                        'solos',
+                        draft.solos.includes(member.id)
+                          ? draft.solos.filter((id) => id !== member.id)
+                          : [...draft.solos, member.id],
+                      );
+                    }}
+                    selected={draft.solos.includes(member.id)}
+                  />
+                ))}
+              </View>
+            ) : null}
           </Card>
         ) : null}
         {!isNew ? (
           <Card style={styles.card}>
-            <View style={styles.sectionRow}>
-              <SectionHeader subtitle={t('Partitions liées au morceau')} title={t('Documents')} />
-              <Pressable
-                accessibilityLabel={t('Ajouter un document')}
-                accessibilityRole="button"
-                onPress={() => void pickDocument()}
-                style={[styles.roundButton, { borderColor: palette.border }]}
+            <SectionHeader subtitle={t('Partitions liées au morceau')} title={t('Documents')} />
+            <View style={styles.wrap}>
+              <ChoiceChip
+                label={t('Tout le monde')}
+                onPress={() => setDocumentInstrument(null)}
+                selected={documentInstrument === null}
+              />
+              {documentInstruments.map((instrument) => (
+                <ChoiceChip
+                  key={instrument}
+                  label={t(instrument)}
+                  onPress={() => setDocumentInstrument(instrument)}
+                  selected={documentInstrument === instrument}
+                />
+              ))}
+            </View>
+            <View style={styles.documentActions}>
+              <DispoButton
+                icon="image-outline"
+                onPress={() => void pickPhoto()}
+                variant="secondary"
               >
-                <Ionicons color={palette.electric} name="add" size={20} />
-              </Pressable>
+                {t('Photo')}
+              </DispoButton>
+              <DispoButton
+                icon="document-attach-outline"
+                onPress={() => void pickDocument()}
+                variant="secondary"
+              >
+                {t('Fichier')}
+              </DispoButton>
             </View>
             {documents.map((document) => (
               <View
                 key={document.id}
                 style={[styles.documentRow, { borderBottomColor: palette.border }]}
               >
-                <Pressable
-                  onPress={() => void openGroupDocument(document)}
-                  style={styles.documentOpen}
-                >
+                <Pressable onPress={() => void openDocument(document)} style={styles.documentOpen}>
                   <Ionicons color={palette.electric} name="document-text" size={18} />
                   <View style={styles.flex}>
                     <AppText style={styles.bold}>{document.title}</AppText>
@@ -487,11 +838,18 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
                     </AppText>
                   </View>
                 </Pressable>
-                {isLeader ? (
+                {isLeader || document.addedById === userId ? (
                   <Pressable
                     accessibilityLabel={t('Supprimer le document')}
                     accessibilityRole="button"
-                    onPress={() => deleteDocument.mutate(document)}
+                    onPress={() =>
+                      deleteDocument.mutate(document, {
+                        onError: () =>
+                          setDocumentError(
+                            t("L'action n'a pas pu être enregistrée. Réessaie dans un instant."),
+                          ),
+                      })
+                    }
                     style={styles.iconAction}
                   >
                     <Ionicons color={palette.signal} name="trash-outline" size={17} />
@@ -502,6 +860,11 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
             {!documents.length ? (
               <AppText color={palette.muted} variant="caption">
                 {t('Aucune partition liée.')}
+              </AppText>
+            ) : null}
+            {documentError ? (
+              <AppText color={palette.signal} variant="caption">
+                {documentError}
               </AppText>
             ) : null}
           </Card>
@@ -558,8 +921,8 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
         ) : null}
         {canEdit ? (
           <DispoButton
-            disabled={!draft.title.trim() || !draft.artist.trim()}
-            loading={save.isPending}
+            disabled={!draft.title.trim()}
+            loading={saveRepertoire.isPending || saveSetlist.isPending}
             onPress={submit}
           >
             {isNew
@@ -572,7 +935,16 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
         {!isNew ? (
           <DispoButton
             icon="copy-outline"
-            onPress={() => router.push(`/groups/${group.id}/songs/${draft.id}/copy` as never)}
+            onPress={() =>
+              router.push({
+                params: {
+                  id: group.id,
+                  songId: draft.id,
+                  ...(sourceEvent ? { sourceEventId: sourceEvent.id } : {}),
+                },
+                pathname: '/groups/[id]/songs/[songId]/copy',
+              } as never)
+            }
             variant="secondary"
           >
             {t('Copier le morceau')}
@@ -580,10 +952,10 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
         ) : null}
         {!isNew && isLeader ? (
           <DispoButton onPress={removeSong} variant="danger">
-            {t('Retirer du répertoire')}
+            {sourceEvent ? t('Retirer') : t('Retirer du répertoire')}
           </DispoButton>
         ) : null}
-        {save.error ? (
+        {saveRepertoire.error || saveSetlist.error ? (
           <AppText color={palette.error} style={styles.center} variant="caption">
             {t('Le morceau n’a pas pu être enregistré. Il est peut-être déjà dans le répertoire.')}
           </AppText>
@@ -594,6 +966,7 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
 }
 
 const styles = StyleSheet.create({
+  analysisRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   arrangementChip: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -605,6 +978,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   arrangementText: { flexShrink: 1, fontWeight: '800' },
+  advancedAction: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.tight,
+    minHeight: minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
   bold: { fontWeight: '700' },
   card: { gap: spacing.sm },
   catalogRow: {
@@ -623,8 +1006,9 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 44,
+    minHeight: minimumTouchTarget,
   },
+  documentActions: { gap: spacing.xs },
   documentRow: {
     alignItems: 'center',
     borderBottomWidth: 1,
@@ -638,32 +1022,44 @@ const styles = StyleSheet.create({
   heroAction: {
     alignItems: 'center',
     borderRadius: 18,
-    height: 36,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 36,
+    width: minimumTouchTarget,
   },
   heroCopy: { flex: 1, gap: spacing.xxxs, minWidth: 0 },
   heroTitle: { fontSize: 19, lineHeight: 23 },
-  iconAction: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
-  multiline: { minHeight: 100, textAlignVertical: 'top' },
-  roundButton: {
+  iconAction: {
     alignItems: 'center',
-    borderRadius: 22,
-    borderWidth: 1,
-    height: 44,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 44,
+    width: minimumTouchTarget,
   },
+  multiline: { minHeight: 100, textAlignVertical: 'top' },
+  pressed: { opacity: 0.72 },
   searchButton: {
     alignItems: 'center',
     borderRadius: 22,
-    height: 44,
+    height: minimumTouchTarget,
     justifyContent: 'center',
     marginBottom: 3,
-    width: 44,
+    width: minimumTouchTarget,
   },
   searchRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
-  sectionRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  soloIndex: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  soloRow: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: minimumTouchTarget,
+    paddingLeft: spacing.xs,
+  },
   songHero: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

@@ -1,10 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { GroupEvent, GroupSong, MusicGroup } from '@/features/groups/group-model';
+import { openDocumentPreview } from '../../modules/dispo-document-preview';
+
+import type {
+  GroupDocument,
+  GroupEvent,
+  GroupSong,
+  MusicGroup,
+} from '@/features/groups/group-model';
 import {
   cancelGroupEvent,
   createGroup,
+  enrichSongCatalogResult,
+  isAllowedGroupDocumentExtension,
+  openGroupDocument,
   saveGroupRepertoire,
   searchSongCatalog,
   setGroupMessageReaction,
@@ -20,6 +30,7 @@ import { getSupabaseClient } from '@/services/supabase/client';
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+jest.mock('../../modules/dispo-document-preview', () => ({ openDocumentPreview: jest.fn() }));
 jest.mock('@/services/supabase/client', () => ({ getSupabaseClient: jest.fn() }));
 
 const mockedClient = jest.mocked(getSupabaseClient);
@@ -79,6 +90,7 @@ describe('catalogue musical partagé', () => {
           genres: ['Jazz'],
           id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
           isrc: 'USSM15900123',
+          musical_key: 'Dm',
           metadata_source: 'catalog-test',
           metadata_updated_at: '2026-08-31T18:00:00.000Z',
           platform_ids: { appleMusic: '123' },
@@ -86,6 +98,7 @@ describe('catalogue musical partagé', () => {
             spotify: 'https://open.spotify.com/track/exact',
           },
           release_year: 1959,
+          tempo_bpm: 136,
           title: 'So What',
         },
       ],
@@ -114,10 +127,12 @@ describe('catalogue musical partagé', () => {
         canonicalSongId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         artworkUrl: 'https://example.com/600x600bb.jpg',
         previewUrl: 'https://example.com/preview.m4a',
+        key: 'Dm',
         platformLinks: {
           appleMusic: 'https://music.apple.com/ch/song/123',
           spotify: 'https://open.spotify.com/track/exact',
         },
+        tempoBpm: 136,
       }),
     ]);
     expect(rpc).toHaveBeenCalledWith(
@@ -156,6 +171,163 @@ describe('catalogue musical partagé', () => {
 
     expect(results).toHaveLength(2);
     expect(results.map(({ isrc }) => isrc)).toEqual(['USSM15900123', 'USSM19990123']);
+  });
+
+  it('demande un enrichissement authentifié puis relit la source canonique', async () => {
+    const invoke = jest.fn(async () => ({
+      data: { audio_metrics: 'client_fallback', queued: true },
+      error: null,
+    }));
+    const rpc = jest.fn(async () => ({
+      data: [
+        {
+          artist: 'Miles Davis',
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          platform_ids: { appleMusic: '123' },
+          platform_links: { spotify: 'https://open.spotify.com/track/exact' },
+          title: 'So What',
+        },
+      ],
+      error: null,
+    }));
+    mockedClient.mockReturnValue({ functions: { invoke }, rpc } as never);
+    const source = {
+      albumTitle: null,
+      artist: 'Miles Davis',
+      artworkUrl: null,
+      catalogId: 'apple:123',
+      canonicalSongId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      composer: null,
+      durationMilliseconds: null,
+      genre: null,
+      genres: [],
+      isrc: null,
+      key: null,
+      metadataSource: 'apple-itunes-search',
+      metadataUpdatedAt: '2026-08-31T18:00:00.000Z',
+      platformIds: { appleMusic: '123' },
+      platformLinks: {},
+      previewUrl: null,
+      releaseYear: null,
+      tempoBpm: null,
+      title: 'So What',
+      trackUrl: null,
+    };
+
+    await expect(enrichSongCatalogResult(source)).resolves.toEqual({
+      audioMetrics: 'client_fallback',
+      refreshed: expect.objectContaining({
+        canonicalSongId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        platformLinks: { spotify: 'https://open.spotify.com/track/exact' },
+      }),
+    });
+    expect(invoke).toHaveBeenCalledWith('song-enrichment', {
+      body: { action: 'enqueue', song_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
+    });
+  });
+
+  it('enregistre côté serveur une sélection Apple encore sans UUID canonique', async () => {
+    const canonicalId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const invoke = jest.fn(async () => ({
+      data: { audio_metrics: 'client_fallback', queued: true, song_id: canonicalId },
+      error: null,
+    }));
+    const rpc = jest.fn(async () => ({
+      data: [
+        {
+          artist: 'Santana',
+          id: canonicalId,
+          platform_ids: { appleMusic: '871146601' },
+          platform_links: {
+            appleMusic: 'https://music.apple.com/ch/album/oye-como-va/871146591?i=871146601',
+          },
+          title: 'Oye Como Va',
+        },
+      ],
+      error: null,
+    }));
+    mockedClient.mockReturnValue({ functions: { invoke }, rpc } as never);
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      json: async () => ({ results: [] }),
+      ok: true,
+    } as Response);
+
+    const result = await enrichSongCatalogResult({
+      albumTitle: 'Abraxas',
+      artist: 'Santana',
+      artworkUrl: null,
+      catalogId: 'apple:871146601',
+      canonicalSongId: null,
+      composer: null,
+      durationMilliseconds: 260_229,
+      genre: 'Rock',
+      genres: ['Rock'],
+      isrc: null,
+      key: null,
+      metadataSource: 'apple-itunes-search',
+      metadataUpdatedAt: '2026-08-31T18:00:00.000Z',
+      platformIds: { appleMusic: '871146601' },
+      platformLinks: {
+        appleMusic: 'https://music.apple.com/ch/album/oye-como-va/871146591?i=871146601',
+      },
+      previewUrl: null,
+      releaseYear: 1970,
+      tempoBpm: null,
+      title: 'Oye Como Va',
+      trackUrl: 'https://music.apple.com/ch/album/oye-como-va/871146591?i=871146601',
+    });
+
+    expect(invoke).toHaveBeenCalledWith('song-enrichment', {
+      body: {
+        action: 'enqueue',
+        apple_id: '871146601',
+        apple_url: 'https://music.apple.com/ch/album/oye-como-va/871146591?i=871146601',
+      },
+    });
+    expect(result.refreshed?.canonicalSongId).toBe(canonicalId);
+  });
+});
+
+describe('documents de groupe', () => {
+  it('n’accepte que les formats annoncés dans l’interface native', () => {
+    expect(['jpg', 'jpeg', 'png', 'pdf', 'txt'].every(isAllowedGroupDocumentExtension)).toBe(true);
+    expect(['doc', 'docx', 'pages', 'zip', 'exe'].some(isAllowedGroupDocumentExtension)).toBe(
+      false,
+    );
+    expect(isAllowedGroupDocumentExtension(' PDF ')).toBe(true);
+  });
+
+  it('ouvre le document privé avec une URL signée de 60 secondes et son vrai nom', async () => {
+    const document: GroupDocument = {
+      addedBy: 'Miles',
+      addedById: 'profile-1',
+      createdAt: '2026-08-31T18:00:00.000Z',
+      extension: 'pdf',
+      groupId: 'group-1',
+      id: 'document-1',
+      instrument: 'Trompette',
+      path: 'group-1/document-1.pdf',
+      songId: 'song-1',
+      title: 'So What — Trompette',
+    };
+    const createSignedUrl = jest.fn(async () => ({
+      data: { signedUrl },
+      error: null,
+    }));
+    const from = jest.fn(() => ({ createSignedUrl }));
+    const signedUrl =
+      'https://project.supabase.co/storage/v1/object/sign/group-docs/group-1/document-1.pdf?token=short';
+    mockedClient.mockReturnValue({ storage: { from } } as never);
+
+    await openGroupDocument(document);
+
+    expect(from).toHaveBeenCalledWith('group-docs');
+    expect(createSignedUrl).toHaveBeenCalledWith(document.path, 60);
+    expect(openDocumentPreview).toHaveBeenCalledWith({
+      extension: 'pdf',
+      signedUrl,
+      title: 'So What — Trompette',
+    });
   });
 });
 

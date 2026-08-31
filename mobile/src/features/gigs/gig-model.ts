@@ -40,6 +40,7 @@ export interface GigSummary {
   isLocked: boolean;
   neighborhood: string;
   paymentMethod: string | null;
+  pendingApplicantCount?: number;
   place: string;
   postedAt: string | null;
   targetId: string | null;
@@ -375,6 +376,47 @@ export function openGigInstruments(
 ): string[] {
   const filled = new Set(gig.filledInstruments);
   return gig.wantedInstruments.filter((instrument) => !filled.has(instrument));
+}
+
+export interface HostedGigTriage {
+  hosted: GigSummary[];
+  pendingApplicantCount: number;
+  sentDirect: GigSummary[];
+}
+
+/** Mirrors the SwiftUI "Mes SOS" order: decisions first, then direct requests, then dates. */
+export function triageHostedGigs(gigs: readonly GigSummary[]): HostedGigTriage {
+  const byPriorityThenDate = (a: GigSummary, b: GigSummary) => {
+    const pendingDelta = (b.pendingApplicantCount ?? 0) - (a.pendingApplicantCount ?? 0);
+    if (pendingDelta !== 0) return pendingDelta;
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  };
+  const hosted = gigs.filter((gig) => gig.targetId === null).sort(byPriorityThenDate);
+  const sentDirect = gigs
+    .filter((gig) => gig.targetId !== null)
+    .sort((a, b) => {
+      const pendingA = a.targetStatus === 'pending' ? 0 : 1;
+      const pendingB = b.targetStatus === 'pending' ? 0 : 1;
+      return pendingA - pendingB || new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+  return {
+    hosted,
+    pendingApplicantCount: hosted.reduce(
+      (count, gig) => count + (gig.pendingApplicantCount ?? 0),
+      0,
+    ),
+    sentDirect,
+  };
+}
+
+/** Legacy applications could predate the mandatory instrument slot. Keep them actionable. */
+export function unslottedGigApplicants(
+  gig: Pick<GigDetail, 'applicants' | 'wantedInstruments'>,
+): GigApplication[] {
+  const slots = new Set(gig.wantedInstruments);
+  return gig.applicants.filter(
+    (applicant) => !applicant.instrument || !slots.has(applicant.instrument),
+  );
 }
 
 export type GigViewerAction =

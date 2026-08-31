@@ -13,8 +13,7 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { canUsePremiumCapability } from '@/features/premium/premium-model';
@@ -44,9 +43,6 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
   const [reminderLeadDays, setReminderLeadDays] = useState(event.reminderLeadDays ?? 2);
   const [scope, setScope] = useState<'futureOccurrences' | 'thisDate'>('thisDate');
   const [editStartedAt] = useState(Date.now);
-  const backAction = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
-  );
   const valid =
     title.trim().length > 0 &&
     venue.trim().length > 0 &&
@@ -84,12 +80,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
       { onSuccess: () => router.back() },
     );
   return (
-    <Screen>
-      <ScreenHeader
-        leadingAction={backAction}
-        subtitle={group.name}
-        title={t('Modifier la session')}
-      />
+    <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
           <FormField label={t('Titre')} onChangeText={setTitle} value={title} />
@@ -274,28 +265,15 @@ export function GroupEventEditScreen({ eventId, groupId }: { eventId: string; gr
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const query = useGroup(groupId);
-  const backAction = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
-  );
   if (query.isLoading)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Sessions')}
-          title={t('Modifier la session')}
-        />
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement de la session…')} />
       </Screen>
     );
   if (query.error)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Sessions')}
-          title={t('Modifier la session')}
-        />
+      <Screen nativeHeader>
         <ErrorState message={t("Cette session n'a pas pu être chargée.")} />
       </Screen>
     );
@@ -303,23 +281,13 @@ export function GroupEventEditScreen({ eventId, groupId }: { eventId: string; gr
   const event = group?.events.find((item) => item.id === eventId);
   if (!group || !event)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Sessions')}
-          title={t('Modifier la session')}
-        />
+      <Screen nativeHeader>
         <ErrorState message={t("Cette session n'est plus accessible.")} />
       </Screen>
     );
   if (group.leaderId !== userId)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Sessions')}
-          title={t('Modifier la session')}
-        />
+      <Screen nativeHeader>
         <ErrorState message={t('Seul le leader peut modifier cette session.')} />
       </Screen>
     );

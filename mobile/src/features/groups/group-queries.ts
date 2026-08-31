@@ -1,5 +1,6 @@
 import {
   type InfiniteData,
+  type InvalidateQueryFilters,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -25,6 +26,10 @@ import {
   type GroupSong,
   type MusicGroup,
 } from './group-model';
+import {
+  applyOptimisticEventSetlistOrder,
+  applyOptimisticGroupRepertoireOrder,
+} from './group-order';
 import {
   acceptGroupInvitation,
   addSongComment,
@@ -86,6 +91,7 @@ import {
 import type { Page } from '@/domain/pagination';
 import { useAuth } from '@/features/auth/auth-context';
 import type { PendingMessageAttachment } from '@/features/messages/message-model';
+import { sessionKeys } from '@/features/sessions/session-queries';
 
 export const groupKeys = {
   all: ['groups'] as const,
@@ -109,6 +115,7 @@ type GroupReactionMutationContext = {
   previous: GroupMessageCache | undefined;
   queryKey: GroupMessageQueryKey;
 };
+type GroupOrderMutationContext = { previous: MusicGroup[] | undefined };
 type EditGroupMessageInput = { groupId: string; messageId: string; text: string };
 type DeleteGroupMessageInput = { groupId: string; messageId: string };
 type GroupReactionMutationInput = {
@@ -233,7 +240,7 @@ export function useGroupEventResources(input: {
 }
 
 export function useInviteAvailableToGroupEvent() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: InviteAvailableToEventInput) => inviteAvailableToGroupEvent(input),
     onSuccess: refresh,
@@ -241,11 +248,33 @@ export function useInviteAvailableToGroupEvent() {
 }
 
 export function useReorderGroupEventSetlist() {
-  const refresh = useRefreshGroups();
-  return useMutation({
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
+  const refresh = useRefreshGroups(true);
+  return useMutation<
+    void,
+    unknown,
+    { eventId: string; songIds: string[] },
+    GroupOrderMutationContext
+  >({
     mutationFn: (input: { eventId: string; songIds: string[] }) =>
       reorderGroupEventSetlist(input.eventId, input.songIds),
-    onSuccess: refresh,
+    onError: (_error, _input, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(groupKeys.list(userId), context.previous);
+      }
+    },
+    onMutate: async (input) => {
+      const queryKey = groupKeys.list(userId);
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      const previous = queryClient.getQueryData<MusicGroup[]>(queryKey);
+      queryClient.setQueryData<MusicGroup[]>(queryKey, (current) =>
+        current ? applyOptimisticEventSetlistOrder(current, input.eventId, input.songIds) : current,
+      );
+      return { previous };
+    },
+    onSettled: refresh,
   });
 }
 
@@ -277,6 +306,7 @@ export function useGroupRealtimeSync(groups: readonly MusicGroup[] | undefined) 
         queryKey: groupKeys.invitations(userId),
       });
       void queryClient.invalidateQueries({ queryKey: ['groups', 'event-resources'] });
+      void queryClient.invalidateQueries({ queryKey: sessionKeys.all });
     });
   }, [queryClient, userId]);
   useEffect(() => {
@@ -521,20 +551,32 @@ export function useGroupProfileCandidates() {
   });
 }
 
-function useRefreshGroups() {
+export function groupRefreshFilters(
+  userId: string,
+  includeSessions = false,
+): InvalidateQueryFilters[] {
+  const filters: InvalidateQueryFilters[] = [
+    { exact: true, queryKey: groupKeys.list(userId) },
+    { exact: true, queryKey: groupKeys.invitations(userId) },
+    { queryKey: ['groups', 'event-resources'] as const },
+  ];
+  return includeSessions ? [...filters, { queryKey: sessionKeys.all }] : filters;
+}
+
+function useRefreshGroups(includeSessions = false) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const queryClient = useQueryClient();
   return () =>
-    Promise.all([
-      queryClient.invalidateQueries({ exact: true, queryKey: groupKeys.list(userId) }),
-      queryClient.invalidateQueries({ exact: true, queryKey: groupKeys.invitations(userId) }),
-      queryClient.invalidateQueries({ queryKey: ['groups', 'event-resources'] }),
-    ]);
+    Promise.all(
+      groupRefreshFilters(userId, includeSessions).map((filter) =>
+        queryClient.invalidateQueries(filter),
+      ),
+    );
 }
 
 export function useInvitationResponse() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: { accept: boolean; invitationId: string }) =>
       input.accept
@@ -569,7 +611,7 @@ export function useCancelGroupInvitation() {
 }
 
 export function useUpdateGroupMember() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: {
       groupId: string;
@@ -582,7 +624,7 @@ export function useUpdateGroupMember() {
 }
 
 export function useRemoveGroupMember() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: { groupId: string; profileId: string }) =>
       removeGroupMember(input.groupId, input.profileId),
@@ -600,7 +642,7 @@ export function useTransferGroupLeadership() {
 }
 
 export function useUpdateGroupSettings() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: UpdateGroupSettingsInput) => updateGroupSettings(input),
     onSuccess: refresh,
@@ -619,7 +661,7 @@ export function useGroupPhoto() {
 }
 
 export function useDeleteGroup() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({ mutationFn: deleteGroup, onSuccess: refresh });
 }
 
@@ -780,7 +822,7 @@ export function useGroupMessageReaction() {
 
 export function useSetGroupAttendance() {
   const { session } = useAuth();
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: { eventId: string; status: Exclude<GroupAttendanceStatus, 'pending'> }) =>
       setGroupEventAttendance(input.eventId, session?.user.id ?? '', input.status),
@@ -789,7 +831,7 @@ export function useSetGroupAttendance() {
 }
 
 export function useCreateGroupEvents() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: { draft: GroupEventDraft; groupId: string }) =>
       createGroupEvents(input.groupId, input.draft),
@@ -798,7 +840,7 @@ export function useCreateGroupEvents() {
 }
 
 export function useUpdateGroupEvent() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: UpdateGroupEventInput) => updateGroupEvent(input),
     onSuccess: refresh,
@@ -806,7 +848,7 @@ export function useUpdateGroupEvent() {
 }
 
 export function useCancelGroupEvent() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({ mutationFn: cancelGroupEvent, onSuccess: refresh });
 }
 
@@ -820,16 +862,40 @@ export function useSaveGroupRepertoire() {
 }
 
 export function useReorderGroupRepertoire() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
   const refresh = useRefreshGroups();
-  return useMutation({
+  return useMutation<
+    void,
+    unknown,
+    { groupId: string; songIds: string[] },
+    GroupOrderMutationContext
+  >({
     mutationFn: (input: { groupId: string; songIds: string[] }) =>
       reorderGroupRepertoire(input.groupId, input.songIds),
-    onSuccess: refresh,
+    onError: (_error, _input, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(groupKeys.list(userId), context.previous);
+      }
+    },
+    onMutate: async (input) => {
+      const queryKey = groupKeys.list(userId);
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      const previous = queryClient.getQueryData<MusicGroup[]>(queryKey);
+      queryClient.setQueryData<MusicGroup[]>(queryKey, (current) =>
+        current
+          ? applyOptimisticGroupRepertoireOrder(current, input.groupId, input.songIds)
+          : current,
+      );
+      return { previous };
+    },
+    onSettled: refresh,
   });
 }
 
 export function useSaveEventSetlist() {
-  const refresh = useRefreshGroups();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (input: { desired: GroupSong[]; eventId: string; original: GroupSong[] }) =>
       saveEventSetlist(input.eventId, input.original, input.desired),
@@ -841,6 +907,7 @@ export function useCopyGroupSong() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const queryClient = useQueryClient();
+  const refresh = useRefreshGroups(true);
   return useMutation({
     mutationFn: (targets: GroupSongCopyTarget[]) => copyGroupSongToDestinations(targets),
     onError: (_error, targets) => {
@@ -854,8 +921,7 @@ export function useCopyGroupSong() {
         current ? applyOptimisticSongCopies(current, targets) : current,
       );
     },
-    onSettled: () =>
-      queryClient.invalidateQueries({ exact: true, queryKey: groupKeys.list(userId) }),
+    onSettled: refresh,
     onSuccess: (results, targets) => {
       const failedIds = new Set(
         results

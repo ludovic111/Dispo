@@ -1,5 +1,5 @@
 import type { ProfileSummary } from '@/domain/profile';
-import type { GigSummary } from '@/features/gigs/gig-model';
+import { GIG_GENRE_GROUPS, type GigSummary } from '@/features/gigs/gig-model';
 
 export type AvailabilityScope = 'nearby' | 'today' | 'weekend';
 
@@ -9,10 +9,13 @@ export interface DiscoveryFilters {
   instruments: string[];
   levels: string[];
   neededDate: string | null;
-  place: string;
+  placeCity: string;
+  placeCountry: string;
+  placePostalCode: string;
   playedWithFriend: boolean;
   radiusKm: number;
   sameSchoolOnly: boolean;
+  wellRated: boolean;
 }
 
 export const defaultDiscoveryFilters: DiscoveryFilters = {
@@ -21,10 +24,13 @@ export const defaultDiscoveryFilters: DiscoveryFilters = {
   instruments: [],
   levels: [],
   neededDate: null,
-  place: '',
+  placeCity: '',
+  placeCountry: '',
+  placePostalCode: '',
   playedWithFriend: false,
   radiusKm: 25,
   sameSchoolOnly: false,
+  wellRated: false,
 };
 
 const stopWords = new Set([
@@ -57,17 +63,57 @@ const stopWords = new Set([
 ]);
 
 const instrumentAliases: Record<string, readonly string[]> = {
-  Batterie: ['batteur', 'batteuse', 'drums'],
+  Accordéon: ['accordéoniste'],
+  Alto: ['altiste'],
+  Banjo: ['banjoïste'],
+  Batterie: ['batteur', 'batteuse', 'drummer', 'drums'],
   Basse: ['bassiste', 'bass'],
+  Beatbox: ['beatboxer'],
+  Cajón: ['percussionniste'],
   Chant: ['chanteur', 'chanteuse', 'vocaliste'],
+  Chœurs: ['choriste'],
+  Clarinette: ['clarinettiste'],
+  Congas: ['conguero', 'percussionniste'],
   Contrebasse: ['contrebassiste', 'upright'],
+  Cor: ['corniste'],
+  'DJ / Platines': ['deejay', 'platines'],
+  Flûte: ['flûtiste'],
   Guitare: ['guitariste', 'guitar'],
-  Piano: ['pianiste', 'pianist'],
-  Saxophone: ['saxophoniste', 'sax'],
+  'Guitare électrique': ['guitariste'],
+  Harmonica: ['harmoniciste'],
+  Harpe: ['harpiste'],
+  Mandoline: ['mandoliniste'],
+  Orgue: ['organiste'],
+  Percussions: ['percussionniste', 'percu'],
+  Piano: ['pianiste', 'pianist', 'claviériste', 'keys'],
+  Saxophone: ['saxophoniste', 'sax', 'saxo'],
+  'Saxophone alto': ['saxophoniste', 'sax', 'saxo', 'alto', 'eb'],
+  'Saxophone ténor': ['saxophoniste', 'sax', 'saxo', 'ténor', 'tenor', 'bb'],
+  'Synthé / MAO': ['claviériste', 'producteur', 'beatmaker', 'mao'],
+  Timbales: ['timbalero', 'percussionniste'],
+  Trombone: ['tromboniste'],
   Trompette: ['trompettiste', 'trumpet'],
+  Tuba: ['tubiste'],
+  Vibraphone: ['vibraphoniste'],
   Violon: ['violoniste', 'violin'],
+  Violoncelle: ['violoncelliste', 'celliste'],
   Voix: ['chanteur', 'chanteuse', 'chant', 'vocaliste'],
 };
+
+export type AvailabilityStatusKind = 'today' | 'thisWeek' | 'weekend' | 'onRequest' | 'unavailable';
+
+export interface AvailabilityStatus {
+  badgeLabel: string;
+  kind: AvailabilityStatusKind;
+  rawLabel: string;
+  urgencyRank: number;
+}
+
+export interface DiscoverySearchOptions {
+  now?: Date;
+  referenceProfile?: ProfileSummary | null;
+  translate?: (value: string) => string;
+}
 
 export function normalizeSearch(value: string): string {
   return value
@@ -132,8 +178,25 @@ function matchCount(tokens: readonly string[], words: readonly string[]): number
   return tokens.reduce((count, token) => count + Number(tokenMatches(token, words)), 0);
 }
 
-function profileWords(profile: ProfileSummary): string[] {
+function translatedTerms(value: string, translate?: (value: string) => string): string[] {
+  const translated = translate?.(value);
+  return translated && translated !== value ? [value, translated] : [value];
+}
+
+export function genreFamilyLabel(genre: string): string | null {
+  const group = GIG_GENRE_GROUPS.find(({ values }) =>
+    (values as readonly string[]).includes(genre),
+  );
+  return group?.label.replace(/^[^\p{L}\p{N}]+/u, '') ?? null;
+}
+
+function profileWords(
+  profile: ProfileSummary,
+  now: Date,
+  translate?: (value: string) => string,
+): string[] {
   const handle = normalizeSearch(profile.name).replace(/\s+/g, '.');
+  const availability = profileAvailability(profile, now);
   return normalizedWords([
     profile.name,
     handle,
@@ -143,9 +206,17 @@ function profileWords(profile: ProfileSummary): string[] {
     profile.postalCode ?? '',
     profile.country ?? '',
     profile.level,
-    ...profile.instruments,
+    profile.level === 'Professionnel' ? 'Pro' : profile.level,
+    ...translatedTerms(profile.level, translate),
+    ...profile.instruments.flatMap((instrument) => translatedTerms(instrument, translate)),
     ...profile.instruments.flatMap((instrument) => instrumentAliases[instrument] ?? []),
-    ...profile.genres,
+    ...profile.genres.flatMap((genre) => translatedTerms(genre, translate)),
+    ...profile.genres.flatMap((genre) => {
+      const family = genreFamilyLabel(genre);
+      return family ? translatedTerms(family, translate) : [];
+    }),
+    ...translatedTerms(availability.badgeLabel, translate),
+    ...translatedTerms(availability.rawLabel, translate),
     ...(profile.availabilityPlaces ?? []).flatMap((place) => [
       place.city,
       place.postalCode ?? '',
@@ -155,14 +226,17 @@ function profileWords(profile: ProfileSummary): string[] {
   ]);
 }
 
-function gigWords(gig: GigSummary): string[] {
+function gigWords(gig: GigSummary, translate?: (value: string) => string): string[] {
+  const family = genreFamilyLabel(gig.genre);
   return normalizedWords([
     'sos',
     gig.title,
     gig.place,
+    gig.neighborhood,
     gig.hostName,
-    gig.genre,
-    ...gig.wantedInstruments,
+    ...translatedTerms(gig.genre, translate),
+    ...(family ? translatedTerms(family, translate) : []),
+    ...gig.wantedInstruments.flatMap((instrument) => translatedTerms(instrument, translate)),
     ...gig.wantedInstruments.flatMap((instrument) => instrumentAliases[instrument] ?? []),
   ]);
 }
@@ -178,25 +252,96 @@ export function searchDiscovery(
   query: string,
   profiles: readonly ProfileSummary[],
   gigs: readonly GigSummary[],
+  options: DiscoverySearchOptions = {},
 ): { gigs: GigSummary[]; profiles: ProfileSummary[] } {
   const tokens = searchTokens(query);
   if (tokens.length === 0) return { gigs: [], profiles: [] };
+  const now = options.now ?? new Date();
   const matchedProfiles = bestMatches(
-    profiles.map((item) => ({ item, score: matchCount(tokens, profileWords(item)) })),
+    profiles.map((item) => ({
+      item,
+      score: matchCount(tokens, profileWords(item, now, options.translate)),
+    })),
     tokens.length,
-  ).sort(rankProfiles);
+  ).sort((left, right) => rankProfiles(left, right, options.referenceProfile, now));
   const matchedGigs = bestMatches(
-    gigs.map((item) => ({ item, score: matchCount(tokens, gigWords(item)) })),
+    gigs.map((item) => ({
+      item,
+      score: matchCount(tokens, gigWords(item, options.translate)),
+    })),
     tokens.length,
   ).sort((left, right) => Date.parse(left.date) - Date.parse(right.date));
   return { gigs: matchedGigs, profiles: matchedProfiles };
 }
 
-function dateKey(value: Date): string {
+export function dateKey(value: Date): string {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function dayNumber(value: string): number {
+  const [year = 0, month = 1, day = 1] = value.split('-').map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+export function profileAvailability(
+  profile: Pick<ProfileSummary, 'availableDates'>,
+  now = new Date(),
+): AvailabilityStatus {
+  const today = dateKey(now);
+  const first = profile.availableDates
+    .map((value) => value.slice(0, 10))
+    .filter((value) => value >= today)
+    .sort()[0];
+  if (!first) {
+    return {
+      badgeLabel: 'Indispo',
+      kind: 'unavailable',
+      rawLabel: 'Indisponible',
+      urgencyRank: 0,
+    };
+  }
+  if (first === today) {
+    return {
+      badgeLabel: "Dispo aujourd'hui",
+      kind: 'today',
+      rawLabel: 'Ce soir',
+      urgencyRank: 4,
+    };
+  }
+  const daysAway = dayNumber(first) - dayNumber(today);
+  if (daysAway <= 7) {
+    const weekday = new Date(`${first}T12:00:00`).getDay();
+    if (weekday === 0 || weekday === 6) {
+      return {
+        badgeLabel: 'Ce week-end',
+        kind: 'weekend',
+        rawLabel: 'Ce week-end',
+        urgencyRank: 2,
+      };
+    }
+    return {
+      badgeLabel: 'Cette semaine',
+      kind: 'thisWeek',
+      rawLabel: 'Cette semaine',
+      urgencyRank: 3,
+    };
+  }
+  return {
+    badgeLabel: 'Sur demande',
+    kind: 'onRequest',
+    rawLabel: 'Sur demande',
+    urgencyRank: 1,
+  };
+}
+
+export function hasFutureAvailability(
+  profile: Pick<ProfileSummary, 'availableDates'>,
+  now = new Date(),
+): boolean {
+  return profileAvailability(profile, now).kind !== 'unavailable';
 }
 
 export function isAvailableOn(profile: ProfileSummary, date: Date): boolean {
@@ -212,15 +357,25 @@ export function availabilityPlaceCovers(
   return place.from <= wanted && wanted <= place.to;
 }
 
+export function availabilityPlaceForDate(
+  profile: Pick<ProfileSummary, 'availabilityPlaces'>,
+  value: Date | string,
+): NonNullable<ProfileSummary['availabilityPlaces']>[number] | null {
+  const date = typeof value === 'string' ? new Date(`${value.slice(0, 10)}T12:00:00`) : value;
+  return (
+    [...(profile.availabilityPlaces ?? [])]
+      .filter((place) => availabilityPlaceCovers(place, date))
+      .sort((left, right) => left.from.localeCompare(right.from))[0] ?? null
+  );
+}
+
 function placeLabel(place: NonNullable<ProfileSummary['availabilityPlaces']>[number]): string {
   return [place.postalCode, place.city, place.country].filter(Boolean).join(' ');
 }
 
 export function profilePlaceLabel(profile: ProfileSummary, neededDate?: string | null): string {
   if (neededDate) {
-    const trip = (profile.availabilityPlaces ?? []).find((place) =>
-      availabilityPlaceCovers(place, new Date(`${neededDate}T12:00:00`)),
-    );
+    const trip = availabilityPlaceForDate(profile, neededDate);
     if (trip) return placeLabel(trip);
   }
   return [profile.postalCode, profile.city, profile.country].filter(Boolean).join(' ');
@@ -228,24 +383,27 @@ export function profilePlaceLabel(profile: ProfileSummary, neededDate?: string |
 
 export function profileMatchesPlace(
   profile: ProfileSummary,
-  requestedPlace: string,
+  requestedCity: string,
   neededDate?: string | null,
+  requestedPostalCode = '',
+  requestedCountry = '',
 ): boolean {
-  const needle = normalizeSearch(requestedPlace.trim());
-  if (!needle) return true;
-  const home = normalizeSearch(profilePlaceLabel(profile));
-  if (neededDate) {
-    const trip = (profile.availabilityPlaces ?? []).find((place) =>
-      availabilityPlaceCovers(place, new Date(`${neededDate}T12:00:00`)),
-    );
-    return normalizeSearch(trip ? placeLabel(trip) : home).includes(needle);
-  }
-  return (
-    home.includes(needle) ||
-    (profile.availabilityPlaces ?? []).some((place) =>
-      normalizeSearch(placeLabel(place)).includes(needle),
-    )
+  const needles = [requestedCity, requestedPostalCode, requestedCountry]
+    .map((value) => normalizeSearch(value.trim()))
+    .filter(Boolean);
+  if (needles.length === 0) return true;
+  const home = normalizeSearch(
+    [profile.neighborhood, profilePlaceLabel(profile)].filter(Boolean).join(' '),
   );
+  if (neededDate) {
+    const trip = availabilityPlaceForDate(profile, neededDate);
+    const location = normalizeSearch(trip ? placeLabel(trip) : home);
+    return needles.every((needle) => location.includes(needle));
+  }
+  return [
+    home,
+    ...(profile.availabilityPlaces ?? []).map((place) => normalizeSearch(placeLabel(place))),
+  ].some((location) => needles.every((needle) => location.includes(needle)));
 }
 
 export function weekendDays(now = new Date()): Date[] {
@@ -259,6 +417,16 @@ export function weekendDays(now = new Date()): Date[] {
   return result;
 }
 
+export function dateForAvailabilityScope(
+  scope: AvailabilityScope,
+  neededDate: string | null,
+  now = new Date(),
+): string | null {
+  if (scope === 'today') return dateKey(now);
+  if (scope === 'weekend') return dateKey(weekendDays(now)[0] ?? now);
+  return neededDate?.slice(0, 10) ?? null;
+}
+
 export function activeFilterCount(filters: DiscoveryFilters): number {
   return [
     filters.instruments.length > 0,
@@ -269,7 +437,10 @@ export function activeFilterCount(filters: DiscoveryFilters): number {
     filters.friendsOnly,
     filters.playedWithFriend,
     filters.sameSchoolOnly,
-    Boolean(filters.place.trim()),
+    filters.wellRated,
+    Boolean(
+      filters.placeCity.trim() || filters.placePostalCode.trim() || filters.placeCountry.trim(),
+    ),
   ].filter(Boolean).length;
 }
 
@@ -295,6 +466,24 @@ export function distanceKm(
       Math.cos(radians(to.latitude)) *
       Math.sin(longitudeDelta / 2) ** 2;
   return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function profileDistanceLabel(
+  from: Pick<ProfileSummary, 'latitude' | 'longitude'>,
+  profile: Pick<ProfileSummary, 'hasExactLocation' | 'latitude' | 'longitude'>,
+  locale = 'fr-CH',
+): string | null {
+  const distance = distanceKm(from, profile);
+  if (distance === null) return null;
+  if (profile.hasExactLocation) {
+    return `${new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 1,
+      minimumFractionDigits: 1,
+    }).format(distance)} km`;
+  }
+  return `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
+    Math.max(1, Math.round(distance)),
+  )} km`;
 }
 
 export function matchesDiscoveryFilters(
@@ -327,7 +516,15 @@ export function matchesDiscoveryFilters(
   if (filters.neededDate && !isAvailableOn(profile, new Date(`${filters.neededDate}T12:00:00`))) {
     return false;
   }
-  if (!profileMatchesPlace(profile, filters.place, filters.neededDate)) {
+  if (
+    !profileMatchesPlace(
+      profile,
+      filters.placeCity,
+      filters.neededDate,
+      filters.placePostalCode,
+      filters.placeCountry,
+    )
+  ) {
     return false;
   }
   const distance = currentProfile ? distanceKm(currentProfile, profile) : null;
@@ -335,35 +532,52 @@ export function matchesDiscoveryFilters(
   if (filters.friendsOnly && !profile.isFriend) return false;
   if (filters.playedWithFriend && !profile.playedWithFriend) return false;
   if (filters.sameSchoolOnly && !profile.sharesSchool) return false;
+  if (
+    filters.wellRated &&
+    (profile.ratingAverage === null || profile.ratingAverage < 4 || profile.ratingCount < 3)
+  ) {
+    return false;
+  }
   return true;
 }
 
-export function rankProfiles(left: ProfileSummary, right: ProfileSummary): number {
+export function rankProfiles(
+  left: ProfileSummary,
+  right: ProfileSummary,
+  referenceProfile: ProfileSummary | null = null,
+  now = new Date(),
+): number {
   const levelRank: Record<string, number> = {
-    Avancé: 3,
-    Débutant: 1,
-    Intermédiaire: 2,
-    Pro: 4,
-    Professionnel: 4,
+    Avancé: 2,
+    Débutant: 0,
+    Intermédiaire: 1,
+    Pro: 3,
+    Professionnel: 3,
   };
-  const score = (profile: ProfileSummary) => {
-    const relation = profile.isFriend
-      ? 40
-      : profile.playedWithFriend
-        ? 30
-        : profile.relationship !== 'none'
-          ? 20
-          : 0;
-    const strongestLevel = Math.max(
-      levelRank[profile.level] ?? 0,
-      ...Object.values(profile.instrumentLevels).map((level) => levelRank[level] ?? 0),
-    );
-    const availableSoon = Number(
-      profile.availableDates.some((date) => date.slice(0, 10) >= dateKey(new Date())),
-    );
-    return relation * 100 + strongestLevel * 10 + availableSoon;
+  const relationRank = (profile: ProfileSummary) => {
+    if (profile.isFriend || profile.relationship === 'friend') return 40;
+    if (profile.playedWithFriend) return 30;
+    if (profile.relationship === 'following') return 2;
+    if (profile.relationship === 'follower') return 1;
+    return 0;
   };
-  return score(right) - score(left) || left.name.localeCompare(right.name, 'fr');
+  const relationDifference = relationRank(right) - relationRank(left);
+  if (relationDifference !== 0) return relationDifference;
+  const levelDifference = (levelRank[right.level] ?? 0) - (levelRank[left.level] ?? 0);
+  if (levelDifference !== 0) return levelDifference;
+  const urgencyDifference =
+    profileAvailability(right, now).urgencyRank - profileAvailability(left, now).urgencyRank;
+  if (urgencyDifference !== 0) return urgencyDifference;
+  if (referenceProfile) {
+    const leftDistance = distanceKm(referenceProfile, left);
+    const rightDistance = distanceKm(referenceProfile, right);
+    if (leftDistance !== null && rightDistance !== null && leftDistance !== rightDistance) {
+      return leftDistance - rightDistance;
+    }
+    if (leftDistance !== null && rightDistance === null) return -1;
+    if (leftDistance === null && rightDistance !== null) return 1;
+  }
+  return left.name.localeCompare(right.name, 'fr');
 }
 
 export function profilesForScope(

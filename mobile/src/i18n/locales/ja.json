@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "対応可能日を保存できませんでした — ネットワークを確認してください。",
   "1 date cochée": "選択済みの日付 1件",
   "1 voyage enregistré": "保存済みの旅行 1件",
-  "1 vidéo sur ton profil": "プロフィールの動画 1本"
+  "1 vidéo sur ton profil": "プロフィールの動画 1本",
+  "Renseigne un pays, une ville et un code postal valides.": "有効な国、市区町村、郵便番号を入力してください。",
+  "Impossible d'enregistrer cette région.": "この地域を保存できませんでした。",
+  "Enregistrement…": "保存中…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "国、郵便番号、市区町村は地域検索に使用されます。"
 }

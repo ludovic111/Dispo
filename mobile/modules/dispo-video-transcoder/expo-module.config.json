@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["DispoVideoTranscoderModule"]
+  },
+  "android": {
+    "modules": ["ch.dispo.modules.videotranscoder.DispoVideoTranscoderModule"]
+  }
+}

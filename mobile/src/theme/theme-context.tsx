@@ -22,7 +22,7 @@ interface ThemeValue {
 }
 
 const ThemeContext = createContext<ThemeValue | null>(null);
-const themeStorageKey = '@dispo/theme';
+export const themeStorageKey = '@dispo/theme';
 
 function isThemePreference(value: string | null): value is ThemePreference {
   return value === 'system' || value === 'light' || value === 'dark';

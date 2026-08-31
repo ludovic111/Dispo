@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "无法保存你的可用日期 — 请检查网络连接。",
   "1 date cochée": "已选择 1 个日期",
   "1 voyage enregistré": "已保存 1 次旅行",
-  "1 vidéo sur ton profil": "个人资料中的 1 个视频"
+  "1 vidéo sur ton profil": "个人资料中的 1 个视频",
+  "Renseigne un pays, une ville et un code postal valides.": "请输入有效的国家、城市和邮政编码。",
+  "Impossible d'enregistrer cette région.": "无法保存此地区。",
+  "Enregistrement…": "正在保存…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "国家、邮政编码和城市用于本地搜索。"
 }

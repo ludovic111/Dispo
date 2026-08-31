@@ -154,6 +154,12 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
           <>
             <AffiliationStatusCard affiliation={{ ...affiliation, school }} />
             <DispoButton
+              icon="chatbubbles-outline"
+              onPress={() => router.push(`/schools/${school.id}/community` as never)}
+            >
+              {t('Ouvrir la communauté')}
+            </DispoButton>
+            <DispoButton
               icon="create-outline"
               onPress={() => router.push(`/schools/${school.id}/join` as never)}
               variant="secondary"

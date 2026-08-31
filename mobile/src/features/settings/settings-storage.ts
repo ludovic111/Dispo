@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { defaultPushPreferences, type PushPreferences } from './settings-model';
 
-const notificationsEnabledKey = 'dispo.settings.notifications-enabled';
-const pushPreferencesKey = 'dispo.settings.push-preferences';
+export const notificationsEnabledKey = 'dispo.settings.notifications-enabled';
+export const pushPreferencesKey = 'dispo.settings.push-preferences';
 const pushTokenKey = 'dispo.settings.native-push-token';
 const notificationSettingsListeners = new Set<() => void>();
 

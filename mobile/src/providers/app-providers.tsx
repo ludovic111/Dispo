@@ -13,9 +13,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
 import { NetworkBanner } from '@/features/connectivity/network-banner';
 import { DiscoveryProvider } from '@/features/discovery/discovery-context';
+import { GigRealtimeBridge } from '@/features/gigs/gig-realtime-bridge';
 import { GroupEventReminderBridge } from '@/features/groups/group-event-reminder-bridge';
 import { NativeNotificationBridge } from '@/features/notifications/native-notification-bridge';
+import { SchoolRealtimeBridge } from '@/features/schools/school-realtime-bridge';
+import { NativeDeviceSyncBridge } from '@/features/settings/native-device-sync-bridge';
 import { hydrateAppLanguage } from '@/i18n';
+import { migrateLegacyNativePreferences } from '@/services/storage/legacy-native-preferences';
 import { DispoThemeProvider } from '@/theme/theme-context';
 
 function SessionScopedProviders({ children }: PropsWithChildren) {
@@ -37,8 +41,11 @@ function SessionScopedProviders({ children }: PropsWithChildren) {
 
   return (
     <DiscoveryProvider key={userId ?? 'signed-out'}>
+      <GigRealtimeBridge />
       <GroupEventReminderBridge />
+      <SchoolRealtimeBridge />
       <NativeNotificationBridge />
+      <NativeDeviceSyncBridge />
       {children}
       <NetworkBanner />
     </DiscoveryProvider>
@@ -74,14 +81,16 @@ export function AppProviders({ children }: PropsWithChildren) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30_000, retry: 2, refetchOnWindowFocus: false },
+          queries: { staleTime: 30_000, retry: 2, refetchOnWindowFocus: true },
           mutations: { retry: 0 },
         },
       }),
   );
 
   useEffect(() => {
-    void hydrateAppLanguage().finally(() => setLanguageReady(true));
+    void migrateLegacyNativePreferences()
+      .then(hydrateAppLanguage)
+      .finally(() => setLanguageReady(true));
   }, []);
 
   if (!languageReady) return null;

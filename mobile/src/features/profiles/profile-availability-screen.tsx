@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -16,9 +16,10 @@ import { profileKeys } from './profile-queries';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
@@ -41,7 +42,10 @@ export function ProfileAvailabilityScreen() {
   const [calendarVisible, setCalendarVisible] = useState(Platform.OS === 'ios');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const dates = draft ?? query.data ?? [];
-  const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
+  const hasUnsavedChanges =
+    draft !== null &&
+    normalizeAvailableDates(draft).join('|') !==
+      normalizeAvailableDates(query.data ?? []).join('|');
 
   const updateDay = (date: Date) => {
     setCalendarDate(date);
@@ -70,27 +74,57 @@ export function ProfileAvailabilityScreen() {
     }
   };
 
+  const nativeHeader = (
+    <Stack.Screen
+      options={{
+        headerLeft: () => <NativeHeaderButton label={t('Fermer')} onPress={() => router.back()} />,
+        headerRight: () => (
+          <NativeHeaderButton
+            disabled={!hasUnsavedChanges || saving}
+            label={t('Enregistrer')}
+            onPress={() => void save()}
+          />
+        ),
+        title: t('Mes disponibilités'),
+      }}
+    />
+  );
+
   if (query.isLoading) {
     return (
-      <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Mes disponibilités')} />
+      <Screen nativeHeader>
+        {nativeHeader}
         <LoadingState />
       </Screen>
     );
   }
   if (query.isError) {
     return (
-      <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Mes disponibilités')} />
-        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+      <Screen nativeHeader>
+        {nativeHeader}
+        <ErrorState message={t('Chargement impossible.')} onRetry={() => void query.refetch()} />
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <ScreenHeader action={close} eyebrow={t('Profil')} title={t('Mes disponibilités')} />
+    <Screen nativeHeader>
+      {nativeHeader}
       <ScrollView contentContainerStyle={styles.content}>
+        {hasUnsavedChanges ? (
+          <View
+            accessibilityLiveRegion="polite"
+            style={[
+              styles.unsavedBanner,
+              { backgroundColor: `${palette.bronze}16`, borderColor: `${palette.bronze}55` },
+            ]}
+          >
+            <Ionicons color={palette.bronze} name="alert-circle-outline" size={19} />
+            <AppText color={palette.bronze} style={styles.flex} variant="caption">
+              {t('Enregistrer les modifications')}
+            </AppText>
+          </View>
+        ) : null}
         <Card style={styles.card}>
           <View style={styles.headingRow}>
             <View style={[styles.icon, { backgroundColor: `${palette.jam}18` }]}>
@@ -209,7 +243,7 @@ export function ProfileAvailabilityScreen() {
             {errorText}
           </AppText>
         ) : null}
-        <DispoButton loading={saving} onPress={() => void save()}>
+        <DispoButton disabled={!hasUnsavedChanges} loading={saving} onPress={() => void save()}>
           {t('Enregistrer mes disponibilités')}
         </DispoButton>
       </ScrollView>
@@ -254,4 +288,13 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.76 },
   sectionHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  unsavedBanner: {
+    alignItems: 'center',
+    borderRadius: radii.button,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
 });

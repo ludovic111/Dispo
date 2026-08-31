@@ -1,17 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 
-import {
-  SettingsDivider,
-  SettingsShell,
-  SettingsSwitchRow,
-  SheetHeader,
-} from './settings-components';
+import { SettingsDivider, SettingsShell, SettingsSwitchRow } from './settings-components';
 import {
   notificationStatusLabel,
+  permissionAllowsDelivery,
   setPushCategory,
   type PushCategory,
   type PushPreferences,
@@ -42,10 +37,6 @@ import { useAuth } from '@/features/auth/auth-context';
 import i18n from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
-
-function permissionAllowsDelivery(permission: NotificationPermission): boolean {
-  return permission === 'granted' || permission === 'provisional' || permission === 'ephemeral';
-}
 
 export function NotificationsScreen() {
   const { session } = useAuth();
@@ -200,9 +191,7 @@ export function NotificationsScreen() {
   };
 
   return (
-    <SettingsShell>
-      <SheetHeader onClose={() => router.back()} title={t('Notifications')} />
-
+    <SettingsShell nativeHeader>
       <Card padding={spacing.md}>
         <View style={styles.introRow}>
           <Ionicons

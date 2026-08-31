@@ -426,8 +426,9 @@ export async function openMessageAttachment(attachment: MessageAttachment): Prom
   const storage = getSupabaseClient().storage.from(messageFilesBucket);
   const signed = await storage.createSignedUrl(attachment.remotePath, 60);
   if (signed.error) throw signed.error;
-  // Keep consultation inside the app, like Swift's Quick Look sheet. The
-  // private object remains protected by a short-lived signed URL.
+  // The private object remains protected by a short-lived signed URL. This
+  // browser fallback is not equivalent to Swift Quick Look: native preview,
+  // local cache and Save to Files still require a dedicated native module.
   await WebBrowser.openBrowserAsync(signed.data.signedUrl);
 }
 

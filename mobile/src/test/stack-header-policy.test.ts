@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  filterPresentationOptions,
   headerlessModalStackRoutes,
   headerlessStackRoutes,
   isHeaderlessStackRoute,
@@ -19,15 +20,16 @@ describe('root stack header policy', () => {
     'groups/[id]/events/new',
     'groups/[id]/songs/[songId]',
     'groups/[id]/songs/[songId]/copy',
-  ])('keeps %s on its single custom header', (route) => {
-    expect(isHeaderlessStackRoute(route)).toBe(true);
+    'schools/[id]/community',
+  ])('lets %s use the native Stack header', (route) => {
+    expect(isHeaderlessStackRoute(route)).toBe(false);
   });
 
-  it.each(['settings', 'profile/availability', 'notification-center'])(
-    'hides the native header for %s before the route renders',
+  it.each(['account', 'notifications', 'settings', 'profile/availability', 'notification-center'])(
+    'lets the modal route %s render one native header',
     (route) => {
-      expect(isHeaderlessStackRoute(route)).toBe(true);
-      expect(headerlessModalStackRoutes).toContain(route);
+      expect(isHeaderlessStackRoute(route)).toBe(false);
+      expect(headerlessModalStackRoutes).not.toContain(route);
     },
   );
 
@@ -38,6 +40,18 @@ describe('root stack header policy', () => {
 
   it('keeps whats-new as a gesture-locked custom-header modal', () => {
     expect(lockedHeaderlessModalStackRoutes).toContain('whats-new');
+  });
+
+  it('uses native medium and large filter detents on iOS only', () => {
+    expect(filterPresentationOptions('ios')).toMatchObject({
+      presentation: 'formSheet',
+      sheetAllowedDetents: [0.5, 1],
+      sheetInitialDetentIndex: 0,
+    });
+    expect(filterPresentationOptions('android')).toEqual({
+      headerShown: false,
+      presentation: 'modal',
+    });
   });
 
   it('contains no duplicate route registrations', () => {

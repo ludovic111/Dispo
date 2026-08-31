@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -20,8 +20,8 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
+import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -87,27 +87,43 @@ export function NotificationsCenterScreen() {
   const markAll = useMarkAllNotificationsRead();
   const notifications = notificationItems(query.data);
   const unread = unreadQuery.data ?? notifications.filter((item) => !item.readAt).length;
-  const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
+  const nativeHeader = (
+    <Stack.Screen
+      options={{
+        headerLeft: () => <NativeHeaderButton label={t('Fermer')} onPress={() => router.back()} />,
+        headerRight: () =>
+          unread > 0 ? (
+            <NativeHeaderButton
+              disabled={markAll.isPending}
+              label={t('Tout lire')}
+              onPress={() => markAll.mutate()}
+            />
+          ) : null,
+        title: t('Notifications'),
+      }}
+    />
+  );
 
   if (query.isLoading) {
     return (
-      <Screen>
-        <ScreenHeader action={close} title={t('Notifications')} />
+      <Screen nativeHeader>
+        {nativeHeader}
         <LoadingState label={t('Chargement des notifications…')} />
       </Screen>
     );
   }
   if (query.isError) {
     return (
-      <Screen>
-        <ScreenHeader action={close} title={t('Notifications')} />
+      <Screen nativeHeader>
+        {nativeHeader}
         <ErrorState message={t('Chargement impossible.')} onRetry={() => void query.refetch()} />
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    <Screen nativeHeader>
+      {nativeHeader}
       <FlashList
         contentContainerStyle={styles.content}
         data={notifications}
@@ -118,28 +134,6 @@ export function NotificationsCenterScreen() {
             icon="notifications-off-outline"
             message={t('Les SOS, messages et événements de groupe apparaîtront ici.')}
             title={t('Aucune notification')}
-          />
-        }
-        ListHeaderComponent={
-          <ScreenHeader
-            action={
-              <View style={styles.actions}>
-                {unread > 0 ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={markAll.isPending}
-                    onPress={() => markAll.mutate()}
-                    style={({ pressed }) => pressed && styles.pressed}
-                  >
-                    <AppText color={palette.electric} style={styles.readAll} variant="subheadline">
-                      {t('Tout lire')}
-                    </AppText>
-                  </Pressable>
-                ) : null}
-                {close}
-              </View>
-            }
-            title={t('Notifications')}
           />
         }
         refreshControl={
@@ -173,8 +167,11 @@ export function NotificationsCenterScreen() {
 }
 
 const styles = StyleSheet.create({
-  actions: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  content: { paddingBottom: spacing.xl, paddingHorizontal: spacing.gutter },
+  content: {
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.sm,
+  },
   copy: { flex: 1, gap: spacing.xxxs },
   icon: {
     alignItems: 'center',
@@ -184,7 +181,6 @@ const styles = StyleSheet.create({
     width: 34,
   },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
-  readAll: { fontWeight: '700' },
   row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.section },
   separator: { height: spacing.control },
   title: { flex: 1 },

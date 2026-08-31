@@ -58,7 +58,7 @@ export default function SessionsScreen() {
   if (query.isLoading) {
     return (
       <Screen nativeTabRoot>
-        <ScreenHeader eyebrow={t('Agenda')} icon="calendar-outline" title={t('Sessions')} />
+        <ScreenHeader icon="calendar-outline" title={t('Sessions')} />
         <LoadingState label={t('Chargement de ton agenda…')} />
       </Screen>
     );
@@ -66,8 +66,8 @@ export default function SessionsScreen() {
   if (query.isError) {
     return (
       <Screen nativeTabRoot>
-        <ScreenHeader eyebrow={t('Agenda')} icon="calendar-outline" title={t('Sessions')} />
-        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+        <ScreenHeader icon="calendar-outline" title={t('Sessions')} />
+        <ErrorState message={t('Chargement impossible.')} onRetry={() => void query.refetch()} />
       </Screen>
     );
   }
@@ -95,17 +95,12 @@ export default function SessionsScreen() {
           />
         }
       >
-        <View>
-          <ScreenHeader
-            eyebrow={t('Agenda')}
-            icon="calendar-outline"
-            inset={false}
-            title={t('Sessions')}
-          />
-          <AppText color={palette.muted} style={styles.headerSubtitle} variant="caption">
-            {subtitle}
-          </AppText>
-        </View>
+        <ScreenHeader
+          icon="calendar-outline"
+          inset={false}
+          subtitle={subtitle}
+          title={t('Sessions')}
+        />
 
         <SessionsSegmentedControl onChange={setScope} value={scope} />
 
@@ -120,7 +115,7 @@ export default function SessionsScreen() {
             {mutationError ? (
               <Card>
                 <AppText color={palette.signal} style={styles.mutationError} variant="caption">
-                  {t('La réponse n’a pas pu être envoyée.')} {mutationError.message}
+                  {t('La réponse n’a pas pu être envoyée.')}
                 </AppText>
               </Card>
             ) : null}
@@ -167,19 +162,17 @@ export default function SessionsScreen() {
         {scope === 'past' && sessions.length > 0 ? <PastSummaryCard sessions={sessions} /> : null}
 
         {sessions.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon={scope === 'upcoming' ? 'calendar-outline' : 'time-outline'}
-              message={
-                scope === 'upcoming'
-                  ? t(
-                      'Tes concerts de groupe, les dépannages qu’on te confie, tes candidatures et les SOS que tu publies apparaissent ici.',
-                    )
-                  : t('Les dates que tu auras jouées se rangent ici, mois par mois.')
-              }
-              title={scope === 'upcoming' ? t('Rien de prévu') : t('Aucune date passée')}
-            />
-          </Card>
+          <EmptyState
+            icon={scope === 'upcoming' ? 'calendar-outline' : 'time-outline'}
+            message={
+              scope === 'upcoming'
+                ? t(
+                    'Tes concerts de groupe, les dépannages qu’on te confie, tes candidatures et les SOS que tu publies apparaissent ici.',
+                  )
+                : t('Les dates que tu auras jouées se rangent ici, mois par mois.')
+            }
+            title={scope === 'upcoming' ? t('Rien de prévu') : t('Aucune date passée')}
+          />
         ) : null}
 
         {months.map((month) => (
@@ -208,7 +201,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     paddingHorizontal: spacing.md,
   },
-  headerSubtitle: { marginTop: -spacing.xs },
   month: { gap: spacing.sm },
   monthLabel: { letterSpacing: 1.3 },
   mutationError: { fontWeight: '700', textAlign: 'center' },

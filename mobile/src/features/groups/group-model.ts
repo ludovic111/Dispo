@@ -130,6 +130,7 @@ export interface GroupSong {
 
 export interface GroupDocument {
   addedBy: string | null;
+  addedById: string | null;
   createdAt: string;
   extension: string;
   groupId: string;
@@ -528,8 +529,11 @@ export function reorderSongs(songs: readonly GroupSong[], orderedApprovedIds: re
     return [song];
   });
   const remaining = songs.filter((song) => song.isApproved && approved.has(song.id));
-  const pending = songs.filter((song) => !song.isApproved);
-  return [...ordered, ...remaining, ...pending];
+  const normalizedApproved = [...ordered, ...remaining];
+  let approvedIndex = 0;
+  return songs.map((song) =>
+    song.isApproved ? (normalizedApproved[approvedIndex++] ?? song) : song,
+  );
 }
 
 export function isValidGroupMessage(text: string, hasAttachment = false): boolean {

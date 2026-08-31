@@ -9,13 +9,12 @@ import { DiscoveryProfileRow } from './discovery-profile-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { DispoButton } from '@/components/ui/pressable';
-import { EmptyState, Screen } from '@/components/ui/screen';
+import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigCard } from '@/features/gigs/gig-card';
 import { useGigs } from '@/features/gigs/gig-queries';
-import { useDiscoveryProfiles } from '@/features/profiles/profile-queries';
+import { useDiscoveryProfiles, useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -28,17 +27,8 @@ export function SearchScreen() {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const profilesQuery = useDiscoveryProfiles(session?.user.id ?? '');
+  const meQuery = useProfile(session?.user.id ?? '', session?.user.id ?? '');
   const gigsQuery = useGigs();
-  const {
-    fetchNextPage: fetchNextProfiles,
-    hasNextPage: hasNextProfiles,
-    isFetchingNextPage: isFetchingNextProfiles,
-  } = profilesQuery;
-  const {
-    fetchNextPage: fetchNextGigs,
-    hasNextPage: hasNextGigs,
-    isFetchingNextPage: isFetchingNextGigs,
-  } = gigsQuery;
 
   const profiles = useMemo(
     () => profilesQuery.data?.pages.flatMap((page) => page.items) ?? [],
@@ -48,8 +38,17 @@ export function SearchScreen() {
     () => gigsQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [gigsQuery.data?.pages],
   );
-  const results = useMemo(() => searchDiscovery(query, profiles, gigs), [gigs, profiles, query]);
+  const results = useMemo(
+    () =>
+      searchDiscovery(query, profiles, gigs, {
+        referenceProfile: meQuery.data ?? null,
+        translate: (value) => t(value),
+      }),
+    [gigs, meQuery.data, profiles, query, t],
+  );
   const hasQuery = query.trim().length > 0;
+  const loadingResults = profilesQuery.isLoading || gigsQuery.isLoading || meQuery.isLoading;
+  const resultError = profilesQuery.error ?? gigsQuery.error ?? meQuery.error;
 
   return (
     <Screen nativeHeader>
@@ -108,6 +107,15 @@ export function SearchScreen() {
               ))}
             </View>
           </Card>
+        ) : loadingResults ? (
+          <LoadingState label={t('Recherche des musicien·nes compatibles…')} />
+        ) : resultError ? (
+          <ErrorState
+            message={resultError.message}
+            onRetry={() =>
+              void Promise.all([profilesQuery.refetch(), gigsQuery.refetch(), meQuery.refetch()])
+            }
+          />
         ) : results.profiles.length === 0 && results.gigs.length === 0 ? (
           <EmptyState
             icon="search"
@@ -123,7 +131,11 @@ export function SearchScreen() {
                   title={t('Musiciens')}
                 />
                 {results.profiles.map((profile) => (
-                  <DiscoveryProfileRow key={profile.id} profile={profile} />
+                  <DiscoveryProfileRow
+                    key={profile.id}
+                    profile={profile}
+                    referenceProfile={meQuery.data ?? null}
+                  />
                 ))}
               </View>
             ) : null}
@@ -140,18 +152,6 @@ export function SearchScreen() {
             ) : null}
           </>
         )}
-        {hasQuery && (hasNextProfiles || hasNextGigs) ? (
-          <DispoButton
-            loading={isFetchingNextProfiles || isFetchingNextGigs}
-            onPress={() => {
-              if (hasNextProfiles && !isFetchingNextProfiles) void fetchNextProfiles();
-              if (hasNextGigs && !isFetchingNextGigs) void fetchNextGigs();
-            }}
-            variant="secondary"
-          >
-            {t('Chercher dans la suite')}
-          </DispoButton>
-        ) : null}
       </ScrollView>
     </Screen>
   );

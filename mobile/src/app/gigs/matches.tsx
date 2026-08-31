@@ -73,11 +73,14 @@ export default function GigMatchesScreen() {
       </Screen>
     );
   }
-  if (query.isError) {
+  if (query.isExhaustiveError) {
     return (
       <Screen>
         <ScreenHeader leadingAction={back} title={t('Matches SOS')} />
-        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+        <ErrorState
+          message={query.error?.message ?? t('Chargement impossible.')}
+          onRetry={() => void query.refetch()}
+        />
       </Screen>
     );
   }
@@ -168,16 +171,6 @@ export default function GigMatchesScreen() {
               <MatchRow gig={gig} key={match.id} match={match} />
             ))}
           </Card>
-        ) : null}
-
-        {query.hasNextPage ? (
-          <DispoButton
-            disabled={query.isFetchingNextPage}
-            onPress={() => void query.fetchNextPage()}
-            variant="secondary"
-          >
-            {query.isFetchingNextPage ? t('Chargement…') : t('Charger plus')}
-          </DispoButton>
         ) : null}
 
         <DispoButton onPress={() => router.replace(`/gigs/${gig.id}`)}>{t('Terminé')}</DispoButton>

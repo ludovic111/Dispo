@@ -1339,6 +1339,81 @@ export type Database = {
           },
         ];
       };
+      song_catalog: {
+        Row: {
+          album_title: string | null;
+          artist: string;
+          artwork_url: string | null;
+          composer: string | null;
+          created_at: string;
+          duration_ms: number | null;
+          genres: string[];
+          id: string;
+          isrc: string | null;
+          metadata_source: string | null;
+          metadata_updated_at: string | null;
+          musical_key: string | null;
+          normalized_artist: string;
+          normalized_composer: string;
+          normalized_isrc: string | null;
+          normalized_title: string;
+          platform_ids: Json;
+          release_year: number | null;
+          search_vector: unknown;
+          tempo_bpm: number | null;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          album_title?: string | null;
+          artist?: string;
+          artwork_url?: string | null;
+          composer?: string | null;
+          created_at?: string;
+          duration_ms?: number | null;
+          genres?: string[];
+          id?: string;
+          isrc?: string | null;
+          metadata_source?: string | null;
+          metadata_updated_at?: string | null;
+          musical_key?: string | null;
+          normalized_artist?: string;
+          normalized_composer?: string;
+          normalized_isrc?: string | null;
+          normalized_title?: string;
+          platform_ids?: Json;
+          release_year?: number | null;
+          search_vector?: unknown;
+          tempo_bpm?: number | null;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          album_title?: string | null;
+          artist?: string;
+          artwork_url?: string | null;
+          composer?: string | null;
+          created_at?: string;
+          duration_ms?: number | null;
+          genres?: string[];
+          id?: string;
+          isrc?: string | null;
+          metadata_source?: string | null;
+          metadata_updated_at?: string | null;
+          musical_key?: string | null;
+          normalized_artist?: string;
+          normalized_composer?: string;
+          normalized_isrc?: string | null;
+          normalized_title?: string;
+          platform_ids?: Json;
+          release_year?: number | null;
+          search_vector?: unknown;
+          tempo_bpm?: number | null;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       song_comments: {
         Row: {
           author_id: string | null;
@@ -1377,6 +1452,53 @@ export type Database = {
             columns: ['group_id'];
             isOneToOne: false;
             referencedRelation: 'music_groups';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      song_platform_links: {
+        Row: {
+          checked_at: string;
+          created_at: string;
+          external_id: string | null;
+          market: string;
+          match_kind: string;
+          platform: string;
+          song_id: string;
+          source: string | null;
+          updated_at: string;
+          url: string;
+        };
+        Insert: {
+          checked_at?: string;
+          created_at?: string;
+          external_id?: string | null;
+          market?: string;
+          match_kind?: string;
+          platform: string;
+          song_id: string;
+          source?: string | null;
+          updated_at?: string;
+          url: string;
+        };
+        Update: {
+          checked_at?: string;
+          created_at?: string;
+          external_id?: string | null;
+          market?: string;
+          match_kind?: string;
+          platform?: string;
+          song_id?: string;
+          source?: string | null;
+          updated_at?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'song_platform_links_song_id_fkey';
+            columns: ['song_id'];
+            isOneToOne: false;
+            referencedRelation: 'song_catalog';
             referencedColumns: ['id'];
           },
         ];
@@ -1532,10 +1654,26 @@ export type Database = {
           user_id: string;
         }[];
       };
+      claim_song_enrichment_jobs: {
+        Args: { p_claim_id: string; p_limit?: number; p_song_id?: string };
+        Returns: {
+          apple_id: string;
+          apple_url: string;
+          artist: string;
+          attempt_number: number;
+          isrc: string;
+          song_id: string;
+          title: string;
+        }[];
+      };
       cockpit_stats: { Args: never; Returns: Json };
       complete_message_file_cleanup: {
         Args: { p_path: string };
         Returns: undefined;
+      };
+      complete_song_enrichment_job: {
+        Args: { p_claim_id: string; p_result: Json; p_song_id: string };
+        Returns: boolean;
       };
       create_auto_sos: {
         Args: {
@@ -1572,6 +1710,21 @@ export type Database = {
       edit_school_message: {
         Args: { p_message_id: string; p_text: string };
         Returns: undefined;
+      };
+      enqueue_song_enrichment: { Args: { p_song_id: string }; Returns: boolean };
+      enqueue_song_enrichment_candidate: {
+        Args: { p_apple_id: string; p_apple_url: string };
+        Returns: Json;
+      };
+      finish_song_enrichment_job: {
+        Args: {
+          p_claim_id: string;
+          p_error?: string;
+          p_outcome: string;
+          p_retry_after_seconds?: number;
+          p_song_id: string;
+        };
+        Returns: boolean;
       };
       get_gig_request_location: {
         Args: { p_gig_id: string };
@@ -1719,6 +1872,10 @@ export type Database = {
         Args: { p_items: Json };
         Returns: Json;
       };
+      normalize_song_catalog_text: {
+        Args: { p_value: string };
+        Returns: string;
+      };
       notify_group_event_moved: {
         Args: { p_dates?: number; p_event_id: string };
         Returns: undefined;
@@ -1831,6 +1988,10 @@ export type Database = {
         Args: { p_claim_id: string };
         Returns: number;
       };
+      release_song_enrichment_claim: {
+        Args: { p_claim_id: string };
+        Returns: number;
+      };
       reopen_gig_application: {
         Args: { application_id: string };
         Returns: undefined;
@@ -1843,6 +2004,10 @@ export type Database = {
         Args: { p_group_id: string; p_song_ids: string[] };
         Returns: Json;
       };
+      reserve_song_enrichment_provider_call: {
+        Args: { p_song_id: string };
+        Returns: boolean;
+      };
       respond_to_direct_gig: {
         Args: { p_accept: boolean; p_gig: string };
         Returns: undefined;
@@ -1850,6 +2015,36 @@ export type Database = {
       save_group_events_with_locations: {
         Args: { p_events: Json; p_group_id: string; p_mode?: string };
         Returns: undefined;
+      };
+      search_song_catalog: {
+        Args: {
+          p_after_id?: string;
+          p_after_title?: string;
+          p_limit?: number;
+          p_market?: string;
+          p_query?: string;
+        };
+        Returns: {
+          album_title: string;
+          artist: string;
+          artwork_url: string;
+          composer: string;
+          created_at: string;
+          cursor_title: string;
+          duration_ms: number;
+          genres: string[];
+          id: string;
+          isrc: string;
+          metadata_source: string;
+          metadata_updated_at: string;
+          musical_key: string;
+          platform_ids: Json;
+          platform_links: Json;
+          release_year: number;
+          tempo_bpm: number;
+          title: string;
+          updated_at: string;
+        }[];
       };
       send_school_message: {
         Args: { p_channel_id: string; p_text: string };

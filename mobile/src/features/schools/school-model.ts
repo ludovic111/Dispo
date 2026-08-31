@@ -1,6 +1,7 @@
 export const schoolRoles = ['student', 'teacher', 'alumni', 'staff', 'applicant', 'other'] as const;
 
 export const schoolVisibilities = ['profile', 'school_only', 'private'] as const;
+export const SCHOOL_MESSAGE_MAX_LENGTH = 4_000;
 
 export type SchoolRole = (typeof schoolRoles)[number];
 export type SchoolVisibility = (typeof schoolVisibilities)[number];
@@ -44,6 +45,28 @@ export interface SchoolMember {
   roleLabel: string | null;
   verificationLevel: SchoolVerificationLevel;
 }
+
+export interface SchoolMessage {
+  channelId: string;
+  createdAt: string;
+  deletedAt: string | null;
+  editedAt: string | null;
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderPhotoUrl: string | null;
+  text: string;
+}
+
+export interface SchoolCommunity {
+  affiliation: SchoolAffiliation;
+  channelId: string;
+  messages: SchoolMessage[];
+}
+
+export type SchoolMessageTimelineItem =
+  | { id: string; kind: 'day'; date: string }
+  | { id: string; kind: 'message'; message: SchoolMessage };
 
 export interface SchoolAffiliationDraft {
   role: SchoolRole;
@@ -157,6 +180,65 @@ export function normalizeSchoolAffiliationInput(
     schoolId,
     visibility: draft.visibility,
   };
+}
+
+export function isValidSchoolMessage(text: string): boolean {
+  const clean = text.trim();
+  return clean.length > 0 && clean.length <= SCHOOL_MESSAGE_MAX_LENGTH;
+}
+
+function compareSchoolMessagesNewestFirst(left: SchoolMessage, right: SchoolMessage): number {
+  return right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id);
+}
+
+export function mergeSchoolMessagesNewestFirst(
+  messages: readonly SchoolMessage[],
+  incoming?: SchoolMessage,
+): SchoolMessage[] {
+  const byId = new Map<string, SchoolMessage>();
+  for (const message of messages) {
+    if (!byId.has(message.id)) byId.set(message.id, message);
+  }
+  if (incoming) {
+    const current = byId.get(incoming.id);
+    byId.set(incoming.id, {
+      ...current,
+      ...incoming,
+      senderName: incoming.senderName || current?.senderName || 'Membre',
+      senderPhotoUrl: incoming.senderPhotoUrl ?? current?.senderPhotoUrl ?? null,
+    });
+  }
+  return [...byId.values()].sort(compareSchoolMessagesNewestFirst);
+}
+
+export function latestSchoolMessage(messages: readonly SchoolMessage[]): SchoolMessage | null {
+  return mergeSchoolMessagesNewestFirst(messages)[0] ?? null;
+}
+
+function schoolMessageDayKey(value: string): string {
+  const date = new Date(value);
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part, index) => (index === 0 ? String(part) : String(part).padStart(2, '0')))
+    .join('-');
+}
+
+export function buildSchoolMessageTimeline(
+  messages: readonly SchoolMessage[],
+): SchoolMessageTimelineItem[] {
+  const ordered = mergeSchoolMessagesNewestFirst(messages);
+  const items: SchoolMessageTimelineItem[] = [];
+  ordered.forEach((message, index) => {
+    items.push({ id: `message:${message.id}`, kind: 'message', message });
+    const older = ordered[index + 1];
+    if (!older || schoolMessageDayKey(older.createdAt) !== schoolMessageDayKey(message.createdAt)) {
+      items.push({
+        date: message.createdAt,
+        id: `day:${schoolMessageDayKey(message.createdAt)}`,
+        kind: 'day',
+      });
+    }
+  });
+  return items;
 }
 
 export function schoolErrorMessage(error: unknown): string {

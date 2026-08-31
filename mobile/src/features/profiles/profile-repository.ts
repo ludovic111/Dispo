@@ -43,6 +43,7 @@ type ProfileProjection = Pick<
 >;
 type AffiliationProjection = Pick<MembershipRow, 'is_primary' | 'profile_id' | 'school_id'>;
 type SchoolProjection = Pick<SchoolRow, 'id' | 'logo_url' | 'name' | 'short_name' | 'slug'>;
+type ExactLocationRow = Database['public']['Tables']['profile_locations']['Row'];
 
 const profileColumns =
   'id,name,age,photo_url,bio,instruments,instrument_levels,genres,level,available_dates,availability_places,city,country,postal_code,neighborhood,latitude,longitude,location_precision,rating_avg,rating_count,is_premium,is_demo,is_showcase,repertoire,socials,demo_videos' as const;
@@ -130,6 +131,7 @@ async function enrichProfiles(
     followerResult,
     collaborationAsFirst,
     collaborationAsSecond,
+    exactLocationResult,
   ] = await Promise.all([
     supabase
       .from('follows')
@@ -150,6 +152,10 @@ async function enrichProfiles(
     supabase.from('follows').select('following_id').in('following_id', profileIds),
     supabase.from('collaborations').select('a_id').in('a_id', profileIds),
     supabase.from('collaborations').select('b_id').in('b_id', profileIds),
+    supabase
+      .from('profile_locations')
+      .select('user_id,latitude,longitude,updated_at')
+      .in('user_id', profileIds),
   ]);
   if (outgoingResult.error) throw outgoingResult.error;
   if (incomingResult.error) throw incomingResult.error;
@@ -157,6 +163,7 @@ async function enrichProfiles(
   if (followerResult.error) throw followerResult.error;
   if (collaborationAsFirst.error) throw collaborationAsFirst.error;
   if (collaborationAsSecond.error) throw collaborationAsSecond.error;
+  if (exactLocationResult.error) throw exactLocationResult.error;
 
   const affiliations = affiliationResult.data as AffiliationProjection[];
   const schoolIds = [...new Set(affiliations.map((membership) => membership.school_id))];
@@ -215,8 +222,15 @@ async function enrichProfiles(
   const mySchools = new Set(
     (membershipsByProfile.get(userId) ?? []).map((membership) => membership.school_id),
   );
+  const exactLocations = new Map(
+    (exactLocationResult.data as ExactLocationRow[]).map((location) => [
+      location.user_id,
+      location,
+    ]),
+  );
 
   return rows.map((row) => {
+    const exactLocation = exactLocations.get(row.id);
     const profileMemberships = membershipsByProfile.get(row.id) ?? [];
     const profileSchools = profileMemberships
       .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
@@ -257,11 +271,12 @@ async function enrichProfiles(
           : {},
       instruments: row.instruments,
       isDemo: row.is_demo,
+      hasExactLocation: Boolean(exactLocation),
       isFriend: outgoing.has(row.id) && incoming.has(row.id),
       isPremium: row.is_premium,
-      latitude: row.latitude,
+      latitude: exactLocation?.latitude ?? row.latitude,
       level: row.level,
-      longitude: row.longitude,
+      longitude: exactLocation?.longitude ?? row.longitude,
       locationPrecision: row.location_precision,
       name: row.name,
       neighborhood: row.neighborhood,

@@ -8,7 +8,14 @@ import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
 import { relationTags, type ProfileSummary } from '@/domain/profile';
-import { profilePlaceLabel } from '@/features/discovery/discovery-model';
+import {
+  availabilityPlaceForDate,
+  dateKey,
+  normalizeSearch,
+  profileAvailability,
+  profileDistanceLabel,
+  profilePlaceLabel,
+} from '@/features/discovery/discovery-model';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -23,14 +30,37 @@ function handleFor(name: string): string {
 }
 
 export function DiscoveryProfileRow({
-  neededDate,
+  scopeDate,
   profile,
+  referenceProfile,
 }: {
-  neededDate?: string | null;
+  scopeDate?: string | null;
   profile: ProfileSummary;
+  referenceProfile?: ProfileSummary | null;
 }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
+  const distance = referenceProfile ? profileDistanceLabel(referenceProfile, profile) : null;
+  const today = new Date();
+  const wantedDate = scopeDate?.slice(0, 10) ?? dateKey(today);
+  const availability = profileAvailability(profile, today);
+  const availabilityColor =
+    availability.kind === 'today'
+      ? palette.jam
+      : availability.kind === 'thisWeek'
+        ? palette.electric
+        : availability.kind === 'weekend'
+          ? palette.rehearsal
+          : palette.bronze;
+  const relevantTrip = availabilityPlaceForDate(profile, wantedDate);
+  const homeLabel = profilePlaceLabel(profile);
+  const candidateTravelLabel = relevantTrip
+    ? [relevantTrip.postalCode, relevantTrip.city, relevantTrip.country].filter(Boolean).join(' ')
+    : null;
+  const travelLabel =
+    candidateTravelLabel && normalizeSearch(candidateTravelLabel) !== normalizeSearch(homeLabel)
+      ? candidateTravelLabel
+      : null;
   return (
     <Pressable
       accessibilityLabel={formatSwiftPlaceholders(t('Ouvrir le profil de %@'), profile.name)}
@@ -48,6 +78,10 @@ export function DiscoveryProfileRow({
               </AppText>
               {profile.isPremium ? (
                 <Ionicons color={palette.electric} name="sparkles" size={13} />
+              ) : null}
+              {profile.isDemo ? <Tag color={palette.bronze} label={t('Démo')} /> : null}
+              {availability.kind !== 'unavailable' ? (
+                <Tag color={availabilityColor} label={t(availability.badgeLabel)} />
               ) : null}
             </View>
             <AppText color={palette.bronze} style={styles.handle} variant="caption2">
@@ -78,9 +112,34 @@ export function DiscoveryProfileRow({
                 ))}
               </View>
             ) : null}
-            <AppText color={palette.muted} numberOfLines={1} variant="caption">
-              {profilePlaceLabel(profile, neededDate) || t('Lieu non renseigné')}
-            </AppText>
+            <View style={styles.placeRow}>
+              <AppText
+                color={palette.muted}
+                numberOfLines={1}
+                style={styles.place}
+                variant="caption"
+              >
+                {homeLabel || t('Lieu non renseigné')}
+              </AppText>
+              {distance ? (
+                <AppText color={palette.electric} numberOfLines={1} variant="caption">
+                  {distance}
+                </AppText>
+              ) : null}
+            </View>
+            {travelLabel ? (
+              <View style={styles.travelRow}>
+                <Ionicons color={palette.rehearsal} name="airplane-outline" size={13} />
+                <AppText
+                  color={palette.rehearsal}
+                  numberOfLines={1}
+                  style={styles.place}
+                  variant="caption2"
+                >
+                  {travelLabel}
+                </AppText>
+              </View>
+            ) : null}
             <View style={styles.footer}>
               <AppText color={palette.muted} variant="caption2">
                 {formatSwiftPlaceholders(t('%lld abonnés'), profile.followerCount)}
@@ -106,7 +165,10 @@ const styles = StyleSheet.create({
   handle: { fontWeight: '700' },
   name: { flex: 1, fontWeight: '800' },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
+  place: { flex: 1 },
+  placeRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.compact },
+  travelRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.compact },
 });

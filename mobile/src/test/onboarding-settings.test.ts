@@ -9,6 +9,7 @@ import {
 import { patchNotes } from '@/features/settings/patch-notes-data';
 import {
   normalizeMarketingVersion,
+  normalizeProfileRegion,
   notificationStatusLabel,
   privacyPage,
   setPushCategory,
@@ -72,6 +73,19 @@ describe('settings parity helpers', () => {
   it('updates one push category without mutating the others', () => {
     expect(setPushCategory({ groups: true, messages: true, sos: true }, 'messages', false)).toEqual(
       { groups: true, messages: false, sos: true },
+    );
+  });
+
+  it('normalise la région native et refuse une adresse incomplète', () => {
+    expect(
+      normalizeProfileRegion({
+        city: '  La  Chaux-de-Fonds ',
+        country: ' ch ',
+        postalCode: ' 2300 ',
+      }),
+    ).toEqual({ city: 'La Chaux-de-Fonds', country: 'CH', postalCode: '2300' });
+    expect(() => normalizeProfileRegion({ city: 'G', country: 'CH', postalCode: '12' })).toThrow(
+      'profile_region_incomplete',
     );
   });
 

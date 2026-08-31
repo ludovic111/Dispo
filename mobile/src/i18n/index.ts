@@ -45,7 +45,7 @@ function deviceLocale(): SupportedLocale {
 }
 
 const i18n = createInstance();
-const languageStorageKey = 'dispo.settings.language';
+export const languageStorageKey = 'dispo.settings.language';
 
 void i18n.use(initReactI18next).init({
   compatibilityJSON: 'v4',

@@ -1,15 +1,20 @@
 import { describe, expect, it } from '@jest/globals';
 
-import type { ProfileSummary } from '@/domain/profile';
+import { relationTags, type ProfileSummary } from '@/domain/profile';
 import {
   activeFilterCount,
+  availabilityPlaceForDate,
   boundedEditDistance,
+  dateForAvailabilityScope,
   defaultDiscoveryFilters,
   distanceKm,
   matchesDiscoveryFilters,
   openingScope,
+  profileAvailability,
+  profileDistanceLabel,
   profileMatchesPlace,
   profilePlaceLabel,
+  rankProfiles,
   searchDiscovery,
   searchTokens,
 } from '@/features/discovery/discovery-model';
@@ -99,6 +104,25 @@ describe('recherche universelle fidèle', () => {
       searchDiscovery('piano Carouge', [partial, full], []).profiles.map((item) => item.id),
     ).toEqual(['full']);
   });
+
+  it('indexe disponibilité, traductions, familles, alias complets et quartier SOS', () => {
+    const now = new Date('2026-08-31T12:00:00');
+    const translated = (value: string) => (value === 'Jazz manouche' ? 'Gypsy jazz' : value);
+    const musician = profile({
+      availableDates: ['2026-08-31'],
+      genres: ['Jazz manouche', 'Salsa / Timba'],
+      instruments: ['Violoncelle'],
+    });
+    expect(searchDiscovery('ce soir', [musician], [], { now }).profiles).toHaveLength(1);
+    expect(
+      searchDiscovery('gypsy', [musician], [], { now, translate: translated }).profiles,
+    ).toHaveLength(1);
+    expect(searchDiscovery('latin', [musician], [], { now }).profiles).toHaveLength(1);
+    expect(searchDiscovery('celliste', [musician], [], { now }).profiles).toHaveLength(1);
+    expect(
+      searchDiscovery('paquis', [], [gig({ neighborhood: 'Pâquis', place: 'Genève' })]).gigs,
+    ).toHaveLength(1);
+  });
 });
 
 describe('filtres de découverte', () => {
@@ -143,6 +167,18 @@ describe('filtres de découverte', () => {
     );
   });
 
+  it('distingue une position exacte d’une position approximative', () => {
+    const geneva = profile();
+    const exact = profile({ hasExactLocation: true, latitude: 46.5197, longitude: 6.6323 });
+    const approximate = profile({
+      hasExactLocation: false,
+      latitude: 46.5197,
+      longitude: 6.6323,
+    });
+    expect(profileDistanceLabel(geneva, exact, 'fr-CH')).toMatch(/^5\d,\d km$/);
+    expect(profileDistanceLabel(geneva, approximate, 'fr-CH')).toMatch(/^≈ 5\d km$/);
+  });
+
   it('cherche le lieu du séjour à la date demandée sans prétendre être au domicile', () => {
     const travelling = profile({
       availabilityPlaces: [
@@ -159,13 +195,101 @@ describe('filtres de découverte', () => {
     expect(profileMatchesPlace(travelling, 'Lisbonne', '2026-09-14')).toBe(true);
     expect(profileMatchesPlace(travelling, 'Genève', '2026-09-14')).toBe(false);
     expect(profileMatchesPlace(travelling, 'Genève', '2026-09-25')).toBe(true);
+    expect(profilePlaceLabel(travelling)).toBe('1201 Genève CH');
     expect(profilePlaceLabel(travelling, '2026-09-14')).toBe('1100 Lisbonne PT');
+    expect(availabilityPlaceForDate(travelling, '2026-09-14')?.id).toBe('trip-1');
+    expect(availabilityPlaceForDate(travelling, '2026-09-25')).toBeNull();
+  });
+
+  it('conserve pays, code postal et ville séparés et exige chaque champ renseigné', () => {
+    const filters = {
+      ...defaultDiscoveryFilters,
+      placeCity: 'Genève',
+      placeCountry: 'CH',
+      placePostalCode: '1201',
+    };
+    expect(activeFilterCount(filters)).toBe(1);
+    expect(matchesDiscoveryFilters(profile(), filters, null)).toBe(true);
+    expect(matchesDiscoveryFilters(profile({ postalCode: '1202' }), filters, null)).toBe(false);
+    expect(matchesDiscoveryFilters(profile({ country: 'FR' }), filters, null)).toBe(false);
+    expect(
+      matchesDiscoveryFilters(
+        profile({ city: 'Paris', country: 'FR', postalCode: '75011' }),
+        { ...defaultDiscoveryFilters, placeCountry: 'FR' },
+        null,
+      ),
+    ).toBe(true);
+  });
+
+  it('applique le filtre Bien notés à partir de quatre étoiles et trois avis', () => {
+    const filters = { ...defaultDiscoveryFilters, wellRated: true };
+    expect(matchesDiscoveryFilters(profile(), filters, null)).toBe(true);
+    expect(matchesDiscoveryFilters(profile({ ratingAverage: 3.9 }), filters, null)).toBe(false);
+    expect(matchesDiscoveryFilters(profile({ ratingCount: 2 }), filters, null)).toBe(false);
+  });
+
+  it('dérive les cinq états temporels et la date du scope', () => {
+    const now = new Date('2026-08-31T12:00:00');
+    expect(profileAvailability(profile({ availableDates: ['2026-08-31'] }), now).kind).toBe(
+      'today',
+    );
+    expect(profileAvailability(profile({ availableDates: ['2026-09-02'] }), now).kind).toBe(
+      'thisWeek',
+    );
+    expect(profileAvailability(profile({ availableDates: ['2026-09-05'] }), now).kind).toBe(
+      'weekend',
+    );
+    expect(profileAvailability(profile({ availableDates: ['2026-09-09'] }), now).kind).toBe(
+      'onRequest',
+    );
+    expect(profileAvailability(profile({ availableDates: [] }), now).kind).toBe('unavailable');
+    expect(dateForAvailabilityScope('today', null, now)).toBe('2026-08-31');
+    expect(dateForAvailabilityScope('weekend', null, now)).toBe('2026-09-05');
+    expect(dateForAvailabilityScope('nearby', '2026-09-14', now)).toBe('2026-09-14');
+  });
+
+  it('classe relation, niveau, urgence puis distance comme Swift', () => {
+    const now = new Date('2026-08-31T12:00:00');
+    const me = profile({ id: 'me' });
+    const friend = profile({ id: 'friend', isFriend: true, level: 'Débutant' });
+    const pro = profile({ id: 'pro', level: 'Professionnel' });
+    const availableToday = profile({
+      availableDates: ['2026-08-31'],
+      id: 'today',
+      latitude: 46.4,
+      level: 'Avancé',
+    });
+    const availableLater = profile({
+      availableDates: ['2026-09-02'],
+      id: 'later',
+      latitude: 46.21,
+      level: 'Avancé',
+    });
+    const nearby = profile({
+      availableDates: ['2026-08-31'],
+      id: 'nearby',
+      latitude: 46.21,
+      level: 'Avancé',
+    });
+    expect([pro, friend].sort((a, b) => rankProfiles(a, b, me, now))[0]?.id).toBe('friend');
+    expect([availableLater, pro].sort((a, b) => rankProfiles(a, b, me, now))[0]?.id).toBe('pro');
+    expect(
+      [availableLater, availableToday].sort((a, b) => rankProfiles(a, b, me, now))[0]?.id,
+    ).toBe('today');
+    expect([availableToday, nearby].sort((a, b) => rankProfiles(a, b, me, now))[0]?.id).toBe(
+      'nearby',
+    );
+  });
+
+  it('affiche explicitement la relation Même école', () => {
+    expect(relationTags(profile({ sharesSchool: true }))).toContain('Même école');
   });
 });
 
 describe('centre de notifications', () => {
   it('additionne les invitations en attente au badge Messages', () => {
     expect(messageTabBadgeCount(2, 3, 1)).toBe(6);
+    expect(messageTabBadgeCount(2, 3, 1, 4)).toBe(10);
     expect(messageTabBadgeCount(0, 0, -1)).toBe(0);
     expect(tabBadgeValue(0)).toBeUndefined();
     expect(tabBadgeValue(7)).toBe('7');
@@ -244,5 +368,17 @@ describe('centre de notifications', () => {
         title: '🎶 Invitation à un groupe',
       }),
     ).toBe('/(tabs)/messages?segment=groups');
+
+    expect(
+      notificationDestination({
+        body: '',
+        category: 'messages',
+        createdAt: '',
+        data: { school_id: 'school-7', target_tab: 'messages' },
+        id: 'notification-4',
+        readAt: null,
+        title: 'Nouveau message dans la communauté',
+      }),
+    ).toBe('/schools/school-7/community');
   });
 });

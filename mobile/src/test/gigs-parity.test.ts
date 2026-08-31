@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
+import { mergeNativeDateTimePart } from '@/components/ui/native-date-time-field';
 import {
   applicationDecisionParams,
   combineGigDate,
@@ -8,6 +9,8 @@ import {
   gigViewerAction,
   matchProfilesToGig,
   resolveGigLocation,
+  triageHostedGigs,
+  unslottedGigApplicants,
   type GigCreateInput,
   type GigDetail,
   type GigMatchProfile,
@@ -137,6 +140,13 @@ describe('formulaire SOS structuré et confidentialité', () => {
     expect(
       createGigWritePlan({ ...validCreate, feeMode: 'negotiable' }, now).insert.fee,
     ).toBeNull();
+    expect(
+      createGigWritePlan({ ...validCreate, paymentMethod: 'Revolut' }, now).insert.payment_method,
+    ).toBe('Revolut');
+    expect(
+      createGigWritePlan({ ...validCreate, paymentMethod: 'PayPal', targetId: 'target-1' }, now)
+        .insert.payment_method,
+    ).toBe('PayPal');
   });
 
   it('conserve le lien groupe/événement d’un SOS prérempli', () => {
@@ -151,6 +161,23 @@ describe('formulaire SOS structuré et confidentialité', () => {
     expect(new Date(combineGigDate('2026-09-12', '20:30')).getTime()).toBeGreaterThan(0);
     expect(() => combineGigDate('2026-02-30', '20:30')).toThrow('gig_date_invalid');
     expect(() => combineGigDate('2026-09-12', '25:00')).toThrow('gig_date_invalid');
+    const current = new Date(2026, 8, 12, 20, 30);
+    const changedDay = mergeNativeDateTimePart(current, new Date(2026, 9, 4, 12, 0), 'date');
+    expect([
+      changedDay.getFullYear(),
+      changedDay.getMonth(),
+      changedDay.getDate(),
+      changedDay.getHours(),
+      changedDay.getMinutes(),
+    ]).toEqual([2026, 9, 4, 20, 30]);
+    const changedTime = mergeNativeDateTimePart(current, new Date(2026, 0, 1, 18, 45), 'time');
+    expect([
+      changedTime.getFullYear(),
+      changedTime.getMonth(),
+      changedTime.getDate(),
+      changedTime.getHours(),
+      changedTime.getMinutes(),
+    ]).toEqual([2026, 8, 12, 18, 45]);
   });
 
   it('distingue adresse absente, interdite, disponible et erreur RPC', () => {
@@ -225,6 +252,30 @@ describe('états de candidature et décisions serveur', () => {
       application_id: 'application-1',
     });
     expect(directResponseParams('gig-1', true)).toEqual({ p_accept: true, p_gig: 'gig-1' });
+  });
+
+  it('garde les candidatures historiques sans poste dans le groupe Autre', () => {
+    const legacy = { ...application, id: 'legacy', instrument: null };
+    const unknown = { ...application, id: 'unknown', instrument: 'Theremin' };
+    expect(
+      unslottedGigApplicants(
+        detail({ applicants: [application, legacy, unknown], wantedInstruments: ['Basse'] }),
+      ).map((candidate) => candidate.id),
+    ).toEqual(['legacy', 'unknown']);
+  });
+});
+
+describe('triage Mes SOS', () => {
+  it('place les décisions hôte en premier et sépare les demandes directes envoyées', () => {
+    const result = triageHostedGigs([
+      gig({ date: '2026-09-02T18:00:00Z', id: 'quiet', pendingApplicantCount: 0 }),
+      gig({ date: '2026-09-10T18:00:00Z', id: 'todo', pendingApplicantCount: 2 }),
+      gig({ id: 'direct-done', targetId: 'target-1', targetStatus: 'accepted' }),
+      gig({ id: 'direct-pending', targetId: 'target-2', targetStatus: 'pending' }),
+    ]);
+    expect(result.hosted.map((item) => item.id)).toEqual(['todo', 'quiet']);
+    expect(result.pendingApplicantCount).toBe(2);
+    expect(result.sentDirect.map((item) => item.id)).toEqual(['direct-pending', 'direct-done']);
   });
 });
 

@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "Your availability could not be saved — check your connection.",
   "1 date cochée": "1 date selected",
   "1 voyage enregistré": "1 trip saved",
-  "1 vidéo sur ton profil": "1 video on your profile"
+  "1 vidéo sur ton profil": "1 video on your profile",
+  "Renseigne un pays, une ville et un code postal valides.": "Enter a valid country, city and postal code.",
+  "Impossible d'enregistrer cette région.": "This region could not be saved.",
+  "Enregistrement…": "Saving…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "Your country, postal code and city are used for local searches."
 }

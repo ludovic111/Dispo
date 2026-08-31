@@ -11,8 +11,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -29,9 +28,6 @@ export function GroupNewScreen() {
   const [emoji, setEmoji] = useState('🎶');
   const [search, setSearch] = useState('');
   const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
-  const backAction = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
-  );
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const needle = search.trim().toLocaleLowerCase(locale);
   const visible = (candidates.data ?? []).filter(
@@ -46,23 +42,13 @@ export function GroupNewScreen() {
 
   if (candidates.isLoading)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Groupes')}
-          title={t('Nouveau groupe')}
-        />
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des musiciens…')} />
       </Screen>
     );
   if (candidates.error)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Groupes')}
-          title={t('Nouveau groupe')}
-        />
+      <Screen nativeHeader>
         <ErrorState
           message={t('Les musiciens n’ont pas pu être chargés.')}
           onRetry={() => void candidates.refetch()}
@@ -101,12 +87,7 @@ export function GroupNewScreen() {
   };
 
   return (
-    <Screen>
-      <ScreenHeader
-        leadingAction={backAction}
-        subtitle={t('Tu en seras le leader')}
-        title={t('Nouveau groupe')}
-      />
+    <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.section}>
           <FormField

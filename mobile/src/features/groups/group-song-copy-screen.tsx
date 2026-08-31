@@ -16,8 +16,7 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
-import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -178,25 +177,15 @@ export function GroupSongCopyScreen({
   const selectedDestinations = destinations.filter((destination) =>
     selectedIds.has(destination.id),
   );
-  const close = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace(`/groups/${sourceGroupId}` as never);
-  };
-  const closeAction = (
-    <HeaderAction disabled={copySong.isPending} icon="close" label={t('Fermer')} onPress={close} />
-  );
-
   if (query.isLoading)
     return (
-      <Screen>
-        <ScreenHeader action={closeAction} eyebrow={t('Groupes')} title={t('Copier le morceau')} />
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des destinations…')} />
       </Screen>
     );
   if (query.error)
     return (
-      <Screen>
-        <ScreenHeader action={closeAction} eyebrow={t('Groupes')} title={t('Copier le morceau')} />
+      <Screen nativeHeader>
         <ErrorState
           message={t('Les destinations n’ont pas pu être chargées.')}
           onRetry={() => void query.refetch()}
@@ -205,8 +194,7 @@ export function GroupSongCopyScreen({
     );
   if (!sourceGroup || !song)
     return (
-      <Screen>
-        <ScreenHeader action={closeAction} eyebrow={t('Groupes')} title={t('Copier le morceau')} />
+      <Screen nativeHeader>
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />
       </Screen>
     );
@@ -262,14 +250,7 @@ export function GroupSongCopyScreen({
   };
 
   return (
-    <Screen>
-      <ScreenHeader
-        action={closeAction}
-        icon="copy-outline"
-        iconColor={palette.bronze}
-        subtitle={sourceGroup.name}
-        title={t('Copier le morceau')}
-      />
+    <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={styles.sourceCard}>
           <View style={[styles.songIcon, { backgroundColor: `${palette.bronze}1f` }]}>

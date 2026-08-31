@@ -2,13 +2,18 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   affiliationStatusLabel,
+  buildSchoolMessageTimeline,
   filterSchools,
+  isValidSchoolMessage,
+  latestSchoolMessage,
+  mergeSchoolMessagesNewestFirst,
   normalizeSchoolAffiliationInput,
   schoolDisplayName,
   schoolErrorMessage,
   schoolInitials,
   sortSchools,
   type MusicSchool,
+  type SchoolMessage,
 } from '@/features/schools/school-model';
 
 const amr: MusicSchool = {
@@ -130,5 +135,50 @@ describe('affiliation école', () => {
     expect(schoolErrorMessage(new Error('school_membership_limit_reached'))).toContain('cinq');
     expect(schoolErrorMessage(new Error('school_membership_suspended'))).toContain('suspendue');
     expect(schoolErrorMessage(new Error('network'))).toContain("Rien n'a été modifié");
+  });
+});
+
+function schoolMessage(
+  id: string,
+  createdAt: string,
+  overrides: Partial<SchoolMessage> = {},
+): SchoolMessage {
+  return {
+    channelId: 'channel-1',
+    createdAt,
+    deletedAt: null,
+    editedAt: null,
+    id,
+    senderId: 'member-1',
+    senderName: 'Nina',
+    senderPhotoUrl: null,
+    text: `Message ${id}`,
+    ...overrides,
+  };
+}
+
+describe('communauté école', () => {
+  it('applique exactement la limite serveur de 4000 caractères après trim', () => {
+    expect(isValidSchoolMessage('   ')).toBe(false);
+    expect(isValidSchoolMessage('x'.repeat(4_000))).toBe(true);
+    expect(isValidSchoolMessage('x'.repeat(4_001))).toBe(false);
+  });
+
+  it('dédoublonne le realtime, garde le dernier état et trie le fil de façon stable', () => {
+    const first = schoolMessage('a', '2026-08-31T10:00:00.000Z');
+    const second = schoolMessage('b', '2026-08-31T10:01:00.000Z');
+    const updated = { ...second, editedAt: '2026-08-31T10:02:00.000Z', text: 'Corrigé' };
+    const merged = mergeSchoolMessagesNewestFirst([first, second, first], updated);
+    expect(merged.map((message) => message.id)).toEqual(['b', 'a']);
+    expect(merged[0]?.text).toBe('Corrigé');
+    expect(latestSchoolMessage(merged)?.id).toBe('b');
+  });
+
+  it('insère un séparateur de jour compatible avec la liste inversée', () => {
+    const timeline = buildSchoolMessageTimeline([
+      schoolMessage('new', '2026-09-01T10:00:00.000Z'),
+      schoolMessage('old', '2026-08-31T15:00:00.000Z'),
+    ]);
+    expect(timeline.map((item) => item.kind)).toEqual(['message', 'day', 'message', 'day']);
   });
 });

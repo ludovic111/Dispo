@@ -40,6 +40,8 @@ export interface DemoVideoSelectionMetadata {
   mimeType?: string | null | undefined;
 }
 
+export type DemoVideoSourceMetadata = Pick<DemoVideoSelectionMetadata, 'durationMs' | 'mimeType'>;
+
 export type PortfolioErrorCode =
   | 'demo_video_invalid_duration'
   | 'demo_video_invalid_file'
@@ -158,6 +160,11 @@ export function assertDemoVideoSelection(metadata: DemoVideoSelectionMetadata): 
   if ((fileSize ?? 0) > DEMO_VIDEO_MAX_BYTES) {
     throw new PortfolioValidationError('demo_video_too_large');
   }
+  assertDemoVideoSource({ durationMs, mimeType });
+}
+
+export function assertDemoVideoSource(metadata: DemoVideoSourceMetadata): void {
+  const { durationMs, mimeType } = metadata;
   if (!Number.isFinite(durationMs) || (durationMs ?? 0) <= 0) {
     throw new PortfolioValidationError('demo_video_invalid_duration');
   }

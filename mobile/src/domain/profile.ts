@@ -40,6 +40,7 @@ export interface ProfileSummary {
   instrumentLevels: Record<string, string>;
   instruments: string[];
   isDemo?: boolean;
+  hasExactLocation?: boolean;
   isFriend: boolean;
   isPremium: boolean;
   latitude: number | null;
@@ -113,13 +114,14 @@ export function relationshipMatches(
 
 export function relationTags(
   profile: Pick<ProfileSummary, 'isFriend' | 'schools'> &
-    Partial<Pick<ProfileSummary, 'playedWithFriend' | 'relationship'>>,
+    Partial<Pick<ProfileSummary, 'playedWithFriend' | 'relationship' | 'sharesSchool'>>,
 ): string[] {
   const tags: string[] = [];
   if (profile.isFriend || profile.relationship === 'friend') tags.push('Ami');
   else if (profile.relationship === 'following') tags.push('Suivi');
   else if (profile.relationship === 'follower') tags.push('Te suit');
   if (profile.schools.some(isAmrSchool)) tags.push('AMR');
+  if (profile.sharesSchool) tags.push('Même école');
   if (profile.playedWithFriend) tags.push('Relation commune');
   return tags;
 }

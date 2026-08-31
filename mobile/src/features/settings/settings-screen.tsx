@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -13,7 +13,6 @@ import {
   SettingsRow,
   SettingsSection,
   SettingsShell,
-  SheetHeader,
 } from './settings-components';
 import {
   appearanceOptions,
@@ -36,10 +35,10 @@ import { loadNotificationsEnabled } from './settings-storage';
 import { AppText } from '@/components/ui/app-text';
 import { useAuth } from '@/features/auth/auth-context';
 import { linkAppleIdentity } from '@/features/auth/auth-service';
-import { languageOptions } from '@/features/onboarding/onboarding-model';
-import i18n, { setAppLanguage, type SupportedLocale } from '@/i18n';
+import { countryOptions, languageOptions } from '@/features/onboarding/onboarding-model';
+import i18n from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
 
 const validLocationPrecisions = new Set<LocationPrecision>([
   'city',
@@ -53,7 +52,6 @@ export function SettingsScreen() {
   const { palette, preference: appearance, setPreference } = useDispoTheme();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<SettingsProfile | null>(null);
-  const [languageExpanded, setLanguageExpanded] = useState(false);
   const [locationSaving, setLocationSaving] = useState<LocationPrecision | null>(null);
   const [linkingApple, setLinkingApple] = useState(false);
   const [appleLinkCompleted, setAppleLinkCompleted] = useState(false);
@@ -69,33 +67,30 @@ export function SettingsScreen() {
     ? (profile?.location_precision as LocationPrecision)
     : 'city';
 
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
-      loadNotificationsEnabled(),
-      getNotificationPermission(),
-      session ? fetchSettingsProfile(session.user.id) : Promise.resolve(null),
-    ])
-      .then(([notificationsEnabled, permission, currentProfile]) => {
-        if (!active) return;
-        setNotificationLabel(t(notificationStatusLabel(permission, notificationsEnabled)));
-        setProfile(currentProfile);
-      })
-      .catch(() => {
-        if (active) setErrorText(t('Certains réglages ne peuvent pas être chargés.'));
-      });
-    return () => {
-      active = false;
-    };
-  }, [session, t]);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void Promise.all([
+        loadNotificationsEnabled(),
+        getNotificationPermission(),
+        session ? fetchSettingsProfile(session.user.id) : Promise.resolve(null),
+      ])
+        .then(([notificationsEnabled, permission, currentProfile]) => {
+          if (!active) return;
+          setNotificationLabel(t(notificationStatusLabel(permission, notificationsEnabled)));
+          setProfile(currentProfile);
+        })
+        .catch(() => {
+          if (active) setErrorText(t('Certains réglages ne peuvent pas être chargés.'));
+        });
+      return () => {
+        active = false;
+      };
+    }, [session, t]),
+  );
 
   const selectAppearance = (value: AppearancePreference) => {
     setPreference(value);
-  };
-
-  const selectLanguage = (locale: SupportedLocale) => {
-    void setAppLanguage(locale);
-    setLanguageExpanded(false);
   };
 
   const selectLocation = async (precision: LocationPrecision) => {
@@ -136,9 +131,7 @@ export function SettingsScreen() {
   };
 
   return (
-    <SettingsShell>
-      <SheetHeader onClose={() => router.back()} title={t('Réglages')} />
-
+    <SettingsShell nativeHeader>
       {errorText ? (
         <View
           style={[
@@ -251,38 +244,11 @@ export function SettingsScreen() {
         <SettingsDivider />
         <SettingsRow
           color={palette.bronze}
-          detail={`${languageOptions.find((language) => language.locale === i18n.resolvedLanguage)?.flag ?? '🌍'} ${profile?.city ?? ''}`.trim()}
+          detail={`${languageOptions.find((language) => language.locale === i18n.resolvedLanguage)?.flag ?? '🌍'} ${countryOptions.find((country) => country.code === profile?.country)?.flag ?? ''} ${profile?.city ?? ''}`.trim()}
           icon="globe-outline"
-          onPress={() => setLanguageExpanded((value) => !value)}
-          right={
-            <Ionicons
-              color={palette.muted}
-              name={languageExpanded ? 'chevron-up' : 'chevron-down'}
-              size={16}
-            />
-          }
+          onPress={() => router.push('/settings/language-region' as Href)}
           title={t('Langue & région')}
         />
-        {languageExpanded ? (
-          <View style={[styles.languageGrid, { borderTopColor: palette.border }]}>
-            {languageOptions.map((language) => (
-              <Pressable
-                key={language.locale}
-                onPress={() => selectLanguage(language.locale)}
-                style={({ pressed }) => [styles.languageChoice, pressed && styles.pressed]}
-              >
-                <AppText style={styles.flag}>{language.flag}</AppText>
-                <AppText style={styles.languageLabel} variant="caption">
-                  {language.nativeName}
-                </AppText>
-                <SelectionDot
-                  active={i18n.resolvedLanguage === language.locale}
-                  color={palette.electric}
-                />
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
       </SettingsSection>
 
       <SettingsSection
@@ -399,7 +365,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radii.round,
     borderWidth: 1,
-    minHeight: 30,
+    minHeight: minimumTouchTarget,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
@@ -420,24 +386,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   errorCopy: { flex: 1 },
-  flag: { fontSize: 18 },
   footerText: { paddingBottom: spacing.sm, textAlign: 'center' },
-  languageChoice: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 42,
-    width: '48%',
-  },
-  languageGrid: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: spacing.sm,
-  },
-  languageLabel: { flex: 1, fontWeight: '700' },
   linkedStatus: { alignItems: 'center', flexDirection: 'row', gap: 5 },
   linkedText: { fontWeight: '800' },
   preferenceTitle: { fontSize: 15, fontWeight: '600' },

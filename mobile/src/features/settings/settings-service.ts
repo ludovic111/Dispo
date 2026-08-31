@@ -3,7 +3,12 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import type { LocationPrecision, PushPreferences } from './settings-model';
+import {
+  normalizeProfileRegion,
+  type LocationPrecision,
+  type ProfileRegionDraft,
+  type PushPreferences,
+} from './settings-model';
 
 import i18n from '@/i18n';
 import { getSupabaseClient } from '@/services/supabase/client';
@@ -34,12 +39,38 @@ export async function fetchSettingsProfile(userId: string): Promise<SettingsProf
   return data;
 }
 
+export async function updateProfileRegion(
+  userId: string,
+  draft: ProfileRegionDraft,
+): Promise<void> {
+  const region = normalizeProfileRegion(draft);
+  const { error } = await getSupabaseClient()
+    .from('profiles')
+    .update({
+      city: region.city,
+      country: region.country,
+      neighborhood: `${region.postalCode} ${region.city}`,
+      postal_code: region.postalCode,
+    })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 function roundedCoordinate(value: number, digits: number): number {
   return Number(value.toFixed(digits));
 }
 
-async function currentCoordinate(): Promise<{ latitude: number; longitude: number }> {
-  const permission = await Location.requestForegroundPermissionsAsync();
+/** Same ~5 km consent grid as the Swift reference (0.05 degree per axis). */
+export function cityRoundedCoordinate(value: number): number {
+  return Number((Math.round(value / 0.05) * 0.05).toFixed(2));
+}
+
+async function currentCoordinate(
+  requestPermission: boolean,
+): Promise<{ latitude: number; longitude: number }> {
+  const permission = requestPermission
+    ? await Location.requestForegroundPermissionsAsync()
+    : await Location.getForegroundPermissionsAsync();
   if (!permission.granted) throw new Error('location_permission_denied');
   const location = await Location.getCurrentPositionAsync({
     accuracy: Location.Accuracy.Balanced,
@@ -47,9 +78,10 @@ async function currentCoordinate(): Promise<{ latitude: number; longitude: numbe
   return location.coords;
 }
 
-export async function updateLocationPrecision(
+async function persistLocationPrecision(
   userId: string,
   precision: LocationPrecision,
+  requestPermission: boolean,
 ): Promise<void> {
   const supabase = getSupabaseClient();
   if (precision === 'hidden') {
@@ -63,10 +95,10 @@ export async function updateLocationPrecision(
     return;
   }
 
-  const coordinate = await currentCoordinate();
+  const coordinate = await currentCoordinate(requestPermission);
   const cityCoordinate = {
-    latitude: roundedCoordinate(coordinate.latitude, 2),
-    longitude: roundedCoordinate(coordinate.longitude, 2),
+    latitude: cityRoundedCoordinate(coordinate.latitude),
+    longitude: cityRoundedCoordinate(coordinate.longitude),
   };
   if (precision === 'city') {
     const cityResult = await supabase
@@ -90,6 +122,22 @@ export async function updateLocationPrecision(
     .update({ ...cityCoordinate, location_precision: precision })
     .eq('id', userId);
   if (profileResult.error) throw profileResult.error;
+}
+
+/** User-initiated change: asking for foreground permission is expected here. */
+export async function updateLocationPrecision(
+  userId: string,
+  precision: LocationPrecision,
+): Promise<void> {
+  await persistLocationPrecision(userId, precision, true);
+}
+
+/** Foreground refresh: never opens a system permission prompt by itself. */
+export async function refreshSharedLocation(
+  userId: string,
+  precision: Exclude<LocationPrecision, 'hidden'>,
+): Promise<void> {
+  await persistLocationPrecision(userId, precision, false);
 }
 
 export async function deleteCurrentAccount(): Promise<void> {

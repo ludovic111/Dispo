@@ -49,6 +49,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+/modules/*/android/build/
+/modules/*/ios/build/
 
 # unused create-expo-app scaffold assets
 /assets/expo.icon/

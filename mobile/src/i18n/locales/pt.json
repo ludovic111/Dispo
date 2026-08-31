@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "Não foi possível guardar a tua disponibilidade — verifica a ligação.",
   "1 date cochée": "1 data selecionada",
   "1 voyage enregistré": "1 viagem guardada",
-  "1 vidéo sur ton profil": "1 vídeo no teu perfil"
+  "1 vidéo sur ton profil": "1 vídeo no teu perfil",
+  "Renseigne un pays, une ville et un code postal valides.": "Introduz um país, uma cidade e um código postal válidos.",
+  "Impossible d'enregistrer cette région.": "Não foi possível guardar esta região.",
+  "Enregistrement…": "A guardar…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "O país, o código postal e a cidade são utilizados nas pesquisas locais."
 }

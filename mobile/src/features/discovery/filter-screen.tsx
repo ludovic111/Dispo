@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
@@ -14,14 +14,13 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction, SectionHeader } from '@/components/ui/section';
-import { useAuth } from '@/features/auth/auth-context';
+import { GIG_GENRE_GROUPS } from '@/features/gigs/gig-model';
 import { PostalPlaceField, type PostalPlaceDraft } from '@/features/location';
 import {
   countryOptions,
   instrumentCategories,
   levelOptions,
 } from '@/features/onboarding/onboarding-model';
-import { useDiscoveryProfiles } from '@/features/profiles/profile-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -60,36 +59,48 @@ function FilterSwitch({
   );
 }
 
+function ClearSelectionButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const { palette } = useDispoTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
+    >
+      <Ionicons color={palette.electric} name="close-circle-outline" size={16} />
+      <AppText color={palette.electric} style={styles.clearLabel} variant="caption">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 export function FilterScreen() {
   const { filters, resetFilters, setFilters } = useDiscoveryState();
-  const { session } = useAuth();
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
-  const profilesQuery = useDiscoveryProfiles(session?.user.id ?? '');
-  const profiles = useMemo(
-    () => profilesQuery.data?.pages.flatMap((page) => page.items) ?? [],
-    [profilesQuery.data?.pages],
-  );
-  const genres = useMemo(
-    () =>
-      [...new Set(profiles.flatMap((profile) => profile.genres))].sort((a, b) =>
-        a.localeCompare(b, 'fr'),
-      ),
-    [profiles],
-  );
   const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
-  const [placeDraft, setPlaceDraft] = useState<PostalPlaceDraft>({
-    city: filters.place,
-    countryCode: 'CH',
-    postalCode: '',
-  });
+  const [expandedGenreFamilies, setExpandedGenreFamilies] = useState<Set<string>>(
+    () =>
+      new Set(
+        GIG_GENRE_GROUPS.filter((group) =>
+          group.values.some((genre) => filters.genres.includes(genre)),
+        ).map((group) => group.label),
+      ),
+  );
+  const placeDraft: PostalPlaceDraft = {
+    city: filters.placeCity,
+    countryCode: filters.placeCountry || 'CH',
+    postalCode: filters.placePostalCode,
+  };
   const date = filters.neededDate ? new Date(`${filters.neededDate}T12:00:00`) : new Date();
   const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
   const updatePlace = (place: PostalPlaceDraft) => {
-    setPlaceDraft(place);
     setFilters({
       ...filters,
-      place: [place.postalCode, place.city, place.countryCode].filter(Boolean).join(' '),
+      placeCity: place.city,
+      placeCountry: place.countryCode,
+      placePostalCode: place.postalCode,
     });
   };
 
@@ -102,6 +113,12 @@ export function FilterScreen() {
             subtitle={filters.instruments.length ? `${filters.instruments.length}` : t('Tous')}
             title={t('Instruments')}
           />
+          {filters.instruments.length > 0 ? (
+            <ClearSelectionButton
+              label={t('Effacer les instruments')}
+              onPress={() => setFilters({ ...filters, instruments: [] })}
+            />
+          ) : null}
           {instrumentCategories.map((category) => (
             <Card key={category.label} style={styles.card}>
               <View style={styles.categoryTitle}>
@@ -134,26 +151,65 @@ export function FilterScreen() {
             subtitle={filters.genres.length ? `${filters.genres.length}` : t('Tous')}
             title={t('Styles')}
           />
-          <Card>
-            {genres.length > 0 ? (
-              <View style={styles.choices}>
-                {genres.map((genre) => (
-                  <ChoiceChip
-                    key={genre}
-                    label={t(genre)}
-                    onPress={() =>
-                      setFilters({ ...filters, genres: toggle(filters.genres, genre) })
-                    }
-                    selected={filters.genres.includes(genre)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <AppText color={palette.muted} variant="caption">
-                {t('Les styles apparaissent avec les profils du réseau.')}
-              </AppText>
-            )}
-          </Card>
+          {filters.genres.length > 0 ? (
+            <ClearSelectionButton
+              label={t('Effacer les styles')}
+              onPress={() => setFilters({ ...filters, genres: [] })}
+            />
+          ) : null}
+          {GIG_GENRE_GROUPS.map((group) => {
+            const expanded = expandedGenreFamilies.has(group.label);
+            const selectedCount = group.values.filter((genre) =>
+              filters.genres.includes(genre),
+            ).length;
+            return (
+              <Card key={group.label} style={styles.card}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded }}
+                  onPress={() =>
+                    setExpandedGenreFamilies((current) => {
+                      const next = new Set(current);
+                      if (next.has(group.label)) next.delete(group.label);
+                      else next.add(group.label);
+                      return next;
+                    })
+                  }
+                  style={({ pressed }) => [styles.genreHeader, pressed && styles.pressed]}
+                >
+                  <AppText style={styles.categoryLabel} variant="subheadline">
+                    {t(group.label)}
+                  </AppText>
+                  <View style={styles.genreHeaderMeta}>
+                    {selectedCount > 0 ? (
+                      <AppText color={palette.electric} style={styles.selectionCount}>
+                        {selectedCount}
+                      </AppText>
+                    ) : null}
+                    <Ionicons
+                      color={palette.muted}
+                      name={expanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                    />
+                  </View>
+                </Pressable>
+                {expanded ? (
+                  <View style={styles.choices}>
+                    {group.values.map((genre) => (
+                      <ChoiceChip
+                        key={genre}
+                        label={t(genre)}
+                        onPress={() =>
+                          setFilters({ ...filters, genres: toggle(filters.genres, genre) })
+                        }
+                        selected={filters.genres.includes(genre)}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </Card>
+            );
+          })}
         </View>
 
         <View style={styles.section}>
@@ -216,6 +272,19 @@ export function FilterScreen() {
               </View>
             </ScrollView>
             <PostalPlaceField onChange={updatePlace} value={placeDraft} />
+            {filters.placeCity || filters.placePostalCode || filters.placeCountry ? (
+              <ClearSelectionButton
+                label={t('Chercher partout')}
+                onPress={() =>
+                  setFilters({
+                    ...filters,
+                    placeCity: '',
+                    placeCountry: '',
+                    placePostalCode: '',
+                  })
+                }
+              />
+            ) : null}
             <View style={styles.radiusHeader}>
               <AppText>{t('Rayon')}</AppText>
               <AppText color={palette.electric} style={styles.radiusValue} variant="subheadline">
@@ -283,6 +352,12 @@ export function FilterScreen() {
                 onValueChange={(sameSchoolOnly) => setFilters({ ...filters, sameSchoolOnly })}
                 value={filters.sameSchoolOnly}
               />
+              <View style={[styles.divider, { backgroundColor: palette.border }]} />
+              <FilterSwitch
+                label={t('Bien notés')}
+                onValueChange={(wellRated) => setFilters({ ...filters, wellRated })}
+                value={filters.wellRated}
+              />
             </View>
           </Card>
         </View>
@@ -290,7 +365,6 @@ export function FilterScreen() {
         <DispoButton onPress={() => router.back()}>{t('Voir les résultats')}</DispoButton>
         <DispoButton
           onPress={() => {
-            setPlaceDraft({ city: '', countryCode: 'CH', postalCode: '' });
             resetFilters();
           }}
           variant="danger"
@@ -306,6 +380,14 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   categoryLabel: { fontWeight: '800' },
   categoryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  clearButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.compact,
+    minHeight: 36,
+  },
+  clearLabel: { fontWeight: '800' },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   content: { gap: spacing.lg, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   countryChoices: { flexDirection: 'row', gap: spacing.xs },
@@ -318,9 +400,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   divider: { height: StyleSheet.hairlineWidth },
+  genreHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 32,
+  },
+  genreHeaderMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  pressed: { opacity: 0.94, transform: [{ scale: 0.98 }] },
   radiusHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   radiusValue: { fontWeight: '800' },
   section: { gap: spacing.sm },
+  selectionCount: { fontWeight: '900' },
   sliderLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   switchLabel: { flex: 1 },
   switchPad: { paddingHorizontal: spacing.md },

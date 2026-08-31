@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["DispoLegacyPreferencesModule"]
+  },
+  "android": {
+    "modules": ["ch.dispo.modules.legacypreferences.DispoLegacyPreferencesModule"]
+  }
+}

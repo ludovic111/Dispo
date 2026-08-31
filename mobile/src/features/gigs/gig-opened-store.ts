@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { openGigInstruments, type GigSummary } from './gig-model';
 
+import { legacyOpenedGigIdsKey } from '@/services/storage/legacy-native-preferences';
+
 const storagePrefix = '@dispo/gigs/opened/v1';
 const openedListeners = new Set<(userId: string, gigId: string) => void>();
 
@@ -43,8 +45,21 @@ function decodeOpenedIds(raw: string | null): Set<string> {
 }
 
 export async function readOpenedGigIds(userId: string): Promise<Set<string>> {
-  const raw = await AsyncStorage.getItem(openedGigsStorageKey(userId));
-  return decodeOpenedIds(raw);
+  const key = openedGigsStorageKey(userId);
+  const stored = await AsyncStorage.multiGet([key, legacyOpenedGigIdsKey]);
+  const raw = stored[0]?.[1] ?? null;
+  const legacyRaw = stored[1]?.[1] ?? null;
+  const opened = decodeOpenedIds(raw);
+  const legacy = decodeOpenedIds(legacyRaw);
+  if (legacy.size === 0) return opened;
+
+  for (const gigId of legacy) opened.add(gigId);
+  await AsyncStorage.multiSet([[key, JSON.stringify([...opened].sort())]]);
+  // The Swift value was global. Attribute it exactly once to the first
+  // authenticated profile, then remove the staging value so accounts cannot
+  // inherit one another's read state.
+  await AsyncStorage.removeItem(legacyOpenedGigIdsKey);
+  return opened;
 }
 
 export async function markGigOpened(userId: string, gigId: string): Promise<void> {

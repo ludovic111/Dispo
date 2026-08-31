@@ -4,19 +4,27 @@ import type { ImagePickerAsset } from 'expo-image-picker';
 import { createVideoPlayer, type VideoPlayer } from 'expo-video';
 
 import {
+  transcodePortfolioVideo,
+  type VideoTranscodeOptions,
+} from '../../../modules/dispo-video-transcoder';
+
+import {
   assertDemoVideoSelection,
+  assertDemoVideoSource,
   DEMO_THUMBNAIL_MAX_BYTES,
   PortfolioValidationError,
 } from './portfolio-model';
 
 export interface PreparedDemoVideo {
-  contentType: 'video/mp4' | 'video/quicktime';
+  contentType: 'video/mp4';
   durationMs: number;
-  extension: 'mov' | 'mp4';
+  extension: 'mp4';
   fileSize: number;
   thumbnailUri: string | null;
   uri: string;
 }
+
+type SourceVideoContentType = 'video/mp4' | 'video/quicktime';
 
 function waitForVideoReady(player: VideoPlayer): Promise<void> {
   if (player.status === 'readyToPlay') return Promise.resolve();
@@ -71,10 +79,7 @@ async function saveThumbnail(player: VideoPlayer): Promise<string | null> {
   }
 }
 
-function resolvedContentType(
-  asset: ImagePickerAsset,
-  file: File,
-): PreparedDemoVideo['contentType'] {
+function resolvedContentType(asset: ImagePickerAsset, file: File): SourceVideoContentType {
   const candidate = (asset.mimeType || file.type || '').toLocaleLowerCase('en');
   if (candidate === 'video/quicktime') return 'video/quicktime';
   if (candidate === 'video/mp4') return 'video/mp4';
@@ -84,7 +89,10 @@ function resolvedContentType(
   throw new PortfolioValidationError('demo_video_unsupported_type');
 }
 
-export async function prepareDemoVideo(asset: ImagePickerAsset): Promise<PreparedDemoVideo> {
+export async function prepareDemoVideo(
+  asset: ImagePickerAsset,
+  options: VideoTranscodeOptions = {},
+): Promise<PreparedDemoVideo> {
   const file = new File(asset.uri);
   if (!file.exists) throw new PortfolioValidationError('demo_video_invalid_file');
   const contentType = resolvedContentType(asset, file);
@@ -104,18 +112,36 @@ export async function prepareDemoVideo(asset: ImagePickerAsset): Promise<Prepare
   } finally {
     player.release();
   }
-  assertDemoVideoSelection({ durationMs, fileSize: file.size, mimeType: contentType });
-  return {
-    contentType,
-    durationMs,
-    extension: contentType === 'video/quicktime' ? 'mov' : 'mp4',
-    fileSize: file.size,
-    thumbnailUri,
-    uri: asset.uri,
-  };
+  let transcodedUri: string | null = null;
+  try {
+    assertDemoVideoSource({ durationMs, mimeType: contentType });
+    const transcoded = await transcodePortfolioVideo(asset.uri, options);
+    transcodedUri = transcoded.uri;
+    const output = new File(transcoded.uri);
+    if (!output.exists || output.size !== transcoded.fileSize) {
+      throw new PortfolioValidationError('demo_video_invalid_file');
+    }
+    assertDemoVideoSelection({
+      durationMs: transcoded.durationMs,
+      fileSize: transcoded.fileSize,
+      mimeType: transcoded.mimeType,
+    });
+    return {
+      contentType: 'video/mp4',
+      durationMs: transcoded.durationMs,
+      extension: 'mp4',
+      fileSize: transcoded.fileSize,
+      thumbnailUri,
+      uri: transcoded.uri,
+    };
+  } catch (error) {
+    removeTemporaryFile(transcodedUri);
+    removeTemporaryFile(thumbnailUri);
+    throw error;
+  }
 }
 
-export function removePreparedThumbnail(uri: string | null): void {
+function removeTemporaryFile(uri: string | null): void {
   if (!uri) return;
   try {
     const file = new File(uri);
@@ -124,4 +150,10 @@ export function removePreparedThumbnail(uri: string | null): void {
     // Le cache temporaire sera purgé par le système ; cela ne doit pas
     // transformer un envoi déjà réussi en erreur visible.
   }
+}
+
+export function removePreparedDemoMedia(prepared: PreparedDemoVideo | null): void {
+  if (!prepared) return;
+  removeTemporaryFile(prepared.thumbnailUri);
+  removeTemporaryFile(prepared.uri);
 }

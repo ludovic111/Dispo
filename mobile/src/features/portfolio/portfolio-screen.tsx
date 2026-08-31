@@ -5,7 +5,7 @@ import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -19,7 +19,13 @@ import {
   View,
 } from 'react-native';
 
-import { prepareDemoVideo, removePreparedThumbnail } from './portfolio-media';
+import { VideoTranscodeError } from '../../../modules/dispo-video-transcoder';
+
+import {
+  prepareDemoVideo,
+  removePreparedDemoMedia,
+  type PreparedDemoVideo,
+} from './portfolio-media';
 import {
   availabilityTripLabel,
   canAddDemoVideo,
@@ -73,6 +79,13 @@ function formatDay(value: string, locale: string): string {
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof VideoTranscodeError) {
+    if (error.code === 'video_transcode_cancelled') return "L'import vidéo a été annulé.";
+    if (error.code === 'video_transcoder_unavailable') {
+      return 'Mets Dispo à jour pour importer cette vidéo.';
+    }
+    return "La vidéo n'a pas pu être préparée — réessaie avec un autre fichier.";
+  }
   if (error instanceof PortfolioValidationError) {
     if (error.code === 'demo_video_too_long') return 'Vidéo trop longue — 3 minutes maximum.';
     if (error.code === 'demo_video_too_large') {
@@ -207,6 +220,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
   const [videoDraft, setVideoDraft] = useState<VideoDetailsDraft | null>(null);
   const [tripDraft, setTripDraft] = useState<AvailabilityTripDraft | null>(null);
   const [countryModal, setCountryModal] = useState(false);
+  const videoPreparationRef = useRef<AbortController | null>(null);
   const locale = i18n.resolvedLanguage ?? 'fr';
   const screenTitle = section === 'demos' ? t('Mes démos') : t('Mes voyages');
   const localizedDemoTitle = (video: DemoVideo, index: number) =>
@@ -216,6 +230,13 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
     [tripDraft?.country],
   );
   const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
+
+  useEffect(
+    () => () => {
+      videoPreparationRef.current?.abort();
+    },
+    [],
+  );
 
   const setPortfolio = (next: PortfolioState) => {
     queryClient.setQueryData(portfolioKeys.detail(userId), next);
@@ -256,10 +277,11 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
     const asset = result.assets[0];
     if (!asset) return;
     setBusy('upload');
-    let thumbnailUri: string | null = null;
+    const controller = new AbortController();
+    videoPreparationRef.current = controller;
+    let prepared: PreparedDemoVideo | null = null;
     try {
-      const prepared = await prepareDemoVideo(asset);
-      thumbnailUri = prepared.thumbnailUri;
+      prepared = await prepareDemoVideo(asset, { signal: controller.signal });
       const created = await addDemoVideo(userId, portfolio.videos, expandedPortfolio, prepared);
       setPortfolio({ ...portfolio, videos: created.videos });
       await refreshProfile();
@@ -272,7 +294,8 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
     } catch (error) {
       setErrorText(t(errorMessage(error)));
     } finally {
-      removePreparedThumbnail(thumbnailUri);
+      if (videoPreparationRef.current === controller) videoPreparationRef.current = null;
+      removePreparedDemoMedia(prepared);
       setBusy(null);
     }
   };
@@ -484,7 +507,11 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
                     onPress={() =>
                       router.push({
                         pathname: '/profiles/[id]/video',
-                        params: { id: userId, url: video.url },
+                        params: {
+                          id: userId,
+                          title: localizedDemoTitle(video, index),
+                          url: video.url,
+                        },
                       } as never)
                     }
                     style={({ pressed }) => [styles.videoPreview, pressed && styles.pressed]}

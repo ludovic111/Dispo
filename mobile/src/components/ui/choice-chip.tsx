@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
 
 export function ChoiceChip({
   icon,
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.chip,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: minimumTouchTarget,
     paddingHorizontal: spacing.sm,
   },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },

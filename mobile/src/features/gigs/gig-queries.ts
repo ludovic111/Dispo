@@ -15,25 +15,44 @@ import {
 
 import { useAuth } from '@/features/auth/auth-context';
 import type { GigCreateInput } from '@/features/gigs/gig-model';
+import { useExhaustivePages } from '@/features/pagination/exhaustive-pages';
 
 export const gigKeys = {
   all: ['gigs'] as const,
   defaults: (userId: string) => ['gigs', 'defaults', userId] as const,
-  detail: (userId: string, id: string) => ['gigs', 'detail', userId, id] as const,
+  details: (userId: string) => ['gigs', 'detail', userId] as const,
+  detail: (userId: string, id: string) => [...gigKeys.details(userId), id] as const,
   feed: (userId: string) => ['gigs', 'feed', userId] as const,
-  matches: (userId: string, id: string) => ['gigs', 'matches', userId, id] as const,
+  matchesForUser: (userId: string) => ['gigs', 'matches', userId] as const,
+  matches: (userId: string, id: string) => [...gigKeys.matchesForUser(userId), id] as const,
 };
 
 export function useGigs() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  return useInfiniteQuery({
+  const query = useInfiniteQuery({
     queryKey: gigKeys.feed(userId),
-    queryFn: ({ pageParam, signal }) => fetchGigsPage(pageParam, 20, signal),
+    queryFn: ({ pageParam, signal }) => fetchGigsPage(pageParam, 20, signal, userId),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     enabled: Boolean(userId),
   });
+  const exhaustive = useExhaustivePages({
+    enabled: Boolean(userId),
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
+    isError: query.isError || query.isFetchNextPageError,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isLoading: query.isLoading,
+    loadKey: gigKeys.feed(userId).join(':'),
+  });
+  return {
+    ...query,
+    isExhaustiveError: query.isError || query.isFetchNextPageError,
+    isExhaustive: exhaustive.isComplete,
+    isExhaustiveLoading: exhaustive.isLoading,
+    isLoading: query.isLoading || exhaustive.isLoading,
+  };
 }
 
 export function useGig(gigId: string) {
@@ -59,13 +78,29 @@ export function useGigFormDefaults() {
 export function useGigMatches(gigId: string) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  return useInfiniteQuery({
+  const query = useInfiniteQuery({
     queryKey: gigKeys.matches(userId, gigId),
     queryFn: ({ pageParam, signal }) => fetchGigMatches(gigId, userId, pageParam, 50, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     enabled: Boolean(userId && gigId),
   });
+  const exhaustive = useExhaustivePages({
+    enabled: Boolean(userId && gigId),
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
+    isError: query.isError || query.isFetchNextPageError,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isLoading: query.isLoading,
+    loadKey: gigKeys.matches(userId, gigId).join(':'),
+  });
+  return {
+    ...query,
+    isExhaustiveError: query.isError || query.isFetchNextPageError,
+    isExhaustive: exhaustive.isComplete,
+    isExhaustiveLoading: exhaustive.isLoading,
+    isLoading: query.isLoading || exhaustive.isLoading,
+  };
 }
 
 function useInvalidateGig() {

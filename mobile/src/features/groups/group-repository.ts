@@ -6,6 +6,8 @@ import { randomUUID } from 'expo-crypto';
 import { File } from 'expo-file-system';
 import * as WebBrowser from 'expo-web-browser';
 
+import { openDocumentPreview } from '../../../modules/dispo-document-preview';
+
 import {
   aggregateGroupReactions,
   buildEventSavePayloads,
@@ -77,15 +79,24 @@ export interface SongCatalogResult {
   genre: string | null;
   genres: string[];
   isrc: string | null;
+  key: string | null;
   metadataSource: string;
   metadataUpdatedAt: string;
   platformIds: Record<string, string>;
   platformLinks: Record<string, string>;
   previewUrl: string | null;
   releaseYear: number | null;
+  tempoBpm: number | null;
   title: string;
   trackUrl: string | null;
 }
+
+export interface SongEnrichmentRequestResult {
+  audioMetrics: 'client_fallback' | 'server_optional' | null;
+  refreshed: SongCatalogResult | null;
+}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface SongCatalogRpcRow {
   album_title?: unknown;
@@ -96,11 +107,13 @@ interface SongCatalogRpcRow {
   genres?: unknown;
   id?: unknown;
   isrc?: unknown;
+  musical_key?: unknown;
   metadata_source?: unknown;
   metadata_updated_at?: unknown;
   platform_ids?: unknown;
   platform_links?: unknown;
   release_year?: unknown;
+  tempo_bpm?: unknown;
   title?: unknown;
 }
 
@@ -218,6 +231,7 @@ function songCatalogRpcResult(value: unknown): SongCatalogResult | null {
     genre: genres[0] ?? null,
     genres,
     isrc: nullableCatalogString(row.isrc),
+    key: nullableCatalogString(row.musical_key),
     metadataSource: nullableCatalogString(row.metadata_source) ?? 'dispo-catalog',
     metadataUpdatedAt: nullableCatalogString(row.metadata_updated_at) ?? new Date(0).toISOString(),
     platformIds,
@@ -226,6 +240,10 @@ function songCatalogRpcResult(value: unknown): SongCatalogResult | null {
     releaseYear:
       typeof row.release_year === 'number' && Number.isFinite(row.release_year)
         ? row.release_year
+        : null,
+    tempoBpm:
+      typeof row.tempo_bpm === 'number' && Number.isFinite(row.tempo_bpm)
+        ? Math.round(row.tempo_bpm)
         : null,
     title,
     trackUrl: platformLinks.appleMusic ?? null,
@@ -296,6 +314,7 @@ async function searchAppleSongCatalog(
         genre,
         genres: genre ? [genre] : [],
         isrc: null,
+        key: null,
         metadataSource: 'apple-itunes-search',
         metadataUpdatedAt,
         platformIds: { appleMusic: String(row.trackId) },
@@ -303,6 +322,7 @@ async function searchAppleSongCatalog(
         previewUrl: typeof row.previewUrl === 'string' ? row.previewUrl : null,
         releaseYear:
           typeof row.releaseDate === 'string' ? new Date(row.releaseDate).getUTCFullYear() : null,
+        tempoBpm: null,
         title: row.trackName,
         trackUrl,
       },
@@ -340,12 +360,14 @@ function mergeSongCatalogResult(
     genre: canonical.genre ?? supplement.genre,
     genres: [...new Set([...canonical.genres, ...supplement.genres])],
     isrc: canonical.isrc ?? supplement.isrc,
+    key: canonical.key ?? supplement.key,
     metadataSource: canonical.metadataSource,
     metadataUpdatedAt: canonical.metadataUpdatedAt,
     platformIds: { ...supplement.platformIds, ...canonical.platformIds },
     platformLinks: { ...supplement.platformLinks, ...canonical.platformLinks },
     previewUrl: canonical.previewUrl ?? supplement.previewUrl,
     releaseYear: canonical.releaseYear ?? supplement.releaseYear,
+    tempoBpm: canonical.tempoBpm ?? supplement.tempoBpm,
     title: canonical.title || supplement.title,
     trackUrl: canonical.trackUrl ?? supplement.trackUrl,
   };
@@ -402,6 +424,52 @@ export async function searchSongCatalog(
     }
   }
   return ordered.filter((item): item is SongCatalogResult => item !== null);
+}
+
+/**
+ * Demande l'enrichissement exact d'un morceau canonique. L'Edge Function
+ * traite immédiatement le petit lot côté serveur, puis le client relit la
+ * source canonique au lieu de faire confiance au corps HTTP du fournisseur.
+ */
+export async function enrichSongCatalogResult(
+  song: SongCatalogResult,
+): Promise<SongEnrichmentRequestResult> {
+  const canonicalSongId = song.canonicalSongId;
+  const appleId = song.platformIds.appleMusic ?? song.catalogId.match(/^apple:(\d+)$/)?.[1];
+  const appleUrl = song.platformLinks.appleMusic ?? song.trackUrl;
+  const body =
+    canonicalSongId && uuidPattern.test(canonicalSongId)
+      ? { action: 'enqueue', song_id: canonicalSongId }
+      : appleId && appleUrl
+        ? { action: 'enqueue', apple_id: appleId, apple_url: appleUrl }
+        : null;
+  if (!body) {
+    return { audioMetrics: 'client_fallback', refreshed: null };
+  }
+  const { data, error } = await getSupabaseClient().functions.invoke('song-enrichment', {
+    body,
+  });
+  if (error) throw error;
+  const payload =
+    typeof data === 'object' && data !== null && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : {};
+  const audioMetrics =
+    payload.audio_metrics === 'client_fallback' || payload.audio_metrics === 'server_optional'
+      ? payload.audio_metrics
+      : null;
+  const responseSongId =
+    typeof payload.song_id === 'string' && uuidPattern.test(payload.song_id)
+      ? payload.song_id
+      : canonicalSongId;
+  const results = await searchCanonicalSongCatalog(`${song.title} ${song.artist}`);
+  const refreshed =
+    results.find((candidate) => candidate.canonicalSongId === responseSongId) ??
+    results.find((candidate) =>
+      songCatalogIdentities(candidate).some((id) => songCatalogIdentities(song).includes(id)),
+    ) ??
+    null;
+  return { audioMetrics, refreshed };
 }
 
 function memberKind(value: string): GroupMemberKind {
@@ -540,6 +608,7 @@ function mapDocuments(
     .filter((row) => row.group_id === groupId)
     .map((row) => ({
       addedBy: row.added_by ? (profiles.get(row.added_by)?.name ?? null) : null,
+      addedById: row.added_by,
       createdAt: row.created_at,
       extension: row.ext,
       groupId: row.group_id,
@@ -1406,12 +1475,19 @@ function documentContentType(extension: string, declared: string) {
   return 'application/octet-stream';
 }
 
+const allowedGroupDocumentExtensions = new Set(['jpeg', 'jpg', 'pdf', 'png', 'txt']);
+
+export function isAllowedGroupDocumentExtension(extension: string): boolean {
+  return allowedGroupDocumentExtensions.has(extension.trim().toLowerCase());
+}
+
 export async function uploadGroupDocument(input: UploadGroupDocumentInput): Promise<void> {
   const extension =
     input.extension
       .replace(/[^a-z0-9]/gi, '')
       .toLowerCase()
       .slice(0, 12) || 'pdf';
+  if (!isAllowedGroupDocumentExtension(extension)) throw new Error('group_document_type_invalid');
   const documentId = randomUUID().toLowerCase();
   const path = `${input.groupId.toLowerCase()}/${documentId}.${extension}`;
   const data = await new File(input.uri).arrayBuffer();
@@ -1444,7 +1520,11 @@ export async function openGroupDocument(document: GroupDocument): Promise<void> 
     .storage.from(groupDocsBucket)
     .createSignedUrl(document.path, 60);
   if (signed.error) throw signed.error;
-  await WebBrowser.openBrowserAsync(signed.data.signedUrl);
+  await openDocumentPreview({
+    extension: document.extension,
+    signedUrl: signed.data.signedUrl,
+    title: document.title,
+  });
 }
 
 export async function deleteGroupDocument(document: GroupDocument): Promise<void> {

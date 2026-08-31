@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   assertDemoVideoSelection,
+  assertDemoVideoSource,
   availabilityTripLabel,
   canAddDemoVideo,
   dayKey,
@@ -87,6 +88,18 @@ describe('portfolio vidéo', () => {
     expect(() =>
       assertDemoVideoSelection({ durationMs: 10_000, fileSize: 100, mimeType: 'video/webm' }),
     ).toThrow(new PortfolioValidationError('demo_video_unsupported_type'));
+    expect(() =>
+      assertDemoVideoSource({
+        durationMs: 180_000,
+        mimeType: 'video/quicktime',
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertDemoVideoSource({
+        durationMs: 181_001,
+        mimeType: 'video/quicktime',
+      }),
+    ).toThrow(new PortfolioValidationError('demo_video_too_long'));
   });
 
   it('construit uniquement les chemins Storage propriétaires et retrouve une miniature', () => {

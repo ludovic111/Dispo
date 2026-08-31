@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "Deine Verfügbarkeit konnte nicht gespeichert werden — überprüfe die Verbindung.",
   "1 date cochée": "1 ausgewähltes Datum",
   "1 voyage enregistré": "1 gespeicherte Reise",
-  "1 vidéo sur ton profil": "1 Video in deinem Profil"
+  "1 vidéo sur ton profil": "1 Video in deinem Profil",
+  "Renseigne un pays, une ville et un code postal valides.": "Gib ein gültiges Land, eine Stadt und eine Postleitzahl ein.",
+  "Impossible d'enregistrer cette région.": "Diese Region konnte nicht gespeichert werden.",
+  "Enregistrement…": "Wird gespeichert…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "Land, Postleitzahl und Stadt werden für die lokale Suche verwendet."
 }

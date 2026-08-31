@@ -2184,5 +2184,9 @@
   "Tes disponibilités n'ont pas pu être enregistrées — vérifie le réseau.": "가능한 날짜를 저장하지 못했습니다 — 네트워크를 확인하세요.",
   "1 date cochée": "선택한 날짜 1개",
   "1 voyage enregistré": "저장된 여행 1개",
-  "1 vidéo sur ton profil": "프로필의 동영상 1개"
+  "1 vidéo sur ton profil": "프로필의 동영상 1개",
+  "Renseigne un pays, une ville et un code postal valides.": "유효한 국가, 도시 및 우편번호를 입력하세요.",
+  "Impossible d'enregistrer cette région.": "이 지역을 저장하지 못했습니다.",
+  "Enregistrement…": "저장 중…",
+  "Le pays, le code postal et la ville servent aux recherches locales.": "국가, 우편번호 및 도시는 지역 검색에 사용됩니다."
 }

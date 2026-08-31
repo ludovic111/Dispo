@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, View } from 'react-native';
@@ -9,9 +9,10 @@ import type { GroupTab } from './group-model';
 import { useGroup, useMarkGroupSeen } from './group-queries';
 import { GroupRepertoireTab } from './group-repertoire-tab';
 
+import { AppText } from '@/components/ui/app-text';
 import { ChoiceChip } from '@/components/ui/choice-chip';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -32,24 +33,19 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
   const query = useGroup(groupId);
   const markSeen = useMarkGroupSeen();
   const [tab, setTab] = useState<GroupTab>('messages');
-  const backAction = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
-  );
   useEffect(() => {
     markSeen(groupId);
     return () => markSeen(groupId);
   }, [groupId, markSeen]);
   if (query.isLoading)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Groupes')} title={t('Groupe')} />
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement du groupe…')} />
       </Screen>
     );
   if (query.error)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Groupes')} title={t('Groupe')} />
+      <Screen nativeHeader>
         <ErrorState
           message={t('Ce groupe n’a pas pu être chargé.')}
           onRetry={() => void query.refetch()}
@@ -59,8 +55,7 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
   const group = query.data;
   if (!group)
     return (
-      <Screen>
-        <ScreenHeader leadingAction={backAction} eyebrow={t('Groupes')} title={t('Groupe')} />
+      <Screen nativeHeader>
         <ErrorState message={t('Ce groupe n’est plus accessible.')} />
       </Screen>
     );
@@ -83,17 +78,21 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
       { style: 'cancel' as const, text: t('Annuler') },
     ]);
   return (
-    <Screen>
-      <ScreenHeader
-        action={
-          <HeaderAction
-            icon="ellipsis-horizontal"
-            label={isLeader ? `${t('Membres')} / ${t('Réglages du groupe')}` : t('Membres')}
-            onPress={openGroupMenu}
-          />
-        }
-        leadingAction={backAction}
-        subtitle={formatSwiftPlaceholders(
+    <Screen nativeHeader>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <NativeHeaderButton
+              icon="ellipsis-horizontal"
+              label={isLeader ? `${t('Membres')} / ${t('Réglages du groupe')}` : t('Membres')}
+              onPress={openGroupMenu}
+            />
+          ),
+          title: group.name,
+        }}
+      />
+      <AppText color={palette.muted} style={styles.groupSummary} variant="caption">
+        {formatSwiftPlaceholders(
           t('%lld membres · %@'),
           group.members.length,
           formatSwiftPlaceholders(
@@ -101,8 +100,7 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
             group.repertoire.filter((song) => song.isApproved).length,
           ),
         )}
-        title={group.name}
-      />
+      </AppText>
       {isLeader || group.isPublic ? (
         <View style={styles.statusRow}>
           {isLeader ? <Tag color={palette.bronze} label={t('👑 Leader')} /> : null}
@@ -131,6 +129,7 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
 }
 
 const styles = StyleSheet.create({
+  groupSummary: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
   body: { flex: 1 },
   tab: { flex: 1 },
   tabs: {

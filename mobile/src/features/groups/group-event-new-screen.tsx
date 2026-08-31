@@ -14,8 +14,7 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { canUsePremiumCapability } from '@/features/premium/premium-model';
@@ -65,41 +64,23 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
   const [recurrence, setRecurrence] = useState<GroupRecurrence>('Ponctuel');
   const [occurrenceCount, setOccurrenceCount] = useState(1);
   const [reminderLeadDays, setReminderLeadDays] = useState(2);
-  const backAction = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
-  );
   const canRepeat = canUsePremiumCapability('recurringEvents');
   const canConfigureReminder = canUsePremiumCapability('configurableReminders');
   if (group.isLoading)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Groupes')}
-          title={t('Créer un événement')}
-        />
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement du groupe…')} />
       </Screen>
     );
   if (group.error)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Groupes')}
-          title={t('Créer un événement')}
-        />
+      <Screen nativeHeader>
         <ErrorState message={t('Ce groupe n’a pas pu être chargé.')} />
       </Screen>
     );
   if (!group.data || group.data.leaderId !== userId)
     return (
-      <Screen>
-        <ScreenHeader
-          leadingAction={backAction}
-          eyebrow={t('Groupes')}
-          title={t('Créer un événement')}
-        />
+      <Screen nativeHeader>
         <ErrorState message={t('Seul le leader peut créer une date.')} />
       </Screen>
     );
@@ -143,12 +124,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
     );
   };
   return (
-    <Screen>
-      <ScreenHeader
-        leadingAction={backAction}
-        subtitle={group.data.name}
-        title={t('Créer un événement')}
-      />
+    <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
           <AppText variant="title">{t('Type de date')}</AppText>

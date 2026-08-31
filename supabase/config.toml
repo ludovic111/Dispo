@@ -425,3 +425,9 @@ verify_jwt = false
 # logique applicative avant la lecture de la file globale.
 [functions.push]
 verify_jwt = false
+
+# Deux portées sont validées dans le handler : JWT utilisateur pour l'enqueue
+# ciblé, service_role pour le worker borné. MUSICFETCH_API_TOKEN reste un secret
+# serveur optionnel ; Odesli/song.link résout les liens même sans abonnement.
+[functions.song-enrichment]
+verify_jwt = false
