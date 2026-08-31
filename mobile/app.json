@@ -2,13 +2,14 @@
   "expo": {
     "name": "Dispo",
     "slug": "dispo",
-    "version": "2.4.0",
+    "version": "2.4",
     "orientation": "portrait",
     "icon": "./assets/images/dispo/app-icon.png",
     "scheme": "dispo",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
+      "buildNumber": "36",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
