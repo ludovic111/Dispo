@@ -36,6 +36,7 @@ import {
 } from './group-song-copy';
 
 import { pageRange, type Page } from '@/domain/pagination';
+import { normalizeSongText } from '@/domain/song';
 import {
   MESSAGE_ATTACHMENT_MAX_BYTES,
   type PendingMessageAttachment,
@@ -84,6 +85,23 @@ export interface SongCatalogResult {
   releaseYear: number | null;
   title: string;
   trackUrl: string | null;
+}
+
+interface SongCatalogRpcRow {
+  album_title?: unknown;
+  artist?: unknown;
+  artwork_url?: unknown;
+  composer?: unknown;
+  duration_ms?: unknown;
+  genres?: unknown;
+  id?: unknown;
+  isrc?: unknown;
+  metadata_source?: unknown;
+  metadata_updated_at?: unknown;
+  platform_ids?: unknown;
+  platform_links?: unknown;
+  release_year?: unknown;
+  title?: unknown;
 }
 
 export interface CreateGroupInput {
@@ -160,7 +178,88 @@ const messageFilesBucket = 'message-files';
 const groupDocsBucket = 'group-docs';
 const attachmentMaxBytes = 25 * 1_024 * 1_024;
 
-export async function searchSongCatalog(
+function nullableCatalogString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function catalogStringRecord(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1].length > 0,
+    ),
+  );
+}
+
+function songCatalogRpcResult(value: unknown): SongCatalogResult | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const row = value as SongCatalogRpcRow;
+  const canonicalSongId = nullableCatalogString(row.id)?.toLowerCase() ?? null;
+  const title = nullableCatalogString(row.title);
+  if (!canonicalSongId || !title) return null;
+  const artist = nullableCatalogString(row.artist) ?? i18n.t('Artiste inconnu');
+  const platformIds = catalogStringRecord(row.platform_ids);
+  const platformLinks = catalogStringRecord(row.platform_links);
+  const appleId = platformIds.appleMusic;
+  const genres = Array.isArray(row.genres)
+    ? row.genres.filter((item): item is string => typeof item === 'string' && item.length > 0)
+    : [];
+  return {
+    albumTitle: nullableCatalogString(row.album_title),
+    artist,
+    artworkUrl: nullableCatalogString(row.artwork_url),
+    catalogId: appleId ? `apple:${appleId}` : `dispo:${canonicalSongId}`,
+    canonicalSongId,
+    composer: nullableCatalogString(row.composer),
+    durationMilliseconds:
+      typeof row.duration_ms === 'number' && Number.isFinite(row.duration_ms)
+        ? row.duration_ms
+        : null,
+    genre: genres[0] ?? null,
+    genres,
+    isrc: nullableCatalogString(row.isrc),
+    metadataSource: nullableCatalogString(row.metadata_source) ?? 'dispo-catalog',
+    metadataUpdatedAt: nullableCatalogString(row.metadata_updated_at) ?? new Date(0).toISOString(),
+    platformIds,
+    platformLinks,
+    previewUrl: null,
+    releaseYear:
+      typeof row.release_year === 'number' && Number.isFinite(row.release_year)
+        ? row.release_year
+        : null,
+    title,
+    trackUrl: platformLinks.appleMusic ?? null,
+  };
+}
+
+async function searchCanonicalSongCatalog(
+  query: string,
+  signal?: AbortSignal,
+): Promise<SongCatalogResult[]> {
+  const request = getSupabaseClient().rpc(
+    'search_song_catalog' as never,
+    {
+      p_after_id: null,
+      p_after_title: null,
+      p_limit: 20,
+      p_market: 'CH',
+      p_query: query,
+    } as never,
+  );
+  if (signal) request.abortSignal(signal);
+  const { data, error } = await request;
+  // La migration du catalogue est volontairement progressive. Tant qu'elle
+  // n'est pas appliquée au backend, la recherche Apple ci-dessous reste le
+  // repli fonctionnel sans bloquer l'app.
+  if (error || !Array.isArray(data)) return [];
+  const rows = data as unknown[];
+  return rows.flatMap((row) => {
+    const result = songCatalogRpcResult(row);
+    return result ? [result] : [];
+  });
+}
+
+async function searchAppleSongCatalog(
   term: string,
   signal?: AbortSignal,
 ): Promise<SongCatalogResult[]> {
@@ -209,6 +308,100 @@ export async function searchSongCatalog(
       },
     ];
   });
+}
+
+function songCatalogIdentities(song: SongCatalogResult): string[] {
+  const identities: string[] = [];
+  const isrc = song.isrc?.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (isrc) identities.push(`isrc:${isrc}`);
+  const appleId = song.platformIds.appleMusic ?? song.catalogId.match(/^apple:(\d+)$/)?.[1];
+  if (appleId) identities.push(`apple:${appleId}`);
+  if (!identities.length) {
+    identities.push(`text:${normalizeSongText(song.artist)}|${normalizeSongText(song.title)}`);
+  }
+  return identities;
+}
+
+function mergeSongCatalogResult(
+  canonical: SongCatalogResult,
+  supplement: SongCatalogResult,
+): SongCatalogResult {
+  const unknownArtist = normalizeSongText(i18n.t('Artiste inconnu'));
+  const canonicalArtist = normalizeSongText(canonical.artist);
+  return {
+    albumTitle: canonical.albumTitle ?? supplement.albumTitle,
+    artist:
+      !canonicalArtist || canonicalArtist === unknownArtist ? supplement.artist : canonical.artist,
+    artworkUrl: canonical.artworkUrl ?? supplement.artworkUrl,
+    catalogId: canonical.catalogId,
+    canonicalSongId: canonical.canonicalSongId ?? supplement.canonicalSongId,
+    composer: canonical.composer ?? supplement.composer,
+    durationMilliseconds: canonical.durationMilliseconds ?? supplement.durationMilliseconds,
+    genre: canonical.genre ?? supplement.genre,
+    genres: [...new Set([...canonical.genres, ...supplement.genres])],
+    isrc: canonical.isrc ?? supplement.isrc,
+    metadataSource: canonical.metadataSource,
+    metadataUpdatedAt: canonical.metadataUpdatedAt,
+    platformIds: { ...supplement.platformIds, ...canonical.platformIds },
+    platformLinks: { ...supplement.platformLinks, ...canonical.platformLinks },
+    previewUrl: canonical.previewUrl ?? supplement.previewUrl,
+    releaseYear: canonical.releaseYear ?? supplement.releaseYear,
+    title: canonical.title || supplement.title,
+    trackUrl: canonical.trackUrl ?? supplement.trackUrl,
+  };
+}
+
+/**
+ * Le catalogue partagé (quand sa migration est active) passe en premier afin
+ * de réutiliser ses liens exacts. Apple complète les résultats et reste le
+ * repli intégral pendant la migration progressive du backend.
+ */
+export async function searchSongCatalog(
+  term: string,
+  signal?: AbortSignal,
+): Promise<SongCatalogResult[]> {
+  const query = term.trim();
+  if (query.length < 2) return [];
+  const [canonical, apple] = await Promise.all([
+    searchCanonicalSongCatalog(query, signal).catch(() => []),
+    searchAppleSongCatalog(query, signal).catch(() => []),
+  ]);
+  const ordered: (SongCatalogResult | null)[] = [];
+  const indexByIdentity = new Map<string, number>();
+  for (const item of [...canonical, ...apple]) {
+    const identities = songCatalogIdentities(item);
+    const matchingIndexes = [
+      ...new Set(
+        identities.flatMap((identity) => {
+          const index = indexByIdentity.get(identity);
+          return index === undefined ? [] : [index];
+        }),
+      ),
+    ];
+    if (!matchingIndexes.length) {
+      const index = ordered.push(item) - 1;
+      for (const identity of identities) indexByIdentity.set(identity, index);
+      continue;
+    }
+
+    const targetIndex = matchingIndexes[0] as number;
+    let merged = ordered[targetIndex] as SongCatalogResult;
+    for (const duplicateIndex of matchingIndexes.slice(1)) {
+      const duplicate = ordered[duplicateIndex];
+      if (!duplicate) continue;
+      merged = mergeSongCatalogResult(merged, duplicate);
+      ordered[duplicateIndex] = null;
+      for (const [identity, index] of indexByIdentity) {
+        if (index === duplicateIndex) indexByIdentity.set(identity, targetIndex);
+      }
+    }
+    merged = mergeSongCatalogResult(merged, item);
+    ordered[targetIndex] = merged;
+    for (const identity of new Set([...identities, ...songCatalogIdentities(merged)])) {
+      indexByIdentity.set(identity, targetIndex);
+    }
+  }
+  return ordered.filter((item): item is SongCatalogResult => item !== null);
 }
 
 function memberKind(value: string): GroupMemberKind {

@@ -16,20 +16,20 @@ export default function PlayedWithScreen() {
   const query = useProfileCollaborators(id);
   if (query.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des collaborations…')} />
       </Screen>
     );
   }
   if (query.isError) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
   }
   return (
-    <Screen>
+    <Screen nativeHeader>
       <Stack.Screen options={{ title: t('A joué avec') }} />
       <FlashList
         contentContainerStyle={styles.content}

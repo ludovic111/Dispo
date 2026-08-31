@@ -114,12 +114,14 @@ export function PromoBanner({
 export function HeaderAction({
   badge,
   children,
+  disabled = false,
   icon,
   label,
   onPress,
 }: {
   badge?: number;
   children?: ReactNode;
+  disabled?: boolean;
   icon?: ComponentProps<typeof Ionicons>['name'];
   label?: string;
   onPress: () => void;
@@ -129,11 +131,14 @@ export function HeaderAction({
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.headerAction,
         { backgroundColor: palette.card, borderColor: palette.border },
         pressed && styles.pressed,
+        disabled && styles.disabled,
       ]}
     >
       {children ?? (icon ? <Ionicons color={palette.text} name={icon} size={19} /> : null)}
@@ -151,6 +156,7 @@ export function HeaderAction({
 const styles = StyleSheet.create({
   badge: { borderRadius: radii.round, paddingHorizontal: 6, paddingVertical: 2 },
   badgeText: { fontFamily: 'SplineSansMonoSemibold', fontSize: 11 },
+  disabled: { opacity: 0.45 },
   headerAction: {
     alignItems: 'center',
     borderRadius: 22,

@@ -27,8 +27,14 @@ export interface StreamingSong {
   trackUrl: string | null;
 }
 
-export interface StreamingDestination {
-  kind: 'direct' | 'search';
+export interface DirectStreamingDestination {
+  kind: 'direct';
+  platform: StreamingPlatformId;
+  url: string;
+}
+
+export interface StreamingSearchFallback {
+  kind: 'search';
   platform: StreamingPlatformId;
   url: string;
 }
@@ -127,14 +133,57 @@ function isOfficialStreamingUrl(
   }
 }
 
+/**
+ * Écarte notamment les pages d'accueil et de recherche, même sur un hôte officiel.
+ * Le lien reste par ailleurs une association métier fournie par le catalogue du morceau.
+ */
+function isDirectStreamingContentUrl(
+  platform: StreamingPlatformId,
+  value: string | null | undefined,
+): value is string {
+  if (!isOfficialStreamingUrl(platform, value)) return false;
+  const parsed = new URL(value);
+  const path = parsed.pathname.replace(/\/+$/, '');
+  switch (platform) {
+    case 'appleMusic': {
+      const segments = path.split('/').filter(Boolean);
+      const contentIndex = segments.findIndex((segment) =>
+        ['album', 'song'].includes(segment.toLowerCase()),
+      );
+      if (contentIndex < 0 || !segments[contentIndex + 1]) return false;
+      return (
+        segments[contentIndex]?.toLowerCase() === 'song' ||
+        Boolean(parsed.searchParams.get('i')?.trim())
+      );
+    }
+    case 'spotify':
+      return /^(?:\/intl-[^/]+)?\/track\/[^/]+$/i.test(path);
+    case 'youtubeMusic':
+      return path.toLowerCase() === '/watch' && Boolean(parsed.searchParams.get('v')?.trim());
+    case 'deezer':
+      return /^\/(?:[a-z]{2}\/)?track\/[^/]+$/i.test(path);
+    case 'tidal':
+      return (
+        /\/(?:browse\/)?track\/[^/]+$/i.test(path) || /\/album\/[^/]+\/track\/[^/]+$/i.test(path)
+      );
+    case 'amazonMusic': {
+      if (/\/tracks?\/[^/]+$/i.test(path)) return true;
+      const hasTrackAsin = [...parsed.searchParams.keys()].some(
+        (key) => key.toLowerCase() === 'trackasin',
+      );
+      return /\/albums\/[^/]+$/i.test(path) && hasTrackAsin;
+    }
+  }
+}
+
 function directStreamingUrl(platform: StreamingPlatformId, song: StreamingSong): string | null {
   const aliases = platformAliases[platform];
   const direct = Object.entries(song.platformLinks).find(
     ([key, value]) =>
-      aliases.includes(normalizedPlatformKey(key)) && isOfficialStreamingUrl(platform, value),
+      aliases.includes(normalizedPlatformKey(key)) && isDirectStreamingContentUrl(platform, value),
   )?.[1];
   if (direct) return direct;
-  return platform === 'appleMusic' && isOfficialStreamingUrl(platform, song.trackUrl)
+  return platform === 'appleMusic' && isDirectStreamingContentUrl(platform, song.trackUrl)
     ? song.trackUrl
     : null;
 }
@@ -158,19 +207,33 @@ function streamingSearchUrl(platform: StreamingPlatformId, query: string): strin
 }
 
 /**
- * Six destinations stables, dans le même ordre sur iOS et Android.
- * Un lien HTTPS exact gagne toujours ; sinon on fournit une recherche HTTPS
- * fonctionnelle, que le système peut ouvrir dans l'app via Universal/App Links.
+ * Ne renvoie que les liens HTTPS officiels déjà associés au morceau.
+ * Une URL de recherche n'est jamais promue en destination directe.
  */
-export function streamingDestinations(song: StreamingSong): StreamingDestination[] {
+export function directStreamingDestinations(song: StreamingSong): DirectStreamingDestination[] {
+  return STREAMING_PLATFORM_IDS.flatMap((platform) => {
+    const direct = directStreamingUrl(platform, song);
+    return direct ? [{ kind: 'direct' as const, platform, url: direct }] : [];
+  });
+}
+
+/**
+ * Recherches HTTPS explicites, uniquement pour les services sans lien direct.
+ * L'ordre canonique reste identique sur iOS et Android.
+ */
+export function streamingSearchFallbacks(song: StreamingSong): StreamingSearchFallback[] {
   const query = [song.artist.trim(), song.title.trim()].filter(Boolean).join(' ');
   if (!query) return [];
-  return STREAMING_PLATFORM_IDS.map((platform) => {
-    const direct = directStreamingUrl(platform, song);
-    return direct
-      ? { kind: 'direct' as const, platform, url: direct }
-      : { kind: 'search' as const, platform, url: streamingSearchUrl(platform, query) };
-  });
+  const directPlatforms = new Set(
+    directStreamingDestinations(song).map((destination) => destination.platform),
+  );
+  return STREAMING_PLATFORM_IDS.filter((platform) => !directPlatforms.has(platform)).map(
+    (platform) => ({
+      kind: 'search' as const,
+      platform,
+      url: streamingSearchUrl(platform, query),
+    }),
+  );
 }
 
 const irealSchemes = ['irealb', 'irealbook'] as const;

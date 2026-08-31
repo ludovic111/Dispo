@@ -15,6 +15,7 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -37,15 +38,28 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
   const [publicOverride, setPublicOverride] = useState<boolean | null>(null);
   const [autoSosOverride, setAutoSosOverride] = useState<boolean | null>(null);
   const [minLevelOverride, setMinLevelOverride] = useState<{ value: string | null } | null>(null);
+  const backAction = (
+    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+  );
   if (query.isLoading)
     return (
       <Screen>
+        <ScreenHeader
+          leadingAction={backAction}
+          eyebrow={t('Groupes')}
+          title={t('Réglages du groupe')}
+        />
         <LoadingState label={t('Chargement des réglages…')} />
       </Screen>
     );
   if (query.error)
     return (
       <Screen>
+        <ScreenHeader
+          leadingAction={backAction}
+          eyebrow={t('Groupes')}
+          title={t('Réglages du groupe')}
+        />
         <ErrorState
           message={t('Les réglages n’ont pas pu être chargés.')}
           onRetry={() => void query.refetch()}
@@ -55,12 +69,22 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
   if (!group)
     return (
       <Screen>
+        <ScreenHeader
+          leadingAction={backAction}
+          eyebrow={t('Groupes')}
+          title={t('Réglages du groupe')}
+        />
         <ErrorState message={t('Ce groupe n’est plus accessible.')} />
       </Screen>
     );
   if (group.leaderId !== session?.user.id)
     return (
       <Screen>
+        <ScreenHeader
+          leadingAction={backAction}
+          eyebrow={t('Groupes')}
+          title={t('Réglages du groupe')}
+        />
         <ErrorState message={t('Seul le leader peut modifier ce groupe.')} />
       </Screen>
     );
@@ -124,12 +148,12 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
     );
   return (
     <Screen>
+      <ScreenHeader
+        leadingAction={backAction}
+        subtitle={t('Réservé au leader')}
+        title={t('Réglages du groupe')}
+      />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ScreenHeader
-          icon="settings-outline"
-          subtitle={t('Réservé au leader')}
-          title={t('Réglages du groupe')}
-        />
         <Card style={styles.card}>
           <FormField
             label={t('Nom du groupe')}

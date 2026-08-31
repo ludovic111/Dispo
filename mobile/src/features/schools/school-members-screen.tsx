@@ -22,7 +22,7 @@ export function SchoolMembersScreen({ schoolId }: { schoolId: string }) {
 
   if (school.isLoading || mine.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des membres…')} />
       </Screen>
     );
@@ -30,7 +30,7 @@ export function SchoolMembersScreen({ schoolId }: { schoolId: string }) {
   const loadError = school.error ?? mine.error;
   if (loadError) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState
           message={loadError.message}
           onRetry={() => void Promise.all([school.refetch(), mine.refetch()])}
@@ -40,35 +40,35 @@ export function SchoolMembersScreen({ schoolId }: { schoolId: string }) {
   }
   if (!school.data) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={t('École introuvable.')} />
       </Screen>
     );
   }
   if (!affiliation) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={t('La liste des membres est réservée aux affiliations actives.')} />
       </Screen>
     );
   }
   if (members.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des membres…')} />
       </Screen>
     );
   }
   if (members.isError) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={members.error.message} onRetry={() => void members.refetch()} />
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    <Screen nativeHeader>
       <FlatList
         contentContainerStyle={styles.content}
         data={visibleMembers}

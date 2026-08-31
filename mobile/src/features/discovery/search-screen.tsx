@@ -52,7 +52,7 @@ export function SearchScreen() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <Screen>
+    <Screen nativeHeader>
       <View style={styles.searchWrap}>
         <View
           style={[styles.search, { backgroundColor: palette.card, borderColor: palette.border }]}

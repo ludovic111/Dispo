@@ -17,6 +17,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -177,16 +178,25 @@ export function GroupSongCopyScreen({
   const selectedDestinations = destinations.filter((destination) =>
     selectedIds.has(destination.id),
   );
+  const close = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace(`/groups/${sourceGroupId}` as never);
+  };
+  const closeAction = (
+    <HeaderAction disabled={copySong.isPending} icon="close" label={t('Fermer')} onPress={close} />
+  );
 
   if (query.isLoading)
     return (
       <Screen>
+        <ScreenHeader action={closeAction} eyebrow={t('Groupes')} title={t('Copier le morceau')} />
         <LoadingState label={t('Chargement des destinations…')} />
       </Screen>
     );
   if (query.error)
     return (
       <Screen>
+        <ScreenHeader action={closeAction} eyebrow={t('Groupes')} title={t('Copier le morceau')} />
         <ErrorState
           message={t('Les destinations n’ont pas pu être chargées.')}
           onRetry={() => void query.refetch()}
@@ -196,6 +206,7 @@ export function GroupSongCopyScreen({
   if (!sourceGroup || !song)
     return (
       <Screen>
+        <ScreenHeader action={closeAction} eyebrow={t('Groupes')} title={t('Copier le morceau')} />
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />
       </Screen>
     );
@@ -253,19 +264,7 @@ export function GroupSongCopyScreen({
   return (
     <Screen>
       <ScreenHeader
-        action={
-          <Pressable
-            accessibilityLabel={t('Fermer')}
-            disabled={copySong.isPending}
-            onPress={() => router.back()}
-            style={[
-              styles.closeButton,
-              { backgroundColor: palette.card, borderColor: palette.border },
-            ]}
-          >
-            <Ionicons color={palette.text} name="close" size={20} />
-          </Pressable>
-        }
+        action={closeAction}
         icon="copy-outline"
         iconColor={palette.bronze}
         subtitle={sourceGroup.name}
@@ -328,14 +327,6 @@ export function GroupSongCopyScreen({
 }
 
 const styles = StyleSheet.create({
-  closeButton: {
-    alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   copy: { flex: 1, gap: 2 },
   destinationCard: {

@@ -23,28 +23,28 @@ export default function GigDetailScreen() {
 
   if (query.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement du SOS…')} />
       </Screen>
     );
   }
   if (query.isError) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
   }
   if (!query.data) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={t('Annonce introuvable.')} />
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <GigDetailContent
           gig={query.data}

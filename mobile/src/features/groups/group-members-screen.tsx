@@ -21,6 +21,7 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -173,6 +174,9 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
   const cancel = useCancelGroupInvitation();
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState<GroupMemberKind>('permanent');
+  const backAction = (
+    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+  );
   const group = groupQuery.data;
   const userId = session?.user.id ?? '';
   const isLeader = group?.leaderId === userId;
@@ -196,12 +200,14 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
   if (groupQuery.isLoading || candidates.isLoading)
     return (
       <Screen>
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Groupes')} title={t('Membres')} />
         <LoadingState label={t('Chargement des membres…')} />
       </Screen>
     );
   if (groupQuery.error || candidates.error)
     return (
       <Screen>
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Groupes')} title={t('Membres')} />
         <ErrorState
           message={t('Les membres n’ont pas pu être chargés.')}
           onRetry={() => {
@@ -214,17 +220,18 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
   if (!group)
     return (
       <Screen>
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Groupes')} title={t('Membres')} />
         <ErrorState message={t('Ce groupe n’est plus accessible.')} />
       </Screen>
     );
   return (
     <Screen>
+      <ScreenHeader
+        leadingAction={backAction}
+        subtitle={formatSwiftPlaceholders(t('%lld membres'), group.members.length)}
+        title={t('Membres')}
+      />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ScreenHeader
-          icon="people"
-          subtitle={formatSwiftPlaceholders(t('%lld membres'), group.members.length)}
-          title={t('Membres')}
-        />
         {group.members.map((member) => (
           <MemberCard
             groupId={group.id}

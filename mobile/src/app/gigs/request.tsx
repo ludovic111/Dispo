@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm, type GigFormInitial } from '@/features/gigs/gig-form';
 import type { GigFormDefaults } from '@/features/gigs/gig-model';
@@ -39,12 +40,16 @@ export default function DirectGigRequestScreen() {
   const defaults = useGigFormDefaults();
   const create = useCreateGig();
   const { t } = useTranslation();
+  const back = (
+    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+  );
 
   const waiting =
     profile.isLoading || defaults.isLoading || (Boolean(gigId) && sourceGig.isLoading);
   if (waiting) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Demande de dépannage')} />
         <LoadingState label={t('Préparation de la demande…')} />
       </Screen>
     );
@@ -52,6 +57,7 @@ export default function DirectGigRequestScreen() {
   if (profile.isError) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Demande de dépannage')} />
         <ErrorState message={profile.error.message} onRetry={() => void profile.refetch()} />
       </Screen>
     );
@@ -59,6 +65,7 @@ export default function DirectGigRequestScreen() {
   if (!profile.data) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Demande de dépannage')} />
         <ErrorState message={t('Profil introuvable.')} />
       </Screen>
     );
@@ -88,7 +95,7 @@ export default function DirectGigRequestScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenHeader
-          icon="person-add"
+          leadingAction={back}
           subtitle={t('La personne répond oui ou non directement dans Dispo.')}
           title={t('Demande de dépannage')}
         />

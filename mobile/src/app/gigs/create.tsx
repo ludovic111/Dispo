@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm, type GigFormInitial } from '@/features/gigs/gig-form';
 import type { GigFormDefaults } from '@/features/gigs/gig-model';
@@ -33,6 +34,7 @@ export default function CreateGigScreen() {
   const defaults = useGigFormDefaults();
   const create = useCreateGig();
   const { t } = useTranslation();
+  const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
   const initial: GigFormInitial = {
     ...(date ? { date } : {}),
     ...(place ? { publicPlace: place } : {}),
@@ -43,6 +45,7 @@ export default function CreateGigScreen() {
   if (defaults.isLoading) {
     return (
       <Screen>
+        <ScreenHeader action={close} title={t('Publier un SOS')} />
         <LoadingState label={t('Préparation du formulaire…')} />
       </Screen>
     );
@@ -52,6 +55,7 @@ export default function CreateGigScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenHeader
+          action={close}
           icon="flash"
           subtitle={t('L’adresse exacte reste privée jusqu’à l’acceptation.')}
           title={t('Publier un SOS')}

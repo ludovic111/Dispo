@@ -109,21 +109,21 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
   if (query.isLoading)
     return (
       <Screen>
-        <ScreenHeader action={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
         <LoadingState label={t('Chargement du morceau…')} />
       </Screen>
     );
   if (query.error)
     return (
       <Screen>
-        <ScreenHeader action={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
         <ErrorState message={t('Le morceau n’a pas pu être chargé.')} />
       </Screen>
     );
   if (!group || (!isNew && !existing))
     return (
       <Screen>
-        <ScreenHeader action={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Répertoire')} title={t('Morceau')} />
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />
       </Screen>
     );
@@ -255,8 +255,7 @@ export function GroupSongScreen({ groupId, songId }: { groupId: string; songId: 
     <Screen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenHeader
-          action={backAction}
-          icon="musical-notes"
+          leadingAction={backAction}
           subtitle={group.name}
           title={
             isNew ? (isLeader ? t('Ajouter un morceau') : t('Suggérer un morceau')) : draft.title

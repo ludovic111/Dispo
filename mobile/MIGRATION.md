@@ -16,8 +16,15 @@ n’est assimilée à une validation métier, visuelle ou sur appareil.
 ### Surfaces désormais présentes dans le client Expo
 
 - Navigation : le shell utilise les `NativeTabs` système avec les cinq onglets,
-  les badges et les marges sûres. La validation visuelle authentifiée sur iOS
-  et Android reste à consigner.
+  les badges et les marges sûres. La pile racine applique désormais une
+  politique explicite avant le premier rendu : les routes qui possèdent leur
+  propre `ScreenHeader` masquent la barre native, tandis que les écrans qui
+  conservent un titre système n’en rendent pas un second. Pour ces derniers,
+  `Screen` retire uniquement la marge sûre supérieure déjà gérée par la barre
+  native et conserve la marge basse. Ce lot élimine structurellement les deux
+  titres et le grand espace supérieur. Le rendu sans doublon a été contrôlé sur
+  simulateur iOS 26.5 et émulateur Android 16 pour Réglages, Disponibilités et
+  Notifications, ainsi que sous un vrai titre Stack iOS pour Recherche.
 - Authentification et compte : restauration de session, connexion/création,
   reset et retour de lien, onboarding, stockage SecureStore, réglages, thème,
   langues, préférences de notifications, nouveautés et écran Premium de la
@@ -42,11 +49,18 @@ n’est assimilée à une validation métier, visuelle ou sur appareil.
   détails/copie de morceau, documents, événements nouveaux/édités/récurrents,
   présence, invités acceptés, rôles manquants, SOS liés et préremplis,
   candidats disponibles le jour même, adresse privée, rappels locaux et
-  setlist avec suggestion, validation et réorganisation. Les répertoires et
-  setlists partagent maintenant la ligne Swift de 68 points, sa pochette de
-  46 points, ses métadonnées compactes et son bouton d’écoute. La feuille
-  d’écoute propose Apple Music, Spotify, YouTube Music, Deezer, Tidal et Amazon
-  Music, avec lien exact vérifié puis recherche HTTPS de secours.
+  setlist avec suggestion, validation et réorganisation. Toutes les routes
+  Groupes sans barre Stack possèdent désormais un Retour ou Fermer visible de
+  44 points dans leurs états chargement, erreur, vide et succès. Les
+  répertoires et setlists partagent maintenant la ligne Swift de 68 points, sa
+  pochette de 46 points, ses métadonnées compactes et son bouton d’écoute. La feuille
+  d’écoute affiche d’abord uniquement les liens directs de morceau dont l’hôte
+  officiel et la forme d’URL ont été vérifiés. Les services sans lien exact sont
+  rangés dans une action secondaire explicite « Rechercher sur un autre
+  service » ; une recherche n’est jamais présentée comme un lien direct.
+  La recherche d’ajout interroge le catalogue canonique Supabase puis fusionne
+  son résultat avec le repli Apple, en privilégiant les métadonnées et liens
+  canoniques lorsque le RPC est disponible.
 - Internationalisation : neuf catalogues sont branchés et leur cohérence est
   testée. La présence d’une traduction ne prouve pas encore son rendu sans
   débordement sur chaque écran et chaque plateforme.
@@ -60,13 +74,18 @@ bout avec des comptes authentifiés.
 - `npm run format:check` : réussi sur l’état courant.
 - `npm run validate` : réussi d’un seul tenant le 31 août après le lot
   répertoire/profil/navigation, avec TypeScript, ESLint sans avertissement et
-  31 suites / 188 tests Jest réussis.
-- Les quatre suites ciblées morceaux/répertoire ont aussi réussi : 44 tests sur
-  la sérialisation rétrocompatible, la déduplication, la copie, iReal Pro et les
-  six destinations d’écoute, dont les faux domaines, identifiants et ports.
+  33 suites / 216 tests Jest réussis.
+- Les tests ciblés couvrent aussi la politique de barre de navigation, les
+  marges sûres des écrans à titre natif, la sérialisation rétrocompatible, la
+  déduplication, la copie, iReal Pro, la fusion catalogue canonique/Apple et la
+  distinction entre lien direct vérifié et recherche secondaire, notamment
+  face aux faux domaines, identifiants et ports.
 - L’introspection CNG confirme `irealb` et `irealbook` dans
   `LSApplicationQueriesSchemes` sur iOS et dans les intents `<queries>` Android.
 - `npx expo-doctor` : 21/21 contrôles réussis le 31 août.
+- Les cinq écrans qui emploient le sélecteur de date natif utilisent l’API
+  actuelle `onValueChange` / `onDismiss` ; l’avertissement de développement
+  qui recouvrait le bas de l’écran n’est plus émis par ces composants.
 - Les contrôles ciblés du détail d’événement de groupe ont aussi passé
   Prettier, ESLint, `git diff --check` et 7 suites Jest (54 tests).
 - La suite SQL transactionnelle locale v35-v43 a été exécutée jusqu’au
@@ -79,19 +98,21 @@ bout avec des comptes authentifiés.
   morceau manuel exposé. Le test transactionnel complet a atteint `ROLLBACK` et
   `supabase db lint --local --level error` a terminé sans erreur. Supabase et
   Colima ont ensuite été arrêtés.
-- Après le prébuild CNG final, CocoaPods et `xcodebuild` Debug simulateur iOS
-  ont réussi ; `assembleDebug` Android a aussi réussi (458 tâches). Ces builds
-  prouvent la compilation native, pas les parcours authentifiés complets.
+- Le lot navigation/streaming courant a été reconstruit en Debug sur simulateur
+  iOS 26.5 (`Build Succeeded`, zéro erreur et un warning de linkage bénin) et en
+  APK Debug Android avec JDK 17 (`BUILD SUCCESSFUL`, 613 tâches). L’APK a été
+  installé et lancé à froid sur l’AVD Android 16/API 36 ; aucun crash, erreur JS
+  fatale ni sortie récente n’a été relevé.
 
 ### État Pixel et iOS
 
-| Cible                     | État vérifié                                                                                                                                        | Ce que cela ne prouve pas                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Google Pixel physique     | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.      | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.  |
-| Expo Android émulateur    | APK final JDK 17 signé v2, installé sur l’AVD API 36 ; activité, PID, bundle Metro, écran de connexion sombre et absence d’erreur fatale contrôlés. | Les parcours authentifiés, les données réelles et la carte Android avec clé restreinte restent à exercer.   |
-| Expo iOS simulateur       | Prebuild CNG, CocoaPods et build final `DispoDev` réussis ; app signée localement avec ses entitlements et installée sur un simulateur temporaire.  | macOS verrouillé a empêché la dernière ouverture/capture ; aucun parcours authentifié final n’est consigné. |
-| iPhone physique / Expo Go | Aucun test effectué pour le lot courant.                                                                                                            | Expo Go ne couvre pas toutes les intégrations natives ; la preuve finale exige un development build.        |
-| Référence SwiftUI         | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                       | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                 |
+| Cible                     | État vérifié                                                                                                                                                                      | Ce que cela ne prouve pas                                                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Pixel physique     | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                    | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                      |
+| Expo Android émulateur    | APK courant compilé, installé et lancé sur Android 16/API 36 ; Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset. PID stable, logs fatals vides. | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.          |
+| Expo iOS simulateur       | Build Debug courant réussi et installé sur iOS 26.5 ; les trois routes signalées n’affichent plus le slug natif ni le double titre, et Recherche conserve un seul header Stack.   | Aucun parcours authentifié, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.      |
+| iPhone physique / Expo Go | Aucun test physique effectué pour ce correctif ; le build 37 TestFlight antérieur ne le contient pas.                                                                             | Expo Go ne couvre pas toutes les intégrations natives ; la preuve finale physique exige le prochain development build ou un nouveau TestFlight. |
+| Référence SwiftUI         | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                     | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                     |
 
 ### Limites et gates restants
 
@@ -101,20 +122,28 @@ bout avec des comptes authentifiés.
   leader/invité, hôte/candidat, blocage, confidentialité des adresses, mutations
   et Realtime ; aucune de ces preuves ne doit utiliser les comptes de
   production comme fixtures automatisées.
-- Refaire les builds après gel du JavaScript, puis parcourir les écrans sur
-  Pixel et iOS en clair/sombre, dans les langues cibles et avec les principaux
-  états ; comparer aux références SwiftUI et Kotlin sur des données identiques.
+- Refaire les contrôles sur Pixel et iPhone physiques après gel du JavaScript,
+  puis parcourir les écrans en clair/sombre, dans les langues cibles et avec
+  les principaux états ; comparer aux références SwiftUI et Kotlin sur des
+  données identiques.
 - Valider sur development builds les intégrations natives : Apple/Google,
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
-- Aucun build Release signé, upload TestFlight/Play, publication ni soumission
-  App Review n’est acquis pour Expo.
+- Le build 37 Expo antérieur est valide et disponible côté Apple, sans
+  soumission App Review. Le correctif courant n’est pas encore dans un build 38
+  Release/TestFlight ; aucune publication Google Play n’a eu lieu.
 - Le backend et la production sont inchangés : aucun `db push`, déploiement
   d’Edge Function, changement Auth/RLS/secret, compte ou donnée de production
   n’a été réalisé par ce portage. La migration locale
   `20260830173725_fix_song_catalog_trigger_privileges.sql` reste non appliquée,
   tout comme `20260831172807_song_catalog_and_streaming_links.sql`.
+- Tant que cette migration n’est pas approuvée et appliquée, la production ne
+  fournit pas le RPC canonique ni son cache de liens. Le repli Apple reste
+  fonctionnel, mais une couverture automatique en liens exacts pour Apple
+  Music, Spotify, YouTube Music, Deezer, Tidal et Amazon Music nécessite encore
+  un fournisseur de métadonnées approuvé et ses identifiants serveur ; aucun
+  fournisseur ni abonnement n’a été créé implicitement.
 
 ## 1. Références et règles
 
@@ -193,8 +222,11 @@ fonctionnement sur simulateur/appareil.
   le nouveau modèle.
 - AMR est affiché comme badge immédiatement après Ami lorsqu’il est présent ;
   il ne faut pas confondre une entrée d’annuaire avec un partenariat officiel.
-- Les liens musicaux ne sont affichés que lorsqu’une URL HTTPS fonctionnelle
-  existe. Aucun faux bouton Tidal, Amazon Music ou autre ne doit être rendu.
+- Les services musicaux ne sont affichés comme destinations directes que
+  lorsqu’une URL de morceau HTTPS sur l’hôte officiel est vérifiée. Un service
+  manquant peut apparaître uniquement dans la zone secondaire, libellé sans
+  ambiguïté « Rechercher sur … » ; aucun faux lien direct Tidal, Amazon Music
+  ou autre ne doit être rendu.
 - Premium reste contextuel et serveur-autoritaire.
 - Le Paywall SwiftUI semble orphelin dans le shell actuel. Son point de
   présentation Expo doit être décidé avant de déclarer cette parité terminée.
@@ -290,64 +322,64 @@ des écrans Phase 2.
 Les chemins RN proposés deviennent les propriétaires des parcours. Un composant
 partagé ne doit pas absorber la logique métier de plusieurs features.
 
-| SwiftUI / fonctionnalité              | Cible Expo / RN                             | Statut        | Parité ou travail restant                                                                                                                                                                                    |
-| ------------------------------------- | ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| DispoApp + RootView                   | src/app/_layout.tsx, src/app/index.tsx      | EN COURS      | Session et shell présents ; onboarding, bannière globale, nouveautés, deep links et notifications à compléter.                                                                                               |
-| TabView 5 onglets                     | src/app/(tabs)/_layout.tsx                  | EN COURS      | `NativeTabs` système, ordre, badges et safe area présents ; validation visuelle authentifiée iOS/Android encore requise.                                                                                     |
-| AuthGateView / AuthForm               | src/app/(auth)/sign-in.tsx, features/auth   | EN COURS      | Hiérarchie, copies, sélecteur, champs, CTA et mentions Swift portés ; login/signup et demande de reset e-mail présents. Callback de récupération, Apple, Google Android et parcours réels restent à prouver. |
-| OnboardingView                        | src/app/(auth)/onboarding/*                 | À FAIRE       | Quatre étapes, profil express, région et changement de compte.                                                                                                                                               |
-| HomeView                              | src/app/(tabs)/index.tsx                    | EN COURS      | Feed profils présent ; greeting/logo, réseau, notifications, recherche, groupes, trois scopes de disponibilité et actions manquent.                                                                          |
-| SearchView                            | src/app/search.tsx, features/search         | EN COURS      | Logique Ami/Même école/AMR présente dans domain/profile ; écran et recherche SOS manquent.                                                                                                                   |
-| FilterSheet                           | src/app/filters.tsx, features/search        | EN COURS      | Type relationship filter présent ; instruments, genres, date, pays/postal/ville, rayon, niveaux et gating Premium manquent.                                                                                  |
-| NotificationsCenterView               | src/app/notifications.tsx                   | À FAIRE       | Feed, lecture, navigation cible et états vides.                                                                                                                                                              |
-| MusicianDetailView                    | src/app/profiles/[id].tsx                   | EN COURS      | Résumé, écoles, rating et contact présents ; follow, SOS direct, groupes, vidéos, réseaux, joué-avec, followers, report/block manquent.                                                                      |
-| PlayedWithSheet                       | src/app/profiles/[id]/played-with.tsx       | À FAIRE       | Pagination et navigation profil.                                                                                                                                                                             |
-| FollowersSheet                        | src/app/profiles/[id]/followers.tsx         | À FAIRE       | Followers/following, relation mutuelle.                                                                                                                                                                      |
-| VideoPlayerSheet                      | features/media/profile-video.tsx            | À FAIRE       | Player, état de chargement, erreur et analytics local uniquement.                                                                                                                                            |
-| EventsView                            | src/app/(tabs)/sos.tsx                      | EN COURS      | Feed public présent ; segments SOS/Mes SOS, compatibilité, demandes directes et gestion hôte manquent.                                                                                                       |
-| EventCard                             | features/gigs/gig-card.tsx                  | EN COURS      | Carte présente, mais forme de billet, perforation, code-barres et couleurs exactes manquent.                                                                                                                 |
-| CreateEventView                       | src/app/gigs/create.tsx                     | EN COURS      | Mutation minimale présente ; contrôles structurés, récurrence, Premium, lieu privé et validations UX manquent.                                                                                               |
-| SOSMatchView                          | src/app/gigs/[id]/matches.tsx               | À FAIRE       | Classement et profils compatibles.                                                                                                                                                                           |
-| SOSRequestSheet                       | src/app/gigs/request/[profileId].tsx        | À FAIRE       | Instrument, dates du musicien, lieu, cachet et message.                                                                                                                                                      |
-| EventDetailView                       | src/app/gigs/[id].tsx                       | EN COURS      | Détail/candidature simple ; état candidature, retrait, hôte, sécurité, demandes et line-up manquent.                                                                                                         |
-| GigPrivateLocationCard                | features/locations/private-gig-location.tsx | BLOQUÉ        | À implémenter uniquement via RPC privé autorisé et carte native ; aucune adresse exacte dans le feed.                                                                                                        |
-| MyEventsView                          | src/app/(tabs)/sessions.tsx                 | À FAIRE       | Futur/passé, synthèse, groupes et SOS, badges de réponse.                                                                                                                                                    |
-| AgendaRow / NextDateCard / AnswerCard | features/sessions/components/*              | À FAIRE       | Cartes, regroupement mensuel et réponse oui/non.                                                                                                                                                             |
-| ChatListView                          | src/app/(tabs)/messages.tsx                 | EN COURS      | Direct présent ; groupes musicaux, invitations et unread manquent ; discussions école volontairement exclues.                                                                                                |
-| ChatView                              | src/app/messages/[id].tsx                   | EN COURS      | Texte, pagination et Realtime présents ; delivered/read, typing, edit/delete, réactions et scroll fin manquent.                                                                                              |
-| MessageAttachment*                    | features/messages/attachments/*             | À FAIRE       | Photo, vidéo, fichier, brouillon, upload privé, téléchargement et aperçu.                                                                                                                                    |
-| MessageControls                       | features/messages/message-actions.tsx       | À FAIRE       | Jour, réactions, menu, édition, suppression, confirmations.                                                                                                                                                  |
-| GroupChatView — Messages              | src/app/groups/[id]/index.tsx               | À FAIRE       | Messages de groupe, unread, typing, réactions et pièces jointes.                                                                                                                                             |
-| GroupChatView — Répertoire            | src/app/groups/[id]/songs.tsx               | EN COURS      | Liste, recherche, ajout/suggestion et réordonnancement présents ; comparaison visuelle authentifiée avec Swift encore requise.                                                                               |
-| SongRow / drag                        | features/groups/group-song-row.tsx          | EN COURS      | Ligne partagée de 68 pt, pochette 46 × 46, méta compacte, écoute et actions 44 pt présentes dans répertoire/setlist ; drag, haptique et auto-scroll restent à porter.                                        |
-| SongDetailSheet                       | src/app/groups/[id]/songs/[songId].tsx      | EN COURS      | En-tête avec pochette, écoute, iReal direct ou recherche, partitions, solos et commentaires présents ; onglets/gestes et validation visuelle Swift restent à terminer.                                       |
-| AddSongSheet / EditSongSheet          | src/app/groups/[id]/songs/[songId].tsx      | EN COURS      | Création/édition, tonalité, catalogue et validation présents dans la fiche ; enrichissement canonique serveur et parcours leader/membre restent à valider.                                                   |
-| CopySongSheet                         | features/songs/copy-song.tsx                | EN COURS      | Tri, libellé complet et déduplication testables présents ; mutation/UI manquent.                                                                                                                             |
-| ListenSheet                           | features/groups/group-song-row.tsx          | EN COURS      | UI native présente pour six services, ordre stable, hôtes officiels exacts et recherche HTTPS de secours ; liens exacts multi-marchés dépendants du catalogue local non appliqué.                            |
-| GroupChatView — Événements            | src/app/groups/[id]/events.tsx              | À FAIRE       | Cartes, création, édition, annulation et réponses.                                                                                                                                                           |
-| GroupEventSheet                       | src/app/groups/[id]/events/[eventId].tsx    | À FAIRE       | Détail, présence, setlist, invités, SOS et lieu privé.                                                                                                                                                       |
-| Add/EditGroupEventSheet               | features/groups/events/forms/*              | À FAIRE       | Types concert/répétition/jam, récurrence et atomicité lieu privé.                                                                                                                                            |
-| GroupMembersSheet                     | src/app/groups/[id]/members.tsx             | À FAIRE       | Membres, rôles et profils.                                                                                                                                                                                   |
-| InviteMemberSheet                     | src/app/groups/[id]/invite.tsx              | À FAIRE       | Recherche, invitation, Premium et états.                                                                                                                                                                     |
-| GroupSettingsSheet                    | src/app/groups/[id]/settings.tsx            | À FAIRE       | Nom/photo, leadership, sortie/suppression.                                                                                                                                                                   |
-| NewGroupSheet                         | src/app/groups/create.tsx                   | À FAIRE       | Création et limite de groupes dirigés.                                                                                                                                                                       |
-| DocPreview / QuickLook                | features/documents/document-preview.tsx     | BLOQUÉ        | Pas d’équivalent QuickLook exact ; choisir PDF viewer ou module natif et fallback partage.                                                                                                                   |
-| MusicSchoolDirectoryView              | src/app/schools/index.tsx                   | À FAIRE       | Annuaire et affiliations uniquement.                                                                                                                                                                         |
-| MusicSchoolJoinSheet                  | src/app/schools/[id]/join.tsx               | À FAIRE       | Rôle, instrument, statut et école principale.                                                                                                                                                                |
-| MusicSchoolCommunityView              | aucune route publique                       | NE PAS PORTER | Discussions école explicitement masquées ; conserver seulement affiliation/badge si décision maintenue.                                                                                                      |
-| MusicSchoolMembersSheet               | src/app/schools/[id]/members.tsx            | À FAIRE       | À décider séparément du chat école.                                                                                                                                                                          |
-| MyProfileView                         | src/app/(tabs)/profile.tsx                  | EN COURS      | Lecture et accès séparés à l’édition, aux disponibilités, aux voyages et aux démos présents ; parcours authentifié et stats détaillées restent à valider.                                                    |
-| EditProfileSheet                      | src/app/profile/edit.tsx                    | EN COURS      | Édition profil présente ; parcours authentifié et comparaison Swift restent à valider.                                                                                                                       |
-| VideoDetailsSheet                     | src/app/profile/videos/[id].tsx             | À FAIRE       | Titre, suppression et upload/transcodage.                                                                                                                                                                    |
-| LanguageRegionSheet                   | src/app/settings/language-region.tsx        | À FAIRE       | Choix persistant parmi neuf langues et pays/région.                                                                                                                                                          |
-| AvailabilityPlaceSheet                | src/app/profile/travel.tsx                  | EN COURS      | Voyage/lieu séparé des démos ; les dates de disponibilité vivent dans `/profile/availability`. Validation authentifiée et visuelle encore requise.                                                           |
-| SettingsSheet                         | src/app/settings/index.tsx                  | À FAIRE       | Navigation réglages, thème, localisation, support et confidentialité.                                                                                                                                        |
-| AccountSheet                          | src/app/settings/account.tsx                | À FAIRE       | E-mail, déconnexion, suppression, isolation de compte et changement de compte.                                                                                                                               |
-| NotificationsSettingsView             | src/app/settings/notifications.tsx          | À FAIRE       | Catégories, permission système, token et badge.                                                                                                                                                              |
-| LinkAppleSheet                        | src/app/settings/link-apple.tsx             | BLOQUÉ        | Capability/config Apple et parcours de liaison à valider sur development build.                                                                                                                              |
-| PaywallView                           | src/app/paywall.tsx                         | BLOQUÉ        | Point de montage produit à décider, SDK RevenueCat absent et stores non configurés pour la cible commune.                                                                                                    |
-| WhatsNewSheet / PatchNotesView        | src/app/whats-new.tsx                       | À FAIRE       | Présentation une fois par version et historique.                                                                                                                                                             |
-| CityPickerSheet                       | aucune                                      | NE PAS PORTER | Vue Swift apparemment orpheline ; utiliser pays + postal + résolution de ville et correction manuelle.                                                                                                       |
+| SwiftUI / fonctionnalité              | Cible Expo / RN                             | Statut        | Parité ou travail restant                                                                                                                                                                                                                         |
+| ------------------------------------- | ------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DispoApp + RootView                   | src/app/_layout.tsx, src/app/index.tsx      | EN COURS      | Session et shell présents ; politique globale de header enregistrée avant rendu pour séparer routes à `ScreenHeader` et routes à titre natif. Validation visuelle du correctif encore requise.                                                    |
+| TabView 5 onglets                     | src/app/(tabs)/_layout.tsx                  | EN COURS      | `NativeTabs` système, ordre, badges et safe area présents ; validation visuelle authentifiée iOS/Android encore requise.                                                                                                                          |
+| AuthGateView / AuthForm               | src/app/(auth)/sign-in.tsx, features/auth   | EN COURS      | Hiérarchie, copies, sélecteur, champs, CTA et mentions Swift portés ; login/signup et demande de reset e-mail présents. Callback de récupération, Apple, Google Android et parcours réels restent à prouver.                                      |
+| OnboardingView                        | src/app/(auth)/onboarding/*                 | À FAIRE       | Quatre étapes, profil express, région et changement de compte.                                                                                                                                                                                    |
+| HomeView                              | src/app/(tabs)/index.tsx                    | EN COURS      | Feed profils présent ; greeting/logo, réseau, notifications, recherche, groupes, trois scopes de disponibilité et actions manquent.                                                                                                               |
+| SearchView                            | src/app/search.tsx, features/search         | EN COURS      | Logique Ami/Même école/AMR présente dans domain/profile ; écran et recherche SOS manquent.                                                                                                                                                        |
+| FilterSheet                           | src/app/filters.tsx, features/search        | EN COURS      | Type relationship filter présent ; instruments, genres, date, pays/postal/ville, rayon, niveaux et gating Premium manquent.                                                                                                                       |
+| NotificationsCenterView               | src/app/notifications.tsx                   | À FAIRE       | Feed, lecture, navigation cible et états vides.                                                                                                                                                                                                   |
+| MusicianDetailView                    | src/app/profiles/[id].tsx                   | EN COURS      | Résumé, écoles, rating et contact présents ; follow, SOS direct, groupes, vidéos, réseaux, joué-avec, followers, report/block manquent.                                                                                                           |
+| PlayedWithSheet                       | src/app/profiles/[id]/played-with.tsx       | À FAIRE       | Pagination et navigation profil.                                                                                                                                                                                                                  |
+| FollowersSheet                        | src/app/profiles/[id]/followers.tsx         | À FAIRE       | Followers/following, relation mutuelle.                                                                                                                                                                                                           |
+| VideoPlayerSheet                      | features/media/profile-video.tsx            | À FAIRE       | Player, état de chargement, erreur et analytics local uniquement.                                                                                                                                                                                 |
+| EventsView                            | src/app/(tabs)/sos.tsx                      | EN COURS      | Feed public présent ; segments SOS/Mes SOS, compatibilité, demandes directes et gestion hôte manquent.                                                                                                                                            |
+| EventCard                             | features/gigs/gig-card.tsx                  | EN COURS      | Carte présente, mais forme de billet, perforation, code-barres et couleurs exactes manquent.                                                                                                                                                      |
+| CreateEventView                       | src/app/gigs/create.tsx                     | EN COURS      | Mutation minimale présente ; contrôles structurés, récurrence, Premium, lieu privé et validations UX manquent.                                                                                                                                    |
+| SOSMatchView                          | src/app/gigs/[id]/matches.tsx               | À FAIRE       | Classement et profils compatibles.                                                                                                                                                                                                                |
+| SOSRequestSheet                       | src/app/gigs/request/[profileId].tsx        | À FAIRE       | Instrument, dates du musicien, lieu, cachet et message.                                                                                                                                                                                           |
+| EventDetailView                       | src/app/gigs/[id].tsx                       | EN COURS      | Détail/candidature simple ; état candidature, retrait, hôte, sécurité, demandes et line-up manquent.                                                                                                                                              |
+| GigPrivateLocationCard                | features/locations/private-gig-location.tsx | BLOQUÉ        | À implémenter uniquement via RPC privé autorisé et carte native ; aucune adresse exacte dans le feed.                                                                                                                                             |
+| MyEventsView                          | src/app/(tabs)/sessions.tsx                 | À FAIRE       | Futur/passé, synthèse, groupes et SOS, badges de réponse.                                                                                                                                                                                         |
+| AgendaRow / NextDateCard / AnswerCard | features/sessions/components/*              | À FAIRE       | Cartes, regroupement mensuel et réponse oui/non.                                                                                                                                                                                                  |
+| ChatListView                          | src/app/(tabs)/messages.tsx                 | EN COURS      | Direct présent ; groupes musicaux, invitations et unread manquent ; discussions école volontairement exclues.                                                                                                                                     |
+| ChatView                              | src/app/messages/[id].tsx                   | EN COURS      | Texte, pagination et Realtime présents ; delivered/read, typing, edit/delete, réactions et scroll fin manquent.                                                                                                                                   |
+| MessageAttachment*                    | features/messages/attachments/*             | À FAIRE       | Photo, vidéo, fichier, brouillon, upload privé, téléchargement et aperçu.                                                                                                                                                                         |
+| MessageControls                       | features/messages/message-actions.tsx       | À FAIRE       | Jour, réactions, menu, édition, suppression, confirmations.                                                                                                                                                                                       |
+| GroupChatView — Messages              | src/app/groups/[id]/index.tsx               | À FAIRE       | Messages de groupe, unread, typing, réactions et pièces jointes.                                                                                                                                                                                  |
+| GroupChatView — Répertoire            | src/app/groups/[id]/songs.tsx               | EN COURS      | Liste, recherche, ajout/suggestion et réordonnancement présents ; comparaison visuelle authentifiée avec Swift encore requise.                                                                                                                    |
+| SongRow / drag                        | features/groups/group-song-row.tsx          | EN COURS      | Ligne partagée de 68 pt, pochette 46 × 46, méta compacte, écoute et actions 44 pt présentes dans répertoire/setlist ; drag, haptique et auto-scroll restent à porter.                                                                             |
+| SongDetailSheet                       | src/app/groups/[id]/songs/[songId].tsx      | EN COURS      | En-tête avec pochette, écoute, iReal direct ou recherche, partitions, solos et commentaires présents ; onglets/gestes et validation visuelle Swift restent à terminer.                                                                            |
+| AddSongSheet / EditSongSheet          | src/app/groups/[id]/songs/[songId].tsx      | EN COURS      | Création/édition, tonalité, catalogue et validation présents dans la fiche ; enrichissement canonique serveur et parcours leader/membre restent à valider.                                                                                        |
+| CopySongSheet                         | features/songs/copy-song.tsx                | EN COURS      | Tri, libellé complet et déduplication testables présents ; mutation/UI manquent.                                                                                                                                                                  |
+| ListenSheet                           | features/groups/group-song-row.tsx          | EN COURS      | Liens directs vérifiés affichés en premier ; services manquants repliés sous « Rechercher sur un autre service » et libellés comme recherches. Couverture exacte des six services dépendante d’un fournisseur approuvé et de credentials serveur. |
+| GroupChatView — Événements            | src/app/groups/[id]/events.tsx              | À FAIRE       | Cartes, création, édition, annulation et réponses.                                                                                                                                                                                                |
+| GroupEventSheet                       | src/app/groups/[id]/events/[eventId].tsx    | À FAIRE       | Détail, présence, setlist, invités, SOS et lieu privé.                                                                                                                                                                                            |
+| Add/EditGroupEventSheet               | features/groups/events/forms/*              | À FAIRE       | Types concert/répétition/jam, récurrence et atomicité lieu privé.                                                                                                                                                                                 |
+| GroupMembersSheet                     | src/app/groups/[id]/members.tsx             | À FAIRE       | Membres, rôles et profils.                                                                                                                                                                                                                        |
+| InviteMemberSheet                     | src/app/groups/[id]/invite.tsx              | À FAIRE       | Recherche, invitation, Premium et états.                                                                                                                                                                                                          |
+| GroupSettingsSheet                    | src/app/groups/[id]/settings.tsx            | À FAIRE       | Nom/photo, leadership, sortie/suppression.                                                                                                                                                                                                        |
+| NewGroupSheet                         | src/app/groups/create.tsx                   | À FAIRE       | Création et limite de groupes dirigés.                                                                                                                                                                                                            |
+| DocPreview / QuickLook                | features/documents/document-preview.tsx     | BLOQUÉ        | Pas d’équivalent QuickLook exact ; choisir PDF viewer ou module natif et fallback partage.                                                                                                                                                        |
+| MusicSchoolDirectoryView              | src/app/schools/index.tsx                   | À FAIRE       | Annuaire et affiliations uniquement.                                                                                                                                                                                                              |
+| MusicSchoolJoinSheet                  | src/app/schools/[id]/join.tsx               | À FAIRE       | Rôle, instrument, statut et école principale.                                                                                                                                                                                                     |
+| MusicSchoolCommunityView              | aucune route publique                       | NE PAS PORTER | Discussions école explicitement masquées ; conserver seulement affiliation/badge si décision maintenue.                                                                                                                                           |
+| MusicSchoolMembersSheet               | src/app/schools/[id]/members.tsx            | À FAIRE       | À décider séparément du chat école.                                                                                                                                                                                                               |
+| MyProfileView                         | src/app/(tabs)/profile.tsx                  | EN COURS      | Lecture et accès séparés à l’édition, aux disponibilités, aux voyages et aux démos présents ; parcours authentifié et stats détaillées restent à valider.                                                                                         |
+| EditProfileSheet                      | src/app/profile/edit.tsx                    | EN COURS      | Édition profil présente ; parcours authentifié et comparaison Swift restent à valider.                                                                                                                                                            |
+| VideoDetailsSheet                     | src/app/profile/videos/[id].tsx             | À FAIRE       | Titre, suppression et upload/transcodage.                                                                                                                                                                                                         |
+| LanguageRegionSheet                   | src/app/settings/language-region.tsx        | À FAIRE       | Choix persistant parmi neuf langues et pays/région.                                                                                                                                                                                               |
+| AvailabilityPlaceSheet                | src/app/profile/travel.tsx                  | EN COURS      | Voyage/lieu séparé des démos ; les dates de disponibilité vivent dans `/profile/availability`. Validation authentifiée et visuelle encore requise.                                                                                                |
+| SettingsSheet                         | src/app/settings/index.tsx                  | À FAIRE       | Navigation réglages, thème, localisation, support et confidentialité.                                                                                                                                                                             |
+| AccountSheet                          | src/app/settings/account.tsx                | À FAIRE       | E-mail, déconnexion, suppression, isolation de compte et changement de compte.                                                                                                                                                                    |
+| NotificationsSettingsView             | src/app/settings/notifications.tsx          | À FAIRE       | Catégories, permission système, token et badge.                                                                                                                                                                                                   |
+| LinkAppleSheet                        | src/app/settings/link-apple.tsx             | BLOQUÉ        | Capability/config Apple et parcours de liaison à valider sur development build.                                                                                                                                                                   |
+| PaywallView                           | src/app/paywall.tsx                         | BLOQUÉ        | Point de montage produit à décider, SDK RevenueCat absent et stores non configurés pour la cible commune.                                                                                                                                         |
+| WhatsNewSheet / PatchNotesView        | src/app/whats-new.tsx                       | À FAIRE       | Présentation une fois par version et historique.                                                                                                                                                                                                  |
+| CityPickerSheet                       | aucune                                      | NE PAS PORTER | Vue Swift apparemment orpheline ; utiliser pays + postal + résolution de ville et correction manuelle.                                                                                                                                            |
 
 ## 6. Contrat Supabase et performance
 
@@ -412,6 +444,14 @@ Le lot répertoire ajoute localement, sans `db push`, un modèle non destructif 
   160 caractères, paginée seulement avec la paire curseur/titre complète et
   lisible par les utilisateurs authentifiés ; les écritures restent réservées
   au `service_role` ;
+- le repository interroge ce RPC canonique et Apple en parallèle, déduplique par
+  ISRC, identifiant Apple ou couple artiste/titre et laisse gagner les données
+  canoniques. En production actuelle, l’absence de la migration est tolérée et
+  déclenche le repli Apple sans rendre la recherche indisponible ;
+- le cache peut stocker les six plateformes, mais son remplissage automatique
+  en liens exacts reste conditionné à un fournisseur autorisé et à des
+  identifiants conservés côté serveur ; aucune clé fournisseur n’est présente
+  dans le client ;
 - aucun catalogue public iReal Pro n’est interrogé : l’app ouvre un lien iReal
   valide ou la recherche locale officielle `irealb://search?...`.
 

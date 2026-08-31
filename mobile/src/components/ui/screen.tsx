@@ -10,15 +10,31 @@ import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
 const screenEdges = ['top', 'bottom'] as const;
+const nativeHeaderScreenEdges = ['bottom'] as const;
 const nativeTabScreenEdges = Platform.OS === 'android' ? (['top'] as const) : screenEdges;
+
+export function screenSafeAreaEdges({
+  nativeHeader = false,
+  nativeTabRoot = false,
+}: {
+  nativeHeader?: boolean;
+  nativeTabRoot?: boolean;
+} = {}) {
+  if (nativeHeader) return nativeHeaderScreenEdges;
+  return nativeTabRoot ? nativeTabScreenEdges : screenEdges;
+}
 
 export function Screen({
   children,
+  nativeHeader = false,
   nativeTabRoot = false,
-}: PropsWithChildren<{ nativeTabRoot?: boolean }>) {
+}: PropsWithChildren<{ nativeHeader?: boolean; nativeTabRoot?: boolean }>) {
   return (
     <DispoBackground>
-      <SafeAreaView edges={nativeTabRoot ? nativeTabScreenEdges : screenEdges} style={styles.safe}>
+      <SafeAreaView
+        edges={screenSafeAreaEdges({ nativeHeader, nativeTabRoot })}
+        style={styles.safe}
+      >
         {children}
       </SafeAreaView>
     </DispoBackground>
@@ -31,6 +47,7 @@ interface ScreenHeaderProps {
   icon?: ComponentProps<typeof Ionicons>['name'];
   iconColor?: string;
   inset?: boolean;
+  leadingAction?: ReactNode;
   subtitle?: string;
   title: string;
 }
@@ -41,6 +58,7 @@ export function ScreenHeader({
   icon,
   iconColor,
   inset = true,
+  leadingAction,
   subtitle,
   title,
 }: ScreenHeaderProps) {
@@ -49,6 +67,7 @@ export function ScreenHeader({
   const resolvedIconColor = iconColor ?? palette.electric;
   return (
     <View style={[styles.header, !inset && styles.headerWithoutInset]}>
+      {leadingAction ?? null}
       {icon ? (
         <View style={[styles.icon, { backgroundColor: `${resolvedIconColor}24` }]}>
           <Ionicons color={resolvedIconColor} name={icon} size={18} />

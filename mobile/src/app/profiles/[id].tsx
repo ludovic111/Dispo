@@ -16,18 +16,18 @@ export default function ProfileScreen() {
   const query = useProfile(id, session?.user.id ?? '');
   if (query.isLoading)
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement du profil…')} />
       </Screen>
     );
   if (query.isError)
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
   return (
-    <Screen>
+    <Screen nativeHeader>
       <Stack.Screen
         options={{ title: query.data ? profileHandle(query.data.name) : t('Profil') }}
       />

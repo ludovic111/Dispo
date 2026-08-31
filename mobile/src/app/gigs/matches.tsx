@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { matchProfilesToGig, type GigMatch, type GigSummary } from '@/features/gigs/gig-model';
 import { useGigMatches } from '@/features/gigs/gig-queries';
@@ -60,10 +61,14 @@ export default function GigMatchesScreen() {
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const query = useGigMatches(id);
+  const back = (
+    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+  );
 
   if (query.isLoading) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Matches SOS')} />
         <LoadingState label={t('Recherche des musicien·nes compatibles…')} />
       </Screen>
     );
@@ -71,6 +76,7 @@ export default function GigMatchesScreen() {
   if (query.isError) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Matches SOS')} />
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
@@ -78,6 +84,7 @@ export default function GigMatchesScreen() {
   if (!query.data) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Matches SOS')} />
         <ErrorState message={t('SOS introuvable.')} />
       </Screen>
     );
@@ -87,6 +94,7 @@ export default function GigMatchesScreen() {
   if (!firstPage) {
     return (
       <Screen>
+        <ScreenHeader leadingAction={back} title={t('Matches SOS')} />
         <ErrorState message={t('SOS introuvable.')} />
       </Screen>
     );
@@ -106,7 +114,7 @@ export default function GigMatchesScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader
-          icon="flash"
+          leadingAction={back}
           subtitle={`${gig.wantedInstruments.map((instrument) => t(instrument)).join(' / ')} · ${dateLabel}`}
           title={t('SOS publié !')}
         />

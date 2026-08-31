@@ -43,7 +43,7 @@ export function SchoolDirectoryScreen() {
 
   if (directory.isLoading || mine.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des écoles…')} />
       </Screen>
     );
@@ -51,7 +51,7 @@ export function SchoolDirectoryScreen() {
   const error = directory.error ?? mine.error;
   if (error) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState
           message={error.message}
           onRetry={() => void Promise.all([directory.refetch(), mine.refetch()])}
@@ -62,7 +62,7 @@ export function SchoolDirectoryScreen() {
 
   const refresh = () => void Promise.all([directory.refetch(), mine.refetch()]);
   return (
-    <Screen>
+    <Screen nativeHeader>
       <FlatList
         contentContainerStyle={styles.content}
         data={filtered}

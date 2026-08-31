@@ -173,9 +173,12 @@ export function FilterScreen() {
                   display={Platform.OS === 'ios' ? 'inline' : 'default'}
                   minimumDate={new Date()}
                   mode="date"
-                  onChange={(_event, value) => {
+                  onDismiss={() => {
                     if (Platform.OS === 'android') setShowDatePicker(false);
-                    if (value) setFilters({ ...filters, neededDate: inputDate(value) });
+                  }}
+                  onValueChange={(_event, value) => {
+                    if (Platform.OS === 'android') setShowDatePicker(false);
+                    setFilters({ ...filters, neededDate: inputDate(value) });
                   }}
                   value={date}
                 />

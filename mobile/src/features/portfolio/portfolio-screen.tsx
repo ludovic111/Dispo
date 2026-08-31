@@ -133,9 +133,12 @@ function DateField({
         <DateTimePicker
           display={Platform.OS === 'ios' ? 'inline' : 'default'}
           mode="date"
-          onChange={(_, selected) => {
+          onDismiss={() => {
             if (Platform.OS !== 'ios') setOpen(false);
-            if (selected) onChange(selected);
+          }}
+          onValueChange={(_, selected) => {
+            if (Platform.OS !== 'ios') setOpen(false);
+            onChange(selected);
           }}
           value={value}
           {...(maximumDate ? { maximumDate } : {})}

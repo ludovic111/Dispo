@@ -5,6 +5,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  headerlessModalStackRoutes,
+  headerlessStackRoutes,
+  lockedHeaderlessModalStackRoutes,
+} from '@/features/navigation/stack-header-policy';
 import { AppProviders } from '@/providers/app-providers';
 import { useDispoTheme } from '@/theme/theme-context';
 
@@ -44,19 +49,26 @@ function Navigation() {
         <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)/update-password" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {headerlessStackRoutes.map((name) => (
+          <Stack.Screen key={name} name={name} options={{ headerShown: false }} />
+        ))}
+        {headerlessModalStackRoutes.map((name) => (
+          <Stack.Screen
+            key={name}
+            name={name}
+            options={{ headerShown: false, presentation: 'modal' }}
+          />
+        ))}
+        {lockedHeaderlessModalStackRoutes.map((name) => (
+          <Stack.Screen
+            key={name}
+            name={name}
+            options={{ gestureEnabled: false, headerShown: false, presentation: 'modal' }}
+          />
+        ))}
         <Stack.Screen name="profiles/[id]" options={{ title: t('Profil') }} />
         <Stack.Screen name="gigs/[id]" options={{ title: t('Détail SOS') }} />
-        <Stack.Screen
-          name="gigs/create"
-          options={{ presentation: 'modal', title: t('Publier un SOS') }}
-        />
-        <Stack.Screen name="gigs/matches" options={{ title: t('Matches SOS') }} />
-        <Stack.Screen name="gigs/request" options={{ title: t('Demander un dépannage') }} />
         <Stack.Screen name="messages/[id]" options={{ title: t('Conversation') }} />
-        <Stack.Screen
-          name="whats-new"
-          options={{ gestureEnabled: false, headerShown: false, presentation: 'modal' }}
-        />
       </Stack>
       <StatusBar style={dark ? 'light' : 'dark'} />
     </ThemeProvider>

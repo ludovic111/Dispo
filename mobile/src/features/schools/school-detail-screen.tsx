@@ -37,7 +37,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
 
   if (schoolQuery.isLoading || mine.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement de l’école…')} />
       </Screen>
     );
@@ -45,7 +45,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
   const loadError = schoolQuery.error ?? mine.error;
   if (loadError) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState
           message={loadError.message}
           onRetry={() => void Promise.all([schoolQuery.refetch(), mine.refetch()])}
@@ -56,7 +56,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
   const school = schoolQuery.data;
   if (!school) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={t('École introuvable.')} />
       </Screen>
     );
@@ -85,7 +85,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
   };
 
   return (
-    <Screen>
+    <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.hero}>
           <SchoolAvatar school={school} size={72} />

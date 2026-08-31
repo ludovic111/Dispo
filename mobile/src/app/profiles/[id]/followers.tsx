@@ -21,20 +21,20 @@ export default function FollowersScreen() {
   );
   if (query.isLoading) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <LoadingState label={t('Chargement des abonnés…')} />
       </Screen>
     );
   }
   if (query.isError) {
     return (
-      <Screen>
+      <Screen nativeHeader>
         <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
       </Screen>
     );
   }
   return (
-    <Screen>
+    <Screen nativeHeader>
       <Stack.Screen options={{ title: t('Abonnés') }} />
       <FlashList
         contentContainerStyle={styles.content}

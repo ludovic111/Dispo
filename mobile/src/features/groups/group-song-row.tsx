@@ -20,8 +20,11 @@ import type { GroupSong } from './group-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { Tag } from '@/components/ui/tag';
-import { streamingDestinations, type StreamingPlatformId } from '@/domain/song';
+import {
+  directStreamingDestinations,
+  streamingSearchFallbacks,
+  type StreamingPlatformId,
+} from '@/domain/song';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -40,7 +43,7 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
     const colors = ['#A238FF', '#5A5BFF', '#00B9FF', '#00D88A', '#F5D90A', '#FF7A21', '#FF3055'];
     return (
       <View
-        accessibilityLabel={platformLabels[platform]}
+        accessible={false}
         style={[styles.logoSurface, { backgroundColor: '#111118', height: size, width: size }]}
       >
         <View style={styles.deezerBars}>
@@ -61,7 +64,7 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
   if (platform === 'tidal') {
     return (
       <View
-        accessibilityLabel={platformLabels[platform]}
+        accessible={false}
         style={[
           styles.logoSurface,
           { backgroundColor: dark ? '#FFFFFF' : '#050814', height: size, width: size },
@@ -79,7 +82,7 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
   if (platform === 'amazonMusic') {
     return (
       <View
-        accessibilityLabel={platformLabels[platform]}
+        accessible={false}
         style={[styles.logoSurface, { backgroundColor: '#25D1DA', height: size, width: size }]}
       >
         <Ionicons color="#050814" name="musical-notes" size={size * 0.55} />
@@ -95,12 +98,7 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
   const color =
     platform === 'appleMusic' ? '#FA243C' : platform === 'spotify' ? '#1DB954' : '#FF0000';
   return (
-    <Svg
-      accessibilityLabel={platformLabels[platform]}
-      height={size}
-      viewBox="0 0 24 24"
-      width={size}
-    >
+    <Svg accessible={false} height={size} viewBox="0 0 24 24" width={size}>
       <Rect fill="transparent" height="24" width="24" />
       <Path d={path} fill={color} />
     </Svg>
@@ -151,11 +149,17 @@ export function SongListenSheet({
 }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  const destinations = useMemo(() => streamingDestinations(song), [song]);
+  const [searchesVisible, setSearchesVisible] = useState(false);
+  const directDestinations = useMemo(() => directStreamingDestinations(song), [song]);
+  const searchFallbacks = useMemo(() => streamingSearchFallbacks(song), [song]);
+  const close = () => {
+    setSearchesVisible(false);
+    onClose();
+  };
   const open = async (url: string) => {
     try {
       await Linking.openURL(url);
-      onClose();
+      close();
     } catch {
       Alert.alert(t('Erreur'), t('Ce lien ne peut pas être ouvert.'));
     }
@@ -163,7 +167,7 @@ export function SongListenSheet({
   return (
     <Modal
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={close}
       presentationStyle="pageSheet"
       visible={visible}
     >
@@ -177,7 +181,7 @@ export function SongListenSheet({
             accessibilityLabel={t('Fermer')}
             accessibilityRole="button"
             hitSlop={10}
-            onPress={onClose}
+            onPress={close}
             style={[styles.closeButton, { backgroundColor: palette.inset }]}
           >
             <Ionicons color={palette.text} name="close" size={18} />
@@ -196,14 +200,11 @@ export function SongListenSheet({
             </View>
           </View>
           <View style={styles.destinationStack}>
-            {destinations.map((destination) => (
+            {directDestinations.map((destination) => (
               <Pressable
-                accessibilityHint={
-                  destination.kind === 'direct' ? t('Lien direct') : t('Recherche')
-                }
                 accessibilityLabel={`${t('Ouvrir')} ${platformLabels[destination.platform]}`}
                 accessibilityRole="link"
-                key={destination.platform}
+                key={`direct-${destination.platform}`}
                 onPress={() => void open(destination.url)}
                 style={({ pressed }) => [
                   styles.destination,
@@ -215,13 +216,71 @@ export function SongListenSheet({
                 <AppText numberOfLines={1} style={styles.destinationLabel} variant="subheadline">
                   {platformLabels[destination.platform]}
                 </AppText>
-                <Tag
-                  color={destination.kind === 'direct' ? palette.jam : palette.bronze}
-                  label={destination.kind === 'direct' ? t('Lien direct') : t('Recherche')}
-                />
                 <Ionicons color={palette.muted} name="arrow-up-outline" size={15} />
               </Pressable>
             ))}
+            {!directDestinations.length ? (
+              <AppText color={palette.muted} style={styles.emptyDestinations} variant="subheadline">
+                {t("Aucun lien exact n'est encore disponible pour ce morceau.")}
+              </AppText>
+            ) : null}
+            {searchFallbacks.length ? (
+              <>
+                <Pressable
+                  accessibilityLabel={t('Rechercher sur un autre service')}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: searchesVisible }}
+                  onPress={() => setSearchesVisible((current) => !current)}
+                  style={({ pressed }) => [
+                    styles.searchToggle,
+                    { backgroundColor: palette.inset },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons color={palette.muted} name="search" size={18} />
+                  <AppText style={styles.searchToggleLabel} variant="subheadline">
+                    {t('Rechercher sur un autre service')}
+                  </AppText>
+                  <Ionicons
+                    color={palette.muted}
+                    name={searchesVisible ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                  />
+                </Pressable>
+                {searchesVisible ? (
+                  <View style={styles.searchStack}>
+                    {searchFallbacks.map((destination) => {
+                      const label = t('Rechercher sur {{service}}', {
+                        service: platformLabels[destination.platform],
+                      });
+                      return (
+                        <Pressable
+                          accessibilityLabel={label}
+                          accessibilityRole="link"
+                          key={`search-${destination.platform}`}
+                          onPress={() => void open(destination.url)}
+                          style={({ pressed }) => [
+                            styles.destination,
+                            { backgroundColor: palette.card, borderColor: palette.border },
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <StreamingLogo platform={destination.platform} />
+                          <AppText
+                            numberOfLines={1}
+                            style={styles.destinationLabel}
+                            variant="subheadline"
+                          >
+                            {label}
+                          </AppText>
+                          <Ionicons color={palette.muted} name="search" size={16} />
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </>
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -365,6 +424,7 @@ const styles = StyleSheet.create({
   },
   destinationLabel: { flex: 1, fontWeight: '700' },
   destinationStack: { gap: spacing.xs },
+  emptyDestinations: { paddingVertical: spacing.sm, textAlign: 'center' },
   embeddedSurface: { height: 68, justifyContent: 'center', paddingHorizontal: 10 },
   flex: { flex: 1 },
   identity: {
@@ -392,6 +452,16 @@ const styles = StyleSheet.create({
   navigationSpacer: { width: 32 },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   pressedReduced: { opacity: 0.96 },
+  searchStack: { gap: spacing.xs },
+  searchToggle: {
+    alignItems: 'center',
+    borderRadius: radii.button,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: spacing.sm,
+  },
+  searchToggleLabel: { flex: 1, fontWeight: '700' },
   sheet: { flex: 1 },
   sheetContent: { gap: spacing.cluster, padding: spacing.gutter, paddingBottom: spacing.xxl },
   sheetNavigation: {

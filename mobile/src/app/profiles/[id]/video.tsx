@@ -9,7 +9,7 @@ export default function ProfileVideoScreen() {
   const { t } = useTranslation();
   const { title, url } = useLocalSearchParams<{ id: string; title?: string; url?: string }>();
   return (
-    <Screen>
+    <Screen nativeHeader>
       <Stack.Screen options={{ presentation: 'modal', title: title || t('Vidéo') }} />
       <View style={styles.root}>
         {url?.startsWith('https://') ? (

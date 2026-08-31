@@ -111,9 +111,12 @@ export function ProfileAvailabilityScreen() {
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               minimumDate={new Date()}
               mode="date"
-              onChange={(_event, date) => {
+              onDismiss={() => {
                 if (Platform.OS === 'android') setCalendarVisible(false);
-                if (date) updateDay(date);
+              }}
+              onValueChange={(_event, date) => {
+                if (Platform.OS === 'android') setCalendarVisible(false);
+                updateDay(date);
               }}
               value={calendarDate}
             />

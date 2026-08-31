@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  directStreamingDestinations,
   functionalMusicLinks,
   irealAppUrl,
   irealDestination,
@@ -9,7 +10,7 @@ import {
   songDestinationLabel,
   songsMatch,
   sortedSongDestinations,
-  streamingDestinations,
+  streamingSearchFallbacks,
   type CanonicalSong,
   type SongDestination,
 } from '@/domain/song';
@@ -35,8 +36,8 @@ describe('liens musicaux', () => {
     ]);
   });
 
-  it('propose toujours les six services dans l’ordre, lien exact avant recherche HTTPS', () => {
-    const destinations = streamingDestinations({
+  it('sépare les liens exacts des recherches manquantes dans l’ordre canonique', () => {
+    const song = {
       artist: 'Miles Davis',
       platformLinks: {
         apple_music: 'javascript:alert(1)',
@@ -44,22 +45,16 @@ describe('liens musicaux', () => {
         youtube: 'https://music.youtube.com/watch?v=exact',
       },
       title: 'So What',
-      trackUrl: 'https://music.apple.com/ch/album/so-what/1',
-    });
+      trackUrl: 'https://music.apple.com/ch/album/so-what/1?i=2',
+    };
+    const direct = directStreamingDestinations(song);
+    const fallbacks = streamingSearchFallbacks(song);
 
-    expect(destinations.map(({ platform }) => platform)).toEqual([
-      'appleMusic',
-      'spotify',
-      'youtubeMusic',
-      'deezer',
-      'tidal',
-      'amazonMusic',
-    ]);
-    expect(destinations.slice(0, 3)).toEqual([
+    expect(direct).toEqual([
       {
         kind: 'direct',
         platform: 'appleMusic',
-        url: 'https://music.apple.com/ch/album/so-what/1',
+        url: 'https://music.apple.com/ch/album/so-what/1?i=2',
       },
       {
         kind: 'direct',
@@ -72,16 +67,15 @@ describe('liens musicaux', () => {
         url: 'https://music.youtube.com/watch?v=exact',
       },
     ]);
+    expect(fallbacks.map(({ platform }) => platform)).toEqual(['deezer', 'tidal', 'amazonMusic']);
     expect(
-      destinations
-        .slice(3)
-        .every(({ kind, url }) => kind === 'search' && url.startsWith('https://')),
+      fallbacks.every(({ kind, url }) => kind === 'search' && url.startsWith('https://')),
     ).toBe(true);
-    expect(destinations[3]?.url).toContain('Miles%20Davis%20So%20What');
+    expect(fallbacks[0]?.url).toContain('Miles%20Davis%20So%20What');
   });
 
-  it('refuse un pseudo-lien exact non HTTPS puis retombe sur une recherche', () => {
-    const [apple, spotify] = streamingDestinations({
+  it('refuse les pseudo-liens exacts non HTTPS et les réserve aux recherches explicites', () => {
+    const song = {
       artist: 'Beyoncé',
       platformLinks: {
         appleMusic: 'http://music.apple.com/insecure',
@@ -89,15 +83,20 @@ describe('liens musicaux', () => {
       },
       title: 'Déjà Vu',
       trackUrl: null,
-    });
+    };
+    const fallbacks = streamingSearchFallbacks(song);
 
-    expect(apple).toEqual(expect.objectContaining({ kind: 'search', platform: 'appleMusic' }));
-    expect(spotify).toEqual(expect.objectContaining({ kind: 'search', platform: 'spotify' }));
-    expect(spotify?.url).toContain('Beyonc%C3%A9%20D%C3%A9j%C3%A0%20Vu');
+    expect(directStreamingDestinations(song)).toEqual([]);
+    expect(fallbacks).toHaveLength(6);
+    expect(fallbacks[0]).toEqual(
+      expect.objectContaining({ kind: 'search', platform: 'appleMusic' }),
+    );
+    expect(fallbacks[1]).toEqual(expect.objectContaining({ kind: 'search', platform: 'spotify' }));
+    expect(fallbacks[1]?.url).toContain('Beyonc%C3%A9%20D%C3%A9j%C3%A0%20Vu');
   });
 
   it('refuse les faux domaines, identifiants et ports même sous une clé de service valide', () => {
-    const destinations = streamingDestinations({
+    const song = {
       artist: 'Herbie Hancock',
       platformLinks: {
         amazonMusic: 'https://music.amazon.com:8443/albums/1',
@@ -108,44 +107,84 @@ describe('liens musicaux', () => {
       },
       title: 'Cantaloupe Island',
       trackUrl: 'https://attacker@music.apple.com/ch/song/1',
-    });
+    };
+    const fallbacks = streamingSearchFallbacks(song);
 
-    expect(destinations.every(({ kind }) => kind === 'search')).toBe(true);
-    expect(destinations.find(({ platform }) => platform === 'spotify')?.url).toBe(
+    expect(directStreamingDestinations(song)).toEqual([]);
+    expect(fallbacks).toHaveLength(6);
+    expect(fallbacks.find(({ platform }) => platform === 'spotify')?.url).toBe(
       'https://open.spotify.com/search/Herbie%20Hancock%20Cantaloupe%20Island',
     );
   });
 
   it('accepte seulement les hôtes officiels exacts', () => {
-    const destinations = streamingDestinations({
+    const song = {
       artist: 'Artist',
       platformLinks: {
-        amazonMusic: 'https://music.amazon.com/albums/1',
+        amazonMusic: 'https://music.amazon.com/albums/1?trackAsin=2',
         deezer: 'https://deezer.com/track/1',
         spotify: 'https://open.spotify.com/track/1',
         tidal: 'https://listen.tidal.com/album/1/track/2',
         youtubeMusic: 'https://music.youtube.com/watch?v=1',
       },
       title: 'Title',
-      trackUrl: 'https://itunes.apple.com/ch/album/title/id1',
-    });
+      trackUrl: 'https://itunes.apple.com/ch/album/title/id1?i=id2',
+    };
 
-    expect(destinations.every(({ kind }) => kind === 'direct')).toBe(true);
+    expect(directStreamingDestinations(song)).toHaveLength(6);
+    expect(streamingSearchFallbacks(song)).toEqual([]);
+  });
+
+  it("ne transforme pas une recherche ou une page d'accueil officielle en lien exact", () => {
+    const song = {
+      artist: 'Miles Davis',
+      platformLinks: {
+        amazonMusic: 'https://music.amazon.com/search/So%20What',
+        appleMusic: 'https://music.apple.com/ch/search?term=So%20What',
+        deezer: 'https://www.deezer.com/search/So%20What',
+        spotify: 'https://open.spotify.com/search/So%20What',
+        tidal: 'https://tidal.com/search?q=So%20What',
+        youtubeMusic: 'https://music.youtube.com/search?q=So%20What',
+      },
+      title: 'So What',
+      trackUrl: null,
+    };
+
+    expect(directStreamingDestinations(song)).toEqual([]);
+    expect(streamingSearchFallbacks(song)).toHaveLength(6);
   });
 
   it('accepte le domaine Apple Music géolocalisé officiel', () => {
-    const [apple] = streamingDestinations({
+    const [apple] = directStreamingDestinations({
       artist: 'Miles Davis',
       platformLinks: {},
       title: 'So What',
-      trackUrl: 'https://geo.music.apple.com/ch/album/so-what/1',
+      trackUrl: 'https://geo.music.apple.com/ch/album/so-what/1?i=2',
     });
 
     expect(apple).toEqual({
       kind: 'direct',
       platform: 'appleMusic',
-      url: 'https://geo.music.apple.com/ch/album/so-what/1',
+      url: 'https://geo.music.apple.com/ch/album/so-what/1?i=2',
     });
+  });
+
+  it('conserve un lien exact même sans texte et ne fabrique aucune recherche vide', () => {
+    const song = {
+      artist: ' ',
+      platformLinks: { spotify: 'https://open.spotify.com/track/exact' },
+      title: '',
+      trackUrl: null,
+    };
+
+    expect(directStreamingDestinations(song)).toEqual([
+      {
+        kind: 'direct',
+        platform: 'spotify',
+        url: 'https://open.spotify.com/track/exact',
+      },
+    ]);
+    expect(streamingSearchFallbacks(song)).toEqual([]);
   });
 });
 

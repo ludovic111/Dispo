@@ -181,6 +181,11 @@ export function GroupListScreen() {
   const invitations = useGroupInvitations();
   const unread = useGroupUnreadState(groups.data ?? []);
   const refreshing = groups.isRefetching || invitations.isRefetching;
+  const leave = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/messages?segment=groups' as never);
+  };
+  const backAction = <HeaderAction icon="chevron-back" label={t('Retour')} onPress={leave} />;
   const retry = () => {
     void groups.refetch();
     void invitations.refetch();
@@ -188,33 +193,35 @@ export function GroupListScreen() {
   if (groups.isLoading || invitations.isLoading)
     return (
       <Screen>
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Messages')} title={t('Groupes')} />
         <LoadingState label={t('Chargement des groupes…')} />
       </Screen>
     );
   if (groups.error || invitations.error)
     return (
       <Screen>
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Messages')} title={t('Groupes')} />
         <ErrorState message={t('Tes groupes n’ont pas pu être chargés.')} onRetry={retry} />
       </Screen>
     );
   return (
     <Screen>
+      <ScreenHeader
+        action={
+          <HeaderAction
+            icon="add"
+            label={t('Nouveau groupe')}
+            onPress={() => router.push('/groups/new' as never)}
+          />
+        }
+        leadingAction={backAction}
+        subtitle={t('Messages, répertoire et prochaines dates')}
+        title={t('Groupes')}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl onRefresh={retry} refreshing={refreshing} />}
       >
-        <ScreenHeader
-          action={
-            <HeaderAction
-              icon="add"
-              label={t('Nouveau groupe')}
-              onPress={() => router.push('/groups/new' as never)}
-            />
-          }
-          icon="people"
-          subtitle={t('Messages, répertoire et prochaines dates')}
-          title={t('Groupes')}
-        />
         {invitations.data?.map((invitation) => (
           <InvitationCard invitation={invitation} key={invitation.id} />
         ))}

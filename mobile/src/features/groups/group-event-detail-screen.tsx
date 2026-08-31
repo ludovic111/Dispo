@@ -203,14 +203,14 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   if (query.isLoading)
     return (
       <Screen>
-        <ScreenHeader action={backAction} eyebrow={t('Sessions')} title={t('Session')} />
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Sessions')} title={t('Session')} />
         <LoadingState label={t('Chargement de la date…')} />
       </Screen>
     );
   if (query.error)
     return (
       <Screen>
-        <ScreenHeader action={backAction} eyebrow={t('Sessions')} title={t('Session')} />
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Sessions')} title={t('Session')} />
         <ErrorState
           message={t('Cette date n’a pas pu être chargée.')}
           onRetry={() => void query.refetch()}
@@ -220,7 +220,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   if (!group || !event)
     return (
       <Screen>
-        <ScreenHeader action={backAction} eyebrow={t('Sessions')} title={t('Session')} />
+        <ScreenHeader leadingAction={backAction} eyebrow={t('Sessions')} title={t('Session')} />
         <ErrorState message={t('Cette date n’est plus accessible.')} />
       </Screen>
     );
@@ -323,12 +323,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
-        <ScreenHeader
-          action={backAction}
-          icon="calendar"
-          subtitle={group.name}
-          title={event.title}
-        />
+        <ScreenHeader leadingAction={backAction} subtitle={group.name} title={event.title} />
         <Card style={styles.card}>
           <View style={styles.titleLine}>
             <Tag

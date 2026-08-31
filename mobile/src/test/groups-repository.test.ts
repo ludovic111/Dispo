@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { GroupEvent, GroupSong, MusicGroup } from '@/features/groups/group-model';
@@ -6,6 +6,7 @@ import {
   cancelGroupEvent,
   createGroup,
   saveGroupRepertoire,
+  searchSongCatalog,
   setGroupMessageReaction,
   updateGroupEvent,
 } from '@/features/groups/group-repository';
@@ -59,6 +60,103 @@ function song(): GroupSong {
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
+describe('catalogue musical partagé', () => {
+  it('fusionne le cache Supabase et Apple en gardant les liens exacts du cache', async () => {
+    const rpc = jest.fn(async () => ({
+      data: [
+        {
+          album_title: 'Kind of Blue',
+          artist: 'Miles Davis',
+          artwork_url: null,
+          composer: null,
+          duration_ms: 545_000,
+          genres: ['Jazz'],
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          isrc: 'USSM15900123',
+          metadata_source: 'catalog-test',
+          metadata_updated_at: '2026-08-31T18:00:00.000Z',
+          platform_ids: { appleMusic: '123' },
+          platform_links: {
+            spotify: 'https://open.spotify.com/track/exact',
+          },
+          release_year: 1959,
+          title: 'So What',
+        },
+      ],
+      error: null,
+    }));
+    mockedClient.mockReturnValue({ rpc } as never);
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      json: async () => ({
+        results: [
+          {
+            artistName: 'Miles Davis',
+            artworkUrl100: 'https://example.com/100x100bb.jpg',
+            collectionName: 'Kind of Blue (Legacy Edition)',
+            previewUrl: 'https://example.com/preview.m4a',
+            trackId: 123,
+            trackName: 'So What',
+            trackViewUrl: 'https://music.apple.com/ch/song/123',
+          },
+        ],
+      }),
+      ok: true,
+    } as Response);
+
+    await expect(searchSongCatalog('So What')).resolves.toEqual([
+      expect.objectContaining({
+        canonicalSongId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        artworkUrl: 'https://example.com/600x600bb.jpg',
+        previewUrl: 'https://example.com/preview.m4a',
+        platformLinks: {
+          appleMusic: 'https://music.apple.com/ch/song/123',
+          spotify: 'https://open.spotify.com/track/exact',
+        },
+      }),
+    ]);
+    expect(rpc).toHaveBeenCalledWith(
+      'search_song_catalog',
+      expect.objectContaining({ p_market: 'CH', p_query: 'So What' }),
+    );
+  });
+
+  it('conserve deux enregistrements distincts qui partagent artiste et titre', async () => {
+    const rpc = jest.fn(async () => ({
+      data: [
+        {
+          artist: 'Miles Davis',
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          isrc: 'USSM15900123',
+          platform_ids: { appleMusic: '123' },
+          title: 'So What',
+        },
+        {
+          artist: 'Miles Davis',
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          isrc: 'USSM19990123',
+          platform_ids: { appleMusic: '456' },
+          title: 'So What',
+        },
+      ],
+      error: null,
+    }));
+    mockedClient.mockReturnValue({ rpc } as never);
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      json: async () => ({ results: [] }),
+      ok: true,
+    } as Response);
+
+    const results = await searchSongCatalog('So What');
+
+    expect(results).toHaveLength(2);
+    expect(results.map(({ isrc }) => isrc)).toEqual(['USSM15900123', 'USSM19990123']);
+  });
 });
 
 describe('mutations du repository Groupes', () => {
