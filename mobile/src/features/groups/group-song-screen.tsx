@@ -179,7 +179,7 @@ export function GroupSongScreen({
   const enrichedExistingRef = useRef(new Set<string>());
   const [commentText, setCommentText] = useState('');
   const [listenVisible, setListenVisible] = useState(false);
-  const [irealAdvancedVisible, setIrealAdvancedVisible] = useState(false);
+  const [soloPickerVisible, setSoloPickerVisible] = useState(false);
   const [documentInstrument, setDocumentInstrument] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const baseDraft = existing ?? { ...blankSong, isApproved: isLeader === true };
@@ -191,6 +191,10 @@ export function GroupSongScreen({
   const comments = useMemo(
     () => group?.comments.filter((item) => item.songId === draft.id) ?? [],
     [draft.id, group?.comments],
+  );
+  const selectableSoloMembers = useMemo(
+    () => group?.members.filter((member) => !draft.solos.includes(member.id)) ?? [],
+    [draft.solos, group?.members],
   );
   const documentInstruments = useMemo(
     () =>
@@ -465,17 +469,6 @@ export function GroupSongScreen({
     durationLabel(draft.durationMilliseconds),
   ].filter((value): value is string => Boolean(value));
   const ireal = irealDestination(draft);
-  const updateIRealUrl = (value: string) => {
-    const cleaned = value.trim() || null;
-    setDraftOverride((current) => {
-      const source = current ?? baseDraft;
-      return {
-        ...source,
-        irealDisabled: cleaned ? false : Boolean(source.irealUrl),
-        irealUrl: cleaned,
-      };
-    });
-  };
   const openIReal = async () => {
     if (!ireal) return;
     try {
@@ -677,115 +670,132 @@ export function GroupSongScreen({
             placeholder={t('AABA, ABAB…')}
             value={draft.form ?? ''}
           />
-          <FormField
-            editable={canEdit}
-            label={t('Grille d’accords')}
-            multiline
-            onChangeText={(value) => patch('chords', value || null)}
-            placeholder={t('| Cmaj7 | Dm7 G7 | …')}
-            style={styles.multiline}
-            value={draft.chords ?? ''}
-          />
         </Card>
-        <Card style={styles.card}>
-          <SectionHeader subtitle={t('Ouvrir dans iReal Pro')} title={t('iReal Pro')} />
-          {canEdit ? (
-            <>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setIrealAdvancedVisible((visible) => !visible)}
-                style={({ pressed }) => [
-                  styles.advancedAction,
-                  { borderColor: palette.border },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons color={palette.muted} name="options-outline" size={17} />
-                <AppText color={palette.muted} variant="caption">
-                  {t('Modifier')}
-                </AppText>
-                <Ionicons
-                  color={palette.muted}
-                  name={irealAdvancedVisible ? 'chevron-up' : 'chevron-down'}
-                  size={15}
-                />
-              </Pressable>
-              {irealAdvancedVisible ? (
-                <FormField
-                  autoCapitalize="none"
-                  label={t('Lien iReal Pro')}
-                  onChangeText={updateIRealUrl}
-                  placeholder={t('irealbook://…')}
-                  value={draft.irealUrl ?? ''}
-                />
-              ) : null}
-            </>
-          ) : null}
-          <DispoButton
-            disabled={!ireal}
-            icon={ireal?.kind === 'direct' ? 'open-outline' : 'search'}
-            onPress={() => void openIReal()}
-          >
-            {ireal?.kind === 'direct' ? t('Ouvrir dans iReal Pro') : t('Chercher dans iReal Pro')}
-          </DispoButton>
-        </Card>
+        <DispoButton disabled={!ireal} icon="open-outline" onPress={() => void openIReal()}>
+          {t('Ouvrir dans iReal Pro')}
+        </DispoButton>
         {!isNew ? (
           <Card style={styles.card}>
-            <SectionHeader subtitle={t('Ordre de passage')} title={t('Solos')} />
-            {draft.solos.map((memberId, index) => {
-              const member = group.members.find((item) => item.id === memberId);
-              return (
-                <View key={memberId} style={[styles.soloRow, { borderColor: palette.border }]}>
-                  <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
-                    <AppText style={styles.bold} variant="caption">
-                      {index + 1}
-                    </AppText>
-                  </View>
-                  <AppText style={styles.flex}>{member?.name ?? memberId}</AppText>
-                  {isLeader ? (
-                    <>
-                      <Pressable
-                        accessibilityLabel={t('Monter')}
-                        accessibilityRole="button"
-                        disabled={index === 0}
-                        onPress={() => moveSolo(index, -1)}
-                        style={styles.iconAction}
-                      >
-                        <Ionicons color={palette.text} name="chevron-up" size={18} />
-                      </Pressable>
-                      <Pressable
-                        accessibilityLabel={t('Descendre')}
-                        accessibilityRole="button"
-                        disabled={index === draft.solos.length - 1}
-                        onPress={() => moveSolo(index, 1)}
-                        style={styles.iconAction}
-                      >
-                        <Ionicons color={palette.text} name="chevron-down" size={18} />
-                      </Pressable>
-                    </>
-                  ) : null}
-                </View>
-              );
-            })}
-            {isLeader ? (
-              <View style={styles.wrap}>
-                {group.members.map((member) => (
-                  <ChoiceChip
-                    key={member.id}
-                    label={member.name}
-                    onPress={() => {
-                      if (!isLeader) return;
-                      patch(
-                        'solos',
-                        draft.solos.includes(member.id)
-                          ? draft.solos.filter((id) => id !== member.id)
-                          : [...draft.solos, member.id],
-                      );
-                    }}
-                    selected={draft.solos.includes(member.id)}
-                  />
-                ))}
+            <SectionHeader
+              subtitle={t(
+                'Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.',
+              )}
+              title={t('Solos')}
+            />
+            {draft.solos.length === 0 ? (
+              <AppText color={palette.muted} style={styles.soloEmpty} variant="subheadline">
+                {t('Aucun solo prévu')}
+              </AppText>
+            ) : (
+              <View style={styles.soloList}>
+                {draft.solos.map((memberId, index) => {
+                  const member = group.members.find((item) => item.id === memberId);
+                  return (
+                    <View key={memberId} style={[styles.soloRow, { borderColor: palette.border }]}>
+                      <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
+                        <AppText style={styles.bold} variant="caption">
+                          {index + 1}
+                        </AppText>
+                      </View>
+                      <Avatar
+                        name={member?.name ?? memberId}
+                        size={34}
+                        uri={member?.photoUrl ?? null}
+                      />
+                      <View style={styles.soloCopy}>
+                        <AppText numberOfLines={1} style={styles.bold}>
+                          {member?.name ?? memberId}
+                        </AppText>
+                        {member?.instruments.length ? (
+                          <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                            {member.instruments.map((instrument) => t(instrument)).join(' · ')}
+                          </AppText>
+                        ) : null}
+                      </View>
+                      {isLeader ? (
+                        <View style={styles.soloActions}>
+                          <Pressable
+                            accessibilityLabel={t('Monter')}
+                            accessibilityRole="button"
+                            disabled={index === 0}
+                            onPress={() => moveSolo(index, -1)}
+                            style={[styles.iconAction, index === 0 && styles.disabledAction]}
+                          >
+                            <Ionicons color={palette.text} name="chevron-up" size={17} />
+                          </Pressable>
+                          <Pressable
+                            accessibilityLabel={t('Descendre')}
+                            accessibilityRole="button"
+                            disabled={index === draft.solos.length - 1}
+                            onPress={() => moveSolo(index, 1)}
+                            style={[
+                              styles.iconAction,
+                              index === draft.solos.length - 1 && styles.disabledAction,
+                            ]}
+                          >
+                            <Ionicons color={palette.text} name="chevron-down" size={17} />
+                          </Pressable>
+                          <Pressable
+                            accessibilityLabel={t('Retirer ce solo')}
+                            accessibilityRole="button"
+                            onPress={() =>
+                              patch(
+                                'solos',
+                                draft.solos.filter((id) => id !== memberId),
+                              )
+                            }
+                            style={styles.iconAction}
+                          >
+                            <Ionicons color={palette.signal} name="close" size={17} />
+                          </Pressable>
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
               </View>
+            )}
+            {isLeader ? (
+              <>
+                {selectableSoloMembers.length > 0 ? (
+                  <DispoButton
+                    icon={soloPickerVisible ? 'chevron-up' : 'add'}
+                    onPress={() => setSoloPickerVisible((visible) => !visible)}
+                    variant="secondary"
+                  >
+                    {t('Ajouter un solo')}
+                  </DispoButton>
+                ) : null}
+                {soloPickerVisible ? (
+                  <View style={styles.soloCandidates}>
+                    {selectableSoloMembers.map((member) => (
+                      <Pressable
+                        accessibilityRole="button"
+                        key={member.id}
+                        onPress={() => patch('solos', [...draft.solos, member.id])}
+                        style={({ pressed }) => [
+                          styles.soloCandidate,
+                          { borderBottomColor: palette.border },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Avatar name={member.name} size={36} uri={member.photoUrl} />
+                        <View style={styles.soloCopy}>
+                          <AppText numberOfLines={1} style={styles.bold}>
+                            {member.name}
+                          </AppText>
+                          {member.instruments.length ? (
+                            <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                              {member.instruments.map((instrument) => t(instrument)).join(' · ')}
+                            </AppText>
+                          ) : null}
+                        </View>
+                        <Ionicons color={palette.electric} name="add-circle" size={22} />
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+              </>
             ) : null}
           </Card>
         ) : null}
@@ -978,16 +988,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   arrangementText: { flexShrink: 1, fontWeight: '800' },
-  advancedAction: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.tight,
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.sm,
-  },
   bold: { fontWeight: '700' },
   card: { gap: spacing.sm },
   catalogRow: {
@@ -1017,6 +1017,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   editorFields: { gap: spacing.sm },
+  disabledAction: { opacity: 0.28 },
   fieldsRow: { flexDirection: 'row', gap: spacing.xs },
   flex: { flex: 1 },
   heroAction: {
@@ -1034,7 +1035,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: minimumTouchTarget,
   },
-  multiline: { minHeight: 100, textAlignVertical: 'top' },
   pressed: { opacity: 0.72 },
   searchButton: {
     alignItems: 'center',
@@ -1052,11 +1052,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 28,
   },
+  soloActions: { alignItems: 'center', flexDirection: 'row' },
+  soloCandidate: {
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 52,
+    paddingVertical: spacing.xs,
+  },
+  soloCandidates: { gap: spacing.xxxs },
+  soloCopy: { flex: 1, minWidth: 0 },
+  soloEmpty: { paddingVertical: spacing.xs, textAlign: 'center' },
+  soloList: { gap: spacing.xs },
   soloRow: {
     alignItems: 'center',
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: 'row',
+    gap: spacing.xs,
     minHeight: minimumTouchTarget,
     paddingLeft: spacing.xs,
   },

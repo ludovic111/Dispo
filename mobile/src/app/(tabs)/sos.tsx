@@ -10,13 +10,19 @@ import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigCard } from '@/features/gigs/gig-card';
-import { openGigInstruments, triageHostedGigs, type GigSummary } from '@/features/gigs/gig-model';
+import {
+  gigsForScope,
+  openGigInstruments,
+  triageHostedGigs,
+  type GigSummary,
+  type SosFeedScope,
+} from '@/features/gigs/gig-model';
 import {
   countUnopenedCompatibleGigs,
   gigMatchesBadgeViewer,
   readOpenedGigIds,
 } from '@/features/gigs/gig-opened-store';
-import { loadSosShowAll, saveSosShowAll } from '@/features/gigs/gig-preferences';
+import { loadSosScope, saveSosScope } from '@/features/gigs/gig-preferences';
 import { useGigs } from '@/features/gigs/gig-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -81,17 +87,17 @@ export default function GigsScreen() {
   const query = useGigs();
   const profile = useProfile(userId, userId);
   const [segment, setSegment] = useState<Segment>('feed');
-  const [showAll, setShowAll] = useState(false);
+  const [scope, setScope] = useState<SosFeedScope>('matching');
   const [opened, setOpened] = useState<Set<string>>(new Set());
   useFocusEffect(
     useCallback(() => {
       let active = true;
       if (userId) {
-        void Promise.all([readOpenedGigIds(userId), loadSosShowAll(userId)]).then(
-          ([ids, savedShowAll]) => {
+        void Promise.all([readOpenedGigIds(userId), loadSosScope(userId)]).then(
+          ([ids, savedScope]) => {
             if (!active) return;
             setOpened(ids);
-            setShowAll(savedShowAll);
+            setScope(savedScope);
           },
         );
       }
@@ -101,10 +107,10 @@ export default function GigsScreen() {
     }, [userId]),
   );
 
-  const changeShowAll = useCallback(
-    (next: boolean) => {
-      setShowAll(next);
-      if (userId) void saveSosShowAll(userId, next);
+  const changeScope = useCallback(
+    (next: SosFeedScope) => {
+      setScope(next);
+      if (userId) void saveSosScope(userId, next);
     },
     [userId],
   );
@@ -130,11 +136,18 @@ export default function GigsScreen() {
         : publicFeed,
     [profile.data, publicFeed],
   );
-  const visible = showAll ? publicFeed : matching;
+  const viewerSchoolIds = useMemo(
+    () => profile.data?.schools.map((school) => school.id) ?? [],
+    [profile.data?.schools],
+  );
+  const visible = useMemo(
+    () => gigsForScope(publicFeed, matching, scope, viewerSchoolIds),
+    [matching, publicFeed, scope, viewerSchoolIds],
+  );
   const freshCount = profile.data
     ? countUnopenedCompatibleGigs(publicFeed, profile.data, opened)
     : 0;
-  const filteredOut = showAll ? 0 : publicFeed.length - matching.length;
+  const filteredOut = scope === 'matching' ? publicFeed.length - matching.length : 0;
 
   const add = (
     <Pressable
@@ -228,14 +241,20 @@ export default function GigsScreen() {
         {segment === 'feed' ? (
           <>
             <View style={styles.scopeRow}>
-              {[false, true].map((all) => {
-                const selected = showAll === all;
+              {(
+                [
+                  ['matching', t('Pour moi')],
+                  ['school', t('École')],
+                  ['all', t('Tout')],
+                ] as const
+              ).map(([value, label]) => {
+                const selected = scope === value;
                 return (
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
-                    key={String(all)}
-                    onPress={() => changeShowAll(all)}
+                    key={value}
+                    onPress={() => changeScope(value)}
                     style={({ pressed }) => [
                       styles.scope,
                       {
@@ -246,18 +265,22 @@ export default function GigsScreen() {
                     ]}
                   >
                     <AppText color={selected ? palette.electric : palette.muted} variant="caption">
-                      {all ? t('Tout') : t('Pour moi')}
+                      {label}
                     </AppText>
                   </Pressable>
                 );
               })}
-              <View style={styles.scopeSpacer} />
-              {filteredOut > 0 ? (
-                <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                  {formatSwiftPlaceholders(t('%lld autre·s dans « Tout »'), filteredOut)}
-                </AppText>
-              ) : null}
             </View>
+            {filteredOut > 0 ? (
+              <AppText
+                color={palette.muted}
+                numberOfLines={1}
+                style={styles.scopeHint}
+                variant="caption2"
+              >
+                {formatSwiftPlaceholders(t('%lld autre·s dans « Tout »'), filteredOut)}
+              </AppText>
+            ) : null}
 
             {mine.length > 0 ? (
               <Pressable
@@ -283,13 +306,23 @@ export default function GigsScreen() {
               <EmptyState
                 icon="flash-outline"
                 message={
-                  showAll
+                  scope === 'all'
                     ? t('Un musicien te lâche ? Publie ton SOS avec le bouton +.')
-                    : t(
-                        "Rien à ton instrument et à ton niveau pour l'instant. Passe sur « Tout » pour voir le reste.",
-                      )
+                    : scope === 'school'
+                      ? viewerSchoolIds.length > 0
+                        ? t('Les SOS publiés par les membres de ton école apparaîtront ici.')
+                        : t('Ajoute une école de musique à ton profil pour filtrer ta communauté.')
+                      : t(
+                          "Rien à ton instrument et à ton niveau pour l'instant. Passe sur « Tout » pour voir le reste.",
+                        )
                 }
-                title={showAll ? t('Aucun SOS en cours') : t('Aucun SOS pour toi')}
+                title={
+                  scope === 'all'
+                    ? t('Aucun SOS en cours')
+                    : scope === 'school'
+                      ? t('Aucun SOS de ton école')
+                      : t('Aucun SOS pour toi')
+                }
               />
             )}
           </>
@@ -348,13 +381,17 @@ const styles = StyleSheet.create({
   mineHintText: { flex: 1, fontWeight: '700' },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   scope: {
+    alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
+    flex: 1,
+    minHeight: 34,
+    justifyContent: 'center',
     paddingHorizontal: 13,
     paddingVertical: 7,
   },
-  scopeRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  scopeSpacer: { flex: 1 },
+  scopeRow: { alignItems: 'stretch', flexDirection: 'row', gap: spacing.xs },
+  scopeHint: { textAlign: 'right' },
   segment: {
     alignItems: 'center',
     borderColor: 'transparent',

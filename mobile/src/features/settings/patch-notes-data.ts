@@ -10,7 +10,7 @@ export const patchNotes: readonly PatchNote[] = [
     version: '2.4',
     title: 'Ton école, ta communauté, tes lieux protégés',
     points: [
-      'Ajoute AMR Genève, EPI Genève ou HEM Genève à ton profil avec ton rôle et sa visibilité',
+      'Ajoute AMR Genève, EPI Genève ou EMA Genève à ton profil avec ton rôle et sa visibilité',
       'Retrouve les membres de ton école et échange dans sa conversation réservée',
       "Les affiliations restent déclaratives tant que l'établissement ne les a pas vérifiées",
       "L'adresse exacte d'un SOS n'apparaît qu'à l'organisateur et aux musiciens acceptés",

@@ -50,6 +50,10 @@ type ApplicationProjection = Pick<
 >;
 type PendingApplicationProjection = Pick<ApplicationRow, 'gig_id'>;
 type ApplicantProfileProjection = Pick<ProfileRow, 'id' | 'name' | 'photo_url'>;
+type VisibleSchoolProjection = Pick<
+  Database['public']['Tables']['music_school_memberships']['Row'],
+  'profile_id' | 'school_id'
+>;
 type MatchProfileProjection = Pick<
   ProfileRow,
   'available_dates' | 'genres' | 'id' | 'instruments' | 'is_demo' | 'level' | 'name' | 'photo_url'
@@ -98,12 +102,36 @@ async function profileMap(
   );
 }
 
+async function visibleSchoolIdsByProfile(
+  profileIds: string[],
+  signal?: AbortSignal,
+): Promise<Map<string, string[]>> {
+  const uniqueIds = [...new Set(profileIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return new Map();
+  const query = getSupabaseClient()
+    .from('music_school_memberships')
+    .select('profile_id,school_id')
+    .in('profile_id', uniqueIds)
+    .eq('status', 'active')
+    .is('left_at', null);
+  const result = await (signal ? query.abortSignal(signal) : query);
+  if (result.error) throw result.error;
+  const schoolsByProfile = new Map<string, string[]>();
+  for (const membership of result.data as VisibleSchoolProjection[]) {
+    const schools = schoolsByProfile.get(membership.profile_id) ?? [];
+    if (!schools.includes(membership.school_id)) schools.push(membership.school_id);
+    schoolsByProfile.set(membership.profile_id, schools);
+  }
+  return schoolsByProfile;
+}
+
 async function mapGigs(rows: GigProjection[], signal?: AbortSignal): Promise<GigSummary[]> {
   const validRows = rows.filter(validGig);
-  const profiles = await profileMap(
-    validRows.map((row) => row.host_id),
-    signal,
-  );
+  const hostIds = validRows.map((row) => row.host_id);
+  const [profiles, schoolsByProfile] = await Promise.all([
+    profileMap(hostIds, signal),
+    visibleSchoolIdsByProfile(hostIds, signal),
+  ]);
   return validRows.map((row) => {
     const host = profiles.get(row.host_id);
     return {
@@ -117,6 +145,7 @@ async function mapGigs(rows: GigProjection[], signal?: AbortSignal): Promise<Gig
       hostId: row.host_id,
       hostName: host?.name ?? '',
       hostPhotoUrl: host?.photo_url ?? null,
+      hostSchoolIds: schoolsByProfile.get(row.host_id) ?? [],
       id: row.id,
       isFresh: row.posted_at
         ? Date.now() - new Date(row.posted_at).getTime() < 48 * 60 * 60 * 1000

@@ -35,11 +35,12 @@ export const radii = {
 } as const;
 
 export const typography = {
+  /** System sans for body copy and controls; Fraunces only for editorial titles, Spline only for labels/data. */
+  body: Platform.select({ android: 'sans-serif', default: 'sans-serif', ios: 'System' }),
   display: 'FrauncesDisplay',
   displayItalic: 'FrauncesDisplayItalic',
   mono: 'SplineSansMonoMedium',
   monoSemibold: 'SplineSansMonoSemibold',
-  body: undefined,
 } as const;
 
 export interface DispoPalette {

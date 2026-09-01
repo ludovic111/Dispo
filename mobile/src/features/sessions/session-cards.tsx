@@ -24,6 +24,7 @@ import {
   minimumTouchTarget,
   radii,
   spacing,
+  typography,
   type DispoPalette,
 } from '@/theme/tokens';
 
@@ -589,10 +590,10 @@ const styles = StyleSheet.create({
   metric: { alignItems: 'center', borderRadius: 11, flex: 1, paddingVertical: spacing.xs },
   metricLabel: { fontSize: 10, fontWeight: '700' },
   metrics: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
-  metricValue: { fontFamily: 'FrauncesDisplay', fontSize: 22, lineHeight: 26 },
+  metricValue: { fontFamily: typography.display, fontSize: 22, lineHeight: 26 },
   nextContent: { flex: 1, gap: 4 },
   nextCountdown: { fontSize: 12, fontWeight: '900' },
-  nextTitle: { fontFamily: 'FrauncesDisplay', fontSize: 21, lineHeight: 25 },
+  nextTitle: { fontFamily: typography.display, fontSize: 21, lineHeight: 25 },
   nextTop: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   pastCard: { opacity: 0.75 },
   pressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
@@ -625,9 +626,9 @@ const styles = StyleSheet.create({
     minHeight: 58,
     width: 48,
   },
-  ticketDay: { fontFamily: 'FrauncesDisplay', fontSize: 21, lineHeight: 23 },
+  ticketDay: { fontFamily: typography.display, fontSize: 21, lineHeight: 23 },
   ticketDayLarge: { fontSize: 30, lineHeight: 33 },
   ticketLarge: { borderRadius: 14, minHeight: 72, width: 62 },
-  ticketMonth: { fontFamily: 'SplineSansMonoSemibold', fontSize: 9, letterSpacing: 0.7 },
+  ticketMonth: { fontFamily: typography.monoSemibold, fontSize: 9, letterSpacing: 0.7 },
   trailing: { alignItems: 'flex-end', gap: 4, paddingHorizontal: spacing.sm },
 });

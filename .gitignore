@@ -1,45 +1,22 @@
-# Xcode
-build/
-DerivedData/
-*.xcuserstate
-*.xcscmblueprint
-xcuserdata/
-
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 
-# Swift Package Manager
-.build/
-.swiftpm/
-Package.resolved
-
-# CocoaPods
-Pods/
-
-# Carthage
-Carthage/Build/
-
-# Fastlane
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots/**/*.png
-fastlane/test_output
-
-# Code injection
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# Secrets (never commit)
+# Secrets and local environment
 .env
 .env.*
+!.env.example
 *.p12
 *.mobileprovision
 
-# Supabase
-Dispo/Secrets.plist
+# Generated archives and symbols
+*.ipa
+*.apk
+*.aab
+*.dSYM
+*.dSYM.zip
+
+# Supabase CLI state
 supabase/.temp/
 supabase/.branches/

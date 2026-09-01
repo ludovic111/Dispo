@@ -35,7 +35,7 @@ export function AppText({ color, style, variant = 'body', ...props }: AppTextPro
 }
 
 const styles = StyleSheet.create({
-  base: { fontSize: 16 },
+  base: { fontFamily: typography.body, fontSize: 16 },
   body: { fontSize: 17, lineHeight: 23 },
   callout: { fontSize: 16, lineHeight: 21 },
   caption: { fontSize: 12, lineHeight: 16 },

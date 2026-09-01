@@ -1,10 +1,16 @@
-# Migration de Dispo vers Expo / React Native
+# Dispo Expo / React Native — état courant et historique de migration
 
 Dernière mise à jour documentaire : 1er septembre 2026.
 
-Ce fichier est le contrat de migration de l’application iOS SwiftUI et de
-l’application Android Kotlin vers une application Expo commune. Il décrit ce
-qui existe dans mobile/, ce qui reste à porter et les preuves attendues.
+Ce fichier conserve le contrat historique de migration et les preuves du
+client commun. Depuis la décision explicite de Ludovic du 1er septembre 2026,
+`mobile/` est l’unique client canonique pour iOS et Android. Les sources SwiftUI
+et Kotlin ont été retirées du workspace ; toute mention contraire plus bas est
+une photographie historique désormais supersédée.
+
+La validation de Ludovic autorise la bascule produit et le nettoyage des
+anciens clients. Elle ne remplace pas les preuves techniques propres à chaque
+parcours, intégration native, appareil physique ou livraison Store.
 
 La section suivante est la source de vérité au 1er septembre 2026. Les matrices
 plus bas conservent la photographie détaillée du socle du 30 août et la cible
@@ -57,8 +63,11 @@ appareil.
   setlist avec suggestion, validation et réorganisation. Toutes les routes
   Groupes sans barre Stack possèdent désormais un Retour ou Fermer visible de
   44 points dans leurs états chargement, erreur, vide et succès. Les
-  répertoires et setlists partagent maintenant la ligne Swift de 68 points, sa
-  pochette de 46 points, ses métadonnées compactes et son bouton d’écoute. La feuille
+  répertoires et setlists partagent maintenant une tuile de 84 points minimum,
+  sa pochette de 56 points, une hiérarchie titre/artiste/métadonnées, une flèche
+  d’ouverture, un bouton d’écoute séparé et une poignée de réorganisation. Le
+  geste caché de copie a été supprimé : la copie reste une action nommée dans la
+  fiche morceau. La feuille
   d’écoute affiche d’abord uniquement les liens directs de morceau dont l’hôte
   officiel et la forme d’URL ont été vérifiés. Les services sans lien exact sont
   rangés dans une action secondaire explicite « Rechercher sur un autre
@@ -78,6 +87,17 @@ appareil.
   les onglets, la saisie, les sélecteurs de date et l’accessibilité privilégient
   les conventions natives ; les surfaces métier restent dessinées sur mesure
   lorsqu’elles rendent l’action plus évidente et la marque plus reconnaissable.
+  Le système typographique actif est volontairement limité à trois rôles :
+  police système pour lecture et contrôles, Fraunces pour les titres éditoriaux,
+  Spline Sans Mono pour libellés courts et données.
+- Navigation et morceau : chaque modal possède une sortie système et une sortie
+  visible ; les états chargement/erreur de l’affiliation école et l’écran
+  Nouveautés ne peuvent plus enfermer l’utilisateur. La fiche morceau ne rend
+  plus la grille d’accords, affiche uniquement l’action d’ouverture iReal Pro et
+  présente les solos comme une liste numérotée ordonnable avec avatars.
+- SOS : le feed propose trois portées explicites — Pour moi, École et Tout — et
+  la portée École compare les affiliations visibles du musicien hôte à celles
+  du profil connecté.
 
 Ces surfaces sont implémentées structurellement et couvertes par des tests
 ciblés ; elles ne sont pas déclarées « pixel perfect » ni validées de bout en
@@ -86,9 +106,12 @@ bout avec des comptes authentifiés.
 ### Validations réellement observées
 
 - `npm run format:check` : réussi sur l’état courant.
-- `npm run validate` : réussi d’un seul tenant le 1er septembre après le gel de
-  parité, avec TypeScript, ESLint sans avertissement et 46 suites / 286 tests
-  Jest réussis.
+- `npm run validate` : réussi d’un seul tenant le 1er septembre après le lot
+  navigation/répertoire/SOS, avec TypeScript, ESLint sans avertissement et 48
+  suites / 293 tests Jest réussis.
+- Les nouvelles suites verrouillent les trois portées SOS, la sortie de chaque
+  modal, les sorties visibles des écrans auparavant bloquants, la tuile morceau,
+  l’absence de grille d’accords et la liste ordonnée des solos.
 - Les tests ciblés couvrent aussi la politique de barre de navigation, les
   marges sûres des écrans à titre natif, la sérialisation rétrocompatible, la
   déduplication, la copie, iReal Pro, la fusion catalogue canonique/Apple et la
@@ -153,6 +176,20 @@ bout avec des comptes authentifiés.
   `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et `APP_STORE_ELIGIBLE` pour la
   livraison `dd4eb42b-4adb-4fa4-b062-09afb32bc255`. Aucune soumission App
   Review n’a été effectuée.
+- Le lot UX du 1er septembre a de nouveau passé Expo Doctor 21/21, un prebuild
+  production CNG propre, l’installation des 128 pods, un build Release iOS
+  simulateur avec bundle embarqué et `:app:assembleRelease` Android sous JDK 17. L’application Release a été installée et lancée sur l’iPhone 17 Pro
+  simulé ; sans session ni compte de test injecté, l’observation s’arrête
+  honnêtement à l’écran de connexion et ne prouve pas encore les tuiles sur des
+  données authentifiées.
+- La migration `20260901082014_rename_hem_to_ema.sql` a conservé l’identifiant
+  de l’école et ses relations, puis a été appliquée en production. Les
+  historiques local et distant sont alignés ; la ligne active expose désormais
+  `ema-geneve`, `École des Musiques Actuelles`, `EMA` et `https://ema.school`.
+- Après validation explicite de Ludovic, les sources SwiftUI suivies et la copie
+  locale Kotlin ont été retirées du workspace. Le dépôt Android distant et les
+  historiques Git sont conservés ; les derniers reliquats locaux iOS et Android
+  ont été déplacés dans la Corbeille et restent récupérables.
 
 ### État Pixel et iOS
 
@@ -162,7 +199,7 @@ bout avec des comptes authentifiés.
 | Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; application Release 2.4 (39) compilée sous JDK 17. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset.                            | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
 | Expo iOS simulateur          | Build Release 2.4 (39) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; l’authentification sombre bleu jazz ne présente pas de chevauchement. Les routes signalées avaient déjà été contrôlées sans slug ni double titre. | Aucun parcours authentifié, thème clair, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                |
 | iPhone physique / TestFlight | Le build Expo 2.4 (39) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
-| Référence SwiftUI            | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                                                                          | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                                            |
+| Anciens clients natifs       | Sources SwiftUI et copie locale Kotlin retirées après validation explicite du client commun. L’historique Git et les dépôts distants permettent un audit ou une restauration.                                                          | Leur suppression n’ajoute aucune preuve aux intégrations Expo sur appareil physique.                                                                                   |
 
 ### Limites et gates restants
 
@@ -174,8 +211,7 @@ bout avec des comptes authentifiés.
   production comme fixtures automatisées.
 - Refaire les contrôles sur Pixel et iPhone physiques après gel du JavaScript,
   puis parcourir les écrans en clair/sombre, dans les langues cibles et avec
-  les principaux états ; comparer aux références SwiftUI et Kotlin sur des
-  données identiques.
+  les principaux états sur des données identiques.
 - Valider sur development builds les intégrations natives : Apple/Google,
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
@@ -194,14 +230,12 @@ bout avec des comptes authentifiés.
 
 ## 1. Références et règles
 
-Références produit :
+Références produit actives :
 
-- iOS : Dispo 2.4 build 35, SwiftUI, branche main, commit de référence
-  02480bf au début de l’audit.
-- Android : application native Kotlin / Jetpack Compose existante, à conserver
-  comme référence jusqu’à ce que la parité Expo soit démontrée.
+- iOS et Android : client commun `mobile/`, Expo SDK 57, React Native 0.86,
+  TypeScript strict. Les anciens clients ne sont consultables que dans
+  l’historique de migration et Git.
 - Backend partagé : projet Supabase cghmmpcwqzpjwgnbiuuw.
-- Nouvelle cible : mobile/, Expo SDK 57, React Native 0.86, TypeScript strict.
 - Identité applicative : ch.dispo.app sur iOS et Android, schéma dispo.
 
 Règles non négociables :
@@ -945,7 +979,8 @@ Gate :
 - tests, builds, lancement et smoke tests réels sur les deux plateformes ;
 - entitlements/extracted artifacts vérifiés ;
 - backend et production inchangés sauf changements explicitement approuvés ;
-- Android Kotlin et iOS SwiftUI conservés jusqu’à décision de bascule ;
+- [historique supersédé] Android Kotlin et iOS SwiftUI devaient être conservés
+  jusqu’à la décision de bascule, désormais prise le 1er septembre 2026 ;
 - aucune App Review ou publication implicite.
 
 ## 12. Risques prioritaires
@@ -978,5 +1013,5 @@ Après chaque lot :
 3. consigner les commandes et sorties réellement observées ;
 4. mettre à jour AGENTS.md en append-only ;
 5. ne jamais masquer un blocage d’outillage ou d’accès administrateur ;
-6. conserver les apps natives et le backend comme références jusqu’au gate
-   final de Phase 4.
+6. conserver le backend Supabase unique et vérifier les deux plateformes à
+   partir de `mobile/` ; les anciens clients ne font plus partie du workspace.

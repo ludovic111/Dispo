@@ -20,7 +20,14 @@ import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, gradients, radii, spacing, type DispoPalette } from '@/theme/tokens';
+import {
+  billetInk,
+  gradients,
+  radii,
+  spacing,
+  typography,
+  type DispoPalette,
+} from '@/theme/tokens';
 
 function colorFor(kind: GroupEvent['kind'], palette: DispoPalette) {
   if (kind === 'Concert') return palette.concert;
@@ -240,7 +247,7 @@ const styles = StyleSheet.create({
     minHeight: 104,
     width: 68,
   },
-  ticketDay: { fontFamily: 'FrauncesDisplay', fontSize: 26, lineHeight: 28 },
-  ticketMonth: { fontFamily: 'SplineSansMonoSemibold', fontSize: 10, letterSpacing: 0.7 },
+  ticketDay: { fontFamily: typography.display, fontSize: 26, lineHeight: 28 },
+  ticketMonth: { fontFamily: typography.monoSemibold, fontSize: 10, letterSpacing: 0.7 },
   titleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
 });

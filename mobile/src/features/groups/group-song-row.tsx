@@ -336,18 +336,14 @@ function SongRowSurface({
 }
 
 export function GroupSongRow({
-  accessibilityHint,
   cardStyle,
   embedded = false,
-  onLongPress,
   onPress,
   song,
   trailing,
 }: {
-  accessibilityHint?: string;
   cardStyle?: ViewStyle;
   embedded?: boolean;
-  onLongPress?: () => void;
   onPress?: () => void;
   song: GroupSong;
   trailing?: ReactNode;
@@ -361,24 +357,22 @@ export function GroupSongRow({
     song.tempoBpm ? `${song.tempoBpm} BPM` : null,
     song.form?.trim(),
   ].filter((value): value is string => Boolean(value));
-  const interactive = Boolean(onPress || onLongPress);
   return (
     <>
       <SongRowSurface {...(cardStyle ? { cardStyle } : {})} embedded={embedded}>
         <View style={styles.songRow}>
           <Pressable
-            accessibilityHint={accessibilityHint ?? (onPress ? t('Ouvrir') : undefined)}
+            accessibilityHint={onPress ? t('Ouvrir') : undefined}
             accessibilityLabel={`${onPress ? `${t('Ouvrir')} ` : ''}${song.title}`}
-            accessibilityRole={interactive ? 'button' : undefined}
-            disabled={!interactive}
-            onLongPress={onLongPress}
+            accessibilityRole={onPress ? 'button' : undefined}
+            disabled={!onPress}
             onPress={onPress}
             style={({ pressed }) => [
               styles.identity,
               pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
             ]}
           >
-            <SongArtwork artworkUrl={song.artworkUrl} radius={9} size={46} />
+            <SongArtwork artworkUrl={song.artworkUrl} radius={12} size={56} />
             <View style={styles.songCopy}>
               <AppText
                 adjustsFontSizeToFit
@@ -389,23 +383,34 @@ export function GroupSongRow({
               >
                 {song.title}
               </AppText>
-              <View style={styles.metadataRow}>
-                <Ionicons color={palette.bronze} name="speedometer-outline" size={10} />
+              {song.artist ? (
                 <AppText
                   adjustsFontSizeToFit
-                  color={palette.bronze}
-                  minimumFontScale={0.78}
+                  color={palette.muted}
+                  minimumFontScale={0.8}
                   numberOfLines={1}
-                  style={styles.metadata}
-                  variant="caption2"
+                  style={styles.artist}
+                  variant="caption"
                 >
-                  {metadata.length ? metadata.join(' · ') : '—'}
+                  {song.artist}
                 </AppText>
-              </View>
+              ) : null}
+              {metadata.length ? (
+                <View style={styles.metadataRow}>
+                  {metadata.map((value) => (
+                    <View
+                      key={value}
+                      style={[styles.metadataPill, { backgroundColor: palette.inset }]}
+                    >
+                      <AppText color={palette.bronze} style={styles.metadata} variant="caption2">
+                        {value}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
-            {onPress ? (
-              <Ionicons color={palette.muted} name="ellipsis-horizontal" size={14} />
-            ) : null}
+            {onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={16} /> : null}
           </Pressable>
           <Pressable
             accessibilityLabel={t('Écouter ce morceau')}
@@ -435,7 +440,8 @@ export function GroupSongRow({
 const styles = StyleSheet.create({
   amazonSmile: { bottom: 4, position: 'absolute' },
   artworkFallback: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  cardSurface: { height: 68 },
+  artist: { fontWeight: '600' },
+  cardSurface: { minHeight: 84 },
   closeButton: {
     alignItems: 'center',
     borderRadius: 16,
@@ -456,7 +462,7 @@ const styles = StyleSheet.create({
   destinationLabel: { flex: 1, fontWeight: '700' },
   destinationStack: { gap: spacing.xs },
   emptyDestinations: { paddingVertical: spacing.sm, textAlign: 'center' },
-  embeddedSurface: { height: 68, justifyContent: 'center', paddingHorizontal: 10 },
+  embeddedSurface: { justifyContent: 'center', minHeight: 84, paddingHorizontal: 10 },
   flex: { flex: 1 },
   identity: {
     alignItems: 'center',
@@ -478,8 +484,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  metadata: { flexShrink: 1, fontWeight: '700' },
-  metadataRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.compact, minWidth: 0 },
+  metadata: { fontWeight: '700' },
+  metadataPill: {
+    borderRadius: radii.chip,
+    maxWidth: '46%',
+    paddingHorizontal: spacing.tight,
+    paddingVertical: 2,
+  },
+  metadataRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.compact,
+    minWidth: 0,
+  },
   navigationSpacer: { width: 32 },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   pressedReduced: { opacity: 0.96 },
@@ -529,7 +547,7 @@ const styles = StyleSheet.create({
   sheetSong: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   sheetSongTitle: { fontWeight: '800' },
   sheetTitle: { flex: 1, fontWeight: '800', textAlign: 'center' },
-  songCopy: { flex: 1, gap: spacing.xxxs, minWidth: 0 },
+  songCopy: { flex: 1, gap: 2, minWidth: 0 },
   songRow: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.xs },
   songTitle: { fontWeight: '700' },
 });

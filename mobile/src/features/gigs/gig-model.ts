@@ -35,6 +35,7 @@ export interface GigSummary {
   hostId: string;
   hostName: string;
   hostPhotoUrl: string | null;
+  hostSchoolIds?: string[];
   id: string;
   isFresh?: boolean;
   isLocked: boolean;
@@ -48,6 +49,21 @@ export interface GigSummary {
   title: string;
   wantedInstruments: string[];
   wantedLevels: string[];
+}
+
+export type SosFeedScope = 'matching' | 'school' | 'all';
+
+export function gigsForScope(
+  gigs: readonly GigSummary[],
+  matchingGigs: readonly GigSummary[],
+  scope: SosFeedScope,
+  viewerSchoolIds: readonly string[],
+): GigSummary[] {
+  if (scope === 'matching') return [...matchingGigs];
+  if (scope === 'all') return [...gigs];
+  const schools = new Set(viewerSchoolIds);
+  if (schools.size === 0) return [];
+  return gigs.filter((gig) => gig.hostSchoolIds?.some((schoolId) => schools.has(schoolId)));
 }
 
 export interface GigDetail extends GigSummary {

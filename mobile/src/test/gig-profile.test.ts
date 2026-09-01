@@ -109,7 +109,7 @@ describe('logo d’école', () => {
     });
     expect(
       schoolLogoPresentation(
-        school({ logoUrl: null, name: 'Haute école de musique', shortName: null, slug: 'hem' }),
+        school({ logoUrl: null, name: 'Haute école de musique', shortName: null, slug: 'ema' }),
       ),
     ).toEqual({ initials: 'HÉD', kind: 'fallback' });
     expect(

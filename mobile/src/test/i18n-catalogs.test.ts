@@ -26,15 +26,6 @@ type VisibleLiteralUse = TranslationUse & {
   kind: 'Alert' | 'JSX' | 'prop';
 };
 
-type SwiftCatalog = {
-  strings: Record<
-    string,
-    {
-      localizations?: Record<string, { stringUnit?: { value?: string } }>;
-    }
-  >;
-};
-
 function sourceFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = path.join(directory, entry.name);
@@ -263,21 +254,6 @@ describe('i18n catalogs', () => {
         },
       ];
     });
-
-    expect(differences).toEqual([]);
-  });
-
-  it('preserves every exact translation imported from the Swift catalog', () => {
-    const swiftCatalogPath = path.resolve(process.cwd(), '..', 'Dispo', 'Localizable.xcstrings');
-    const swiftCatalog = JSON.parse(fs.readFileSync(swiftCatalogPath, 'utf8')) as SwiftCatalog;
-    const differences = Object.entries(swiftCatalog.strings).flatMap(([key, entry]) =>
-      Object.entries(catalogs).flatMap(([locale, catalog]) => {
-        const expected =
-          locale === 'fr' ? key : (entry.localizations?.[locale]?.stringUnit?.value ?? key);
-        const actual = (catalog as Record<string, string>)[key];
-        return actual === expected ? [] : [{ actual, expected, key, locale }];
-      }),
-    );
 
     expect(differences).toEqual([]);
   });

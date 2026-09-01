@@ -13,6 +13,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -36,7 +37,10 @@ export function WhatsNewScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title={t('Nouveautés')} />
+        <ScreenHeader
+          action={<HeaderAction icon="close" label={t('Fermer')} onPress={close} />}
+          title={t('Nouveautés')}
+        />
         <View
           style={[
             styles.banner,

@@ -266,11 +266,6 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
     return Number(rightMatch) - Number(leftMatch) || left.name.localeCompare(right.name, locale);
   });
 
-  const openSongCopy = (song: GroupSong) =>
-    router.push({
-      params: { id: group.id, songId: song.id, sourceEventId: event.id },
-      pathname: '/groups/[id]/songs/[songId]/copy',
-    } as never);
   const openSong = (song: GroupSong) =>
     router.push({
       params: { id: group.id, songId: song.id, sourceEventId: event.id },
@@ -355,9 +350,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
       </AppText>
       <View style={styles.flex}>
         <GroupSongRow
-          accessibilityHint={t('Un appui long permet de copier le morceau')}
           {...(isActive ? { cardStyle: { borderColor: palette.electric } } : {})}
-          onLongPress={() => openSongCopy(song)}
           onPress={() => openSong(song)}
           song={song}
           trailing={
@@ -719,7 +712,6 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               <GroupSongRow
                 cardStyle={{ borderColor: `${palette.signal}55` }}
                 key={song.id}
-                onLongPress={() => openSongCopy(song)}
                 onPress={() => openSong(song)}
                 song={song}
                 trailing={

@@ -120,7 +120,7 @@ select public.join_music_school(
   'student', 'school_only', null
 );
 select public.join_music_school(
-  (select id from public.music_schools where slug = 'hem-geneve'),
+  (select id from public.music_schools where slug = 'ema-geneve'),
   'student', 'profile', null
 );
 
@@ -178,9 +178,9 @@ begin
   if not exists (
     select 1 from public.visible_profile_music_schools()
     where profile_id = '00000000-0000-4000-8000-0000000000a1'
-      and slug = 'hem-geneve'
+      and slug = 'ema-geneve'
   ) then
-    raise exception 'C must see A profile-visible HEM affiliation';
+    raise exception 'C must see A profile-visible EMA affiliation';
   end if;
 end;
 $$;

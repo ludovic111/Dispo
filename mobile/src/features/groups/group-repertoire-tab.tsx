@@ -61,9 +61,7 @@ function SongCard({
   };
   return (
     <GroupSongRow
-      accessibilityHint={t('Un appui long permet de copier le morceau')}
       {...(isActive ? { cardStyle: { borderColor: palette.bronze } } : {})}
-      onLongPress={() => router.push(`/groups/${group.id}/songs/${song.id}/copy` as never)}
       onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
       song={song}
       trailing={

@@ -4,7 +4,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { radii, spacing, typography } from '@/theme/tokens';
 
 interface FormFieldProps extends ComponentProps<typeof TextInput> {
   error?: string | undefined;
@@ -45,6 +45,7 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: radii.button,
     borderWidth: 1,
+    fontFamily: typography.body,
     fontSize: 16,
     minHeight: 48,
     paddingHorizontal: spacing.md,

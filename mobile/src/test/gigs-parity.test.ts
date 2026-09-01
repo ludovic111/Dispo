@@ -6,6 +6,7 @@ import {
   combineGigDate,
   createGigWritePlan,
   directResponseParams,
+  gigsForScope,
   gigViewerAction,
   matchProfilesToGig,
   resolveGigLocation,
@@ -203,6 +204,31 @@ describe('formulaire SOS structuré et confidentialité', () => {
         postal_code: '1201',
       }),
     ).toMatchObject({ exactAddress: 'Rue 1', state: 'available' });
+  });
+});
+
+describe('filtre SOS école de musique', () => {
+  const matching = gig({ hostSchoolIds: ['school-amr'], id: 'matching' });
+  const schoolOnly = gig({ hostSchoolIds: ['school-ema'], id: 'school' });
+  const outside = gig({ hostSchoolIds: ['school-other'], id: 'outside' });
+  const gigs = [matching, schoolOnly, outside];
+
+  it('garde les trois portées indépendantes et respecte les affiliations visibles', () => {
+    expect(
+      gigsForScope(gigs, [matching], 'matching', ['school-ema']).map((item) => item.id),
+    ).toEqual(['matching']);
+    expect(gigsForScope(gigs, [matching], 'school', ['school-ema']).map((item) => item.id)).toEqual(
+      ['school'],
+    );
+    expect(gigsForScope(gigs, [matching], 'all', ['school-ema']).map((item) => item.id)).toEqual([
+      'matching',
+      'school',
+      'outside',
+    ]);
+  });
+
+  it("renvoie une liste vide tant que l'utilisateur n'a pas d'école", () => {
+    expect(gigsForScope(gigs, [matching], 'school', [])).toEqual([]);
   });
 });
 

@@ -121,7 +121,7 @@ export function SchoolDirectoryScreen() {
                 autoCapitalize="words"
                 autoCorrect={false}
                 onChangeText={setQuery}
-                placeholder={t('AMR, EPI, HEM…')}
+                placeholder={t('AMR, EPI, EMA…')}
                 placeholderTextColor={palette.muted}
                 returnKeyType="search"
                 selectionColor={palette.electric}

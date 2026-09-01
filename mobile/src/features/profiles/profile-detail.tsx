@@ -34,7 +34,7 @@ import { SchoolAffiliationChip } from '@/features/schools/school-components';
 import { useMySchoolAffiliations } from '@/features/schools/school-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { radii, spacing, typography } from '@/theme/tokens';
 
 const socialIcons: Record<ProfileSocialNetwork, React.ComponentProps<typeof Ionicons>['name']> = {
   instagram: 'logo-instagram',
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   starPressed: { transform: [{ scale: 0.85 }] },
   stars: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   stat: { alignItems: 'center', flex: 1, gap: 2, justifyContent: 'center' },
-  statValue: { fontFamily: 'SplineSansMonoSemibold', fontSize: 17, textAlign: 'center' },
+  statValue: { fontFamily: typography.monoSemibold, fontSize: 17, textAlign: 'center' },
   tags: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tripCopy: { flex: 1, gap: spacing.xxxs },
   tripRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },

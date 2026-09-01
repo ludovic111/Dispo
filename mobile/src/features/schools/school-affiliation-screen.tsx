@@ -22,6 +22,7 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -37,6 +38,11 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   const [errorText, setErrorText] = useState<string | null>(null);
   const didPrefill = useRef(false);
   const affiliation = mine.data?.find((item) => item.school.id === schoolId) ?? null;
+  const close = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/schools' as never);
+  };
+  const closeAction = <HeaderAction icon="close" label={t('Fermer')} onPress={close} />;
 
   useEffect(() => {
     if (!affiliation || didPrefill.current) return;
@@ -49,6 +55,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   if (schoolQuery.isLoading || mine.isLoading) {
     return (
       <Screen>
+        <View style={styles.stateHeader}>{closeAction}</View>
         <LoadingState label={t('Chargement de l’affiliation…')} />
       </Screen>
     );
@@ -57,6 +64,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   if (loadError) {
     return (
       <Screen>
+        <View style={styles.stateHeader}>{closeAction}</View>
         <ErrorState
           message={loadError.message}
           onRetry={() => void Promise.all([schoolQuery.refetch(), mine.refetch()])}
@@ -68,6 +76,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   if (!school) {
     return (
       <Screen>
+        <View style={styles.stateHeader}>{closeAction}</View>
         <ErrorState message={t('École introuvable.')} />
       </Screen>
     );
@@ -94,11 +103,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   return (
     <Screen>
       <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          style={styles.headerSide}
-        >
+        <Pressable accessibilityRole="button" onPress={close} style={styles.headerSide}>
           <AppText color={palette.electric}>{t('Annuler')}</AppText>
         </Pressable>
         <AppText numberOfLines={1} style={styles.headerTitle}>
@@ -284,5 +289,6 @@ const styles = StyleSheet.create({
   schoolName: { fontWeight: '700' },
   schoolRow: { alignItems: 'center', flexDirection: 'row', gap: 13 },
   section: { gap: spacing.sm },
+  stateHeader: { alignItems: 'flex-end', paddingHorizontal: spacing.gutter },
   visibilityChoices: { gap: spacing.xs },
 });

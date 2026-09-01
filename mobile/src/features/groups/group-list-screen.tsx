@@ -27,7 +27,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { formatRelativeTime } from '@/i18n/relative-time';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { spacing, typography } from '@/theme/tokens';
 
 function relativeDate(value: string, locale: string): string {
   const date = new Date(value);
@@ -267,5 +267,5 @@ const styles = StyleSheet.create({
     minWidth: 22,
     paddingHorizontal: 5,
   },
-  unreadText: { fontFamily: 'SplineSansMonoSemibold', fontSize: 10, lineHeight: 22 },
+  unreadText: { fontFamily: typography.monoSemibold, fontSize: 10, lineHeight: 22 },
 });

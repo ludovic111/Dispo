@@ -6,7 +6,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, gradients, minimumTouchTarget, radii, spacing } from '@/theme/tokens';
+import {
+  billetInk,
+  gradients,
+  minimumTouchTarget,
+  radii,
+  spacing,
+  typography,
+} from '@/theme/tokens';
 
 export function SectionHeader({ subtitle, title }: { subtitle?: string; title: string }) {
   const { palette } = useDispoTheme();
@@ -155,7 +162,7 @@ export function HeaderAction({
 
 const styles = StyleSheet.create({
   badge: { borderRadius: radii.round, paddingHorizontal: 6, paddingVertical: 2 },
-  badgeText: { fontFamily: 'SplineSansMonoSemibold', fontSize: 11 },
+  badgeText: { fontFamily: typography.monoSemibold, fontSize: 11 },
   disabled: { opacity: 0.45 },
   headerAction: {
     alignItems: 'center',

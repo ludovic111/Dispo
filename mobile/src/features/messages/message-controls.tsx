@@ -161,7 +161,19 @@ export function MessageActionsModal({
           style={[styles.sheet, { backgroundColor: palette.card, borderColor: palette.border }]}
         >
           <View style={[styles.grabber, { backgroundColor: palette.border }]} />
-          <AppText variant="title">{t('Réagir')}</AppText>
+          <View style={styles.sheetHeader}>
+            <AppText style={styles.sheetHeaderTitle} variant="title">
+              {t('Réagir')}
+            </AppText>
+            <Pressable
+              accessibilityLabel={t('Fermer')}
+              accessibilityRole="button"
+              onPress={onClose}
+              style={[styles.closeButton, { backgroundColor: palette.inset }]}
+            >
+              <Ionicons color={palette.text} name="close" size={19} />
+            </Pressable>
+          </View>
           <View style={styles.reactionChoices}>
             {MESSAGE_REACTION_CHOICES.map((emoji) => (
               <Pressable
@@ -297,6 +309,13 @@ const styles = StyleSheet.create({
     top: 0,
   },
   counter: { textAlign: 'right' },
+  closeButton: {
+    alignItems: 'center',
+    borderRadius: radii.round,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
   dayLabel: { fontWeight: '600' },
   dayLine: { flex: 1, height: 1 },
   dayPill: { borderRadius: radii.round, paddingHorizontal: 10, paddingVertical: 5 },
@@ -366,6 +385,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
+  sheetHeader: { alignItems: 'center', flexDirection: 'row' },
+  sheetHeaderTitle: { flex: 1 },
   typingBubble: {
     alignItems: 'center',
     borderRadius: 20,

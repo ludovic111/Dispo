@@ -28,15 +28,15 @@ const amr: MusicSchool = {
   websiteUrl: 'https://www.amr-geneve.ch/',
 };
 
-const hem: MusicSchool = {
+const ema: MusicSchool = {
   city: 'Genève',
   countryCode: 'CH',
-  id: 'hem',
+  id: 'ema',
   isVerified: true,
-  logoUrl: 'https://example.test/hem.png',
-  name: 'Haute école de musique de Genève',
-  shortName: 'HEM',
-  slug: 'hem-geneve',
+  logoUrl: 'https://example.test/ema.png',
+  name: 'École des Musiques Actuelles',
+  shortName: 'EMA',
+  slug: 'ema-geneve',
   websiteUrl: null,
 };
 
@@ -54,14 +54,14 @@ const epi: MusicSchool = {
 
 describe('annuaire des écoles', () => {
   it('recherche par nom, nom court ou ville sans dépendre des accents', () => {
-    expect(filterSchools([amr, hem, epi], 'ecole').map((school) => school.id)).toEqual(['hem']);
-    expect(filterSchools([amr, hem, epi], 'hem').map((school) => school.id)).toEqual(['hem']);
-    expect(filterSchools([amr, hem, epi], 'carouge').map((school) => school.id)).toEqual(['epi']);
+    expect(filterSchools([amr, ema, epi], 'ecole').map((school) => school.id)).toEqual(['ema']);
+    expect(filterSchools([amr, ema, epi], 'ema').map((school) => school.id)).toEqual(['ema']);
+    expect(filterSchools([amr, ema, epi], 'carouge').map((school) => school.id)).toEqual(['epi']);
   });
 
   it('place les affiliations actives avant le reste puis garde un ordre stable', () => {
-    expect(sortSchools([hem, epi, amr], new Set(['hem'])).map((school) => school.id)).toEqual([
-      'hem',
+    expect(sortSchools([ema, epi, amr], new Set(['ema'])).map((school) => school.id)).toEqual([
+      'ema',
       'amr',
       'epi',
     ]);

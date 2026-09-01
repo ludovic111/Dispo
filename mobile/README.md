@@ -1,8 +1,8 @@
 # Dispo mobile
 
-Client commun Expo / React Native de Dispo. La migration est progressive : les
-applications SwiftUI et Kotlin restent les références fonctionnelles jusqu’à
-ce que chaque parcours Expo atteigne la parité et passe ses validations.
+Client mobile canonique Expo / React Native de Dispo pour iOS et Android. Les
+anciennes applications SwiftUI et Kotlin ont été retirées du workspace le
+1er septembre 2026 après validation explicite de ce client commun.
 
 Le périmètre, les écarts et l’ordre de portage sont suivis dans
 [`MIGRATION.md`](./MIGRATION.md).
@@ -24,9 +24,9 @@ Renseigner uniquement l’URL Supabase et la clé publique/publishable dans
 `.env.local`. Ne jamais placer de clé `service_role`, de secret Apple/Google ou
 de secret RevenueCat dans le client.
 
-La variante locale utilise `Dispo Dev`, `ch.dispo.app.dev` et `dispo-dev` afin
-de cohabiter avec les applications natives. La production conserve
-`ch.dispo.app` et `dispo` et exige `APP_VARIANT=production`.
+La variante locale utilise `Dispo Dev`, `ch.dispo.app.dev` et `dispo-dev`. La
+production conserve `ch.dispo.app` et `dispo` et exige
+`APP_VARIANT=production`.
 
 ## Commandes utiles
 
@@ -45,14 +45,10 @@ et ignorés par Git. Toute configuration native durable doit vivre dans
 Expo Go n’est pas une preuve suffisante pour Dispo : les parcours natifs se
 valident avec un development build ou un build local sur simulateur/appareil.
 
-## Tranche fonctionnelle actuelle
+## Périmètre courant
 
-- session Supabase persistante et connexion/création e-mail ;
-- accueil de profils paginé, détail de profil et démarrage d’un message direct ;
-- liste, détail, création et candidature SOS ;
-- liste et fil de messages directs paginés avec Realtime filtré ;
-- onglet profil en lecture et shell des cinq onglets.
-
-Les Sessions, groupes, morceaux, écoles, pièces jointes, notifications,
-localisation complète, achats et fournisseurs OAuth restent à porter et sont
-détaillés dans `MIGRATION.md`.
+Le client couvre les cinq onglets, l’authentification, les profils et relations,
+les disponibilités, SOS et Sessions, les messages directs/de groupe/d’école,
+les groupes, répertoires, morceaux, événements, écoles, notifications,
+localisation et pièces jointes. Les preuves, limites d’intégration et travaux
+restants sont détaillés dans `MIGRATION.md`.
