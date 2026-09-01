@@ -55,9 +55,8 @@ function ScopeButton({
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const config = scopeConfig[scope];
-  const activeColor =
-    scope === 'today' ? palette.jam : scope === 'weekend' ? palette.electric : palette.bronze;
-  const activeText = scope === 'weekend' ? billetInk : '#FFFFFF';
+  const activeColor = palette.electric;
+  const activeText = billetInk;
   return (
     <Pressable
       accessibilityRole="button"
@@ -66,7 +65,7 @@ function ScopeButton({
       style={({ pressed }) => [
         styles.scope,
         {
-          backgroundColor: selected ? activeColor : palette.card,
+          backgroundColor: selected ? activeColor : palette.cardMuted,
           borderColor: selected ? 'transparent' : palette.border,
         },
         pressed && styles.pressed,
@@ -211,7 +210,7 @@ export default function DiscoveryScreen() {
             onPress={() => router.push('/notification-center' as never)}
             style={({ pressed }) => [
               styles.circleAction,
-              { backgroundColor: palette.card, borderColor: palette.border },
+              { backgroundColor: palette.cardMuted, borderColor: palette.border },
               pressed && styles.pressed,
             ]}
           >
@@ -258,7 +257,7 @@ export default function DiscoveryScreen() {
         onPress={() => router.push('/search' as never)}
         style={({ pressed }) => [
           styles.search,
-          { backgroundColor: palette.card, borderColor: palette.border },
+          { backgroundColor: palette.cardMuted, borderColor: palette.border },
           pressed && styles.pressed,
         ]}
       >
@@ -280,7 +279,7 @@ export default function DiscoveryScreen() {
               onPress={() => router.push(`/groups/${group.id}` as never)}
               style={({ pressed }) => pressed && styles.pressed}
             >
-              <Card padding={spacing.sm}>
+              <Card padding={spacing.sm} tone="inset">
                 <View style={styles.groupRow}>
                   <View style={styles.groupCopy}>
                     <AppText numberOfLines={1} style={styles.groupName} variant="subheadline">

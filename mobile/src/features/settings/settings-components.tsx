@@ -55,7 +55,10 @@ export function SettingsSection({
         </AppText>
       ) : null}
       <View
-        style={[styles.sectionCard, { backgroundColor: palette.card, borderColor: palette.border }]}
+        style={[
+          styles.sectionCard,
+          { backgroundColor: palette.cardElevated, borderColor: palette.border },
+        ]}
       >
         {children}
       </View>

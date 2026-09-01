@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from './app-text';
+import { BrandLogo } from './brand';
 import { Card } from './card';
 import { DispoBackground } from './dispo-background';
 
@@ -68,23 +69,32 @@ export function ScreenHeader({
   title,
 }: ScreenHeaderProps) {
   const { palette } = useDispoTheme();
-  const detail = subtitle ?? eyebrow;
   const resolvedIconColor = iconColor ?? palette.electric;
   return (
     <View style={[styles.header, !inset && styles.headerWithoutInset]}>
       {leadingAction ?? null}
       {icon ? (
-        <View style={[styles.icon, { backgroundColor: `${resolvedIconColor}24` }]}>
+        <View
+          style={[
+            styles.icon,
+            { backgroundColor: palette.cardMuted, borderColor: `${resolvedIconColor}42` },
+          ]}
+        >
           <Ionicons color={resolvedIconColor} name={icon} size={18} />
         </View>
       ) : null}
       <View style={styles.headerText}>
+        {eyebrow ? (
+          <AppText color={palette.electric} style={styles.headerEyebrow} variant="label">
+            {eyebrow}
+          </AppText>
+        ) : null}
         <AppText numberOfLines={2} style={styles.headerTitle} variant="display">
           {title}
         </AppText>
-        {detail ? (
+        {subtitle ? (
           <AppText color={palette.muted} style={styles.headerSubtitle}>
-            {detail}
+            {subtitle}
           </AppText>
         ) : null}
       </View>
@@ -98,7 +108,17 @@ export function LoadingState({ label }: { label?: string }) {
   const { t } = useTranslation();
   return (
     <View style={styles.center}>
-      <ActivityIndicator color={palette.electric} size="large" />
+      <View
+        style={[
+          styles.loadingMark,
+          { backgroundColor: palette.cardMuted, borderColor: palette.border },
+        ]}
+      >
+        <BrandLogo markSize={30} showWordmark={false} />
+        <View style={[styles.loadingSpinner, { backgroundColor: palette.background }]}>
+          <ActivityIndicator color={palette.electric} size="small" />
+        </View>
+      </View>
       <AppText color={palette.muted}>{label ?? t('Chargement…')}</AppText>
     </View>
   );
@@ -142,8 +162,13 @@ export function EmptyState({
   return (
     <Card accessible accessibilityRole="summary" style={styles.emptyCard}>
       <View style={styles.emptyContent}>
-        <View style={[styles.emptyIcon, { backgroundColor: `${palette.bronze}18` }]}>
-          <Ionicons color={palette.bronze} name={icon} size={28} />
+        <View
+          style={[
+            styles.emptyIcon,
+            { backgroundColor: palette.cardMuted, borderColor: palette.border },
+          ]}
+        >
+          <Ionicons color={palette.electric} name={icon} size={27} />
         </View>
         <AppText numberOfLines={2} style={styles.centerText} variant="title">
           {title}
@@ -170,6 +195,7 @@ const styles = StyleSheet.create({
   emptyIcon: {
     alignItems: 'center',
     borderRadius: radii.round,
+    borderWidth: 1,
     height: 56,
     justifyContent: 'center',
     width: 56,
@@ -183,12 +209,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   headerSubtitle: { fontSize: 15, lineHeight: 20 },
-  headerText: { flex: 1, flexShrink: 1, gap: 4 },
+  headerEyebrow: { letterSpacing: 1.15 },
+  headerText: { flex: 1, flexShrink: 1, gap: 3 },
   headerTitle: { fontSize: 27, lineHeight: 31 },
   headerWithoutInset: { paddingHorizontal: 0 },
   icon: {
     alignItems: 'center',
     borderRadius: radii.button,
+    borderWidth: 1,
     height: 44,
     justifyContent: 'center',
     width: 44,
@@ -201,5 +229,23 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   retryText: { fontWeight: '800' },
+  loadingMark: {
+    alignItems: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 62,
+    justifyContent: 'center',
+    width: 62,
+  },
+  loadingSpinner: {
+    alignItems: 'center',
+    borderRadius: 10,
+    bottom: -5,
+    height: 22,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -5,
+    width: 22,
+  },
   safe: { flex: 1 },
 });

@@ -1,6 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { useMemo, useState } from 'react';
@@ -18,6 +17,7 @@ import {
 import { z } from 'zod';
 
 import { AppText } from '@/components/ui/app-text';
+import { BrandLogo } from '@/components/ui/brand';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
@@ -30,7 +30,7 @@ import {
   signUpWithPassword,
 } from '@/features/auth/auth-service';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { radii, spacing } from '@/theme/tokens';
 
 interface Credentials {
   email: string;
@@ -42,8 +42,9 @@ interface AuthFieldProps extends ComponentProps<typeof TextInput> {
   label: string;
 }
 
-function AuthField({ error, label, style, ...props }: AuthFieldProps) {
+function AuthField({ error, label, onBlur, onFocus, style, ...props }: AuthFieldProps) {
   const { palette } = useDispoTheme();
+  const [focused, setFocused] = useState(false);
 
   return (
     <View style={styles.field}>
@@ -52,13 +53,21 @@ function AuthField({ error, label, style, ...props }: AuthFieldProps) {
       </AppText>
       <TextInput
         {...props}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
         placeholderTextColor={palette.muted}
         selectionColor={palette.electric}
         style={[
           styles.input,
           {
-            backgroundColor: palette.inset,
-            borderColor: error ? palette.error : 'transparent',
+            backgroundColor: focused ? palette.cardElevated : palette.cardMuted,
+            borderColor: error ? palette.error : focused ? palette.electric : palette.border,
             color: palette.text,
           },
           style,
@@ -75,7 +84,7 @@ function AuthField({ error, label, style, ...props }: AuthFieldProps) {
 
 export default function SignInScreen() {
   const { authCallbackError, configurationReady } = useAuth();
-  const { palette } = useDispoTheme();
+  const { dark, palette } = useDispoTheme();
   const { t } = useTranslation();
   const [registering, setRegistering] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -197,18 +206,9 @@ export default function SignInScreen() {
         >
           <View style={styles.content}>
             <View style={styles.hero}>
-              <View accessibilityLabel={t('Dispo')} style={styles.brand}>
-                <Image
-                  accessibilityIgnoresInvertColors
-                  contentFit="contain"
-                  source={require('../../../assets/images/dispo/logo-mark.png')}
-                  style={styles.logo}
-                />
-                <AppText style={styles.wordmark} variant="displayItalic">
-                  dispo
-                </AppText>
-              </View>
-              <AppText style={styles.title}>
+              <BrandLogo markSize={48} />
+              <View style={[styles.heroRule, { backgroundColor: palette.electric }]} />
+              <AppText style={styles.title} variant="display">
                 {t('Le réseau des musiciens\nqui se dépannent')}
               </AppText>
               <AppText color={palette.muted} style={styles.subtitle}>
@@ -223,12 +223,12 @@ export default function SignInScreen() {
                 <>
                   <AppleAuthentication.AppleAuthenticationButton
                     buttonStyle={
-                      palette.background === '#050814'
+                      dark
                         ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
                         : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
                     }
                     buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                    cornerRadius={16}
+                    cornerRadius={radii.button}
                     onPress={() => void authenticateWithApple()}
                     style={[styles.appleButton, appleWorking && styles.disabled]}
                   />
@@ -265,7 +265,7 @@ export default function SignInScreen() {
                 </>
               ) : null}
 
-              <Card padding={spacing.md} style={styles.card}>
+              <Card padding={spacing.gutter} style={styles.card} tone="elevated">
                 <View
                   accessibilityLabel={t('Mode')}
                   accessibilityRole="tablist"
@@ -278,13 +278,18 @@ export default function SignInScreen() {
                     style={({ pressed }) => [
                       styles.modeOption,
                       !registering && {
-                        backgroundColor: `${palette.muted}66`,
-                        borderColor: palette.border,
+                        backgroundColor: `${palette.electric}1F`,
+                        borderColor: `${palette.electric}66`,
                       },
                       pressed && styles.pressed,
                     ]}
                   >
-                    <AppText style={styles.modeText}>{t('Se connecter')}</AppText>
+                    <AppText
+                      color={!registering ? palette.electric : palette.muted}
+                      style={styles.modeText}
+                    >
+                      {t('Se connecter')}
+                    </AppText>
                   </Pressable>
                   <Pressable
                     accessibilityRole="tab"
@@ -293,13 +298,18 @@ export default function SignInScreen() {
                     style={({ pressed }) => [
                       styles.modeOption,
                       registering && {
-                        backgroundColor: `${palette.muted}66`,
-                        borderColor: palette.border,
+                        backgroundColor: `${palette.electric}1F`,
+                        borderColor: `${palette.electric}66`,
                       },
                       pressed && styles.pressed,
                     ]}
                   >
-                    <AppText style={styles.modeText}>{t('Créer un compte')}</AppText>
+                    <AppText
+                      color={registering ? palette.electric : palette.muted}
+                      style={styles.modeText}
+                    >
+                      {t('Créer un compte')}
+                    </AppText>
                   </Pressable>
                 </View>
 
@@ -422,7 +432,6 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   appleButton: { height: 50, width: '100%' },
   authBlock: { gap: spacing.md, width: '100%' },
-  brand: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   card: { gap: 14, width: '100%' },
   content: {
     alignItems: 'center',
@@ -435,9 +444,10 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
   flex: { flex: 1 },
   forgotButton: { alignItems: 'center', minHeight: 24, justifyContent: 'center' },
-  hero: { alignItems: 'center', gap: spacing.sm, width: '100%' },
+  hero: { alignItems: 'center', gap: spacing.control, width: '100%' },
+  heroRule: { borderRadius: 2, height: 3, marginBottom: 2, width: 42 },
   input: {
-    borderRadius: 12,
+    borderRadius: radii.input,
     borderWidth: 1,
     fontSize: 16,
     minHeight: 48,
@@ -451,7 +461,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     textAlign: 'center',
   },
-  logo: { borderRadius: 10, height: 44, width: 44 },
   modeOption: {
     alignItems: 'center',
     borderColor: 'transparent',
@@ -462,7 +471,7 @@ const styles = StyleSheet.create({
     minHeight: 34,
     paddingHorizontal: spacing.xs,
   },
-  modePicker: { borderRadius: 10, flexDirection: 'row', gap: 2, padding: 2 },
+  modePicker: { borderRadius: radii.input, flexDirection: 'row', gap: 3, padding: 3 },
   modeText: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
   notice: { borderRadius: 14, borderWidth: 1, padding: spacing.sm },
   pressed: { opacity: 0.72 },
@@ -471,19 +480,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: spacing.xl,
     paddingHorizontal: 18,
-    paddingTop: 48,
+    paddingTop: spacing.xxl,
   },
   separator: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   separatorLine: { flex: 1, height: StyleSheet.hairlineWidth },
   separatorText: { flexShrink: 0 },
   status: { paddingHorizontal: spacing.xs },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
     maxWidth: 390,
     paddingHorizontal: spacing.lg,
     textAlign: 'center',
   },
-  title: { fontSize: 20, fontWeight: '800', lineHeight: 26, textAlign: 'center' },
-  wordmark: { fontSize: 32, lineHeight: 37 },
+  title: { fontSize: 28, lineHeight: 33, maxWidth: 390, textAlign: 'center' },
 });

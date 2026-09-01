@@ -44,11 +44,14 @@ function SegmentButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.segment,
-        selected && { backgroundColor: palette.card },
+        selected && {
+          backgroundColor: `${palette.electric}1F`,
+          borderColor: `${palette.electric}66`,
+        },
         pressed && styles.pressed,
       ]}
     >
-      <AppText color={selected ? palette.text : palette.muted} variant="subheadline">
+      <AppText color={selected ? palette.electric : palette.muted} variant="subheadline">
         {label}
         {count > 0 ? ` · ${count}` : ''}
       </AppText>
@@ -207,7 +210,7 @@ export default function GigsScreen() {
           title={t('SOS dépannage')}
         />
 
-        <View style={[styles.segmented, { backgroundColor: palette.inset }]}>
+        <View style={[styles.segmented, { backgroundColor: palette.cardMuted }]}>
           <SegmentButton
             count={freshCount}
             label={t('SOS')}
@@ -236,13 +239,13 @@ export default function GigsScreen() {
                     style={({ pressed }) => [
                       styles.scope,
                       {
-                        backgroundColor: selected ? `${palette.bronze}2A` : palette.inset,
-                        borderColor: selected ? `${palette.bronze}80` : 'transparent',
+                        backgroundColor: selected ? `${palette.electric}1F` : palette.cardMuted,
+                        borderColor: selected ? `${palette.electric}66` : 'transparent',
                       },
                       pressed && styles.pressed,
                     ]}
                   >
-                    <AppText color={selected ? palette.bronze : palette.muted} variant="caption">
+                    <AppText color={selected ? palette.electric : palette.muted} variant="caption">
                       {all ? t('Tout') : t('Pour moi')}
                     </AppText>
                   </Pressable>
@@ -354,7 +357,9 @@ const styles = StyleSheet.create({
   scopeSpacer: { flex: 1 },
   segment: {
     alignItems: 'center',
+    borderColor: 'transparent',
     borderRadius: radii.button,
+    borderWidth: 1,
     flex: 1,
     justifyContent: 'center',
     minHeight: 38,

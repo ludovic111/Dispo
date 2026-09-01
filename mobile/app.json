@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "38",
+      "buildNumber": "39",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -22,7 +22,7 @@
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 38,
+      "versionCode": 39,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"

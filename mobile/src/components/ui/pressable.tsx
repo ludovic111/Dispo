@@ -57,6 +57,13 @@ export function DispoButton({
       }}
       style={({ pressed }) => [
         styles.pressable,
+        variant === 'primary' && {
+          shadowColor: palette.electric,
+          shadowOffset: { width: 0, height: 7 },
+          shadowOpacity: 0.2,
+          shadowRadius: 13,
+          elevation: 2,
+        },
         pressed && !inactive && (reduceMotion ? styles.pressedReduced : styles.pressed),
         inactive && styles.disabled,
       ]}
@@ -64,9 +71,9 @@ export function DispoButton({
       {variant === 'primary' ? (
         <LinearGradient
           colors={gradients.hero}
-          end={{ x: 0, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.surface}
+          end={{ x: 1, y: 0.78 }}
+          start={{ x: 0, y: 0.22 }}
+          style={[styles.surface, styles.primarySurface]}
         >
           {content}
         </LinearGradient>
@@ -78,7 +85,7 @@ export function DispoButton({
             styles.surface,
             styles.outline,
             {
-              backgroundColor: palette.card,
+              backgroundColor: variant === 'secondary' ? palette.cardMuted : palette.card,
               borderColor: variant === 'danger' ? palette.error : palette.border,
             },
           ]}
@@ -103,9 +110,10 @@ const styles = StyleSheet.create({
   pressable: { borderRadius: radii.button },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   pressedReduced: { opacity: 0.96 },
+  primarySurface: { borderColor: 'rgba(255,255,255,0.22)', borderWidth: 1 },
   surface: {
     borderRadius: radii.button,
-    minHeight: 48,
+    minHeight: 50,
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

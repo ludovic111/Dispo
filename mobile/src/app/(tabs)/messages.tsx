@@ -40,7 +40,7 @@ function SegmentControl({
     <View
       accessibilityLabel={t('Espace')}
       accessibilityRole="tablist"
-      style={[styles.segment, { backgroundColor: palette.inset }]}
+      style={[styles.segment, { backgroundColor: palette.cardMuted }]}
     >
       {options.map((option) => {
         const selected = value === option.value;
@@ -53,13 +53,18 @@ function SegmentControl({
             style={({ pressed }) => [
               styles.segmentOption,
               selected && {
-                backgroundColor: palette.card,
-                borderColor: palette.border,
+                backgroundColor: `${palette.electric}1F`,
+                borderColor: `${palette.electric}66`,
               },
               pressed && styles.pressed,
             ]}
           >
-            <AppText style={styles.segmentLabel}>{option.label}</AppText>
+            <AppText
+              color={selected ? palette.electric : palette.muted}
+              style={styles.segmentLabel}
+            >
+              {option.label}
+            </AppText>
           </Pressable>
         );
       })}
@@ -99,19 +104,19 @@ export default function MessagesScreen() {
               onPress={() => router.push('/groups/new' as never)}
               style={({ pressed }) => [
                 styles.newGroup,
-                { backgroundColor: `${palette.bronze}24` },
+                { backgroundColor: `${palette.electric}20` },
                 pressed && styles.pressed,
               ]}
             >
-              <Ionicons color={palette.bronze} name="add-circle" size={15} />
-              <AppText color={palette.bronze} style={styles.newGroupLabel} variant="caption">
+              <Ionicons color={palette.electric} name="add-circle" size={15} />
+              <AppText color={palette.electric} style={styles.newGroupLabel} variant="caption">
                 {t('Nouveau')}
               </AppText>
             </Pressable>
           ) : null
         }
         icon="chatbubbles"
-        iconColor={palette.bronze}
+        iconColor={palette.electric}
         subtitle={t('Cale tes prochains dépannages')}
         title={t('Messages')}
       />
@@ -213,7 +218,7 @@ export default function MessagesScreen() {
             {hasSchools ? (
               <View style={styles.sectionHeading}>
                 <View style={styles.sectionHeadingTitle}>
-                  <Ionicons color={palette.bronze} name="school" size={17} />
+                  <Ionicons color={palette.electric} name="school" size={17} />
                   <AppText style={styles.sectionHeadingText} variant="subheadline">
                     {t('Écoles')}
                   </AppText>
@@ -233,7 +238,7 @@ export default function MessagesScreen() {
             {(hasInvitations || hasGroups) && hasSchools ? (
               <View style={styles.sectionHeading}>
                 <View style={styles.sectionHeadingTitle}>
-                  <Ionicons color={palette.bronze} name="people" size={17} />
+                  <Ionicons color={palette.electric} name="people" size={17} />
                   <AppText style={styles.sectionHeadingText} variant="subheadline">
                     {t('Groupes')}
                   </AppText>

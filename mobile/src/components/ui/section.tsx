@@ -53,7 +53,7 @@ export function PillButton({
       style={({ pressed }) => [
         styles.pill,
         {
-          backgroundColor: active ? `${palette.electric}33` : palette.card,
+          backgroundColor: active ? `${palette.electric}29` : palette.cardMuted,
           borderColor: active ? `${palette.electric}59` : palette.border,
         },
         pressed && styles.pressed,
@@ -136,12 +136,12 @@ export function HeaderAction({
       onPress={onPress}
       style={({ pressed }) => [
         styles.headerAction,
-        { backgroundColor: palette.card, borderColor: palette.border },
+        { backgroundColor: palette.cardMuted, borderColor: palette.border },
         pressed && styles.pressed,
         disabled && styles.disabled,
       ]}
     >
-      {children ?? (icon ? <Ionicons color={palette.text} name={icon} size={19} /> : null)}
+      {children ?? (icon ? <Ionicons color={palette.electric} name={icon} size={19} /> : null)}
       {badge ? (
         <View style={[styles.notificationBadge, { backgroundColor: palette.signal }]}>
           <AppText color="#FFFFFF" style={styles.notificationText}>

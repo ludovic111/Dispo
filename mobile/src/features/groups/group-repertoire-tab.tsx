@@ -313,12 +313,12 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
         onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
         style={({ pressed }) => [
           styles.addButton,
-          { backgroundColor: `${palette.bronze}1F` },
+          { backgroundColor: `${palette.electric}1F` },
           pressed && styles.addPressed,
         ]}
       >
-        <Ionicons color={palette.bronze} name="add-circle" size={18} />
-        <AppText color={palette.bronze} style={styles.addLabel}>
+        <Ionicons color={palette.electric} name="add-circle" size={18} />
+        <AppText color={palette.electric} style={styles.addLabel}>
           {isLeader ? t('Ajouter') : t('Suggérer')}
         </AppText>
       </Pressable>

@@ -6,26 +6,36 @@ import { cardShadow, radii, spacing } from '@/theme/tokens';
 
 interface CardProps extends ViewProps {
   padding?: number;
+  tone?: 'default' | 'elevated' | 'inset';
 }
 
 export function Card({
   children,
   padding = spacing.md,
   style,
+  tone = 'default',
   ...props
 }: PropsWithChildren<CardProps>) {
   const { dark, palette } = useDispoTheme();
+  const backgroundColor =
+    tone === 'elevated'
+      ? palette.cardElevated
+      : tone === 'inset'
+        ? palette.cardMuted
+        : palette.card;
   return (
     <View style={[styles.shadow, cardShadow(dark ? 'dark' : 'light')]}>
       <View
         {...props}
-        style={[
-          styles.card,
-          { backgroundColor: palette.card, borderColor: palette.border, padding },
-          style,
-        ]}
+        style={[styles.card, { backgroundColor, borderColor: palette.border, padding }, style]}
       >
-        <View pointerEvents="none" style={styles.highlight} />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.highlight,
+            { borderColor: dark ? `${palette.jazzGlow}1A` : 'rgba(255,255,255,0.84)' },
+          ]}
+        />
         {children}
       </View>
     </View>
@@ -35,7 +45,6 @@ export function Card({
 const styles = StyleSheet.create({
   card: { borderRadius: radii.card, borderWidth: 1, overflow: 'hidden' },
   highlight: {
-    borderColor: 'rgba(255,255,255,0.09)',
     borderRadius: radii.card - 1,
     borderTopWidth: 1,
     height: '50%',
