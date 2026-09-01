@@ -72,6 +72,12 @@ appareil.
   testée. Langue, pays/région, code postal et ville disposent d'un parcours
   dédié et persistant. La présence d’une traduction ne prouve pas encore son
   rendu sans débordement sur chaque écran et chaque plateforme.
+- Identité visuelle : le bleu jazz reste la signature de Dispo, avec une
+  palette nuit/cyan, des fonds atmosphériques, une hiérarchie Fraunces plus
+  éditoriale, des cartes à trois niveaux et des contrôles cohérents. Le shell,
+  les onglets, la saisie, les sélecteurs de date et l’accessibilité privilégient
+  les conventions natives ; les surfaces métier restent dessinées sur mesure
+  lorsqu’elles rendent l’action plus évidente et la marque plus reconnaissable.
 
 Ces surfaces sont implémentées structurellement et couvertes par des tests
 ciblés ; elles ne sont pas déclarées « pixel perfect » ni validées de bout en
@@ -126,16 +132,37 @@ bout avec des comptes authentifiés.
   `APP_STORE_ELIGIBLE` pour la livraison
   `8ef20792-e31f-4216-a8f0-6fca1bc93517`. Aucune soumission App Review n'a été
   effectuée.
+- Après l’évolution de l’identité bleu jazz, le lot 2.4 (39) a de nouveau passé
+  `npm run validate` (46 suites, 286 tests), Expo Doctor 21/21 et un prebuild
+  production CNG propre. Le build Release iOS avec bundle embarqué a réussi,
+  puis a été installé et lancé sur simulateur iPhone 17 Pro sous iOS 26.5. La
+  connexion en thème sombre a été contrôlée visuellement sans chevauchement.
+- L’application Android 2.4 (39) a passé `:app:assembleRelease` et
+  `:app:testReleaseUnitTest` sous JDK 17 ; la tâche de tests de l’application
+  est `NO-SOURCE`. La tâche agrégée à la racine reste incompatible avec une
+  suite vide interne à `expo-modules-core`, sans échec du module applicatif.
+  L’APK final porte `ch.dispo.app`, `versionCode 39`, `versionName 2.4`,
+  `minSdk 24`, `targetSdk 36` et le SHA-256
+  `d426acab92921317c7d96f2ed41d6dce2edeb4fdee2917462fca6eeea1a4447d`.
+- L’IPA 2.4 (39) a passé l’intégrité ZIP,
+  `codesign --verify --deep --strict` et l’inspection de ses entitlements :
+  identifiant `2YBQQ56HH8.ch.dispo.app`, APNs `production`, Sign in with Apple
+  `Default` et `get-task-allow=false`. Son SHA-256 est
+  `e75ca10af300a32dc65e5c17c2215ceb3aa1d3dd468f4a2d703f18ebc4b6cf17`.
+  Apple a répondu `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, puis
+  `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et `APP_STORE_ELIGIBLE` pour la
+  livraison `dd4eb42b-4adb-4fa4-b062-09afb32bc255`. Aucune soumission App
+  Review n’a été effectuée.
 
 ### État Pixel et iOS
 
-| Cible                        | État vérifié                                                                                                                                                                                          | Ce que cela ne prouve pas                                                                                                                                              |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                        | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
-| Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; build Kotlin Release final également réussi. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset. | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
-| Expo iOS simulateur          | Build Release 2.4 (38) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; les trois routes signalées n’affichent plus le slug natif ni le double titre.                                    | Aucun parcours authentifié, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                             |
-| iPhone physique / TestFlight | Le build Expo 2.4 (38) est importé `VALID` et éligible App Store chez Apple.                                                                                                                          | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
-| Référence SwiftUI            | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                                         | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                                            |
+| Cible                        | État vérifié                                                                                                                                                                                                                           | Ce que cela ne prouve pas                                                                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                                                         | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
+| Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; application Release 2.4 (39) compilée sous JDK 17. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset.                            | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
+| Expo iOS simulateur          | Build Release 2.4 (39) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; l’authentification sombre bleu jazz ne présente pas de chevauchement. Les routes signalées avaient déjà été contrôlées sans slug ni double titre. | Aucun parcours authentifié, thème clair, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                |
+| iPhone physique / TestFlight | Le build Expo 2.4 (39) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
+| Référence SwiftUI            | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                                                                          | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                                            |
 
 ### Limites et gates restants
 
@@ -153,7 +180,7 @@ bout avec des comptes authentifiés.
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
-- Le build Expo 2.4 (38) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
+- Le build Expo 2.4 (39) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
   sans soumission App Review ni activation implicite de testeurs. Aucune
   publication Google Play n’a eu lieu.
 - Le backend de production contient désormais le catalogue canonique, sa file
@@ -507,6 +534,23 @@ Les repositories contiennent des mutations normales d’application
 être exercées sur la production pendant les tests automatisés de migration.
 
 ## 7. Design system et écarts visuels
+
+### Direction de marque au 1er septembre 2026
+
+Le bleu jazz est l’accent propriétaire de Dispo : cyan électrique pour les
+actions primaires et états actifs, bleu profond pour les surfaces élevées et
+bleu nuit pour l’atmosphère. Il ne doit pas devenir un halo uniforme : les
+fonds, bordures, contrastes et niveaux de cartes donnent la hiérarchie avant la
+couleur. Fraunces porte la voix éditoriale des titres ; la typographie système
+reste prioritaire pour les contrôles, champs et contenus denses.
+
+La règle n’est pas de rendre chaque élément techniquement natif. Les
+composants système sont privilégiés pour la navigation, les onglets, le clavier,
+les sélecteurs, les feuilles, les permissions et l’accessibilité. Les cartes de
+musiciens, morceaux, groupes, disponibilités et SOS peuvent rester propres à
+Dispo si elles préservent les gestes attendus, une cible tactile minimale de
+44 points, le redimensionnement du texte et un comportement équivalent sur iOS
+et Android.
 
 ### Tokens Swift à conserver
 
