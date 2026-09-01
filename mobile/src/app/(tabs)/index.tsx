@@ -30,7 +30,7 @@ import { useNotificationUnreadCount } from '@/features/notifications/notificatio
 import { useDiscoveryProfiles, useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, radii, spacing, typography } from '@/theme/tokens';
+import { billetInk, minimumTouchTarget, radii, spacing, typography } from '@/theme/tokens';
 
 const scopeConfig: Record<
   AvailabilityScope,
@@ -89,6 +89,39 @@ function ScopeButton({
           {count}
         </AppText>
       </View>
+    </Pressable>
+  );
+}
+
+function HomeQuickAction({
+  color,
+  icon,
+  label,
+  onPress,
+}: {
+  color: string;
+  icon: 'calendar-outline' | 'people-outline' | 'school-outline';
+  label: string;
+  onPress: () => void;
+}) {
+  const { palette } = useDispoTheme();
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.quickAction,
+        { backgroundColor: palette.cardMuted, borderColor: palette.border },
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={[styles.quickActionIcon, { backgroundColor: `${color}1F` }]}>
+        <Ionicons color={color} name={icon} size={16} />
+      </View>
+      <AppText numberOfLines={1} style={styles.quickActionLabel} variant="caption">
+        {label}
+      </AppText>
     </Pressable>
   );
 }
@@ -266,6 +299,37 @@ export default function DiscoveryScreen() {
           {t('Musicien, @pseudo, instrument, lieu…')}
         </AppText>
       </Pressable>
+
+      <ScrollView
+        contentContainerStyle={styles.quickActions}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        <HomeQuickAction
+          color={
+            myAvailability && myAvailability.kind !== 'unavailable'
+              ? myAvailabilityColor
+              : palette.electric
+          }
+          icon="calendar-outline"
+          label={t('Mes disponibilités')}
+          onPress={() => router.push('/profile/availability' as never)}
+        />
+        <HomeQuickAction
+          color={palette.electric}
+          icon="school-outline"
+          label={t('Écoles')}
+          onPress={() => router.push('/schools' as never)}
+        />
+        {groups.length === 0 ? (
+          <HomeQuickAction
+            color={palette.electric}
+            icon="people-outline"
+            label={t('Nouveau groupe')}
+            onPress={() => router.push('/groups/new' as never)}
+          />
+        ) : null}
+      </ScrollView>
 
       {groups.length > 0 ? (
         <View style={styles.groups}>
@@ -454,6 +518,24 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: spacing.xl, paddingHorizontal: spacing.gutter },
   networkLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
+  quickAction: {
+    alignItems: 'center',
+    borderRadius: radii.button,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.tight,
+    minHeight: minimumTouchTarget,
+    paddingHorizontal: spacing.sm,
+  },
+  quickActionIcon: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  quickActionLabel: { fontWeight: '800' },
+  quickActions: { gap: spacing.xs },
   scope: {
     alignItems: 'center',
     borderRadius: radii.chip,

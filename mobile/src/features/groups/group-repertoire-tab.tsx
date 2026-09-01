@@ -34,8 +34,8 @@ function SongCard({
   group,
   index,
   isActive,
-  isLeader,
   onMove,
+  reorderMode,
   reorderPending,
   song,
   total,
@@ -44,8 +44,8 @@ function SongCard({
   group: MusicGroup;
   index: number;
   isActive: boolean;
-  isLeader: boolean;
   onMove: (index: number, offset: -1 | 1) => void;
+  reorderMode: boolean;
   reorderPending: boolean;
   song: GroupSong;
   total: number;
@@ -62,10 +62,14 @@ function SongCard({
   return (
     <GroupSongRow
       {...(isActive ? { cardStyle: { borderColor: palette.bronze } } : {})}
-      onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
+      {...(reorderMode
+        ? {}
+        : { onPress: () => router.push(`/groups/${group.id}/songs/${song.id}` as never) })}
+      showDisclosure={!reorderMode}
+      showListenAction={!reorderMode}
       song={song}
       trailing={
-        isLeader ? (
+        reorderMode ? (
           <Pressable
             accessibilityLabel={t('Déplacer le morceau')}
             accessibilityRole="button"
@@ -107,6 +111,8 @@ function PendingSongCard({ group, song }: { group: MusicGroup; song: GroupSong }
     <GroupSongRow
       cardStyle={{ borderColor: `${palette.signal}55` }}
       onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
+      showDisclosure={false}
+      showListenAction={false}
       song={song}
       trailing={
         <View style={styles.pendingActions}>
@@ -208,6 +214,7 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
   const [search, setSearch] = useState('');
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [approvedOrderOverride, setApprovedOrderOverride] = useState<string[] | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
   const lastPlaceholderIndex = useRef<number | null>(null);
   const isLeader = group.leaderId === userId;
   const serverApprovedIds = group.repertoire
@@ -218,7 +225,8 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
     approvedOrderOverride ?? serverApprovedIds,
   ).filter((song) => song.isApproved);
   const searchActive = Boolean(search.trim());
-  const dragEnabled = isLeader && !searchActive && approvedSongs.length > 1;
+  const reorderActive = reorderMode && isLeader && approvedSongs.length > 1;
+  const dragEnabled = reorderActive && !searchActive;
   const approved = useMemo(() => {
     const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
     const needle = search.trim().toLocaleLowerCase(locale);
@@ -259,8 +267,8 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
         group={group}
         index={getIndex() ?? approvedSongs.findIndex((song) => song.id === item.id)}
         isActive={isActive}
-        isLeader={isLeader}
         onMove={moveApprovedSong}
+        reorderMode
         reorderPending={reorder.isPending}
         song={item}
         total={approvedSongs.length}
@@ -306,20 +314,50 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
         subtitle={t('{{count}} morceaux validés', { count: approvedSongs.length })}
         title={t('Répertoire')}
       />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
-        style={({ pressed }) => [
-          styles.addButton,
-          { backgroundColor: `${palette.electric}1F` },
-          pressed && styles.addPressed,
-        ]}
-      >
-        <Ionicons color={palette.electric} name="add-circle" size={18} />
-        <AppText color={palette.electric} style={styles.addLabel}>
-          {isLeader ? t('Ajouter') : t('Suggérer')}
-        </AppText>
-      </Pressable>
+      <View style={styles.primaryActions}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
+          style={({ pressed }) => [
+            styles.addButton,
+            { backgroundColor: `${palette.electric}1F` },
+            pressed && styles.addPressed,
+          ]}
+        >
+          <Ionicons color={palette.electric} name="add-circle" size={18} />
+          <AppText color={palette.electric} style={styles.addLabel}>
+            {isLeader ? t('Ajouter') : t('Suggérer')}
+          </AppText>
+        </Pressable>
+        {isLeader && approvedSongs.length > 1 ? (
+          <Pressable
+            accessibilityLabel={reorderMode ? t('Terminé') : t('Réorganiser')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: reorderMode }}
+            onPress={() => {
+              setSearch('');
+              setReorderMode((current) => !current);
+            }}
+            style={({ pressed }) => [
+              styles.reorderButton,
+              {
+                backgroundColor: reorderMode ? `${palette.jam}1F` : palette.inset,
+                borderColor: reorderMode ? `${palette.jam}66` : palette.border,
+              },
+              pressed && styles.addPressed,
+            ]}
+          >
+            <Ionicons
+              color={reorderMode ? palette.jam : palette.bronze}
+              name={reorderMode ? 'checkmark' : 'reorder-three'}
+              size={18}
+            />
+            <AppText color={reorderMode ? palette.jam : palette.bronze} style={styles.addLabel}>
+              {reorderMode ? t('Terminé') : t('Réorganiser')}
+            </AppText>
+          </Pressable>
+        ) : null}
+      </View>
       {isLeader && pending.length ? (
         <View style={styles.stack}>
           <AppText color={palette.signal} variant="label">
@@ -330,7 +368,7 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           ))}
         </View>
       ) : null}
-      {approvedSongs.length > 8 ? (
+      {approvedSongs.length > 8 && !reorderActive ? (
         <View style={[styles.search, { backgroundColor: palette.inset }]}>
           <Ionicons color={palette.muted} name="search" size={15} />
           <TextInput
@@ -398,9 +436,9 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
                 group={group}
                 index={orderIndex}
                 isActive={false}
-                isLeader={isLeader}
                 key={song.id}
                 onMove={moveApprovedSong}
+                reorderMode={false}
                 reorderPending={reorder.isPending}
                 song={song}
                 total={approvedSongs.length}
@@ -464,6 +502,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
+    flex: 1,
   },
   addPressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   addLabel: { fontSize: 13, fontWeight: '800' },
@@ -492,6 +531,17 @@ const styles = StyleSheet.create({
     width: 44,
   },
   pendingActions: { flexDirection: 'row', gap: spacing.xxs },
+  primaryActions: { flexDirection: 'row', gap: spacing.xs },
+  reorderButton: {
+    alignItems: 'center',
+    borderRadius: radii.button,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.tight,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
   search: {
     alignItems: 'center',
     borderRadius: 12,

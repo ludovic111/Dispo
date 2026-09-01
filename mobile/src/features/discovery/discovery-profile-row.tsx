@@ -7,7 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
-import { relationTags, type ProfileSummary } from '@/domain/profile';
+import { socialRelationTags, type ProfileSummary } from '@/domain/profile';
 import {
   availabilityPlaceForDate,
   dateKey,
@@ -144,7 +144,7 @@ export function DiscoveryProfileRow({
               <AppText color={palette.muted} variant="caption2">
                 {formatSwiftPlaceholders(t('%lld abonnés'), profile.followerCount)}
               </AppText>
-              {relationTags(profile).map((label) => (
+              {socialRelationTags(profile).map((label) => (
                 <Tag
                   color={label === 'Ami' ? palette.jam : palette.bronze}
                   key={label}

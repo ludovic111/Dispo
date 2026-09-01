@@ -27,7 +27,7 @@ import {
   type StreamingPlatformId,
 } from '@/domain/song';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing, typography } from '@/theme/tokens';
 
 const platformLabels: Record<StreamingPlatformId, string> = {
   amazonMusic: 'Amazon Music',
@@ -339,12 +339,16 @@ export function GroupSongRow({
   cardStyle,
   embedded = false,
   onPress,
+  showDisclosure = true,
+  showListenAction = true,
   song,
   trailing,
 }: {
   cardStyle?: ViewStyle;
   embedded?: boolean;
   onPress?: () => void;
+  showDisclosure?: boolean;
+  showListenAction?: boolean;
   song: GroupSong;
   trailing?: ReactNode;
 }) {
@@ -372,7 +376,7 @@ export function GroupSongRow({
               pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
             ]}
           >
-            <SongArtwork artworkUrl={song.artworkUrl} radius={12} size={56} />
+            <SongArtwork artworkUrl={song.artworkUrl} radius={11} size={52} />
             <View style={styles.songCopy}>
               <AppText
                 adjustsFontSizeToFit
@@ -396,35 +400,35 @@ export function GroupSongRow({
                 </AppText>
               ) : null}
               {metadata.length ? (
-                <View style={styles.metadataRow}>
-                  {metadata.map((value) => (
-                    <View
-                      key={value}
-                      style={[styles.metadataPill, { backgroundColor: palette.inset }]}
-                    >
-                      <AppText color={palette.bronze} style={styles.metadata} variant="caption2">
-                        {value}
-                      </AppText>
-                    </View>
-                  ))}
-                </View>
+                <AppText
+                  color={palette.bronze}
+                  numberOfLines={1}
+                  style={styles.metadata}
+                  variant="caption2"
+                >
+                  {metadata.join(' · ')}
+                </AppText>
               ) : null}
             </View>
-            {onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={16} /> : null}
+            {onPress && showDisclosure ? (
+              <Ionicons color={palette.muted} name="chevron-forward" size={16} />
+            ) : null}
           </Pressable>
-          <Pressable
-            accessibilityLabel={t('Écouter ce morceau')}
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={() => setListenVisible(true)}
-            style={({ pressed }) => [
-              styles.listenButton,
-              { backgroundColor: palette.inset },
-              pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
-            ]}
-          >
-            <Ionicons color={palette.muted} name="headset" size={14} />
-          </Pressable>
+          {showListenAction ? (
+            <Pressable
+              accessibilityLabel={t('Écouter ce morceau')}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setListenVisible(true)}
+              style={({ pressed }) => [
+                styles.listenButton,
+                { backgroundColor: palette.inset },
+                pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
+              ]}
+            >
+              <Ionicons color={palette.muted} name="headset" size={14} />
+            </Pressable>
+          ) : null}
           {trailing}
         </View>
       </SongRowSurface>
@@ -441,7 +445,7 @@ const styles = StyleSheet.create({
   amazonSmile: { bottom: 4, position: 'absolute' },
   artworkFallback: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   artist: { fontWeight: '600' },
-  cardSurface: { minHeight: 84 },
+  cardSurface: { minHeight: 76 },
   closeButton: {
     alignItems: 'center',
     borderRadius: 16,
@@ -462,7 +466,7 @@ const styles = StyleSheet.create({
   destinationLabel: { flex: 1, fontWeight: '700' },
   destinationStack: { gap: spacing.xs },
   emptyDestinations: { paddingVertical: spacing.sm, textAlign: 'center' },
-  embeddedSurface: { justifyContent: 'center', minHeight: 84, paddingHorizontal: 10 },
+  embeddedSurface: { justifyContent: 'center', minHeight: 76, paddingHorizontal: 10 },
   flex: { flex: 1 },
   identity: {
     alignItems: 'center',
@@ -484,20 +488,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  metadata: { fontWeight: '700' },
-  metadataPill: {
-    borderRadius: radii.chip,
-    maxWidth: '46%',
-    paddingHorizontal: spacing.tight,
-    paddingVertical: 2,
-  },
-  metadataRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.compact,
-    minWidth: 0,
-  },
+  metadata: { fontFamily: typography.monoSemibold, fontSize: 10.5, lineHeight: 14 },
   navigationSpacer: { width: 32 },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   pressedReduced: { opacity: 0.96 },

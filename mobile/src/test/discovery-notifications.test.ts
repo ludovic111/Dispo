@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { relationTags, type ProfileSummary } from '@/domain/profile';
+import { relationTags, socialRelationTags, type ProfileSummary } from '@/domain/profile';
 import {
   activeFilterCount,
   availabilityPlaceForDate,
@@ -281,8 +281,23 @@ describe('filtres de découverte', () => {
     );
   });
 
-  it('affiche explicitement la relation Même école', () => {
-    expect(relationTags(profile({ sharesSchool: true }))).toContain('Même école');
+  it('ne répète pas l’école dans les relations sociales de la carte', () => {
+    const musician = profile({
+      playedWithFriend: true,
+      relationship: 'following',
+      schools: [
+        {
+          id: 'school-1',
+          logoUrl: null,
+          name: 'AMR Genève',
+          shortName: 'AMR',
+          slug: 'amr',
+        },
+      ],
+      sharesSchool: true,
+    });
+    expect(relationTags(musician)).not.toContain('Même école');
+    expect(socialRelationTags(musician)).toEqual(['Suivi', 'Relation commune']);
   });
 });
 

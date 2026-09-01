@@ -112,16 +112,34 @@ export function relationshipMatches(
   return true;
 }
 
+function primaryRelationTag(
+  profile: Pick<ProfileSummary, 'isFriend'> & Partial<Pick<ProfileSummary, 'relationship'>>,
+): string | null {
+  if (profile.isFriend || profile.relationship === 'friend') return 'Ami';
+  if (profile.relationship === 'following') return 'Suivi';
+  if (profile.relationship === 'follower') return 'Te suit';
+  return null;
+}
+
+export function socialRelationTags(
+  profile: Pick<ProfileSummary, 'isFriend'> &
+    Partial<Pick<ProfileSummary, 'playedWithFriend' | 'relationship'>>,
+): string[] {
+  const tags: string[] = [];
+  const primary = primaryRelationTag(profile);
+  if (primary) tags.push(primary);
+  if (profile.playedWithFriend) tags.push('Relation commune');
+  return tags;
+}
+
 export function relationTags(
   profile: Pick<ProfileSummary, 'isFriend' | 'schools'> &
     Partial<Pick<ProfileSummary, 'playedWithFriend' | 'relationship' | 'sharesSchool'>>,
 ): string[] {
   const tags: string[] = [];
-  if (profile.isFriend || profile.relationship === 'friend') tags.push('Ami');
-  else if (profile.relationship === 'following') tags.push('Suivi');
-  else if (profile.relationship === 'follower') tags.push('Te suit');
+  const primary = primaryRelationTag(profile);
+  if (primary) tags.push(primary);
   if (profile.schools.some(isAmrSchool)) tags.push('AMR');
-  if (profile.sharesSchool) tags.push('Même école');
   if (profile.playedWithFriend) tags.push('Relation commune');
   return tags;
 }

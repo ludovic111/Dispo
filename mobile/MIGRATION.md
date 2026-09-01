@@ -46,7 +46,12 @@ appareil.
   photo/vidéo, disponibilités, localisation postale et affiliations/annuaire
   des écoles. Le profil personnel sépare désormais l’édition, les dates de
   disponibilité, les voyages et les démos ; le lieu de voyage est porté par
-  `/profile/travel`.
+  `/profile/travel`. L’accueil expose trois raccourcis métier compacts et
+  accessibles : disponibilités pour les musiciens solo, annuaire des écoles et
+  création d’un groupe lorsqu’aucun groupe n’existe encore. Dans les résultats
+  de découverte, l’école n’est affichée qu’une fois dans l’identité du profil ;
+  le badge redondant « Même école » a été retiré sans supprimer le filtre ni
+  l’affiliation.
 - SOS et Sessions : feed, détail, création structurée, candidature/retrait,
   décisions hôte, matching, demande directe, états d’adresse privée et agenda
   futur/passé avec réponses de présence. Le détail d’un événement propose une
@@ -63,11 +68,14 @@ appareil.
   setlist avec suggestion, validation et réorganisation. Toutes les routes
   Groupes sans barre Stack possèdent désormais un Retour ou Fermer visible de
   44 points dans leurs états chargement, erreur, vide et succès. Les
-  répertoires et setlists partagent maintenant une tuile de 84 points minimum,
-  sa pochette de 56 points, une hiérarchie titre/artiste/métadonnées, une flèche
-  d’ouverture, un bouton d’écoute séparé et une poignée de réorganisation. Le
-  geste caché de copie a été supprimé : la copie reste une action nommée dans la
-  fiche morceau. La feuille
+  répertoires et setlists partagent maintenant une tuile compacte de 76 points
+  minimum, sa pochette de 52 points, une hiérarchie titre/artiste et une ligne
+  stable de métadonnées. La poignée de déplacement n’encombre plus chaque
+  morceau : le propriétaire entre dans un mode explicite « Réorganiser », puis
+  en sort avec « Terminé ». Ce mode masque les actions d’ouverture et d’écoute
+  pour éviter les gestes accidentels ; les suggestions en attente restent
+  limitées aux décisions utiles. Le geste caché de copie a été supprimé : la
+  copie reste une action nommée dans la fiche morceau. La feuille
   d’écoute affiche d’abord uniquement les liens directs de morceau dont l’hôte
   officiel et la forme d’URL ont été vérifiés. Les services sans lien exact sont
   rangés dans une action secondaire explicite « Rechercher sur un autre
@@ -192,6 +200,16 @@ bout avec des comptes authentifiés.
   `APP_STORE_ELIGIBLE` pour la livraison
   `a16009f0-fc84-4e6c-82cb-243136a75310`. Aucune soumission App Review ni
   activation de testeurs n'a été effectuée.
+- Le lot UX issu des captures du 1er septembre prépare Expo 2.4 (41). La tuile
+  morceau compacte et la carte de découverte sans badge d’école redondant ont
+  été contrôlées visuellement sur iPhone 17 Pro simulé. `npm run validate` a
+  réussi avec 48 suites et 294 tests, Expo Doctor avec 21 contrôles sur 21,
+  puis le prebuild production CNG et l’installation de 128 pods ont réussi.
+  Android `:app:assembleRelease` et `:app:testReleaseUnitTest` ont terminé avec
+  succès sous JDK 17 ; la tâche de tests applicative reste `NO-SOURCE`. L’APK
+  final est signé v2, porte `ch.dispo.app`, `versionCode 41`, `versionName 2.4`,
+  `minSdk 24`, `targetSdk 36` et le SHA-256
+  `998cd89842495f25f837dc6fa4cf5274f6ab3322ee94b94340dd482c837be836`.
 - La migration `20260901082014_rename_hem_to_ema.sql` a conservé l’identifiant
   de l’école et ses relations, puis a été appliquée en production. Les
   historiques local et distant sont alignés ; la ligne active expose désormais

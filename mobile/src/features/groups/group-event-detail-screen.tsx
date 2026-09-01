@@ -203,6 +203,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   });
   const [approvedOrderOverride, setApprovedOrderOverride] = useState<string[] | null>(null);
   const [invitingProfileId, setInvitingProfileId] = useState<string | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
   const lastPlaceholderIndex = useRef<number | null>(null);
   if (query.isLoading)
     return (
@@ -257,6 +258,8 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   const approvedIds = event.setlist.filter((song) => song.isApproved).map((song) => song.id);
   const orderedSetlist = reorderSongs(event.setlist, approvedOrderOverride ?? approvedIds);
   const approvedSongs = orderedSetlist.filter((song) => song.isApproved);
+  const reorderActive = reorderMode && isLeader && approvedSongs.length > 1;
+  const dragEnabled = reorderActive;
   const repertoireChoices = group.repertoire.filter(
     (song) => song.isApproved && !containsGroupSong(event.setlist, song),
   );
@@ -351,10 +354,12 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
       <View style={styles.flex}>
         <GroupSongRow
           {...(isActive ? { cardStyle: { borderColor: palette.electric } } : {})}
-          onPress={() => openSong(song)}
+          {...(reorderActive ? {} : { onPress: () => openSong(song) })}
+          showDisclosure={!reorderActive}
+          showListenAction={!reorderActive}
           song={song}
           trailing={
-            isLeader ? (
+            reorderActive ? (
               <Pressable
                 accessibilityHint={
                   drag
@@ -713,6 +718,8 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
                 cardStyle={{ borderColor: `${palette.signal}55` }}
                 key={song.id}
                 onPress={() => openSong(song)}
+                showDisclosure={!isLeader}
+                showListenAction={!isLeader}
                 song={song}
                 trailing={
                   isLeader ? (
@@ -748,11 +755,44 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         ) : null}
 
         <View style={styles.songStack}>
-          <SectionHeader
-            subtitle={t('{{count}} morceaux', { count: approvedSongs.length })}
-            title={t('Setlist')}
-          />
-          {isLeader && approvedSongs.length > 1 ? (
+          <View style={styles.setlistHeader}>
+            <View style={styles.flex}>
+              <SectionHeader
+                subtitle={t('{{count}} morceaux', { count: approvedSongs.length })}
+                title={t('Setlist')}
+              />
+            </View>
+            {isLeader && approvedSongs.length > 1 ? (
+              <Pressable
+                accessibilityLabel={reorderMode ? t('Terminé') : t('Réorganiser')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: reorderMode }}
+                onPress={() => setReorderMode((current) => !current)}
+                style={({ pressed }) => [
+                  styles.reorderButton,
+                  {
+                    backgroundColor: reorderMode ? `${palette.jam}1F` : palette.inset,
+                    borderColor: reorderMode ? `${palette.jam}66` : palette.border,
+                  },
+                  pressed && styles.songActionActive,
+                ]}
+              >
+                <Ionicons
+                  color={reorderMode ? palette.jam : palette.electric}
+                  name={reorderMode ? 'checkmark' : 'reorder-three'}
+                  size={17}
+                />
+                <AppText
+                  color={reorderMode ? palette.jam : palette.electric}
+                  style={styles.reorderLabel}
+                  variant="caption2"
+                >
+                  {reorderMode ? t('Terminé') : t('Réorganiser')}
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
+          {dragEnabled ? (
             <View style={styles.dragInstruction}>
               <Ionicons color={palette.muted} name="hand-left-outline" size={15} />
               <AppText color={palette.muted} style={styles.dragInstructionText} variant="caption2">
@@ -761,7 +801,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             </View>
           ) : null}
           {approvedSongs.length ? (
-            isLeader && approvedSongs.length > 1 ? (
+            dragEnabled ? (
               <NestableDraggableFlatList
                 activationDistance={8}
                 animationConfig={{ damping: 22, mass: 0.25, stiffness: 180 }}
@@ -909,7 +949,18 @@ const styles = StyleSheet.create({
   memberRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   numberedSongRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   privateAddress: { borderRadius: radii.button, padding: spacing.sm },
+  reorderButton: {
+    alignItems: 'center',
+    borderRadius: radii.chip,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.tight,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  reorderLabel: { fontWeight: '800' },
   sectionTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  setlistHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   songActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   songActionButton: {
     alignItems: 'center',
