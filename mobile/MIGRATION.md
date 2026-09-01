@@ -117,21 +117,30 @@ bout avec des comptes authentifiés.
   20, aucun job en attente, aucun morceau sans lien exact, 20 liens Apple
   Music, 20 Deezer, 19 Tidal et 19 Amazon Music. Spotify et YouTube Music sont
   proposés comme recherches explicites lorsqu'aucune URL exacte n'est fournie.
+- L'archive de distribution Expo 2.4 (38) a réussi après déverrouillage du
+  trousseau, puis l'IPA finale a passé `codesign --verify --deep --strict`, le
+  contrôle d'intégrité ZIP et l'inspection de ses entitlements : identifiant
+  `2YBQQ56HH8.ch.dispo.app`, APNs `production`, Sign in with Apple `Default` et
+  `get-task-allow=false`. Apple a répondu `VERIFY SUCCEEDED` et
+  `UPLOAD SUCCEEDED`, puis `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et
+  `APP_STORE_ELIGIBLE` pour la livraison
+  `8ef20792-e31f-4216-a8f0-6fca1bc93517`. Aucune soumission App Review n'a été
+  effectuée.
 
 ### État Pixel et iOS
 
-| Cible                     | État vérifié                                                                                                                                                                                          | Ce que cela ne prouve pas                                                                                                                       |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Google Pixel physique     | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                        | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                      |
-| Expo Android émulateur    | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; build Kotlin Release final également réussi. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset. | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.          |
-| Expo iOS simulateur       | Build Release 2.4 (38) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; les trois routes signalées n’affichent plus le slug natif ni le double titre.                                    | Aucun parcours authentifié, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.      |
-| iPhone physique / Expo Go | Aucun test physique effectué pour ce correctif ; le build 37 TestFlight antérieur ne le contient pas.                                                                                                 | Expo Go ne couvre pas toutes les intégrations natives ; la preuve finale physique exige le prochain development build ou un nouveau TestFlight. |
-| Référence SwiftUI         | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                                         | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                     |
+| Cible                        | État vérifié                                                                                                                                                                                          | Ce que cela ne prouve pas                                                                                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                        | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
+| Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; build Kotlin Release final également réussi. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset. | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
+| Expo iOS simulateur          | Build Release 2.4 (38) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; les trois routes signalées n’affichent plus le slug natif ni le double titre.                                    | Aucun parcours authentifié, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                             |
+| iPhone physique / TestFlight | Le build Expo 2.4 (38) est importé `VALID` et éligible App Store chez Apple.                                                                                                                          | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
+| Référence SwiftUI            | L’application native iOS 2.4 build 35 a été recompilée et reste la référence.                                                                                                                         | Aucune comparaison pixel à pixel complète avec Expo n’est encore approuvée.                                                                                            |
 
 ### Limites et gates restants
 
 - Conserver `npm run validate` et `expo-doctor` verts après toute modification
-  supplémentaire ; le gate actuel est acquis sur le lot figé du 31 août.
+  supplémentaire ; le gate actuel est acquis sur le lot figé du 1er septembre.
 - Exécuter sur deux comptes de test les droits propriétaire/membre,
   leader/invité, hôte/candidat, blocage, confidentialité des adresses, mutations
   et Realtime ; aucune de ces preuves ne doit utiliser les comptes de
@@ -144,9 +153,9 @@ bout avec des comptes authentifiés.
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
-- Le build 37 Expo antérieur est valide et disponible côté Apple, sans
-  soumission App Review. Le build 38 Release est prêt à être archivé et livré ;
-  aucune publication Google Play n’a eu lieu.
+- Le build Expo 2.4 (38) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
+  sans soumission App Review ni activation implicite de testeurs. Aucune
+  publication Google Play n’a eu lieu.
 - Le backend de production contient désormais le catalogue canonique, sa file
   d'enrichissement privée, les alias Apple par storefront et la fonction Edge
   protégée par son authentification applicative. Aucun compte, secret Auth,
