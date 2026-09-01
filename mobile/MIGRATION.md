@@ -182,6 +182,16 @@ bout avec des comptes authentifiés.
   simulé ; sans session ni compte de test injecté, l’observation s’arrête
   honnêtement à l’écran de connexion et ne prouve pas encore les tuiles sur des
   données authentifiées.
+- Ce même lot a ensuite été livré en Expo 2.4 (40) selon la règle TestFlight
+  automatique. `npm run validate` a réussi avec 48 suites et 293 tests, Expo
+  Doctor 21/21, puis CNG production et 128 pods. L'archive et l'export ont
+  réussi ; l'IPA finale a passé l'intégrité ZIP et la signature stricte, contient
+  son bundle JavaScript et expose APNs production, Apple Sign-In `Default` et
+  `get-task-allow=false`. Apple a répondu `VERIFY SUCCEEDED`,
+  `UPLOAD SUCCEEDED`, `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et
+  `APP_STORE_ELIGIBLE` pour la livraison
+  `a16009f0-fc84-4e6c-82cb-243136a75310`. Aucune soumission App Review ni
+  activation de testeurs n'a été effectuée.
 - La migration `20260901082014_rename_hem_to_ema.sql` a conservé l’identifiant
   de l’école et ses relations, puis a été appliquée en production. Les
   historiques local et distant sont alignés ; la ligne active expose désormais
@@ -198,7 +208,7 @@ bout avec des comptes authentifiés.
 | Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                                                         | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
 | Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; application Release 2.4 (39) compilée sous JDK 17. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset.                            | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
 | Expo iOS simulateur          | Build Release 2.4 (39) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; l’authentification sombre bleu jazz ne présente pas de chevauchement. Les routes signalées avaient déjà été contrôlées sans slug ni double titre. | Aucun parcours authentifié, thème clair, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                |
-| iPhone physique / TestFlight | Le build Expo 2.4 (39) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
+| iPhone physique / TestFlight | Le build Expo 2.4 (40) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
 | Anciens clients natifs       | Sources SwiftUI et copie locale Kotlin retirées après validation explicite du client commun. L’historique Git et les dépôts distants permettent un audit ou une restauration.                                                          | Leur suppression n’ajoute aucune preuve aux intégrations Expo sur appareil physique.                                                                                   |
 
 ### Limites et gates restants
@@ -216,7 +226,7 @@ bout avec des comptes authentifiés.
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
-- Le build Expo 2.4 (39) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
+- Le build Expo 2.4 (40) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
   sans soumission App Review ni activation implicite de testeurs. Aucune
   publication Google Play n’a eu lieu.
 - Le backend de production contient désormais le catalogue canonique, sa file
