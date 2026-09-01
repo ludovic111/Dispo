@@ -200,7 +200,7 @@ bout avec des comptes authentifiés.
   `APP_STORE_ELIGIBLE` pour la livraison
   `a16009f0-fc84-4e6c-82cb-243136a75310`. Aucune soumission App Review ni
   activation de testeurs n'a été effectuée.
-- Le lot UX issu des captures du 1er septembre prépare Expo 2.4 (41). La tuile
+- Le lot UX issu des captures du 1er septembre a été livré en Expo 2.4 (41). La tuile
   morceau compacte et la carte de découverte sans badge d’école redondant ont
   été contrôlées visuellement sur iPhone 17 Pro simulé. `npm run validate` a
   réussi avec 48 suites et 294 tests, Expo Doctor avec 21 contrôles sur 21,
@@ -210,6 +210,15 @@ bout avec des comptes authentifiés.
   final est signé v2, porte `ch.dispo.app`, `versionCode 41`, `versionName 2.4`,
   `minSdk 24`, `targetSdk 36` et le SHA-256
   `998cd89842495f25f837dc6fa4cf5274f6ab3322ee94b94340dd482c837be836`.
+  L’archive et l’export iOS ont réussi ; l’IPA a passé l’intégrité ZIP et
+  `codesign --verify --deep --strict`, contient son bundle JavaScript et expose
+  `2YBQQ56HH8.ch.dispo.app`, APNs `production`, Apple Sign-In `Default` et
+  `get-task-allow=false`. Son SHA-256 est
+  `fed96d70df493b623eec12c2f336a0a8fcb650a9b795d95b88c0abf3435bde0d`.
+  Apple a répondu `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`,
+  `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et `APP_STORE_ELIGIBLE` pour la
+  livraison `bb1299a7-0583-4c5c-961a-0de497c8b7e0`. Aucune soumission App
+  Review ni activation de testeurs n’a été effectuée.
 - La migration `20260901082014_rename_hem_to_ema.sql` a conservé l’identifiant
   de l’école et ses relations, puis a été appliquée en production. Les
   historiques local et distant sont alignés ; la ligne active expose désormais
@@ -226,7 +235,7 @@ bout avec des comptes authentifiés.
 | Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                                                         | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
 | Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; application Release 2.4 (39) compilée sous JDK 17. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset.                            | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
 | Expo iOS simulateur          | Build Release 2.4 (39) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; l’authentification sombre bleu jazz ne présente pas de chevauchement. Les routes signalées avaient déjà été contrôlées sans slug ni double titre. | Aucun parcours authentifié, thème clair, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                |
-| iPhone physique / TestFlight | Le build Expo 2.4 (40) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
+| iPhone physique / TestFlight | Le build Expo 2.4 (41) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
 | Anciens clients natifs       | Sources SwiftUI et copie locale Kotlin retirées après validation explicite du client commun. L’historique Git et les dépôts distants permettent un audit ou une restauration.                                                          | Leur suppression n’ajoute aucune preuve aux intégrations Expo sur appareil physique.                                                                                   |
 
 ### Limites et gates restants
@@ -244,7 +253,7 @@ bout avec des comptes authentifiés.
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
-- Le build Expo 2.4 (40) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
+- Le build Expo 2.4 (41) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
   sans soumission App Review ni activation implicite de testeurs. Aucune
   publication Google Play n’a eu lieu.
 - Le backend de production contient désormais le catalogue canonique, sa file
