@@ -1,6 +1,6 @@
 # Dispo Expo / React Native — état courant et historique de migration
 
-Dernière mise à jour documentaire : 1er septembre 2026.
+Dernière mise à jour documentaire : 2 septembre 2026.
 
 Ce fichier conserve le contrat historique de migration et les preuves du
 client commun. Depuis la décision explicite de Ludovic du 1er septembre 2026,
@@ -12,13 +12,13 @@ La validation de Ludovic autorise la bascule produit et le nettoyage des
 anciens clients. Elle ne remplace pas les preuves techniques propres à chaque
 parcours, intégration native, appareil physique ou livraison Store.
 
-La section suivante est la source de vérité au 1er septembre 2026. Les matrices
+La section suivante est la source de vérité au 2 septembre 2026. Les matrices
 plus bas conservent la photographie détaillée du socle du 30 août et la cible
-finale ; en cas d’écart de statut, l’état du 1er septembre prévaut. Aucune
+finale ; en cas d’écart de statut, l’état du 2 septembre prévaut. Aucune
 présence de code n’est assimilée à une validation métier, visuelle ou sur
 appareil.
 
-## État faisant autorité — 1er septembre 2026
+## État faisant autorité — 2 septembre 2026
 
 ### Surfaces désormais présentes dans le client Expo
 
@@ -35,7 +35,10 @@ appareil.
 - Authentification et compte : restauration de session, connexion/création,
   reset et retour de lien, onboarding, stockage SecureStore, réglages, thème,
   langues, préférences de notifications, nouveautés et écran Premium de la
-  bêta. Une migration non destructive reprend au premier lancement la session
+  bêta. La connexion par e-mail propose aussi un lien magique Supabase aux
+  comptes existants (`shouldCreateUser: false`) : le mot de passe n'est pas
+  demandé et le callback revient dans l'application. Une migration non
+  destructive reprend au premier lancement la session
   Keychain SwiftUI ou Supabase-KT/SharedPreferences et les préférences locales
   compatibles ; elle conserve les anciennes valeurs pour permettre un retour
   arrière. Les parcours Apple/Google existent dans le code mais restent à
@@ -46,21 +49,23 @@ appareil.
   photo/vidéo, disponibilités, localisation postale et affiliations/annuaire
   des écoles. Le profil personnel sépare désormais l’édition, les dates de
   disponibilité, les voyages et les démos ; le lieu de voyage est porté par
-  `/profile/travel`. L’accueil expose trois raccourcis métier compacts et
-  accessibles : disponibilités pour les musiciens solo, annuaire des écoles et
-  création d’un groupe lorsqu’aucun groupe n’existe encore. Dans les résultats
-  de découverte, l’école n’est affichée qu’une fois dans l’identité du profil ;
+  `/profile/travel`. Sur l'accueil, « Nouveau groupe » est le seul raccourci
+  permanent. Dans les résultats de découverte, l’école n’est affichée qu’une
+  fois dans l’identité du profil ;
   le badge redondant « Même école » a été retiré sans supprimer le filtre ni
-  l’affiliation.
+  l’affiliation. L'acronyme de l'école principale est affiché dans les lignes
+  de musiciens disponibles de l'accueil, sans modifier les autres contextes.
 - SOS et Sessions : feed, détail, création structurée, candidature/retrait,
   décisions hôte, matching, demande directe, états d’adresse privée et agenda
   futur/passé avec réponses de présence. Le détail d’un événement propose une
   carte intégrée sur iOS, une ouverture d’itinéraire sur les deux plateformes
   et une carte Android lorsque la clé Google Maps restreinte est fournie.
-- Messages : conversations directes, de groupe et d'école paginées, Realtime
+- Messages : conversations directes et de groupe paginées, Realtime
   filtré, unread, typing éphémère, réactions, édition/suppression, signalement,
-  blocage et pièces jointes photo, vidéo ou fichier. Le chat d'école a été
-  rétabli pour supprimer une régression certaine face au build SwiftUI 35.
+  blocage et pièces jointes photo, vidéo ou fichier. L'écran Messages ne charge
+  et n'affiche plus une section Écoles ; ses routes et notifications dédiées
+  restent disponibles ailleurs. L'action « Nouveau groupe » est fixée dans
+  l'en-tête du segment Groupes.
 - Groupes : liste, création, invitations, membres, réglages, répertoire,
   détails/copie de morceau, documents, événements nouveaux/édités/récurrents,
   présence, invités acceptés, rôles manquants, SOS liés et préremplis,
@@ -80,6 +85,14 @@ appareil.
   officiel et la forme d’URL ont été vérifiés. Les services sans lien exact sont
   rangés dans une action secondaire explicite « Rechercher sur un autre
   service » ; une recherche n’est jamais présentée comme un lien direct.
+  La création de groupe génère maintenant son UUID côté client et n'utilise
+  plus `insert(...).select()` : cela évite le `42501` causé par la lecture de la
+  représentation PostgREST avant que le trigger d'adhésion rende le groupe
+  visible au leader. Les invitations restent indépendantes et signalent les
+  échecs partiels. Les dates concert/répétition/jam conservent leur couleur
+  propre, indépendamment du line-up. Les morceaux utilisent les 24 tonalités
+  historiques et exposent un ordre de solos en lecture seule dans le répertoire
+  comme dans les setlists, avec « Membre retiré » pour un identifiant absent.
   La recherche d’ajout interroge le catalogue canonique Supabase puis fusionne
   son résultat avec le repli Apple, en privilégiant les métadonnées et liens
   canoniques lorsque le RPC est disponible. L'analyse locale de fichier audio
@@ -108,8 +121,9 @@ appareil.
   du profil connecté.
 
 Ces surfaces sont implémentées structurellement et couvertes par des tests
-ciblés ; elles ne sont pas déclarées « pixel perfect » ni validées de bout en
-bout avec des comptes authentifiés.
+ciblés. Le lot du 2 septembre a été parcouru avec des comptes locaux dédiés,
+mais l'ensemble du client n'est pas déclaré « pixel perfect » ni validé de bout
+en bout sur appareil physique.
 
 ### Validations réellement observées
 
@@ -219,6 +233,25 @@ bout avec des comptes authentifiés.
   `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et `APP_STORE_ELIGIBLE` pour la
   livraison `bb1299a7-0583-4c5c-961a-0de497c8b7e0`. Aucune soumission App
   Review ni activation de testeurs n’a été effectuée.
+- Le lot du 2 septembre a été livré en Expo 2.4 (42), commit fonctionnel
+  `db058f8`. `npm run validate` a réussi avec 49 suites et 311 tests,
+  `npm run format:check` et `git diff --check` ont réussi. Expo Doctor passe
+  20 contrôles sur 21 ; le seul écart est un ensemble de 14 paquets Expo en
+  retard d'une révision patch, laissé hors de ce lot fonctionnel. Le prebuild
+  production CNG, CocoaPods, les builds iOS simulateur et Android Release ont
+  réussi. Les écrans Accueil, Messages/Groupes, événements, répertoire, solos,
+  tonalités et disponibilités ont été parcourus avec des fixtures Supabase
+  locales en clair et sombre, puis les comptes et données temporaires ont été
+  supprimés. L'APK direct est signé v2, porte `ch.dispo.app`, `versionCode 42`,
+  `versionName 2.4`, `minSdk 24`, `targetSdk 36` et le SHA-256
+  `4dc0e143bf94da47885baeccecb9b9504f05818f612fa1994a183e55932e3b40`.
+  L'IPA finale expose `2YBQQ56HH8.ch.dispo.app`, APNs `production`, Apple
+  Sign-In `Default` et `get-task-allow=false`; son SHA-256 est
+  `82ab58669485c71ee89c845561d2f8ee9c98a1b81369f37fb88bdf0a2f536a33`.
+  Apple a répondu `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, puis
+  `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID` et `APP_STORE_ELIGIBLE` pour la
+  livraison `95d17ad6-46b9-4fc9-94e4-465933f458d3`. Aucune soumission App
+  Review ni activation de testeurs n'a été effectuée.
 - La migration `20260901082014_rename_hem_to_ema.sql` a conservé l’identifiant
   de l’école et ses relations, puis a été appliquée en production. Les
   historiques local et distant sont alignés ; la ligne active expose désormais
@@ -230,18 +263,19 @@ bout avec des comptes authentifiés.
 
 ### État Pixel et iOS
 
-| Cible                        | État vérifié                                                                                                                                                                                                                           | Ce que cela ne prouve pas                                                                                                                                              |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                                                         | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
-| Expo Android émulateur       | APK Debug courant compilé, installé et lancé sur Android 16/API 36 ; application Release 2.4 (39) compilée sous JDK 17. Réglages, Disponibilités et Notifications affichent un seul titre sans grand inset.                            | Les parcours authentifiés, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                                 |
-| Expo iOS simulateur          | Build Release 2.4 (39) réussi, installé et lancé sur iOS 26.5 avec bundle embarqué ; l’authentification sombre bleu jazz ne présente pas de chevauchement. Les routes signalées avaient déjà été contrôlées sans slug ni double titre. | Aucun parcours authentifié, thème clair, ouverture iReal/streaming réelle ni comparaison exhaustive de tous les états avec SwiftUI n’est encore prouvé.                |
-| iPhone physique / TestFlight | Le build Expo 2.4 (41) est importé `VALID` et éligible App Store chez Apple.                                                                                                                                                           | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
-| Anciens clients natifs       | Sources SwiftUI et copie locale Kotlin retirées après validation explicite du client commun. L’historique Git et les dépôts distants permettent un audit ou une restauration.                                                          | Leur suppression n’ajoute aucune preuve aux intégrations Expo sur appareil physique.                                                                                   |
+| Cible                        | État vérifié                                                                                                                                                                                        | Ce que cela ne prouve pas                                                                                                                                              |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Pixel physique        | Un APK de développement antérieur a été signé v2, installé et lancé avant la déconnexion du téléphone. Le Pixel est actuellement absent d’ADB.                                                      | Le lot final n’a pas été réinstallé ni observé sur ce téléphone ; aucun parcours authentifié n’est prouvé.                                                             |
+| Expo Android émulateur       | APK Release direct 2.4 (42) compilé sous JDK 17, signé v2, installé et lancé sur Android 16/API 36 ; le bouton de lien magique est visible.                                                         | Les parcours authentifiés complets, les données réelles, les ouvertures de services musicaux et la carte avec clé restreinte restent à exercer.                        |
+| Expo iOS simulateur          | Build natif 2.4 (42) réussi et lancé sur iPhone 17 Pro ; parcours authentifié avec Supabase local sur Accueil, Groupes, événements, répertoire, solos, tonalités et disponibilités en clair/sombre. | Les intégrations externes et l'équivalence complète sur iPhone physique ne sont pas prouvées par ces fixtures locales.                                                 |
+| iPhone physique / TestFlight | Le build Expo 2.4 (42) est importé `VALID` et `APP_STORE_ELIGIBLE` chez Apple.                                                                                                                      | Il n'a pas encore été installé et parcouru sur l'iPhone physique ; la distribution réussie ne prouve pas les intégrations ni la parité visuelle en conditions réelles. |
+| Anciens clients natifs       | Sources SwiftUI et copie locale Kotlin retirées après validation explicite du client commun. L’historique Git et les dépôts distants permettent un audit ou une restauration.                       | Leur suppression n’ajoute aucune preuve aux intégrations Expo sur appareil physique.                                                                                   |
 
 ### Limites et gates restants
 
-- Conserver `npm run validate` et `expo-doctor` verts après toute modification
-  supplémentaire ; le gate actuel est acquis sur le lot figé du 1er septembre.
+- Conserver `npm run validate` vert après toute modification supplémentaire et
+  réaligner les 14 révisions patch Expo avant d'exiger Expo Doctor 21/21 ; le
+  lot du 2 septembre passe actuellement 20 contrôles sur 21.
 - Exécuter sur deux comptes de test les droits propriétaire/membre,
   leader/invité, hôte/candidat, blocage, confidentialité des adresses, mutations
   et Realtime ; aucune de ces preuves ne doit utiliser les comptes de
@@ -253,7 +287,7 @@ bout avec des comptes authentifiés.
   APNs/FCM, rappels locaux, deep links, localisation, caméra/photos, vidéo,
   documents privés, partage, haptique et stockage sécurisé. RevenueCat et les
   achats StoreKit/Play Billing ne sont pas encore intégrés à la cible commune.
-- Le build Expo 2.4 (41) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
+- Le build Expo 2.4 (42) est importé `VALID` et `APP_STORE_ELIGIBLE` côté Apple,
   sans soumission App Review ni activation implicite de testeurs. Aucune
   publication Google Play n’a eu lieu.
 - Le backend de production contient désormais le catalogue canonique, sa file
