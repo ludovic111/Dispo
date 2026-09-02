@@ -35,6 +35,7 @@ import { fetchOnboardingDraft, saveOnboardingDraft } from './onboarding-service'
 import { AppText } from '@/components/ui/app-text';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
+import { shortProfileLevel } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
 import { signOut } from '@/features/auth/auth-service';
 import { PostalPlaceField } from '@/features/location';
@@ -456,7 +457,7 @@ export function OnboardingScreen() {
                     <View key={level} style={styles.levelCell}>
                       <SelectionPill
                         active={draft.level === level}
-                        label={t(level === 'Professionnel' ? 'Pro' : level)}
+                        label={t(shortProfileLevel(level))}
                         onPress={() => setDraft((value) => ({ ...value, level }))}
                       />
                     </View>

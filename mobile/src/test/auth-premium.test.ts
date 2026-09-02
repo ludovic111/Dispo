@@ -6,6 +6,7 @@ import { canReadLockedGig, hasPremiumAccess, type PremiumProfile } from '@/domai
 import {
   handleAuthCallbackUrl,
   isAuthCallbackUrl,
+  requestEmailSignInLink,
   requestPasswordReset,
   restoreSession,
   signInWithGoogle,
@@ -73,6 +74,42 @@ describe('réinitialisation du mot de passe', () => {
 
     await expect(requestPasswordReset('musicien@exemple.ch')).rejects.toBe(failure);
     expect(resetPasswordForEmail).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('connexion sans mot de passe', () => {
+  it('normalise l’adresse, refuse de créer un compte et revient dans l’app', async () => {
+    const signInWithOtp = jest.fn(async () => ({ data: {}, error: null }));
+    jest.mocked(getSupabaseClient).mockReturnValue({
+      auth: { signInWithOtp },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+
+    await requestEmailSignInLink('  MUSICIEN@EXEMPLE.CH ');
+
+    expect(signInWithOtp).toHaveBeenCalledWith({
+      email: 'musicien@exemple.ch',
+      options: {
+        emailRedirectTo: 'dispo://login-callback',
+        shouldCreateUser: false,
+      },
+    });
+  });
+
+  it('restaure une session normale depuis le lien reçu par e-mail', async () => {
+    const setSession = jest.fn(async () => ({ data: {}, error: null }));
+    jest.mocked(getSupabaseClient).mockReturnValue({
+      auth: { setSession },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+
+    await expect(
+      handleAuthCallbackUrl(
+        'dispo://login-callback#access_token=access&refresh_token=refresh&type=magiclink',
+      ),
+    ).resolves.toEqual({ handled: true, recovery: false });
+    expect(setSession).toHaveBeenCalledWith({
+      access_token: 'access',
+      refresh_token: 'refresh',
+    });
   });
 });
 

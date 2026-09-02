@@ -10,6 +10,7 @@ import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
+import { shortProfileLevel } from '@/domain/profile';
 import { matchProfilesToGig, type GigMatch, type GigSummary } from '@/features/gigs/gig-model';
 import { useGigMatches } from '@/features/gigs/gig-queries';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -32,7 +33,7 @@ function MatchRow({ gig, match }: { gig: GigSummary; match: GigMatch }) {
           </AppText>
           <AppText color={palette.muted} numberOfLines={2} variant="caption">
             {match.matchingInstruments.map((instrument) => t(instrument)).join(', ')} ·{' '}
-            {t(match.level === 'Professionnel' ? 'Pro' : match.level)}
+            {t(shortProfileLevel(match.level))}
           </AppText>
           {match.isDemo ? <Tag color={palette.bronze} label={t('Démo')} /> : null}
         </View>

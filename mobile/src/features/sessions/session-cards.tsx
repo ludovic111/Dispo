@@ -17,6 +17,7 @@ import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
+import { groupEventColor } from '@/features/groups/group-event-presentation';
 import { useDispoTheme } from '@/theme/theme-context';
 import {
   billetInk,
@@ -55,24 +56,19 @@ export function sessionMonthLabel(key: string, locale = 'fr'): string {
 }
 
 function eventColor(kind: string | null, palette: DispoPalette): string {
-  switch (kind) {
-    case 'Concert':
-      return palette.concert;
-    case 'Répétition':
-      return palette.rehearsal;
-    case 'Jam':
-      return palette.jam;
-    default:
-      return palette.electric;
-  }
+  return groupEventColor(kind, palette) ?? palette.electric;
 }
 
 function itemGradient(item: SessionItem, palette: DispoPalette): readonly [string, string] {
   if (item.source === 'playing') return gradients.series;
   if (item.source !== 'group') return gradients.hero;
+  if (['Concert', 'Jam', 'Répétition'].includes(item.eventKind ?? '')) {
+    const color = eventColor(item.eventKind, palette);
+    return [color, color];
+  }
   if (item.lineupState === 'complete') return [palette.jam, palette.jam];
   if (item.lineupState === 'late') return gradients.alert;
-  return [eventColor(item.eventKind, palette), palette.electric];
+  return [palette.electric, palette.electric];
 }
 
 function DeadlineBadge({ deadline }: { deadline: string }) {
@@ -100,7 +96,9 @@ function DateTicket({ item, large = false }: { item: SessionItem; large?: boolea
   const date = dateParts(item.date, i18n.resolvedLanguage ?? i18n.language ?? 'fr');
   const colors = large
     ? item.source === 'group'
-      ? ([eventColor(item.eventKind, palette), palette.electric] as const)
+      ? ['Concert', 'Jam', 'Répétition'].includes(item.eventKind ?? '')
+        ? ([eventColor(item.eventKind, palette), eventColor(item.eventKind, palette)] as const)
+        : ([palette.electric, palette.electric] as const)
       : gradients.hero
     : itemGradient(item, palette);
   return (

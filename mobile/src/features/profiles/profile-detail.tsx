@@ -25,6 +25,7 @@ import {
   profileHandle,
   profileSocialUrl,
   relationTags,
+  shortProfileLevel,
   type ProfileSocialNetwork,
   type ProfileSummary,
 } from '@/domain/profile';
@@ -311,7 +312,9 @@ export function ProfileDetail({
         <View style={styles.headerStats}>
           <View style={styles.stat}>
             <AppText style={styles.statValue}>
-              {profile.ratingAverage ? `★ ${profile.ratingAverage.toFixed(1)}` : profile.level}
+              {profile.ratingAverage
+                ? `★ ${profile.ratingAverage.toFixed(1)}`
+                : t(shortProfileLevel(profile.level))}
             </AppText>
             <AppText color={palette.muted} variant="caption2">
               {t(profile.ratingAverage ? 'note' : 'niveau')}
@@ -373,7 +376,7 @@ export function ProfileDetail({
           {relationTags(profile).map((tag) => (
             <Tag key={tag} label={t(tag)} />
           ))}
-          <Tag color={palette.bronze} label={t(profile.level)} />
+          <Tag color={palette.bronze} label={t(shortProfileLevel(profile.level))} />
         </View>
         <AppText color={palette.muted} variant="caption">
           {[
@@ -395,7 +398,9 @@ export function ProfileDetail({
             <Tag
               color={palette.electric}
               key={instrument}
-              label={`${t(instrument)} · ${t(profile.instrumentLevels[instrument] ?? profile.level)}`}
+              label={`${t(instrument)} · ${t(
+                shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
+              )}`}
             />
           ))}
         </View>

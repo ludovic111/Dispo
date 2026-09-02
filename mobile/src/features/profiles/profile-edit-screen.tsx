@@ -23,6 +23,7 @@ import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { shortProfileLevel } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
 import { GIG_GENRE_GROUPS } from '@/features/gigs/gig-model';
 import { instrumentCategories, levelOptions } from '@/features/onboarding/onboarding-model';
@@ -212,7 +213,7 @@ export function ProfileEditScreen() {
                           {levelOptions.map((level) => (
                             <ChoiceChip
                               key={level}
-                              label={t(level)}
+                              label={t(shortProfileLevel(level))}
                               onPress={() =>
                                 update({
                                   instrumentLevels: {

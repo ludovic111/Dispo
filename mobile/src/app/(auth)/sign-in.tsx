@@ -23,6 +23,7 @@ import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import {
+  requestEmailSignInLink,
   requestPasswordReset,
   signInWithApple,
   signInWithGoogle,
@@ -89,6 +90,7 @@ export default function SignInScreen() {
   const [registering, setRegistering] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [infoText, setInfoText] = useState<string | null>(null);
+  const [emailLinkWorking, setEmailLinkWorking] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [appleWorking, setAppleWorking] = useState(false);
   const [googleWorking, setGoogleWorking] = useState(false);
@@ -139,7 +141,7 @@ export default function SignInScreen() {
   };
 
   const forgotPassword = async () => {
-    if (!configurationReady || formState.isSubmitting || resetting) return;
+    if (!configurationReady || emailLinkWorking || formState.isSubmitting || resetting) return;
     const emailIsValid = await trigger('email');
     if (!emailIsValid) return;
 
@@ -156,8 +158,33 @@ export default function SignInScreen() {
     }
   };
 
+  const sendEmailSignInLink = async () => {
+    if (!configurationReady || emailLinkWorking || formState.isSubmitting || resetting) return;
+    const emailIsValid = await trigger('email');
+    if (!emailIsValid) return;
+
+    setEmailLinkWorking(true);
+    setServerError(null);
+    setInfoText(null);
+    try {
+      await requestEmailSignInLink(getValues('email'));
+      setInfoText(t('Lien envoyé. Ouvre ton e-mail sur cet appareil pour te connecter.'));
+    } catch {
+      setServerError(t("Envoi impossible — vérifie l'adresse et le réseau."));
+    } finally {
+      setEmailLinkWorking(false);
+    }
+  };
+
   const authenticateWithApple = async () => {
-    if (!configurationReady || appleWorking || formState.isSubmitting || resetting) return;
+    if (
+      !configurationReady ||
+      appleWorking ||
+      emailLinkWorking ||
+      formState.isSubmitting ||
+      resetting
+    )
+      return;
     setAppleWorking(true);
     setServerError(null);
     setInfoText(null);
@@ -176,7 +203,14 @@ export default function SignInScreen() {
   };
 
   const authenticateWithGoogle = async () => {
-    if (!configurationReady || googleWorking || formState.isSubmitting || resetting) return;
+    if (
+      !configurationReady ||
+      googleWorking ||
+      emailLinkWorking ||
+      formState.isSubmitting ||
+      resetting
+    )
+      return;
     setGoogleWorking(true);
     setServerError(null);
     setInfoText(null);
@@ -246,7 +280,11 @@ export default function SignInScreen() {
                 <>
                   <DispoButton
                     disabled={
-                      !configurationReady || googleWorking || formState.isSubmitting || resetting
+                      !configurationReady ||
+                      googleWorking ||
+                      emailLinkWorking ||
+                      formState.isSubmitting ||
+                      resetting
                     }
                     icon="logo-google"
                     loading={googleWorking}
@@ -372,7 +410,7 @@ export default function SignInScreen() {
                 />
 
                 <DispoButton
-                  disabled={!configurationReady || resetting}
+                  disabled={!configurationReady || emailLinkWorking || resetting}
                   loading={formState.isSubmitting}
                   onPress={() => void submit()}
                 >
@@ -380,30 +418,49 @@ export default function SignInScreen() {
                 </DispoButton>
 
                 {!registering ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={
-                      !configurationReady ||
-                      formState.isSubmitting ||
-                      resetting ||
-                      !normalizedEmail.includes('@')
-                    }
-                    hitSlop={8}
-                    onPress={() => void forgotPassword()}
-                    style={({ pressed }) => [
-                      styles.forgotButton,
-                      pressed && styles.pressed,
-                      (!configurationReady ||
+                  <>
+                    <DispoButton
+                      disabled={
+                        !configurationReady ||
+                        emailLinkWorking ||
                         formState.isSubmitting ||
                         resetting ||
-                        !normalizedEmail.includes('@')) &&
-                        styles.disabled,
-                    ]}
-                  >
-                    <AppText color={palette.muted} variant="caption">
-                      {resetting ? t('Envoi…') : t('Mot de passe oublié ?')}
-                    </AppText>
-                  </Pressable>
+                        !normalizedEmail.includes('@')
+                      }
+                      icon="mail-outline"
+                      loading={emailLinkWorking}
+                      onPress={() => void sendEmailSignInLink()}
+                      variant="secondary"
+                    >
+                      {t('Recevoir un lien de connexion')}
+                    </DispoButton>
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={
+                        !configurationReady ||
+                        emailLinkWorking ||
+                        formState.isSubmitting ||
+                        resetting ||
+                        !normalizedEmail.includes('@')
+                      }
+                      hitSlop={8}
+                      onPress={() => void forgotPassword()}
+                      style={({ pressed }) => [
+                        styles.forgotButton,
+                        pressed && styles.pressed,
+                        (!configurationReady ||
+                          emailLinkWorking ||
+                          formState.isSubmitting ||
+                          resetting ||
+                          !normalizedEmail.includes('@')) &&
+                          styles.disabled,
+                      ]}
+                    >
+                      <AppText color={palette.muted} variant="caption">
+                        {resetting ? t('Envoi…') : t('Mot de passe oublié ?')}
+                      </AppText>
+                    </Pressable>
+                  </>
                 ) : null}
               </Card>
 

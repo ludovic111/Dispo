@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
+import { shortProfileLevel } from '@/domain/profile';
 import type { ProfileConnection } from '@/features/profiles/profile-social-model';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -34,7 +35,7 @@ export function ProfileConnectionRow({ profile }: { profile: ProfileConnection }
               {profile.instruments
                 .slice(0, 2)
                 .map((instrument) => t(instrument))
-                .join(' · ') || t(profile.level)}
+                .join(' · ') || t(shortProfileLevel(profile.level))}
             </AppText>
           </View>
           <Ionicons color={palette.muted} name="chevron-forward" size={15} />

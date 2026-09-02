@@ -304,7 +304,6 @@ describe('filtres de découverte', () => {
 describe('centre de notifications', () => {
   it('additionne les invitations en attente au badge Messages', () => {
     expect(messageTabBadgeCount(2, 3, 1)).toBe(6);
-    expect(messageTabBadgeCount(2, 3, 1, 4)).toBe(10);
     expect(messageTabBadgeCount(0, 0, -1)).toBe(0);
     expect(tabBadgeValue(0)).toBeUndefined();
     expect(tabBadgeValue(7)).toBe('7');

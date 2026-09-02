@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "41",
+      "buildNumber": "42",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -18,11 +18,12 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Dispo utilise ta position approximative pour trouver des musiciens et des SOS près de toi.",
         "NSPhotoLibraryUsageDescription": "Dispo accède aux photos et vidéos que tu choisis pour ton profil et tes messages."
-      }
+      },
+      "appleTeamId": "2YBQQ56HH8"
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 41,
+      "versionCode": 42,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"

@@ -14,6 +14,7 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { shortProfileLevel } from '@/domain/profile';
 import { GIG_GENRE_GROUPS } from '@/features/gigs/gig-model';
 import { PostalPlaceField, type PostalPlaceDraft } from '@/features/location';
 import {
@@ -322,7 +323,7 @@ export function FilterScreen() {
               {levelOptions.map((level) => (
                 <ChoiceChip
                   key={level}
-                  label={t(level === 'Professionnel' ? 'Pro' : level)}
+                  label={t(shortProfileLevel(level))}
                   onPress={() => setFilters({ ...filters, levels: toggle(filters.levels, level) })}
                   selected={filters.levels.includes(level)}
                 />

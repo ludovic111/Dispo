@@ -1,4 +1,4 @@
-import type { ProfileSummary } from '@/domain/profile';
+import { shortProfileLevel, type ProfileSummary } from '@/domain/profile';
 import { GIG_GENRE_GROUPS, type GigSummary } from '@/features/gigs/gig-model';
 
 export type AvailabilityScope = 'nearby' | 'today' | 'weekend';
@@ -206,7 +206,7 @@ function profileWords(
     profile.postalCode ?? '',
     profile.country ?? '',
     profile.level,
-    profile.level === 'Professionnel' ? 'Pro' : profile.level,
+    shortProfileLevel(profile.level),
     ...translatedTerms(profile.level, translate),
     ...profile.instruments.flatMap((instrument) => translatedTerms(instrument, translate)),
     ...profile.instruments.flatMap((instrument) => instrumentAliases[instrument] ?? []),

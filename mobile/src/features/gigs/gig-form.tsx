@@ -25,6 +25,7 @@ import {
   NativeDateTimeField,
 } from '@/components/ui/native-date-time-field';
 import { DispoButton } from '@/components/ui/pressable';
+import { shortProfileLevel } from '@/domain/profile';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
@@ -439,7 +440,7 @@ export function GigForm({
             {GIG_LEVELS.map((level) => (
               <ChoiceChip
                 key={level}
-                label={t(level === 'Professionnel' ? 'Pro' : level)}
+                label={t(shortProfileLevel(level))}
                 onPress={() => toggleLevel(level)}
                 selected={wantedLevels.includes(level)}
               />

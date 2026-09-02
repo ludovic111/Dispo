@@ -7,7 +7,13 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
-import { socialRelationTags, type ProfileSummary } from '@/domain/profile';
+import {
+  schoolAcronym,
+  shortProfileLevel,
+  socialRelationTags,
+  type ProfileSummary,
+  type SchoolAffiliation,
+} from '@/domain/profile';
 import {
   availabilityPlaceForDate,
   dateKey,
@@ -30,10 +36,12 @@ function handleFor(name: string): string {
 }
 
 export function DiscoveryProfileRow({
+  primarySchool,
   scopeDate,
   profile,
   referenceProfile,
 }: {
+  primarySchool?: SchoolAffiliation | null;
   scopeDate?: string | null;
   profile: ProfileSummary;
   referenceProfile?: ProfileSummary | null;
@@ -76,6 +84,11 @@ export function DiscoveryProfileRow({
               <AppText numberOfLines={1} style={styles.name} variant="subheadline">
                 {profile.name}
               </AppText>
+              {primarySchool ? (
+                <View accessible accessibilityLabel={primarySchool.name}>
+                  <Tag color={palette.bronze} label={schoolAcronym(primarySchool)} />
+                </View>
+              ) : null}
               {profile.isPremium ? (
                 <Ionicons color={palette.electric} name="sparkles" size={13} />
               ) : null}
@@ -93,7 +106,7 @@ export function DiscoveryProfileRow({
                   color={palette.electric}
                   key={instrument}
                   label={`${t(instrument)} · ${t(
-                    profile.instrumentLevels[instrument] ?? profile.level,
+                    shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
                   )}`}
                 />
               ))}
@@ -101,7 +114,7 @@ export function DiscoveryProfileRow({
                 <Tag color={palette.bronze} label={`+${profile.instruments.length - 4}`} />
               ) : null}
             </View>
-            {profile.schools.length > 0 ? (
+            {primarySchool === undefined && profile.schools.length > 0 ? (
               <View style={styles.tags}>
                 {profile.schools.slice(0, 3).map((school) => (
                   <Tag

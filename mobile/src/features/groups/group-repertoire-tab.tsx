@@ -65,8 +65,10 @@ function SongCard({
       {...(reorderMode
         ? {}
         : { onPress: () => router.push(`/groups/${group.id}/songs/${song.id}` as never) })}
+      members={group.members}
       showDisclosure={!reorderMode}
       showListenAction={!reorderMode}
+      showSoloAction={!reorderMode}
       song={song}
       trailing={
         reorderMode ? (
@@ -110,9 +112,11 @@ function PendingSongCard({ group, song }: { group: MusicGroup; song: GroupSong }
   return (
     <GroupSongRow
       cardStyle={{ borderColor: `${palette.signal}55` }}
+      members={group.members}
       onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
       showDisclosure={false}
       showListenAction={false}
+      showSoloAction={false}
       song={song}
       trailing={
         <View style={styles.pendingActions}>

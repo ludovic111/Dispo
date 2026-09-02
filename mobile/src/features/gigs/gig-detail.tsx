@@ -30,6 +30,7 @@ import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
 import { Barcode, TicketCard } from '@/components/ui/ticket-card';
+import { shortProfileLevel } from '@/domain/profile';
 import { useDispoTheme } from '@/theme/theme-context';
 import { billetInk, radii, spacing, typography } from '@/theme/tokens';
 
@@ -639,9 +640,7 @@ export function GigDetailContent({
         {gig.wantedLevels.length > 0 ? (
           <AppText color={palette.muted}>
             {t('Niveau')} :{' '}
-            {gig.wantedLevels
-              .map((level) => t(level === 'Professionnel' ? 'Pro' : level))
-              .join(' · ')}
+            {gig.wantedLevels.map((level) => t(shortProfileLevel(level))).join(' · ')}
           </AppText>
         ) : (
           <AppText color={palette.muted}>{t('Niveau : ouvert à tous')}</AppText>

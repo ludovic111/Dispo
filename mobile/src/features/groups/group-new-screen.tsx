@@ -1,10 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { GroupAvatar } from './group-avatar';
+import {
+  acquireGroupCreationLock,
+  groupCreationDiagnostic,
+  groupCreationErrorMessage,
+  releaseGroupCreationLock,
+} from './group-creation-model';
 import { useCreateGroup, useGroupProfileCandidates } from './group-queries';
 
 import { AppText } from '@/components/ui/app-text';
@@ -28,6 +34,7 @@ export function GroupNewScreen() {
   const [emoji, setEmoji] = useState('🎶');
   const [search, setSearch] = useState('');
   const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
+  const submitLock = useRef(false);
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const needle = search.trim().toLocaleLowerCase(locale);
   const visible = (candidates.data ?? []).filter(
@@ -65,9 +72,14 @@ export function GroupNewScreen() {
     });
   };
   const submit = () => {
+    if (!acquireGroupCreationLock(submitLock)) return;
     create.mutate(
       { emoji, memberIds: [...memberIds], name },
       {
+        onError: (error) => {
+          if (__DEV__) console.warn('[group-create]', groupCreationDiagnostic(error));
+        },
+        onSettled: () => releaseGroupCreationLock(submitLock),
         onSuccess: ({ failedInvitationCount, groupId }) => {
           if (failedInvitationCount > 0) {
             Alert.alert(
@@ -170,11 +182,11 @@ export function GroupNewScreen() {
         </Card>
         {create.error ? (
           <AppText color={palette.error} style={styles.error} variant="caption">
-            {t('Impossible de créer le groupe. Vérifie que tu peux encore diriger un groupe.')}
+            {t(groupCreationErrorMessage(create.error))}
           </AppText>
         ) : null}
         <DispoButton
-          disabled={!name.trim() || memberIds.size === 0}
+          disabled={!name.trim() || memberIds.size === 0 || create.isPending}
           icon="add-circle"
           loading={create.isPending}
           onPress={submit}

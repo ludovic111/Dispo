@@ -52,11 +52,12 @@ describe('fiche et tuile morceau', () => {
     expect(event).toContain('const dragEnabled = reorderActive');
   });
 
-  it('donne un accès direct aux trois usages depuis l’accueil', () => {
+  it('garde uniquement le raccourci permanent de création de groupe sur l’accueil', () => {
     const home = fs.readFileSync(path.resolve(process.cwd(), 'src/app/(tabs)/index.tsx'), 'utf8');
 
-    expect(home).toContain("router.push('/profile/availability'");
-    expect(home).toContain("router.push('/schools'");
+    expect(home).not.toContain("label={t('Mes disponibilités')}");
+    expect(home).not.toContain("label={t('Écoles')}");
     expect(home).toContain("router.push('/groups/new'");
+    expect(home).not.toContain('groups.length === 0 ? (');
   });
 });

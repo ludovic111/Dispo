@@ -16,9 +16,11 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import type { GroupSong } from './group-model';
+import type { GroupMember, GroupSong } from './group-model';
+import { soloOrderMembers } from './group-song-row-model';
 
 import { AppText } from '@/components/ui/app-text';
+import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
 import {
@@ -318,6 +320,96 @@ export function SongListenSheet({
   );
 }
 
+export function SongSoloOrderSheet({
+  members,
+  onClose,
+  song,
+  visible,
+}: {
+  members: readonly GroupMember[];
+  onClose: () => void;
+  song: GroupSong;
+  visible: boolean;
+}) {
+  const { palette } = useDispoTheme();
+  const { t } = useTranslation();
+  const orderedMembers = useMemo(() => soloOrderMembers(song, members), [members, song]);
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      presentationStyle="overFullScreen"
+      statusBarTranslucent
+      transparent
+      visible={visible}
+    >
+      <View style={styles.sheetOverlay}>
+        <Pressable
+          accessibilityLabel={t('Fermer')}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={styles.sheetBackdrop}
+        />
+        <SafeAreaView
+          edges={['bottom']}
+          style={[
+            styles.sheet,
+            { backgroundColor: palette.background, borderColor: palette.border },
+          ]}
+        >
+          <View style={[styles.sheetHandle, { backgroundColor: palette.border }]} />
+          <View style={[styles.sheetNavigation, { borderBottomColor: palette.border }]}>
+            <View style={styles.navigationSpacer} />
+            <AppText numberOfLines={1} style={styles.sheetTitle} variant="headline">
+              {t('Ordre des solos')}
+            </AppText>
+            <Pressable
+              accessibilityLabel={t('Fermer')}
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={onClose}
+              style={[styles.closeButton, { backgroundColor: palette.inset }]}
+            >
+              <Ionicons color={palette.text} name="close" size={18} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.soloSheetContent}>
+            <AppText color={palette.muted} variant="caption">
+              {t("Les noms apparaissent dans l'ordre de passage.")}
+            </AppText>
+            {orderedMembers.map((member, index) => {
+              const name = member?.name ?? t('Membre retiré');
+              return (
+                <View
+                  key={`${song.solos[index]}-${index}`}
+                  style={[styles.soloSheetRow, { borderColor: palette.border }]}
+                >
+                  <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
+                    <AppText style={styles.soloIndexText} variant="caption">
+                      {index + 1}
+                    </AppText>
+                  </View>
+                  <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
+                  <View style={styles.flex}>
+                    <AppText numberOfLines={1} style={styles.soloMemberName}>
+                      {name}
+                    </AppText>
+                    {member?.instruments.length ? (
+                      <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                        {member.instruments.map((instrument) => t(instrument)).join(' · ')}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    </Modal>
+  );
+}
+
 function SongRowSurface({
   cardStyle,
   children,
@@ -338,17 +430,21 @@ function SongRowSurface({
 export function GroupSongRow({
   cardStyle,
   embedded = false,
+  members = [],
   onPress,
   showDisclosure = true,
   showListenAction = true,
+  showSoloAction = true,
   song,
   trailing,
 }: {
   cardStyle?: ViewStyle;
   embedded?: boolean;
+  members?: readonly GroupMember[];
   onPress?: () => void;
   showDisclosure?: boolean;
   showListenAction?: boolean;
+  showSoloAction?: boolean;
   song: GroupSong;
   trailing?: ReactNode;
 }) {
@@ -356,6 +452,7 @@ export function GroupSongRow({
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const [listenVisible, setListenVisible] = useState(false);
+  const [solosVisible, setSolosVisible] = useState(false);
   const metadata = [
     song.key?.trim(),
     song.tempoBpm ? `${song.tempoBpm} BPM` : null,
@@ -429,6 +526,21 @@ export function GroupSongRow({
               <Ionicons color={palette.muted} name="headset" size={14} />
             </Pressable>
           ) : null}
+          {showSoloAction && song.solos.length > 0 ? (
+            <Pressable
+              accessibilityLabel={t('Ordre des solos')}
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={() => setSolosVisible(true)}
+              style={({ pressed }) => [
+                styles.listenButton,
+                { backgroundColor: palette.inset },
+                pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
+              ]}
+            >
+              <Ionicons color={palette.bronze} name="list" size={15} />
+            </Pressable>
+          ) : null}
           {trailing}
         </View>
       </SongRowSurface>
@@ -436,6 +548,12 @@ export function GroupSongRow({
         onClose={() => setListenVisible(false)}
         song={song}
         visible={listenVisible}
+      />
+      <SongSoloOrderSheet
+        members={members}
+        onClose={() => setSolosVisible(false)}
+        song={song}
+        visible={solosVisible}
       />
     </>
   );
@@ -503,6 +621,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   searchToggleLabel: { flex: 1, fontWeight: '700' },
+  soloIndex: {
+    alignItems: 'center',
+    borderRadius: 999,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  soloIndexText: { fontWeight: '700' },
+  soloMemberName: { fontWeight: '700' },
+  soloSheetContent: { gap: spacing.xs, padding: spacing.gutter, paddingBottom: spacing.xxl },
+  soloSheetRow: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: 52,
+    padding: spacing.xs,
+  },
   sheet: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,

@@ -27,7 +27,7 @@ import { radii, spacing } from '@/theme/tokens';
 export function ProfileAvailabilityScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const { palette } = useDispoTheme();
+  const { dark, palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const queryClient = useQueryClient();
@@ -142,6 +142,7 @@ export function ProfileAvailabilityScreen() {
 
           {Platform.OS === 'ios' || calendarVisible ? (
             <DateTimePicker
+              accentColor={palette.electric}
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               minimumDate={new Date()}
               mode="date"
@@ -152,6 +153,8 @@ export function ProfileAvailabilityScreen() {
                 if (Platform.OS === 'android') setCalendarVisible(false);
                 updateDay(date);
               }}
+              textColor={palette.text}
+              themeVariant={dark ? 'dark' : 'light'}
               value={calendarDate}
             />
           ) : (

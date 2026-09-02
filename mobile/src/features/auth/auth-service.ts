@@ -84,6 +84,20 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function requestEmailSignInLink(email: string): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) throw new Error('missing_email');
+
+  const { error } = await getSupabaseClient().auth.signInWithOtp({
+    email: normalizedEmail,
+    options: {
+      emailRedirectTo: authCallbackUrl(),
+      shouldCreateUser: false,
+    },
+  });
+  if (error) throw error;
+}
+
 export async function handleAuthCallbackUrl(url: string): Promise<AuthCallbackResult> {
   if (!isAuthCallbackUrl(url)) return { handled: false, recovery: false };
 

@@ -19,7 +19,6 @@ import {
   useGroupUnreadState,
 } from '@/features/groups/group-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
-import { useSchoolCommunities, useSchoolUnreadState } from '@/features/schools/school-queries';
 import { useSessions } from '@/features/sessions/session-queries';
 import { getSupabaseClient } from '@/services/supabase/client';
 import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
@@ -70,8 +69,6 @@ export function useTabBadgeCounts(): TabBadgeCounts {
   const groups = useGroups();
   const invitations = useGroupInvitations();
   const groupUnread = useGroupUnreadState(groups.data ?? []);
-  const schoolCommunities = useSchoolCommunities();
-  const schoolUnread = useSchoolUnreadState(schoolCommunities.data ?? []);
   const profile = useProfile(userId, userId);
   const directMessages = useQuery({
     enabled: Boolean(userId),
@@ -129,7 +126,6 @@ export function useTabBadgeCounts(): TabBadgeCounts {
       directMessages.data ?? 0,
       groupUnread.total,
       invitations.data?.length ?? 0,
-      schoolUnread.total,
     ),
     sessions: sessions.data?.pendingResponses.length ?? 0,
     sos:

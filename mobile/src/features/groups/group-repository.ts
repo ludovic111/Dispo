@@ -964,20 +964,20 @@ export async function createGroup(
 ): Promise<CreateGroupResult> {
   const name = input.name.trim();
   const memberIds = [...new Set(input.memberIds)].filter((id) => id !== userId);
-  if (!userId || !name || memberIds.length === 0) throw new Error('group_invalid');
+  if (!userId) throw new Error('group_auth_required');
+  if (!name || memberIds.length === 0) throw new Error('group_invalid');
   const supabase = getSupabaseClient();
+  const groupId = randomUUID().toLowerCase();
   const created = await supabase
     .from('music_groups')
-    .insert({ emoji: input.emoji || '🎶', leader_id: userId, name })
-    .select('id')
-    .single();
+    .insert({ emoji: input.emoji || '🎶', id: groupId, leader_id: userId, name });
   if (created.error) throw created.error;
   // Comme Swift, le groupe reste utilisable si une invitation individuelle
   // échoue : on tente les autres et l'écran annonce honnêtement le résultat.
   const invitations = await Promise.all(
     memberIds.map(async (profileId) => {
       const invited = await supabase.from('group_invitations').insert({
-        group_id: created.data.id,
+        group_id: groupId,
         invited_by: userId,
         kind: 'permanent',
         profile_id: profileId,
@@ -987,7 +987,7 @@ export async function createGroup(
   );
   return {
     failedInvitationCount: invitations.filter(Boolean).length,
-    groupId: created.data.id,
+    groupId,
   };
 }
 

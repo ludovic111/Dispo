@@ -36,6 +36,7 @@ import {
   searchSongCatalog,
   type SongCatalogResult,
 } from './group-repository';
+import { isKnownMusicalKey, musicalKeyOptions, musicalKeysEqual } from './group-song-key-model';
 import { SongArtwork, SongListenSheet } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
@@ -642,27 +643,40 @@ export function GroupSongScreen({
         />
         <Card style={styles.card}>
           <SectionHeader subtitle={t('Arrangement partagé avec le groupe')} title={t('Repères')} />
-          <View style={styles.fieldsRow}>
-            <View style={styles.flex}>
-              <FormField
-                autoCapitalize="characters"
-                editable={canEdit}
-                label={t('Tonalité')}
-                onChangeText={(value) => patch('key', value.trim() || null)}
-                placeholder={t('Bb, F#m…')}
-                value={draft.key ?? ''}
+          <AppText color={palette.bronze} variant="label">
+            {t('Tonalité')}
+          </AppText>
+          {draft.key?.trim() && !isKnownMusicalKey(draft.key) ? (
+            <AppText color={palette.muted} variant="caption">
+              {t('Tonalité')} : {draft.key}
+            </AppText>
+          ) : null}
+          {canEdit ? (
+            <View style={styles.wrap}>
+              <ChoiceChip
+                label={t('Non renseignée')}
+                onPress={() => patch('key', null)}
+                selected={!draft.key?.trim()}
               />
+              {musicalKeyOptions.map((key) => (
+                <ChoiceChip
+                  key={key}
+                  label={key}
+                  onPress={() => patch('key', key)}
+                  selected={musicalKeysEqual(draft.key, key)}
+                />
+              ))}
             </View>
-            <View style={styles.flex}>
-              <FormField
-                editable={canEdit}
-                keyboardType="number-pad"
-                label={t('Tempo BPM')}
-                onChangeText={(value) => patch('tempoBpm', Number.parseInt(value, 10) || null)}
-                value={draft.tempoBpm?.toString() ?? ''}
-              />
-            </View>
-          </View>
+          ) : (
+            <Tag color={palette.bronze} label={draft.key?.trim() || t('Non renseignée')} />
+          )}
+          <FormField
+            editable={canEdit}
+            keyboardType="number-pad"
+            label={t('Tempo BPM')}
+            onChangeText={(value) => patch('tempoBpm', Number.parseInt(value, 10) || null)}
+            value={draft.tempoBpm?.toString() ?? ''}
+          />
           <FormField
             editable={canEdit}
             label={t('Forme')}

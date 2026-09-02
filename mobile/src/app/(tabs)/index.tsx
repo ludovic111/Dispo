@@ -306,29 +306,11 @@ export default function DiscoveryScreen() {
         showsHorizontalScrollIndicator={false}
       >
         <HomeQuickAction
-          color={
-            myAvailability && myAvailability.kind !== 'unavailable'
-              ? myAvailabilityColor
-              : palette.electric
-          }
-          icon="calendar-outline"
-          label={t('Mes disponibilités')}
-          onPress={() => router.push('/profile/availability' as never)}
-        />
-        <HomeQuickAction
           color={palette.electric}
-          icon="school-outline"
-          label={t('Écoles')}
-          onPress={() => router.push('/schools' as never)}
+          icon="people-outline"
+          label={t('Nouveau groupe')}
+          onPress={() => router.push('/groups/new' as never)}
         />
-        {groups.length === 0 ? (
-          <HomeQuickAction
-            color={palette.electric}
-            icon="people-outline"
-            label={t('Nouveau groupe')}
-            onPress={() => router.push('/groups/new' as never)}
-          />
-        ) : null}
       </ScrollView>
 
       {groups.length > 0 ? (
@@ -465,6 +447,7 @@ export default function DiscoveryScreen() {
         }
         renderItem={({ item }) => (
           <DiscoveryProfileRow
+            primarySchool={item.schools[0] ?? null}
             profile={item}
             referenceProfile={meQuery.data ?? null}
             scopeDate={selectedScopeDate}

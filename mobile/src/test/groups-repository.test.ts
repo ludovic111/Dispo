@@ -31,6 +31,9 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 jest.mock('../../modules/dispo-document-preview', () => ({ openDocumentPreview: jest.fn() }));
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn(() => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+}));
 jest.mock('@/services/supabase/client', () => ({ getSupabaseClient: jest.fn() }));
 
 const mockedClient = jest.mocked(getSupabaseClient);
@@ -333,30 +336,54 @@ describe('documents de groupe', () => {
 
 describe('mutations du repository Groupes', () => {
   it('crée le groupe puis des invitations explicites, jamais des adhésions directes', async () => {
-    const groupSingle = jest.fn(async () => ({ data: { id: 'group-1' }, error: null }));
-    const groupSelect = jest.fn(() => ({ single: groupSingle }));
-    const groupInsert = jest.fn(() => ({ select: groupSelect }));
+    const groupInsert = jest.fn(async () => ({ error: null }));
     const invitationInsert = jest.fn(async () => ({ error: null }));
     const from = jest.fn((table: string) =>
       table === 'music_groups' ? { insert: groupInsert } : { insert: invitationInsert },
     );
     mockedClient.mockReturnValue({ from } as never);
 
-    await expect(
-      createGroup('me', {
-        emoji: '🎷',
-        memberIds: ['member-1', 'member-1', 'me'],
-        name: ' Quartet ',
-      }),
-    ).resolves.toEqual({ failedInvitationCount: 0, groupId: 'group-1' });
-    expect(groupInsert).toHaveBeenCalledWith({ emoji: '🎷', leader_id: 'me', name: 'Quartet' });
+    const result = await createGroup('me', {
+      emoji: '🎷',
+      memberIds: ['member-1', 'member-1', 'me'],
+      name: ' Quartet ',
+    });
+    expect(result).toEqual({ failedInvitationCount: 0, groupId: expect.any(String) });
+    expect(groupInsert).toHaveBeenCalledWith({
+      emoji: '🎷',
+      id: result.groupId,
+      leader_id: 'me',
+      name: 'Quartet',
+    });
     expect(invitationInsert).toHaveBeenCalledWith({
-      group_id: 'group-1',
+      group_id: result.groupId,
       invited_by: 'me',
       kind: 'permanent',
       profile_id: 'member-1',
     });
     expect(from).not.toHaveBeenCalledWith('group_members');
+  });
+
+  it('conserve le groupe et poursuit les invitations après un échec individuel', async () => {
+    const groupInsert = jest.fn(async () => ({ error: null }));
+    const invitationInsert = jest
+      .fn<() => Promise<{ error: Error | null }>>()
+      .mockResolvedValueOnce({ error: new Error('invitation_failed') })
+      .mockResolvedValueOnce({ error: null });
+    const from = jest.fn((table: string) =>
+      table === 'music_groups' ? { insert: groupInsert } : { insert: invitationInsert },
+    );
+    mockedClient.mockReturnValue({ from } as never);
+
+    const result = await createGroup('me', {
+      emoji: '🎶',
+      memberIds: ['member-1', 'member-2'],
+      name: 'Test',
+    });
+
+    expect(result.failedInvitationCount).toBe(1);
+    expect(groupInsert).toHaveBeenCalledTimes(1);
+    expect(invitationInsert).toHaveBeenCalledTimes(2);
   });
 
   it('envoie la suppression de réaction comme NULL malgré le type généré historique', async () => {

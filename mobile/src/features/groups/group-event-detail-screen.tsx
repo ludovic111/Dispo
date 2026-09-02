@@ -355,8 +355,10 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         <GroupSongRow
           {...(isActive ? { cardStyle: { borderColor: palette.electric } } : {})}
           {...(reorderActive ? {} : { onPress: () => openSong(song) })}
+          members={group.members}
           showDisclosure={!reorderActive}
           showListenAction={!reorderActive}
+          showSoloAction={!reorderActive}
           song={song}
           trailing={
             reorderActive ? (
@@ -717,9 +719,11 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               <GroupSongRow
                 cardStyle={{ borderColor: `${palette.signal}55` }}
                 key={song.id}
+                members={group.members}
                 onPress={() => openSong(song)}
                 showDisclosure={!isLeader}
                 showListenAction={!isLeader}
+                showSoloAction={!isLeader}
                 song={song}
                 trailing={
                   isLeader ? (

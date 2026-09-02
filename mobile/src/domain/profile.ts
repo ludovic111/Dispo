@@ -63,6 +63,42 @@ export interface ProfileSummary {
   followerCount: number;
 }
 
+const schoolAcronymStopWords = new Set([
+  'and',
+  'de',
+  'des',
+  'du',
+  'et',
+  'für',
+  'la',
+  'le',
+  'les',
+  'of',
+  'the',
+]);
+
+export function schoolAcronym(school: Pick<SchoolAffiliation, 'name' | 'shortName'>): string {
+  const shortName = school.shortName?.trim();
+  if (shortName) return shortName;
+  const words = school.name
+    .trim()
+    .split(/[\s–—-]+/)
+    .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter(Boolean);
+  const meaningful = words.filter(
+    (word) => !schoolAcronymStopWords.has(word.toLocaleLowerCase('fr')),
+  );
+  const initials = (meaningful.length > 0 ? meaningful : words)
+    .map((word) => Array.from(word)[0]?.toLocaleUpperCase('fr') ?? '')
+    .join('')
+    .slice(0, 5);
+  return initials || school.name.trim().slice(0, 3).toLocaleUpperCase('fr');
+}
+
+export function shortProfileLevel(level: string): string {
+  return level === 'Professionnel' ? 'Pro' : level;
+}
+
 export function profileHandle(name: string): string {
   const normalized = name
     .normalize('NFD')

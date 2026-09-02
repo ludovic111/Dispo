@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { groupEventColor } from './group-event-presentation';
 import {
   attendanceFor,
   eventAttendanceSummary,
@@ -20,22 +21,10 @@ import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import {
-  billetInk,
-  gradients,
-  radii,
-  spacing,
-  typography,
-  type DispoPalette,
-} from '@/theme/tokens';
-
-function colorFor(kind: GroupEvent['kind'], palette: DispoPalette) {
-  if (kind === 'Concert') return palette.concert;
-  if (kind === 'Jam') return palette.jam;
-  return palette.rehearsal;
-}
+import { billetInk, radii, spacing, typography } from '@/theme/tokens';
 
 function DateTicket({ event }: { event: GroupEvent }) {
+  const { palette } = useDispoTheme();
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const date = new Date(event.date);
@@ -44,8 +33,9 @@ function DateTicket({ event }: { event: GroupEvent }) {
     .format(date)
     .replace('.', '')
     .toUpperCase();
+  const color = groupEventColor(event.kind, palette) ?? palette.rehearsal;
   return (
-    <LinearGradient colors={gradients.hero} style={styles.ticket}>
+    <LinearGradient colors={[color, color]} style={styles.ticket}>
       <AppText color={billetInk} style={styles.ticketDay}>
         {day}
       </AppText>
@@ -91,7 +81,10 @@ function EventCard({
               <AppText numberOfLines={1} style={styles.eventTitle}>
                 {event.title}
               </AppText>
-              <Tag color={colorFor(event.kind, palette)} label={t(event.kind)} />
+              <Tag
+                color={groupEventColor(event.kind, palette) ?? palette.rehearsal}
+                label={t(event.kind)}
+              />
             </View>
             <AppText color={palette.muted} numberOfLines={1} variant="caption">
               {date}
