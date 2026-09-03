@@ -51,31 +51,42 @@ export function TicketCard({
   radius = 18,
   style,
 }: TicketCardProps) {
-  const [size, setSize] = useState({ height: 1, width: 1 });
+  const [size, setSize] = useState<{ height: number; width: number } | null>(null);
   const path = useMemo(
-    () => roundedTicketPath(size.width, size.height, radius, notchRadius, notchFromTrailing),
-    [notchFromTrailing, notchRadius, radius, size.height, size.width],
+    () =>
+      size
+        ? roundedTicketPath(size.width, size.height, radius, notchRadius, notchFromTrailing)
+        : '',
+    [notchFromTrailing, notchRadius, radius, size],
   );
 
   const measure = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
-    if (height > 0 && width > 0 && (height !== size.height || width !== size.width)) {
+    if (height > 0 && width > 0 && (height !== size?.height || width !== size?.width)) {
       setSize({ height, width });
     }
   };
 
   return (
     <View onLayout={measure} style={styles.shadow}>
-      <MaskedView
-        maskElement={
-          <Svg height={size.height} viewBox={`0 0 ${size.width} ${size.height}`} width={size.width}>
-            <Path d={path} fill="#000000" fillRule="evenodd" />
-          </Svg>
-        }
-        style={[styles.mask, style]}
-      >
-        <View style={[styles.surface, { backgroundColor }]}>{children}</View>
-      </MaskedView>
+      {size ? (
+        <MaskedView
+          maskElement={
+            <Svg
+              height={size.height}
+              viewBox={`0 0 ${size.width} ${size.height}`}
+              width={size.width}
+            >
+              <Path d={path} fill="#000000" fillRule="evenodd" />
+            </Svg>
+          }
+          style={[styles.mask, { height: size.height, width: size.width }, style]}
+        >
+          <View style={[styles.surface, { backgroundColor }]}>{children}</View>
+        </MaskedView>
+      ) : (
+        <View style={[styles.surface, { backgroundColor }, style]}>{children}</View>
+      )}
     </View>
   );
 }

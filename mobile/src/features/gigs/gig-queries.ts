@@ -9,6 +9,7 @@ import {
   fetchGigFormDefaults,
   fetchGigMatches,
   fetchGigsPage,
+  fetchHostedGigsPage,
   respondToDirectGig,
   withdrawGigApplication,
 } from './gig-repository';
@@ -23,6 +24,7 @@ export const gigKeys = {
   details: (userId: string) => ['gigs', 'detail', userId] as const,
   detail: (userId: string, id: string) => [...gigKeys.details(userId), id] as const,
   feed: (userId: string) => ['gigs', 'feed', userId] as const,
+  hosted: (userId: string) => ['gigs', 'hosted', userId] as const,
   matchesForUser: (userId: string) => ['gigs', 'matches', userId] as const,
   matches: (userId: string, id: string) => [...gigKeys.matchesForUser(userId), id] as const,
 };
@@ -45,6 +47,34 @@ export function useGigs() {
     isFetchingNextPage: query.isFetchingNextPage,
     isLoading: query.isLoading,
     loadKey: gigKeys.feed(userId).join(':'),
+  });
+  return {
+    ...query,
+    isExhaustiveError: query.isError || query.isFetchNextPageError,
+    isExhaustive: exhaustive.isComplete,
+    isExhaustiveLoading: exhaustive.isLoading,
+    isLoading: query.isLoading || exhaustive.isLoading,
+  };
+}
+
+export function useHostedGigs() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const query = useInfiniteQuery({
+    queryKey: gigKeys.hosted(userId),
+    queryFn: ({ pageParam, signal }) => fetchHostedGigsPage(userId, pageParam, 20, signal),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
+    enabled: Boolean(userId),
+  });
+  const exhaustive = useExhaustivePages({
+    enabled: Boolean(userId),
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
+    isError: query.isError || query.isFetchNextPageError,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isLoading: query.isLoading,
+    loadKey: gigKeys.hosted(userId).join(':'),
   });
   return {
     ...query,
@@ -110,6 +140,7 @@ function useInvalidateGig() {
   return async (gigId?: string) => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: gigKeys.feed(userId) }),
+      queryClient.invalidateQueries({ queryKey: gigKeys.hosted(userId) }),
       queryClient.invalidateQueries({ queryKey: ['sessions'] }),
       ...(gigId
         ? [

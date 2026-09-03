@@ -1,3 +1,4 @@
+import { isPlayableProfileVideoUrl } from '@/features/media/profile-video-url';
 import type { Json } from '@/services/supabase/database.types';
 
 export const DEMO_VIDEO_BUCKET = 'demo-videos' as const;
@@ -193,7 +194,7 @@ export function parseDemoVideos(value: Json): DemoVideo[] {
     const id = nonEmptyString(record.id);
     const path = nonEmptyString(record.path);
     const url = nonEmptyString(record.url);
-    if (!id || !isUuid(id) || !path || !url || !url.startsWith('https://')) return [];
+    if (!id || !isUuid(id) || !path || !url || !isPlayableProfileVideoUrl(url)) return [];
     const date = optionalString(record.date);
     const thumbnail = optionalString(record.thumb);
     return [
@@ -201,7 +202,7 @@ export function parseDemoVideos(value: Json): DemoVideo[] {
         date: date && isDayKey(date) ? date : null,
         id,
         path,
-        thumbUrl: thumbnail?.startsWith('https://') ? thumbnail : null,
+        thumbUrl: isPlayableProfileVideoUrl(thumbnail) ? thumbnail : null,
         title: normalizeDemoTitle(optionalString(record.title)),
         url,
       },

@@ -87,6 +87,9 @@ function errorMessage(error: unknown): string {
     return "La vidéo n'a pas pu être préparée — réessaie avec un autre fichier.";
   }
   if (error instanceof PortfolioValidationError) {
+    if (error.code === 'demo_video_invalid_file') {
+      return "Cette vidéo n'a pas pu être lue — choisis un autre fichier.";
+    }
     if (error.code === 'demo_video_too_long') return 'Vidéo trop longue — 3 minutes maximum.';
     if (error.code === 'demo_video_too_large') {
       return 'Vidéo trop lourde — raccourcis-la et réessaie.';
@@ -120,7 +123,7 @@ function DateField({
   onChange: (value: Date) => void;
   value: Date;
 }) {
-  const { palette } = useDispoTheme();
+  const { dark, palette } = useDispoTheme();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   return (
@@ -144,6 +147,7 @@ function DateField({
       </Pressable>
       {open ? (
         <DateTimePicker
+          accentColor={palette.electric}
           display={Platform.OS === 'ios' ? 'inline' : 'default'}
           mode="date"
           onDismiss={() => {
@@ -153,6 +157,8 @@ function DateField({
             if (Platform.OS !== 'ios') setOpen(false);
             onChange(selected);
           }}
+          textColor={palette.text}
+          themeVariant={dark ? 'dark' : 'light'}
           value={value}
           {...(maximumDate ? { maximumDate } : {})}
           {...(minimumDate ? { minimumDate } : {})}
@@ -308,6 +314,17 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
       id: video.id,
       title: video.title ?? '',
     });
+  };
+
+  const openVideo = (video: DemoVideo, index: number) => {
+    router.push({
+      pathname: '/profiles/[id]/video',
+      params: {
+        id: userId,
+        title: localizedDemoTitle(video, index),
+        url: video.url,
+      },
+    } as never);
   };
 
   const saveVideo = async () => {
@@ -478,7 +495,9 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
         {section === 'demos' ? (
           <View style={styles.section}>
             <View style={styles.sectionHeadingWithAction}>
-              <SectionHeader title={t('Mes démos')} />
+              <View style={styles.sectionHeadingTitle}>
+                <SectionHeader title={t('Mes démos')} />
+              </View>
               <View style={styles.sectionHeadingAction}>
                 <AppText
                   color={palette.muted}
@@ -500,77 +519,103 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
               </View>
 
               {portfolio.videos.map((video, index) => (
-                <View key={video.id} style={[styles.videoRow, { borderTopColor: palette.border }]}>
+                <View
+                  key={video.id}
+                  style={[
+                    styles.videoCard,
+                    { backgroundColor: palette.cardMuted, borderColor: palette.border },
+                  ]}
+                >
                   <Pressable
-                    accessibilityLabel={localizedDemoTitle(video, index)}
+                    accessibilityHint={t('Ouvre le lecteur vidéo')}
+                    accessibilityLabel={`${t('Lire')} · ${localizedDemoTitle(video, index)}`}
                     accessibilityRole="button"
-                    onPress={() =>
-                      router.push({
-                        pathname: '/profiles/[id]/video',
-                        params: {
-                          id: userId,
-                          title: localizedDemoTitle(video, index),
-                          url: video.url,
-                        },
-                      } as never)
-                    }
-                    style={({ pressed }) => [styles.videoPreview, pressed && styles.pressed]}
+                    onPress={() => openVideo(video, index)}
+                    style={({ pressed }) => [styles.videoMain, pressed && styles.pressed]}
                   >
-                    {video.thumbUrl ? (
-                      <Image
-                        contentFit="cover"
-                        source={{ uri: video.thumbUrl }}
-                        style={styles.thumb}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.thumb,
-                          styles.thumbFallback,
-                          { backgroundColor: palette.inset },
-                        ]}
-                      >
-                        <Ionicons color={palette.bronze} name="videocam" size={22} />
+                    <View style={styles.videoPreview}>
+                      {video.thumbUrl ? (
+                        <Image
+                          contentFit="cover"
+                          source={{ uri: video.thumbUrl }}
+                          style={styles.thumb}
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.thumb,
+                            styles.thumbFallback,
+                            { backgroundColor: palette.inset },
+                          ]}
+                        >
+                          <Ionicons color={palette.bronze} name="videocam" size={25} />
+                        </View>
+                      )}
+                      <View style={styles.playBadge}>
+                        <Ionicons color="#FFFFFF" name="play" size={12} />
                       </View>
-                    )}
-                    <View style={styles.playBadge}>
-                      <Ionicons color="#FFFFFF" name="play" size={11} />
                     </View>
-                  </Pressable>
-                  <View style={styles.videoCopy}>
-                    <AppText numberOfLines={1} variant="subheadline">
-                      {localizedDemoTitle(video, index)}
-                    </AppText>
-                    {video.date ? (
-                      <View style={styles.metaRow}>
-                        <Ionicons color={palette.muted} name="calendar-outline" size={12} />
-                        <AppText color={palette.muted} variant="caption2">
-                          {formatDay(video.date, locale)}
-                        </AppText>
-                      </View>
-                    ) : (
-                      <AppText color={palette.muted} variant="caption2">
-                        {t('Titre et date : bouton crayon')}
+                    <View style={styles.videoCopy}>
+                      <AppText numberOfLines={2} variant="subheadline">
+                        {localizedDemoTitle(video, index)}
                       </AppText>
-                    )}
+                      {video.date ? (
+                        <View style={styles.metaRow}>
+                          <Ionicons color={palette.muted} name="calendar-outline" size={12} />
+                          <AppText color={palette.muted} variant="caption2">
+                            {formatDay(video.date, locale)}
+                          </AppText>
+                        </View>
+                      ) : (
+                        <AppText color={palette.muted} variant="caption2">
+                          {t('Sans date')}
+                        </AppText>
+                      )}
+                    </View>
+                    <Ionicons color={palette.muted} name="chevron-forward" size={18} />
+                  </Pressable>
+                  <View style={[styles.videoActions, { borderTopColor: palette.border }]}>
+                    <Pressable
+                      accessibilityLabel={t('Lire la vidéo')}
+                      accessibilityRole="button"
+                      onPress={() => openVideo(video, index)}
+                      style={({ pressed }) => [styles.videoAction, pressed && styles.pressed]}
+                    >
+                      <Ionicons color={palette.electric} name="play-circle-outline" size={18} />
+                      <AppText color={palette.electric} variant="caption">
+                        {t('Lire')}
+                      </AppText>
+                    </Pressable>
+                    <View
+                      style={[styles.videoActionDivider, { backgroundColor: palette.border }]}
+                    />
+                    <Pressable
+                      accessibilityLabel={t('Modifier le titre et la date')}
+                      accessibilityRole="button"
+                      onPress={() => editVideo(video)}
+                      style={({ pressed }) => [styles.videoAction, pressed && styles.pressed]}
+                    >
+                      <Ionicons color={palette.bronze} name="pencil-outline" size={17} />
+                      <AppText color={palette.bronze} variant="caption">
+                        {t('Modifier')}
+                      </AppText>
+                    </Pressable>
+                    <View
+                      style={[styles.videoActionDivider, { backgroundColor: palette.border }]}
+                    />
+                    <Pressable
+                      accessibilityLabel={t('Supprimer')}
+                      accessibilityRole="button"
+                      disabled={Boolean(busy)}
+                      onPress={() => confirmRemoveVideo(video)}
+                      style={({ pressed }) => [styles.videoAction, pressed && styles.pressed]}
+                    >
+                      <Ionicons color={palette.signal} name="trash-outline" size={17} />
+                      <AppText color={palette.signal} variant="caption">
+                        {t('Supprimer')}
+                      </AppText>
+                    </Pressable>
                   </View>
-                  <Pressable
-                    accessibilityLabel={t('Modifier le titre et la date')}
-                    accessibilityRole="button"
-                    onPress={() => editVideo(video)}
-                    style={[styles.roundAction, { backgroundColor: `${palette.bronze}18` }]}
-                  >
-                    <Ionicons color={palette.bronze} name="pencil" size={15} />
-                  </Pressable>
-                  <Pressable
-                    accessibilityLabel={t('Supprimer')}
-                    accessibilityRole="button"
-                    disabled={Boolean(busy)}
-                    onPress={() => confirmRemoveVideo(video)}
-                    style={styles.roundAction}
-                  >
-                    <Ionicons color={palette.muted} name="trash-outline" size={16} />
-                  </Pressable>
                 </View>
               ))}
 
@@ -599,7 +644,9 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
         {section === 'trips' ? (
           <View style={styles.section}>
             <View style={styles.sectionHeadingWithAction}>
-              <SectionHeader title={t('Mes voyages')} />
+              <View style={styles.sectionHeadingTitle}>
+                <SectionHeader title={t('Mes voyages')} />
+              </View>
               <Pressable accessibilityRole="button" onPress={newTrip} style={styles.inlineAction}>
                 <Ionicons color={palette.electric} name="add-circle" size={17} />
                 <AppText color={palette.electric} variant="caption">
@@ -1004,13 +1051,14 @@ const styles = StyleSheet.create({
   },
   saveLabel: { fontWeight: '800' },
   section: { gap: spacing.sm },
-  sectionHeadingAction: { paddingHorizontal: spacing.xs },
+  sectionHeadingAction: { flexShrink: 0, paddingHorizontal: spacing.xs },
+  sectionHeadingTitle: { flex: 1, minWidth: 0 },
   sectionHeadingWithAction: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  thumb: { borderRadius: 10, height: 48, width: 48 },
+  thumb: { borderRadius: 12, height: 68, width: 68 },
   thumbFallback: { alignItems: 'center', justifyContent: 'center' },
   toggleRow: {
     alignItems: 'center',
@@ -1030,12 +1078,32 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   videoCopy: { flex: 1, gap: spacing.xxs },
-  videoPreview: { alignItems: 'center', justifyContent: 'center' },
-  videoRow: {
+  videoAction: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: spacing.xxs,
+  },
+  videoActionDivider: { height: 24, width: StyleSheet.hairlineWidth },
+  videoActions: {
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
   },
+  videoCard: {
+    borderRadius: radii.button,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  videoMain: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 92,
+    padding: spacing.sm,
+  },
+  videoPreview: { alignItems: 'center', justifyContent: 'center' },
 });

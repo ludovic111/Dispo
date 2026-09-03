@@ -1,11 +1,16 @@
 import * as Crypto from 'expo-crypto';
 
-import { normalizeAvailableDates } from './profile-availability-model';
+import {
+  normalizeAvailableDates,
+  normalizeAvailabilityTimeSlots,
+  normalizeProfileAvailability,
+  type ProfileAvailability,
+} from './profile-availability-model';
 import type { EditableProfile } from './profile-edit-model';
 import { normalizeEditableProfile, stringRecord } from './profile-edit-model';
 
 import { getSupabaseClient } from '@/services/supabase/client';
-import type { Database } from '@/services/supabase/database.types';
+import type { Database, Json } from '@/services/supabase/database.types';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type EditProjection = Pick<
@@ -22,22 +27,34 @@ type EditProjection = Pick<
   | 'socials'
 >;
 
-type AvailabilityProjection = Pick<ProfileRow, 'available_dates'>;
+type AvailabilityProjection = Pick<ProfileRow, 'availability_time_slots' | 'available_dates'>;
 
-export async function fetchAvailableDates(userId: string): Promise<string[]> {
+export async function fetchProfileAvailability(userId: string): Promise<ProfileAvailability> {
   const { data, error } = await getSupabaseClient()
     .from('profiles')
-    .select('available_dates')
+    .select('available_dates,availability_time_slots')
     .eq('id', userId)
     .single();
   if (error) throw error;
-  return normalizeAvailableDates((data as AvailabilityProjection).available_dates);
+  const row = data as AvailabilityProjection;
+  const dates = normalizeAvailableDates(row.available_dates);
+  return {
+    dates,
+    timeSlots: normalizeAvailabilityTimeSlots(row.availability_time_slots, dates),
+  };
 }
 
-export async function saveAvailableDates(userId: string, dates: string[]): Promise<void> {
+export async function saveProfileAvailability(
+  userId: string,
+  availability: ProfileAvailability,
+): Promise<void> {
+  const normalized = normalizeProfileAvailability(availability);
   const { error } = await getSupabaseClient()
     .from('profiles')
-    .update({ available_dates: normalizeAvailableDates(dates) })
+    .update({
+      availability_time_slots: normalized.timeSlots as unknown as Json,
+      available_dates: normalized.dates,
+    })
     .eq('id', userId)
     .select('id')
     .single();

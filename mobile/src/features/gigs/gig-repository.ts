@@ -19,6 +19,7 @@ import { getSupabaseClient } from '@/services/supabase/client';
 import type { Database } from '@/services/supabase/database.types';
 
 type GigFeedRow = Database['public']['Views']['gig_requests_feed']['Row'];
+type GigRow = Database['public']['Tables']['gig_requests']['Row'];
 type ApplicationRow = Database['public']['Tables']['gig_applications']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type GigProjection = Pick<
@@ -44,6 +45,29 @@ type GigProjection = Pick<
   | 'wanted_instruments'
   | 'wanted_levels'
 >;
+type HostedGigProjection = Pick<
+  GigRow,
+  | 'date'
+  | 'description'
+  | 'event_id'
+  | 'fee'
+  | 'filled_instruments'
+  | 'genre'
+  | 'group_id'
+  | 'host_id'
+  | 'id'
+  | 'neighborhood'
+  | 'payment_method'
+  | 'place'
+  | 'posted_at'
+  | 'public_location_label'
+  | 'target_id'
+  | 'target_status'
+  | 'title'
+  | 'wanted_instruments'
+  | 'wanted_levels'
+>;
+type MappableGigProjection = GigProjection | HostedGigProjection;
 type ApplicationProjection = Pick<
   ApplicationRow,
   'created_at' | 'id' | 'instrument' | 'message' | 'musician_id' | 'status'
@@ -61,6 +85,8 @@ type MatchProfileProjection = Pick<
 
 const gigColumns =
   'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,filled_instruments,fee,payment_method,description,is_locked,posted_at,group_id,event_id,target_id,target_status' as const;
+const hostedGigColumns =
+  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,filled_instruments,fee,payment_method,description,posted_at,group_id,event_id,target_id,target_status' as const;
 const applicationColumns = 'id,musician_id,instrument,message,status,created_at' as const;
 const matchProfileColumns =
   'id,name,photo_url,instruments,genres,level,available_dates,is_demo' as const;
@@ -75,7 +101,7 @@ function directStatus(value: string | null): GigSummary['targetStatus'] {
   return null;
 }
 
-function validGig(row: GigProjection): row is GigProjection & {
+function validGig(row: MappableGigProjection): row is MappableGigProjection & {
   date: string;
   genre: string;
   host_id: string;
@@ -125,7 +151,7 @@ async function visibleSchoolIdsByProfile(
   return schoolsByProfile;
 }
 
-async function mapGigs(rows: GigProjection[], signal?: AbortSignal): Promise<GigSummary[]> {
+async function mapGigs(rows: MappableGigProjection[], signal?: AbortSignal): Promise<GigSummary[]> {
   const validRows = rows.filter(validGig);
   const hostIds = validRows.map((row) => row.host_id);
   const [profiles, schoolsByProfile] = await Promise.all([
@@ -150,7 +176,7 @@ async function mapGigs(rows: GigProjection[], signal?: AbortSignal): Promise<Gig
       isFresh: row.posted_at
         ? Date.now() - new Date(row.posted_at).getTime() < 48 * 60 * 60 * 1000
         : false,
-      isLocked: row.is_locked === true,
+      isLocked: 'is_locked' in row && row.is_locked === true,
       neighborhood: row.neighborhood ?? '',
       paymentMethod: row.payment_method,
       place: row.public_location_label || row.place || '',
@@ -162,6 +188,25 @@ async function mapGigs(rows: GigProjection[], signal?: AbortSignal): Promise<Gig
       wantedLevels: row.wanted_levels ?? [],
     };
   });
+}
+
+async function pendingApplicationCounts(
+  gigIds: readonly string[],
+  signal?: AbortSignal,
+): Promise<Map<string, number>> {
+  if (gigIds.length === 0) return new Map();
+  const query = getSupabaseClient()
+    .from('gig_applications')
+    .select('gig_id')
+    .in('gig_id', [...gigIds])
+    .eq('status', 'pending');
+  const result = await (signal ? query.abortSignal(signal) : query);
+  if (result.error) throw result.error;
+  const counts = new Map<string, number>();
+  for (const application of result.data as PendingApplicationProjection[]) {
+    counts.set(application.gig_id, (counts.get(application.gig_id) ?? 0) + 1);
+  }
+  return counts;
 }
 
 function mapApplication(
@@ -245,27 +290,48 @@ export async function fetchGigsPage(
   const hostedIds = hostingUserId
     ? mapped.filter((gig) => gig.hostId === hostingUserId).map((gig) => gig.id)
     : [];
-  const pendingCounts = new Map<string, number>();
-  if (hostedIds.length > 0) {
-    const applicationsQuery = getSupabaseClient()
-      .from('gig_applications')
-      .select('gig_id')
-      .in('gig_id', hostedIds)
-      .eq('status', 'pending');
-    const applicationsResult = await (signal
-      ? applicationsQuery.abortSignal(signal)
-      : applicationsQuery);
-    if (applicationsResult.error) throw applicationsResult.error;
-    for (const application of applicationsResult.data as PendingApplicationProjection[]) {
-      pendingCounts.set(application.gig_id, (pendingCounts.get(application.gig_id) ?? 0) + 1);
-    }
-  }
+  const pendingCounts = await pendingApplicationCounts(hostedIds, signal);
   return {
     items: mapped.map((gig) => ({
       ...gig,
       ...(gig.hostId === hostingUserId
         ? { pendingApplicantCount: pendingCounts.get(gig.id) ?? 0 }
         : {}),
+    })),
+    nextPage: result.data.length > pageSize ? page + 1 : null,
+  };
+}
+
+/** Reads the owner's active SOS directly from the protected base table.
+ * This must never depend on which pages happen to be loaded in the public feed.
+ */
+export async function fetchHostedGigsPage(
+  hostingUserId: string,
+  page: number,
+  pageSize = 20,
+  signal?: AbortSignal,
+): Promise<Page<GigSummary>> {
+  const { from, to } = pageRange(page, pageSize);
+  const query = getSupabaseClient()
+    .from('gig_requests')
+    .select(hostedGigColumns)
+    .eq('host_id', hostingUserId)
+    .gte('date', new Date().toISOString())
+    .order('date')
+    .order('id')
+    .range(from, to + 1);
+  const result = await (signal ? query.abortSignal(signal) : query);
+  if (result.error) throw result.error;
+  const rows = result.data.slice(0, pageSize) as HostedGigProjection[];
+  const mapped = await mapGigs(rows, signal);
+  const pendingCounts = await pendingApplicationCounts(
+    mapped.map((gig) => gig.id),
+    signal,
+  );
+  return {
+    items: mapped.map((gig) => ({
+      ...gig,
+      pendingApplicantCount: pendingCounts.get(gig.id) ?? 0,
     })),
     nextPage: result.data.length > pageSize ? page + 1 : null,
   };

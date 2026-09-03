@@ -29,6 +29,7 @@ export function mergeNativeDateTimePart(
 
 interface NativeDateTimeFieldProps {
   dateLabel: string;
+  disabled?: boolean;
   minimumDate?: Date;
   onChange: (value: Date) => void;
   timeLabel: string;
@@ -37,12 +38,13 @@ interface NativeDateTimeFieldProps {
 
 export function NativeDateTimeField({
   dateLabel,
+  disabled = false,
   minimumDate,
   onChange,
   timeLabel,
   value,
 }: NativeDateTimeFieldProps) {
-  const { palette } = useDispoTheme();
+  const { dark, palette } = useDispoTheme();
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const dateMinimum = minimumDate
@@ -53,6 +55,7 @@ export function NativeDateTimeField({
     onChange(mergeNativeDateTimePart(value, picked, part));
   };
   const openAndroid = (part: NativeDateTimePart) => {
+    if (disabled) return;
     DateTimePickerAndroid.open({
       display: 'default',
       ...(part === 'date' && dateMinimum ? { minimumDate: dateMinimum } : {}),
@@ -70,10 +73,14 @@ export function NativeDateTimeField({
             {dateLabel}
           </AppText>
           <DateTimePicker
+            accentColor={palette.electric}
             display="compact"
+            disabled={disabled}
             {...(dateMinimum ? { minimumDate: dateMinimum } : {})}
             mode="date"
             onValueChange={(_event, picked) => apply(picked, 'date')}
+            textColor={disabled ? palette.muted : palette.text}
+            themeVariant={dark ? 'dark' : 'light'}
             value={value}
           />
         </View>
@@ -82,9 +89,13 @@ export function NativeDateTimeField({
             {timeLabel}
           </AppText>
           <DateTimePicker
+            accentColor={palette.electric}
             display="compact"
+            disabled={disabled}
             mode="time"
             onValueChange={(_event, picked) => apply(picked, 'time')}
+            textColor={disabled ? palette.muted : palette.text}
+            themeVariant={dark ? 'dark' : 'light'}
             value={value}
           />
         </View>
@@ -102,6 +113,8 @@ export function NativeDateTimeField({
       <Pressable
         accessibilityLabel={`${dateLabel}: ${dateText}`}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         onPress={() => openAndroid('date')}
         style={({ pressed }) => [
           styles.androidField,
@@ -112,11 +125,13 @@ export function NativeDateTimeField({
         <AppText color={palette.muted} variant="caption">
           {dateLabel}
         </AppText>
-        <AppText>{dateText}</AppText>
+        <AppText color={disabled ? palette.muted : palette.text}>{dateText}</AppText>
       </Pressable>
       <Pressable
         accessibilityLabel={`${timeLabel}: ${timeText}`}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         onPress={() => openAndroid('time')}
         style={({ pressed }) => [
           styles.androidField,
@@ -127,7 +142,7 @@ export function NativeDateTimeField({
         <AppText color={palette.muted} variant="caption">
           {timeLabel}
         </AppText>
-        <AppText>{timeText}</AppText>
+        <AppText color={disabled ? palette.muted : palette.text}>{timeText}</AppText>
       </Pressable>
     </View>
   );

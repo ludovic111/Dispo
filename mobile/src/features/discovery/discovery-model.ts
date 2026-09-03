@@ -15,6 +15,7 @@ export interface DiscoveryFilters {
   playedWithFriend: boolean;
   radiusKm: number;
   sameSchoolOnly: boolean;
+  schoolIds: string[];
   wellRated: boolean;
 }
 
@@ -30,6 +31,7 @@ export const defaultDiscoveryFilters: DiscoveryFilters = {
   playedWithFriend: false,
   radiusKm: 25,
   sameSchoolOnly: false,
+  schoolIds: [],
   wellRated: false,
 };
 
@@ -437,6 +439,7 @@ export function activeFilterCount(filters: DiscoveryFilters): number {
     filters.friendsOnly,
     filters.playedWithFriend,
     filters.sameSchoolOnly,
+    filters.schoolIds.length > 0,
     filters.wellRated,
     Boolean(
       filters.placeCity.trim() || filters.placePostalCode.trim() || filters.placeCountry.trim(),
@@ -532,6 +535,12 @@ export function matchesDiscoveryFilters(
   if (filters.friendsOnly && !profile.isFriend) return false;
   if (filters.playedWithFriend && !profile.playedWithFriend) return false;
   if (filters.sameSchoolOnly && !profile.sharesSchool) return false;
+  if (
+    filters.schoolIds.length > 0 &&
+    !profile.schools.some((school) => filters.schoolIds.includes(school.id))
+  ) {
+    return false;
+  }
   if (
     filters.wellRated &&
     (profile.ratingAverage === null || profile.ratingAverage < 4 || profile.ratingCount < 3)

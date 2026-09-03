@@ -8,10 +8,20 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-
 
 import {
   availableDayKey,
+  dateFromLocalTime,
+  defaultAvailabilityTimeSlot,
+  hasInvalidAvailabilityTimeSlots,
+  isValidAvailabilityTimeSlot,
+  localTimeValue,
   normalizeAvailableDates,
+  normalizeAvailabilityTimeSlots,
+  profileAvailabilitySignature,
+  removeAvailableDay,
   toggleAvailableDate,
+  type AvailabilityTimeSlot,
+  type ProfileAvailability,
 } from './profile-availability-model';
-import { fetchAvailableDates, saveAvailableDates } from './profile-edit-repository';
+import { fetchProfileAvailability, saveProfileAvailability } from './profile-edit-repository';
 import { profileKeys } from './profile-queries';
 
 import { AppText } from '@/components/ui/app-text';
@@ -24,6 +34,71 @@ import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
+function AvailabilityTimeField({
+  day,
+  label,
+  onChange,
+  value,
+}: {
+  day: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const { dark, palette } = useDispoTheme();
+  const [open, setOpen] = useState(false);
+  const date = dateFromLocalTime(day, value);
+  const picker = (
+    <DateTimePicker
+      accentColor={palette.electric}
+      display={Platform.OS === 'ios' ? 'compact' : 'default'}
+      mode="time"
+      onDismiss={() => setOpen(false)}
+      onValueChange={(_event, selected) => {
+        if (Platform.OS === 'android') setOpen(false);
+        onChange(localTimeValue(selected));
+      }}
+      textColor={palette.text}
+      themeVariant={dark ? 'dark' : 'light'}
+      value={date}
+    />
+  );
+
+  if (Platform.OS === 'ios') {
+    return (
+      <View
+        style={[styles.timeField, { backgroundColor: palette.inset, borderColor: palette.border }]}
+      >
+        <AppText color={palette.muted} variant="caption2">
+          {label}
+        </AppText>
+        {picker}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.androidTimeFieldWrap}>
+      <Pressable
+        accessibilityLabel={`${label}: ${value}`}
+        accessibilityRole="button"
+        onPress={() => setOpen(true)}
+        style={({ pressed }) => [
+          styles.timeField,
+          { backgroundColor: palette.inset, borderColor: palette.border },
+          pressed && styles.pressed,
+        ]}
+      >
+        <AppText color={palette.muted} variant="caption2">
+          {label}
+        </AppText>
+        <AppText variant="subheadline">{value}</AppText>
+      </Pressable>
+      {open ? picker : null}
+    </View>
+  );
+}
+
 export function ProfileAvailabilityScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
@@ -33,23 +108,39 @@ export function ProfileAvailabilityScreen() {
   const queryClient = useQueryClient();
   const query = useQuery({
     enabled: Boolean(userId),
-    queryFn: () => fetchAvailableDates(userId),
+    queryFn: () => fetchProfileAvailability(userId),
     queryKey: ['profile', 'availability', userId],
   });
-  const [draft, setDraft] = useState<string[] | null>(null);
+  const [draft, setDraft] = useState<ProfileAvailability | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(Platform.OS === 'ios');
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const dates = draft ?? query.data ?? [];
+  const saved = query.data ?? { dates: [], timeSlots: {} };
+  const availability = draft ?? saved;
+  const dates = availability.dates;
+  const invalidSlots = hasInvalidAvailabilityTimeSlots(availability);
   const hasUnsavedChanges =
-    draft !== null &&
-    normalizeAvailableDates(draft).join('|') !==
-      normalizeAvailableDates(query.data ?? []).join('|');
+    draft !== null && profileAvailabilitySignature(draft) !== profileAvailabilitySignature(saved);
 
   const updateDay = (date: Date) => {
+    const day = availableDayKey(date);
+    const nextDates = toggleAvailableDate(dates, day);
     setCalendarDate(date);
-    setDraft(toggleAvailableDate(dates, availableDayKey(date)));
+    setDraft({
+      dates: nextDates,
+      timeSlots: normalizeAvailabilityTimeSlots(availability.timeSlots, nextDates),
+    });
+    setErrorText(null);
+  };
+
+  const updateSlots = (day: string, slots: AvailabilityTimeSlot[]) => {
+    const otherDays = { ...availability.timeSlots };
+    delete otherDays[day];
+    setDraft({
+      dates,
+      timeSlots: slots.length ? { ...otherDays, [day]: slots } : otherDays,
+    });
     setErrorText(null);
   };
 
@@ -58,8 +149,15 @@ export function ProfileAvailabilityScreen() {
     setSaving(true);
     setErrorText(null);
     try {
-      const normalized = normalizeAvailableDates(dates);
-      await saveAvailableDates(userId, normalized);
+      if (invalidSlots) {
+        setErrorText(t("L'heure de fin doit suivre l'heure de début."));
+        return;
+      }
+      const normalized = {
+        dates: normalizeAvailableDates(dates),
+        timeSlots: normalizeAvailabilityTimeSlots(availability.timeSlots, dates),
+      };
+      await saveProfileAvailability(userId, normalized);
       queryClient.setQueryData(['profile', 'availability', userId], normalized);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: profileKeys.me(userId) }),
@@ -80,7 +178,7 @@ export function ProfileAvailabilityScreen() {
         headerLeft: () => <NativeHeaderButton label={t('Fermer')} onPress={() => router.back()} />,
         headerRight: () => (
           <NativeHeaderButton
-            disabled={!hasUnsavedChanges || saving}
+            disabled={!hasUnsavedChanges || invalidSlots || saving}
             label={t('Enregistrer')}
             onPress={() => void save()}
           />
@@ -190,7 +288,11 @@ export function ProfileAvailabilityScreen() {
                   ),
                   [
                     { style: 'cancel', text: t('Annuler') },
-                    { onPress: () => setDraft([]), style: 'destructive', text: t('Tout retirer') },
+                    {
+                      onPress: () => setDraft({ dates: [], timeSlots: {} }),
+                      style: 'destructive',
+                      text: t('Tout retirer'),
+                    },
                   ],
                 )
               }
@@ -203,50 +305,144 @@ export function ProfileAvailabilityScreen() {
           ) : null}
         </View>
 
-        <Card padding={0}>
+        <View style={styles.dateCards}>
           {dates.length ? (
-            dates.map((date, index) => (
-              <Pressable
-                accessibilityHint={t('Retire cette date de tes disponibilités')}
-                accessibilityRole="button"
-                key={date}
-                onPress={() => setDraft(dates.filter((value) => value !== date))}
-                style={({ pressed }) => [
-                  styles.dateRow,
-                  index > 0 && {
-                    borderTopColor: palette.border,
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                  },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={[styles.dateIcon, { backgroundColor: `${palette.jam}18` }]}>
-                  <Ionicons color={palette.jam} name="checkmark" size={17} />
-                </View>
-                <AppText style={styles.flex} variant="subheadline">
-                  {new Intl.DateTimeFormat(locale, {
-                    dateStyle: 'full',
-                  }).format(new Date(`${date}T12:00:00`))}
-                </AppText>
-                <Ionicons color={palette.muted} name="close-circle" size={21} />
-              </Pressable>
-            ))
+            dates.map((date) => {
+              const slots = availability.timeSlots[date] ?? [];
+              return (
+                <Card key={date} style={styles.dateCard}>
+                  <View style={styles.dateRow}>
+                    <View style={[styles.dateIcon, { backgroundColor: `${palette.jam}18` }]}>
+                      <Ionicons color={palette.jam} name="checkmark" size={17} />
+                    </View>
+                    <AppText style={styles.flex} variant="subheadline">
+                      {new Intl.DateTimeFormat(locale, {
+                        dateStyle: 'full',
+                      }).format(new Date(`${date}T12:00:00`))}
+                    </AppText>
+                    <Pressable
+                      accessibilityHint={t('Retire cette date de tes disponibilités')}
+                      accessibilityLabel={t('Supprimer')}
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      onPress={() => setDraft(removeAvailableDay(availability, date))}
+                      style={({ pressed }) => [styles.removeDateButton, pressed && styles.pressed]}
+                    >
+                      <Ionicons color={palette.muted} name="close-circle" size={22} />
+                    </Pressable>
+                  </View>
+
+                  <View style={[styles.slotSection, { borderTopColor: palette.border }]}>
+                    <View style={styles.slotHeading}>
+                      <View style={styles.flex}>
+                        <AppText variant="caption">{t('Créneaux horaires')}</AppText>
+                        <AppText color={palette.muted} variant="caption2">
+                          {t('Facultatif — sans créneau, tu es disponible toute la journée.')}
+                        </AppText>
+                      </View>
+                      <Pressable
+                        accessibilityLabel={t('Ajouter un créneau')}
+                        accessibilityRole="button"
+                        onPress={() =>
+                          updateSlots(date, [...slots, defaultAvailabilityTimeSlot(slots)])
+                        }
+                        style={({ pressed }) => [styles.addSlotButton, pressed && styles.pressed]}
+                      >
+                        <Ionicons color={palette.electric} name="add-circle" size={18} />
+                        <AppText color={palette.electric} variant="caption">
+                          {t('Ajouter')}
+                        </AppText>
+                      </Pressable>
+                    </View>
+
+                    {slots.map((slot, index) => {
+                      const valid = isValidAvailabilityTimeSlot(slot);
+                      const updateSlot = (part: 'start' | 'end', value: string) =>
+                        updateSlots(
+                          date,
+                          slots.map((candidate, candidateIndex) =>
+                            candidateIndex === index ? { ...candidate, [part]: value } : candidate,
+                          ),
+                        );
+                      return (
+                        <View
+                          key={`${date}-${index}`}
+                          style={[
+                            styles.slotRow,
+                            !valid && {
+                              backgroundColor: `${palette.signal}10`,
+                              borderColor: `${palette.signal}55`,
+                            },
+                          ]}
+                        >
+                          <AvailabilityTimeField
+                            day={date}
+                            label={t('Début')}
+                            onChange={(value) => updateSlot('start', value)}
+                            value={slot.start}
+                          />
+                          <AvailabilityTimeField
+                            day={date}
+                            label={t('Fin')}
+                            onChange={(value) => updateSlot('end', value)}
+                            value={slot.end}
+                          />
+                          <Pressable
+                            accessibilityLabel={t('Supprimer ce créneau')}
+                            accessibilityRole="button"
+                            onPress={() =>
+                              updateSlots(
+                                date,
+                                slots.filter(
+                                  (_candidate, candidateIndex) => candidateIndex !== index,
+                                ),
+                              )
+                            }
+                            style={({ pressed }) => [
+                              styles.removeSlotButton,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <Ionicons color={palette.muted} name="trash-outline" size={18} />
+                          </Pressable>
+                          {!valid ? (
+                            <AppText
+                              color={palette.signal}
+                              style={styles.slotError}
+                              variant="caption2"
+                            >
+                              {t("L'heure de fin doit suivre l'heure de début.")}
+                            </AppText>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </Card>
+              );
+            })
           ) : (
-            <View style={styles.empty}>
-              <Ionicons color={palette.muted} name="moon-outline" size={25} />
-              <AppText color={palette.muted} style={styles.emptyText} variant="caption">
-                {t('Aucune date cochée — tu apparais comme indisponible.')}
-              </AppText>
-            </View>
+            <Card>
+              <View style={styles.empty}>
+                <Ionicons color={palette.muted} name="moon-outline" size={25} />
+                <AppText color={palette.muted} style={styles.emptyText} variant="caption">
+                  {t('Aucune date cochée — tu apparais comme indisponible.')}
+                </AppText>
+              </View>
+            </Card>
           )}
-        </Card>
+        </View>
 
         {errorText ? (
           <AppText color={palette.signal} style={styles.error} variant="caption">
             {errorText}
           </AppText>
         ) : null}
-        <DispoButton disabled={!hasUnsavedChanges} loading={saving} onPress={() => void save()}>
+        <DispoButton
+          disabled={!hasUnsavedChanges || invalidSlots}
+          loading={saving}
+          onPress={() => void save()}
+        >
           {t('Enregistrer mes disponibilités')}
         </DispoButton>
       </ScrollView>
@@ -255,6 +451,15 @@ export function ProfileAvailabilityScreen() {
 }
 
 const styles = StyleSheet.create({
+  addSlotButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
+  androidTimeFieldWrap: { flex: 1 },
   card: { gap: spacing.sm },
   clearButton: {
     justifyContent: 'center',
@@ -263,6 +468,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.tight,
   },
   content: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
+  dateCard: { gap: 0, padding: 0 },
+  dateCards: { gap: spacing.sm },
   dateIcon: {
     alignItems: 'center',
     borderRadius: 16,
@@ -290,7 +497,50 @@ const styles = StyleSheet.create({
     width: 42,
   },
   pressed: { opacity: 0.76 },
+  removeDateButton: {
+    alignItems: 'center',
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  removeSlotButton: {
+    alignItems: 'center',
+    height: 48,
+    justifyContent: 'center',
+    width: 40,
+  },
   sectionHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  slotError: { flexBasis: '100%', textAlign: 'center' },
+  slotHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  slotRow: {
+    alignItems: 'center',
+    borderColor: 'transparent',
+    borderRadius: radii.button,
+    borderWidth: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    padding: spacing.xs,
+  },
+  slotSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.xs,
+    padding: spacing.md,
+  },
+  timeField: {
+    borderRadius: radii.button,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    justifyContent: 'center',
+    minHeight: 54,
+    minWidth: 92,
+    paddingHorizontal: spacing.xs,
+  },
   unsavedBanner: {
     alignItems: 'center',
     borderRadius: radii.button,

@@ -75,9 +75,10 @@ describe('fraîcheur Realtime des SOS', () => {
 
     await invalidateGigRealtimeData(queryClient, 'profile-me');
 
-    expect(invalidate).toHaveBeenCalledTimes(4);
+    expect(invalidate).toHaveBeenCalledTimes(5);
     expect(invalidate.mock.calls.map(([filter]) => filter)).toEqual([
       { exact: true, queryKey: gigKeys.feed('profile-me') },
+      { exact: true, queryKey: gigKeys.hosted('profile-me') },
       { queryKey: gigKeys.details('profile-me') },
       { queryKey: gigKeys.matchesForUser('profile-me') },
       { queryKey: sessionKeys.all },

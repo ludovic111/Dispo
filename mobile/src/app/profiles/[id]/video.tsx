@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/ui/screen';
 import { ProfileVideoPlayer } from '@/features/media/profile-video';
+import { isPlayableProfileVideoUrl } from '@/features/media/profile-video-url';
 
 export default function ProfileVideoScreen() {
   const { t } = useTranslation();
@@ -20,7 +21,7 @@ export default function ProfileVideoScreen() {
           title: title || t('Vidéo'),
         }}
       />
-      {url?.startsWith('https://') ? (
+      {isPlayableProfileVideoUrl(url) ? (
         <ProfileVideoPlayer url={url} />
       ) : (
         <View style={styles.empty}>

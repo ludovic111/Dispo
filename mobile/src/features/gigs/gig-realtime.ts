@@ -71,6 +71,7 @@ export async function invalidateGigRealtimeData(
 ): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ exact: true, queryKey: gigKeys.feed(userId) }),
+    queryClient.invalidateQueries({ exact: true, queryKey: gigKeys.hosted(userId) }),
     queryClient.invalidateQueries({ queryKey: gigKeys.details(userId) }),
     queryClient.invalidateQueries({ queryKey: gigKeys.matchesForUser(userId) }),
     queryClient.invalidateQueries({ queryKey: sessionKeys.all }),

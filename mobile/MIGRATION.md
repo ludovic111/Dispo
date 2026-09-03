@@ -1086,3 +1086,66 @@ Après chaque lot :
 5. ne jamais masquer un blocage d’outillage ou d’accès administrateur ;
 6. conserver le backend Supabase unique et vérifier les deux plateformes à
    partir de `mobile/` ; les anciens clients ne font plus partie du workspace.
+
+## 14. Lot retours utilisateurs du 3 septembre 2026
+
+État : les cinq corrections sont implémentées et validées sur le client Expo.
+Après autorisation explicite, la migration
+`20260903084546_profile_availability_time_slots.sql` a été appliquée au projet
+production existant `cghmmpcwqzpjwgnbiuuw` et son schéma contrôlé. Le build est
+passé à 2.4 (43) sur iOS et Android ; la livraison TestFlight est l'étape de
+distribution suivante.
+
+Corrections ciblées :
+
+- date/heure SOS : les champs natifs reçoivent les couleurs de texte, d'accent
+  et de thème explicites, y compris leur état désactivé ;
+- disponibilités : `profiles.availability_time_slots` ajoute un objet JSONB
+  rétrocompatible `{ "YYYY-MM-DD": [{ "start": "HH:mm", "end": "HH:mm" }] }`.
+  Plusieurs tranches facultatives peuvent être ajoutées, modifiées et retirées
+  par date ; la sauvegarde des dates et horaires est atomique. Un trigger
+  valide les dates, le format local `HH:mm`, l'ordre début/fin et interdit les
+  tranches rattachées à une date absente de `available_dates` ;
+- recherche : le filtre « École de musique » réutilise le répertoire paginé
+  des écoles actives, stocke leurs UUID, applique un OU entre les affiliations
+  visibles et compte la sélection comme une catégorie ;
+- Mes SOS : une requête propriétaire exhaustive et dédiée remplace la
+  dérivation depuis la première page du fil public. Les invalidations création,
+  suppression, candidatures, changements d'état et Realtime couvrent désormais
+  cette requête ; le fil public continue d'exclure les propres annonces ;
+- vidéos : aperçu ouvrable, lecteur, titre/date éditables et actions tactiles
+  explicites lire/modifier/supprimer ; les limites 1 gratuite/6 Premium et le
+  rollback de la ligne lorsque la suppression Storage échoue sont conservés.
+  Les URL HTTPS restent obligatoires hors développement local.
+
+Preuves exécutées sur l'état final :
+
+- `npm run format:check` réussi ; `npm run validate` réussi avec 52 suites et
+  322 tests, sans suppression des 49 suites/311 tests préexistants ;
+- Expo Doctor 20/21, strictement le même contrôle connu : 14 révisions patch
+  Expo disponibles, dépendances volontairement inchangées ;
+- prébuild CNG production propre, bundle/package généré `ch.dispo.app`, sans
+  autorisation cleartext Android temporaire ;
+- build iOS Release pour simulateur réussi avec `BUILD SUCCEEDED` ; build
+  Android Release et tests unitaires Gradle réussis avec `BUILD SUCCESSFUL` ;
+- APK direct `Dispo-dist/android/Dispo-2.4-build43-direct-test.apk`, package
+  `ch.dispo.app`, version 2.4, versionCode 43, signature v2 valide avec le
+  certificat Android Debug de test, SHA-256
+  `e79509098dd062852b97da9367cd8a703df57074953f1ccad77c97f7f7fb68b1` ;
+  l'APK a été installé puis lancé à froid sur Android API 36 ;
+- validation visuelle réelle avec development builds : champs date/heure clair
+  et sombre, plusieurs tranches, deux écoles sélectionnées avec logique OU,
+  SOS propriétaire au-delà de la première page et vidéo ajoutée/lue/modifiée
+  sur iPhone 17 Pro Simulator et Android API 36 ; toutes les fixtures locales
+  ont ensuite été supprimées ; aucun appareil physique n'a été validé ;
+- migration testée localement : sauvegarde/relecture de deux tranches, refus
+  RLS d'une mise à jour tierce, refus d'une tranche inversée ou orpheline ;
+  `supabase db lint --local --level error` retourne zéro résultat. La liste des
+  migrations confirme `20260903084546` alignée localement et à distance. En
+  production, la colonne JSONB non nullable, son défaut `{}`, le trigger, la
+  fonction `SECURITY INVOKER` privée et RLS active ont été relus ; l'advisor
+  performance ne remonte aucun problème.
+
+Porte de schéma levée : committer/pousser le lot sur `origin/main`, puis
+archiver, vérifier, uploader et attendre le verdict d'import TestFlight du build 43. L'advisor sécurité CLI a été interrompu après 90 secondes sans sortie ; les
+contrôles directs de la fonction, de ses ACL et de RLS sont concluants.

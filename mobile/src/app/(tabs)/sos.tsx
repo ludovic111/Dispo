@@ -23,7 +23,7 @@ import {
   readOpenedGigIds,
 } from '@/features/gigs/gig-opened-store';
 import { loadSosScope, saveSosScope } from '@/features/gigs/gig-preferences';
-import { useGigs } from '@/features/gigs/gig-queries';
+import { useGigs, useHostedGigs } from '@/features/gigs/gig-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -85,6 +85,9 @@ export default function GigsScreen() {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const query = useGigs();
+  const hostedQuery = useHostedGigs();
+  const { refetch: refetchFeed } = query;
+  const { refetch: refetchHosted } = hostedQuery;
   const profile = useProfile(userId, userId);
   const [segment, setSegment] = useState<Segment>('feed');
   const [scope, setScope] = useState<SosFeedScope>('matching');
@@ -93,6 +96,7 @@ export default function GigsScreen() {
     useCallback(() => {
       let active = true;
       if (userId) {
+        void Promise.all([refetchFeed(), refetchHosted()]);
         void Promise.all([readOpenedGigIds(userId), loadSosScope(userId)]).then(
           ([ids, savedScope]) => {
             if (!active) return;
@@ -104,7 +108,7 @@ export default function GigsScreen() {
       return () => {
         active = false;
       };
-    }, [userId]),
+    }, [refetchFeed, refetchHosted, userId]),
   );
 
   const changeScope = useCallback(
@@ -119,7 +123,10 @@ export default function GigsScreen() {
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data?.pages],
   );
-  const mine = useMemo(() => gigs.filter((gig) => gig.hostId === userId), [gigs, userId]);
+  const mine = useMemo(
+    () => hostedQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [hostedQuery.data?.pages],
+  );
   const hosting = useMemo(() => triageHostedGigs(mine), [mine]);
   const publicFeed = useMemo(
     () =>
@@ -167,7 +174,7 @@ export default function GigsScreen() {
     </Pressable>
   );
 
-  if (query.isLoading || profile.isLoading) {
+  if (query.isLoading || hostedQuery.isLoading || profile.isLoading) {
     return (
       <Screen nativeTabRoot>
         <ScreenHeader
@@ -180,8 +187,12 @@ export default function GigsScreen() {
       </Screen>
     );
   }
-  if (query.isExhaustiveError || profile.isError) {
-    const message = query.error?.message ?? profile.error?.message ?? t('Chargement impossible.');
+  if (query.isExhaustiveError || hostedQuery.isExhaustiveError || profile.isError) {
+    const message =
+      query.error?.message ??
+      hostedQuery.error?.message ??
+      profile.error?.message ??
+      t('Chargement impossible.');
     return (
       <Screen nativeTabRoot>
         <ScreenHeader
@@ -192,7 +203,9 @@ export default function GigsScreen() {
         />
         <ErrorState
           message={message}
-          onRetry={() => void Promise.all([query.refetch(), profile.refetch()])}
+          onRetry={() =>
+            void Promise.all([query.refetch(), hostedQuery.refetch(), profile.refetch()])
+          }
         />
       </Screen>
     );
@@ -205,8 +218,13 @@ export default function GigsScreen() {
         refreshControl={
           <RefreshControl
             colors={[palette.electric]}
-            onRefresh={() => void Promise.all([query.refetch(), profile.refetch()])}
-            refreshing={query.isRefetching && !query.isFetchingNextPage}
+            onRefresh={() =>
+              void Promise.all([query.refetch(), hostedQuery.refetch(), profile.refetch()])
+            }
+            refreshing={
+              (query.isRefetching && !query.isFetchingNextPage) ||
+              (hostedQuery.isRefetching && !hostedQuery.isFetchingNextPage)
+            }
             tintColor={palette.electric}
           />
         }
@@ -351,10 +369,15 @@ export default function GigsScreen() {
           />
         )}
 
-        {query.isFetchingNextPage ? (
+        {(segment === 'feed' ? query : hostedQuery).isFetchingNextPage ? (
           <LoadingState label={t('Chargement de la suite…')} />
-        ) : query.hasNextPage ? (
-          <DispoButton onPress={() => void query.fetchNextPage()} variant="secondary">
+        ) : (segment === 'feed' ? query : hostedQuery).hasNextPage ? (
+          <DispoButton
+            onPress={() =>
+              void (segment === 'feed' ? query.fetchNextPage() : hostedQuery.fetchNextPage())
+            }
+            variant="secondary"
+          >
             {t('Charger plus')}
           </DispoButton>
         ) : null}
@@ -374,9 +397,9 @@ const styles = StyleSheet.create({
   },
   addText: { fontWeight: '900' },
   content: { gap: spacing.md, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
-  directSection: { gap: spacing.sm },
-  hostingSections: { gap: spacing.lg },
-  list: { gap: spacing.md },
+  directSection: { gap: spacing.sm, width: '100%' },
+  hostingSections: { gap: spacing.lg, width: '100%' },
+  list: { gap: spacing.md, width: '100%' },
   mineHint: { alignItems: 'center', flexDirection: 'row', gap: 7, paddingVertical: 9 },
   mineHintText: { flex: 1, fontWeight: '700' },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },

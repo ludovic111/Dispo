@@ -228,6 +228,30 @@ describe('filtres de découverte', () => {
     expect(matchesDiscoveryFilters(profile({ ratingCount: 2 }), filters, null)).toBe(false);
   });
 
+  it('filtre les écoles actives par identifiants réels avec une logique OU', () => {
+    const filters = {
+      ...defaultDiscoveryFilters,
+      schoolIds: ['school-amr', 'school-hem'],
+    };
+    const amr = {
+      id: 'school-amr',
+      logoUrl: null,
+      name: 'AMR Genève',
+      shortName: 'AMR',
+      slug: 'amr',
+    };
+    expect(activeFilterCount(filters)).toBe(1);
+    expect(matchesDiscoveryFilters(profile({ schools: [amr] }), filters, null)).toBe(true);
+    expect(
+      matchesDiscoveryFilters(
+        profile({ schools: [{ ...amr, id: 'school-other', slug: 'other' }] }),
+        filters,
+        null,
+      ),
+    ).toBe(false);
+    expect(defaultDiscoveryFilters.schoolIds).toEqual([]);
+  });
+
   it('dérive les cinq états temporels et la date du scope', () => {
     const now = new Date('2026-08-31T12:00:00');
     expect(profileAvailability(profile({ availableDates: ['2026-08-31'] }), now).kind).toBe(

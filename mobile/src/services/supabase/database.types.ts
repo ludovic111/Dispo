@@ -935,6 +935,7 @@ export type Database = {
         Row: {
           age: number | null;
           availability_places: Json;
+          availability_time_slots: Json;
           available_dates: string[];
           bio: string;
           city: string | null;
@@ -966,6 +967,7 @@ export type Database = {
         Insert: {
           age?: number | null;
           availability_places?: Json;
+          availability_time_slots?: Json;
           available_dates?: string[];
           bio?: string;
           city?: string | null;
@@ -997,6 +999,7 @@ export type Database = {
         Update: {
           age?: number | null;
           availability_places?: Json;
+          availability_time_slots?: Json;
           available_dates?: string[];
           bio?: string;
           city?: string | null;

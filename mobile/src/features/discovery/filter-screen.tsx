@@ -22,6 +22,7 @@ import {
   instrumentCategories,
   levelOptions,
 } from '@/features/onboarding/onboarding-model';
+import { useSchoolDirectory } from '@/features/schools/school-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -78,6 +79,7 @@ function ClearSelectionButton({ label, onPress }: { label: string; onPress: () =
 
 export function FilterScreen() {
   const { filters, resetFilters, setFilters } = useDiscoveryState();
+  const schoolDirectory = useSchoolDirectory();
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
@@ -89,6 +91,7 @@ export function FilterScreen() {
         ).map((group) => group.label),
       ),
   );
+  const schools = schoolDirectory.data?.pages.flatMap((page) => page.items) ?? [];
   const placeDraft: PostalPlaceDraft = {
     city: filters.placeCity,
     countryCode: filters.placeCountry || 'CH',
@@ -333,6 +336,72 @@ export function FilterScreen() {
         </View>
 
         <View style={styles.section}>
+          <SectionHeader
+            subtitle={filters.schoolIds.length ? `${filters.schoolIds.length}` : t('Toutes')}
+            title={t('Écoles de musique')}
+          />
+          {filters.schoolIds.length > 0 ? (
+            <ClearSelectionButton
+              label={t('Effacer les écoles')}
+              onPress={() => setFilters({ ...filters, schoolIds: [] })}
+            />
+          ) : null}
+          <Card style={styles.card}>
+            {schoolDirectory.isLoading ? (
+              <AppText color={palette.muted} variant="caption">
+                {t('Chargement des écoles…')}
+              </AppText>
+            ) : schoolDirectory.isError ? (
+              <View style={styles.schoolError}>
+                <AppText color={palette.signal} style={styles.flex} variant="caption">
+                  {t("L'annuaire des écoles n'a pas pu être chargé.")}
+                </AppText>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void schoolDirectory.refetch()}
+                  style={styles.retryButton}
+                >
+                  <AppText color={palette.electric} variant="caption">
+                    {t('Réessayer')}
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : schools.length > 0 ? (
+              <>
+                <View style={styles.choices}>
+                  {schools.map((school) => (
+                    <ChoiceChip
+                      key={school.id}
+                      label={school.name}
+                      onPress={() =>
+                        setFilters({
+                          ...filters,
+                          schoolIds: toggle(filters.schoolIds, school.id),
+                        })
+                      }
+                      selected={filters.schoolIds.includes(school.id)}
+                    />
+                  ))}
+                </View>
+                {schoolDirectory.hasNextPage ? (
+                  <DispoButton
+                    loading={schoolDirectory.isFetchingNextPage}
+                    onPress={() => void schoolDirectory.fetchNextPage()}
+                    variant="secondary"
+                  >
+                    {t('Charger plus')}
+                  </DispoButton>
+                ) : null}
+              </>
+            ) : (
+              <AppText color={palette.muted} variant="caption">
+                {t("Aucune école active dans l'annuaire.")}
+              </AppText>
+            )}
+          </Card>
+        </View>
+
+        <View style={styles.section}>
           <SectionHeader title={t('Relations')} />
           <Card padding={0}>
             <View style={styles.switchPad}>
@@ -401,6 +470,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   divider: { height: StyleSheet.hairlineWidth },
+  flex: { flex: 1 },
   genreHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -411,6 +481,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.94, transform: [{ scale: 0.98 }] },
   radiusHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   radiusValue: { fontWeight: '800' },
+  retryButton: { justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.xs },
+  schoolError: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   section: { gap: spacing.sm },
   selectionCount: { fontWeight: '900' },
   sliderLabels: { flexDirection: 'row', justifyContent: 'space-between' },
