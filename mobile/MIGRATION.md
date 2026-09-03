@@ -1093,8 +1093,9 @@ Après chaque lot :
 Après autorisation explicite, la migration
 `20260903084546_profile_availability_time_slots.sql` a été appliquée au projet
 production existant `cghmmpcwqzpjwgnbiuuw` et son schéma contrôlé. Le build est
-passé à 2.4 (43) sur iOS et Android ; la livraison TestFlight est l'étape de
-distribution suivante.
+passé à 2.4 (43) sur iOS et Android ; le code a été poussé sur `origin/main` et
+Apple a importé le build TestFlight avec le statut `VALID` et l'éligibilité App
+Store.
 
 Corrections ciblées :
 
@@ -1146,6 +1147,22 @@ Preuves exécutées sur l'état final :
   fonction `SECURITY INVOKER` privée et RLS active ont été relus ; l'advisor
   performance ne remonte aucun problème.
 
-Porte de schéma levée : committer/pousser le lot sur `origin/main`, puis
-archiver, vérifier, uploader et attendre le verdict d'import TestFlight du build 43. L'advisor sécurité CLI a été interrompu après 90 secondes sans sortie ; les
-contrôles directs de la fonction, de ses ACL et de RLS sont concluants.
+Livraison :
+
+- migration production appliquée puis alignée local/distant ; l'advisor
+  sécurité CLI a été interrompu après 90 secondes sans sortie, tandis que les
+  contrôles directs de la fonction, de ses ACL et de RLS sont concluants ;
+- commit applicatif `235f79f9f7847260321295086ce17821f01c19bf` poussé sur
+  `origin/main` ;
+- archive Release et export réussis ; IPA
+  `Dispo-dist/2.4/Dispo-2.4-build43.ipa`, SHA-256
+  `827e29d8f8cd9e2827b8c0c1e7266baff81e5fd3956d501f337b3a441d182a89` ;
+- IPA finale vérifiée : `ch.dispo.app`, version 2.4 build 43, APNs
+  `production`, Apple Sign-In `Default`, `get-task-allow=false` et
+  `codesign --verify --deep --strict` réussi ;
+- App Store Connect : `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, livraison
+  `7d47f852-85a1-4bc3-ba78-e16d739374d7`, puis `BUILD-STATUS: VALID`,
+  `IMPORT-STATUS: VALID` et `APP_STORE_ELIGIBLE` ; aucune App Review ni
+  activation de testeurs ;
+- aucun appareil physique iOS ou Android n'a été validé. L'installation
+  physique du build 43 TestFlight et de l'APK direct reste la prochaine preuve.
