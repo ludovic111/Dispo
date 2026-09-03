@@ -1166,3 +1166,69 @@ Livraison :
   activation de testeurs ;
 - aucun appareil physique iOS ou Android n'a été validé. L'installation
   physique du build 43 TestFlight et de l'APK direct reste la prochaine preuve.
+
+## 15. Écoles, commentaires et connexion — 3 septembre 2026
+
+État : lot livré en version 2.4 (44), code poussé sur `origin/main`, APK direct
+installé et lancé, puis IPA importée par Apple avec les statuts `VALID` et
+`APP_STORE_ELIGIBLE`.
+
+Corrections ciblées :
+
+- filtre école des SOS relié au répertoire existant : UUID exacts, sélection
+  multiple avec logique OU, effacement, chargement, erreur/retry, liste vide et
+  pagination ; le filtre école de la recherche de musiciens est conservé et
+  vérifié avec deux écoles, sans modifier les autres critères ;
+- suppression du second accès « Gérer » aux démos en bas du profil ; l'accès
+  principal « Mes démos » reste disponible ;
+- commentaire de morceau multiligne, défilement vers le champ et prise en
+  compte du clavier iOS/Android, y compris après fermeture puis réouverture ;
+- suppression confirmée des commentaires par auteur ou leader, retrait
+  optimiste du cache, restauration en cas d'échec et erreur explicite si le
+  serveur ne renvoie aucune ligne supprimée ;
+- une coche grise uniquement après persistance d'un commentaire personnel.
+  Aucun état « lu » n'est inventé pour les commentaires. Les coches des
+  messages privés restent fondées sur les états persistés existants ;
+- textes et libellés d'accessibilité ajoutés dans les neuf langues.
+
+Vérifications exécutées :
+
+- `npm run validate` : 53 suites / 333 tests réussis, TypeScript et ESLint
+  réussis ; format et `git diff --check` réussis. Expo Doctor reste à 20/21
+  pour les mêmes 14 écarts de versions patch ; aucune dépendance modifiée ;
+- prébuild CNG production propre, pods installés, build iOS simulateur et
+  archive Release réussis ; build Android Release réussi sous JDK 17 ;
+- parcours réels sur iPhone 17 Pro Simulator et Android API 36, en clair et
+  sombre : connexion, sélection/effacement d'écoles SOS et recherche, accès
+  unique aux démos, commentaire et clavier. Commentaire persisté, coche,
+  confirmation et suppression vérifiés sur iOS ; clavier revérifié dans
+  l'APK Release final, champ et envoi visibles ;
+- règle RLS de production relue : auteur ou `is_group_leader(group_id)`.
+  La migration existante suffit ; aucune migration ni modification du schéma
+  production. Les trois commentaires de validation ont été supprimés et leur
+  absence vérifiée ;
+- sur demande explicite du propriétaire, accès e-mail/mot de passe ajouté au
+  compte François existant, même UUID conservé et connexion réelle réussie
+  sur les deux plateformes. Aucun identifiant de connexion n'est versionné ;
+- aucun appareil physique ni scénario d'achat/push réel n'a été validé.
+
+Livraison :
+
+- commit applicatif `84812d4e7b7d736589b999f9b022f3e3ff905881` poussé sur
+  `origin/main` ;
+- APK direct `Dispo-dist/android/Dispo-2.4-build44-direct-test.apk`, package
+  `ch.dispo.app`, version 2.4, versionCode 44, signature v2 valide avec le
+  certificat Android Debug de test, installé et lancé à froid sur Android 36 ;
+  SHA-256 `73a4d1617bc318d758777c5084c0f91f8739fee53bf14ed146f0b6756d89d56b` ;
+- archive et export iOS réussis ; IPA
+  `Dispo-dist/2.4/Dispo-2.4-build44.ipa`, SHA-256
+  `c5d727fc1579af9df8ee48d29089b5781309971bb4b95e51d4d48ab0da4d7550` ;
+- IPA finale contrôlée : `ch.dispo.app`, version 2.4 build 44, APNs
+  `production`, Apple Sign-In `Default`, `get-task-allow=false`, puis
+  `codesign --verify --deep --strict` réussi ;
+- App Store Connect : `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, livraison
+  `32ffaa01-260f-4b03-b0ae-7bd8f4d53381`, `BUILD-STATUS: VALID`,
+  `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` ;
+- aucune App Review, activation de testeurs, publication Google Play ou
+  modification des secrets. La validation sur appareils physiques reste la
+  prochaine preuve utile.
