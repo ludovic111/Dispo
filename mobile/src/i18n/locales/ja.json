@@ -349,7 +349,7 @@
   "Cercle": "サークル",
   "Certains réglages ne peuvent pas être chargés.": "Certains réglages ne peuvent pas être chargés.",
   "Ces musiciens jouent l'instrument que tu cherches et sont dispo le %@. Contacte-les sans attendre.": "この人たちは募集パートを演奏でき、%@に空いています。すぐ連絡しましょう。",
-  "Cette action est définitive.": "Cette action est définitive.",
+  "Cette action est définitive.": "この操作は元に戻せません。",
   "Cette date ou toute la série ?": "この 1 回だけ？ それとも全部？",
   "Cette date seulement": "この日程のみ",
   "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.": "このアップデートでアプリ内の配置が変わります。1分読んでおけば探さずに済みます。",
@@ -378,7 +378,7 @@
   "Chargement du SOS…": "Chargement du SOS…",
   "Chargement impossible.": "Chargement impossible.",
   "Chargement…": "Chargement…",
-  "Charger plus": "Charger plus",
+  "Charger plus": "さらに読み込む",
   "Cherche": "募集",
   "CHERCHE": "募集",
   "Cherche {{instrument}}": "Cherche {{instrument}}",
@@ -2211,5 +2211,12 @@
   "Lire": "再生",
   "Sans date": "日付なし",
   "Lire la vidéo": "動画を再生",
-  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "この動画を読み込めませんでした。別のファイルを選んでください。"
+  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "この動画を読み込めませんでした。別のファイルを選んでください。",
+  "Supprimer ce commentaire ?": "このコメントを削除しますか？",
+  "Le commentaire n'a pas pu être supprimé. Réessaie.": "コメントを削除できませんでした。もう一度お試しください。",
+  "Le commentaire n'a pas pu être enregistré. Réessaie.": "コメントを保存できませんでした。もう一度お試しください。",
+  "Aucun SOS ne correspond aux écoles sélectionnées.": "選択した学校に一致するSOSはありません。",
+  "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "SOSを絞り込む学校を1つ以上選択してください。",
+  "Aucun SOS pour ces écoles": "これらの学校のSOSはありません",
+  "Aucune école sélectionnée": "学校が選択されていません"
 }

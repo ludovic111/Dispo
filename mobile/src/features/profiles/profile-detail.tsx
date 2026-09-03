@@ -669,20 +669,7 @@ export function ProfileDetail({
       ) : null}
 
       <View style={styles.section}>
-        <View style={styles.rateHeader}>
-          <SectionTitle icon="play-outline" title={t('Démos')} />
-          {self ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/profile/demos' as never)}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <AppText color={palette.electric} style={styles.manageLabel} variant="caption">
-                {t('Gérer')}
-              </AppText>
-            </Pressable>
-          ) : null}
-        </View>
+        <SectionTitle icon="play-outline" title={t('Démos')} />
         {profile.demoVideos?.length ? (
           <View style={styles.videoGrid}>
             {profile.demoVideos.map((video, index) => (

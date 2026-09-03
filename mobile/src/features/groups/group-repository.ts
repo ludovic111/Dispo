@@ -1463,8 +1463,14 @@ export async function addSongComment(
 }
 
 export async function deleteSongComment(commentId: string): Promise<void> {
-  const result = await getSupabaseClient().from('song_comments').delete().eq('id', commentId);
+  const result = await getSupabaseClient()
+    .from('song_comments')
+    .delete()
+    .eq('id', commentId)
+    .select('id')
+    .maybeSingle();
   if (result.error) throw result.error;
+  if (!result.data) throw new Error('group_comment_delete_forbidden');
 }
 
 function documentContentType(extension: string, declared: string) {

@@ -349,7 +349,7 @@
   "Cercle": "Song circle",
   "Certains réglages ne peuvent pas être chargés.": "Certains réglages ne peuvent pas être chargés.",
   "Ces musiciens jouent l'instrument que tu cherches et sont dispo le %@. Contacte-les sans attendre.": "These musicians play the instrument you need and are free on %@. Reach out right away.",
-  "Cette action est définitive.": "Cette action est définitive.",
+  "Cette action est définitive.": "This action cannot be undone.",
   "Cette date ou toute la série ?": "This date or the whole series?",
   "Cette date seulement": "This date only",
   "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.": "This update moves things around in the app. A minute of reading will save you hunting for them.",
@@ -378,7 +378,7 @@
   "Chargement du SOS…": "Chargement du SOS…",
   "Chargement impossible.": "Chargement impossible.",
   "Chargement…": "Chargement…",
-  "Charger plus": "Charger plus",
+  "Charger plus": "Load more",
   "Cherche": "Wanted",
   "CHERCHE": "Wanted",
   "Cherche {{instrument}}": "Cherche {{instrument}}",
@@ -2211,5 +2211,12 @@
   "Lire": "Play",
   "Sans date": "No date",
   "Lire la vidéo": "Play video",
-  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "This video could not be read — choose another file."
+  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "This video could not be read — choose another file.",
+  "Supprimer ce commentaire ?": "Delete this comment?",
+  "Le commentaire n'a pas pu être supprimé. Réessaie.": "The comment could not be deleted. Try again.",
+  "Le commentaire n'a pas pu être enregistré. Réessaie.": "The comment could not be saved. Try again.",
+  "Aucun SOS ne correspond aux écoles sélectionnées.": "No SOS matches the selected schools.",
+  "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "Select one or more schools to filter SOS posts.",
+  "Aucun SOS pour ces écoles": "No SOS for these schools",
+  "Aucune école sélectionnée": "No school selected"
 }

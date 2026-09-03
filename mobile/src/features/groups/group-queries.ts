@@ -17,6 +17,7 @@ import {
 import {
   mergeGroupMessagesNewestFirst,
   optimisticGroupReactions,
+  removeSongCommentFromGroups,
   type GroupAttendanceStatus,
   type GroupDocument,
   type GroupEventDraft,
@@ -24,6 +25,7 @@ import {
   type GroupMemberKind,
   type GroupReactionEmoji,
   type GroupSong,
+  type GroupSongComment,
   type MusicGroup,
 } from './group-model';
 import {
@@ -948,8 +950,29 @@ export function useSongComment() {
 }
 
 export function useDeleteSongComment() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
   const refresh = useRefreshGroups();
-  return useMutation({ mutationFn: deleteSongComment, onSuccess: refresh });
+  return useMutation<void, unknown, GroupSongComment, { previousGroups: MusicGroup[] | undefined }>(
+    {
+      mutationFn: (comment) => deleteSongComment(comment.id),
+      onMutate: async (comment) => {
+        await queryClient.cancelQueries({ exact: true, queryKey: groupKeys.list(userId) });
+        const previousGroups = queryClient.getQueryData<MusicGroup[]>(groupKeys.list(userId));
+        queryClient.setQueryData<MusicGroup[]>(groupKeys.list(userId), (current) =>
+          current ? removeSongCommentFromGroups(current, comment.groupId, comment.id) : current,
+        );
+        return { previousGroups };
+      },
+      onError: (_error, _comment, context) => {
+        if (context?.previousGroups) {
+          queryClient.setQueryData(groupKeys.list(userId), context.previousGroups);
+        }
+      },
+      onSettled: refresh,
+    },
+  );
 }
 
 export function useUploadGroupDocument() {

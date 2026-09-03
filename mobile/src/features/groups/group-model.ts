@@ -196,6 +196,18 @@ export interface MusicGroup {
   repertoire: GroupSong[];
 }
 
+export function removeSongCommentFromGroups(
+  groups: readonly MusicGroup[],
+  groupId: string,
+  commentId: string,
+): MusicGroup[] {
+  return groups.map((group) =>
+    group.id === groupId
+      ? { ...group, comments: group.comments.filter((comment) => comment.id !== commentId) }
+      : group,
+  );
+}
+
 export interface PendingGroupMember {
   createdAt: string;
   id: string;

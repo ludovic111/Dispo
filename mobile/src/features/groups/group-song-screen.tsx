@@ -5,22 +5,35 @@ import * as Haptics from 'expo-haptics';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Stack } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
+  findNodeHandle,
+  Keyboard,
+  KeyboardAvoidingView,
   Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 
 import { analyzeSongPreview } from '../../../modules/dispo-song-analysis';
 
-import type { GroupSong } from './group-model';
+import type { GroupSong, GroupSongComment } from './group-model';
 import {
   useDeleteGroupDocument,
   useDeleteSongComment,
@@ -51,8 +64,39 @@ import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { irealDestination } from '@/domain/song';
 import { useAuth } from '@/features/auth/auth-context';
+import { ReceiptChecks } from '@/features/messages/message-controls';
 import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, spacing } from '@/theme/tokens';
+
+function SongKeyboardScrollView({
+  children,
+  keyboardInset,
+  scrollRef,
+}: {
+  children: ReactNode;
+  keyboardInset: number;
+  scrollRef: RefObject<ScrollView | null>;
+}) {
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'android' ? 'padding' : undefined}
+      style={styles.flex}
+    >
+      <ScrollView
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        contentContainerStyle={[
+          styles.content,
+          keyboardInset ? { paddingBottom: keyboardInset + spacing.lg } : undefined,
+        ]}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        keyboardShouldPersistTaps="handled"
+        ref={scrollRef}
+      >
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
 
 function emptySong(userId: string, approved: boolean): GroupSong {
   return {
@@ -179,6 +223,12 @@ export function GroupSongScreen({
   const analysisRequestRef = useRef(0);
   const enrichedExistingRef = useRef(new Set<string>());
   const [commentText, setCommentText] = useState('');
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInput>(null);
+  const commentInputFocusedRef = useRef(false);
+  const revealCommentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [listenVisible, setListenVisible] = useState(false);
   const [soloPickerVisible, setSoloPickerVisible] = useState(false);
   const [documentInstrument, setDocumentInstrument] = useState<string | null>(null);
@@ -252,6 +302,59 @@ export function GroupSongScreen({
         // Enrichissement opportuniste : la fiche reste utilisable hors ligne.
       });
   }, [draftOverride, existing]);
+
+  const revealCommentComposer = useCallback(() => {
+    commentInputFocusedRef.current = true;
+    if (Platform.OS === 'android') {
+      setKeyboardInset((current) =>
+        current > 0 ? current : Math.round(Dimensions.get('window').height * 0.48),
+      );
+    }
+    if (revealCommentTimerRef.current) clearTimeout(revealCommentTimerRef.current);
+    const revealFocusedInput = () => {
+      const keyboardMetrics = Keyboard.metrics();
+      if (Platform.OS === 'android' && keyboardMetrics?.height) {
+        setKeyboardInset(keyboardMetrics.height);
+      }
+      const inputHandle = findNodeHandle(commentInputRef.current);
+      if (inputHandle) {
+        scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(
+          inputHandle,
+          spacing.sm,
+          true,
+        );
+      } else {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }
+    };
+    requestAnimationFrame(revealFocusedInput);
+    revealCommentTimerRef.current = setTimeout(revealFocusedInput, 420);
+  }, []);
+
+  useEffect(() => {
+    const keyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const showSubscription = Keyboard.addListener(keyboardEvent, (event) => {
+      if (Platform.OS === 'android') setKeyboardInset(event.endCoordinates.height);
+      if (commentInputFocusedRef.current) revealCommentComposer();
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardInset(0));
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+      if (revealCommentTimerRef.current) clearTimeout(revealCommentTimerRef.current);
+    };
+  }, [revealCommentComposer]);
+
+  useEffect(() => {
+    if (!keyboardInset || !commentInputFocusedRef.current) return;
+    const reveal = () => scrollRef.current?.scrollToEnd({ animated: true });
+    const layoutTimer = setTimeout(reveal, 80);
+    const keyboardTimer = setTimeout(reveal, 700);
+    return () => {
+      clearTimeout(layoutTimer);
+      clearTimeout(keyboardTimer);
+    };
+  }, [keyboardInset]);
 
   if (query.isLoading)
     return (
@@ -500,6 +603,21 @@ export function GroupSongScreen({
     void Haptics.selectionAsync();
     patch('solos', next);
   };
+  const confirmCommentDeletion = (item: GroupSongComment) => {
+    Alert.alert(t('Supprimer ce commentaire ?'), t('Cette action est définitive.'), [
+      { style: 'cancel', text: t('Annuler') },
+      {
+        onPress: () => {
+          setCommentError(null);
+          deleteComment.mutate(item, {
+            onError: () => setCommentError(t("Le commentaire n'a pas pu être supprimé. Réessaie.")),
+          });
+        },
+        style: 'destructive',
+        text: t('Supprimer'),
+      },
+    ]);
+  };
   return (
     <Screen nativeHeader>
       <Stack.Screen
@@ -519,7 +637,7 @@ export function GroupSongScreen({
             : draft.title,
         }}
       />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <SongKeyboardScrollView keyboardInset={keyboardInset} scrollRef={scrollRef}>
         {isNew ? (
           <Card style={styles.card}>
             <AppText variant="title">{t('Catalogue musical')}</AppText>
@@ -899,17 +1017,19 @@ export function GroupSongScreen({
             {comments.map((item) => (
               <View key={item.id} style={styles.commentRow}>
                 <Avatar name={item.authorName} size={30} />
-                <View style={styles.flex}>
+                <View style={styles.commentCopy}>
                   <AppText style={styles.bold} variant="caption">
                     {item.authorName}
                   </AppText>
                   <AppText>{item.text}</AppText>
+                  {item.authorId === userId ? <ReceiptChecks receipt="sent" /> : null}
                 </View>
                 {isLeader || item.authorId === userId ? (
                   <Pressable
                     accessibilityLabel={t('Supprimer')}
                     accessibilityRole="button"
-                    onPress={() => deleteComment.mutate(item.id)}
+                    disabled={deleteComment.isPending}
+                    onPress={() => confirmCommentDeletion(item)}
                     style={styles.iconAction}
                   >
                     <Ionicons color={palette.signal} name="trash-outline" size={16} />
@@ -920,27 +1040,46 @@ export function GroupSongScreen({
             <View style={styles.commentComposer}>
               <View style={styles.flex}>
                 <FormField
+                  ref={commentInputRef}
                   label={t('Ajouter une note')}
+                  multiline
+                  numberOfLines={3}
+                  onBlur={() => {
+                    commentInputFocusedRef.current = false;
+                  }}
                   onChangeText={setCommentText}
+                  onFocus={revealCommentComposer}
+                  onPressIn={revealCommentComposer}
                   placeholder={t('Intro, fin, consigne…')}
+                  style={styles.commentInput}
                   value={commentText}
                 />
               </View>
               <Pressable
                 accessibilityLabel={t('Envoyer')}
                 accessibilityRole="button"
-                disabled={!commentText.trim()}
-                onPress={() =>
+                disabled={!commentText.trim() || comment.isPending}
+                onPress={() => {
+                  setCommentError(null);
                   comment.mutate(
                     { groupId: group.id, songId: draft.id, text: commentText },
-                    { onSuccess: () => setCommentText('') },
-                  )
-                }
+                    {
+                      onError: () =>
+                        setCommentError(t("Le commentaire n'a pas pu être enregistré. Réessaie.")),
+                      onSuccess: () => setCommentText(''),
+                    },
+                  );
+                }}
                 style={[styles.searchButton, { backgroundColor: palette.electric }]}
               >
                 <Ionicons color="#050814" name="arrow-up" size={18} />
               </Pressable>
             </View>
+            {commentError ? (
+              <AppText accessibilityLiveRegion="polite" color={palette.error} variant="caption">
+                {commentError}
+              </AppText>
+            ) : null}
           </Card>
         ) : null}
         {canEdit ? (
@@ -984,7 +1123,7 @@ export function GroupSongScreen({
             {t('Le morceau n’a pas pu être enregistré. Il est peut-être déjà dans le répertoire.')}
           </AppText>
         ) : null}
-      </ScrollView>
+      </SongKeyboardScrollView>
     </Screen>
   );
 }
@@ -1013,6 +1152,8 @@ const styles = StyleSheet.create({
   },
   center: { textAlign: 'center' },
   commentComposer: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
+  commentCopy: { flex: 1, gap: spacing.xxxs },
+  commentInput: { minHeight: 84, textAlignVertical: 'top' },
   commentRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   documentOpen: {

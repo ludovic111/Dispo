@@ -12,6 +12,7 @@ import type {
 import {
   cancelGroupEvent,
   createGroup,
+  deleteSongComment,
   enrichSongCatalogResult,
   isAllowedGroupDocumentExtension,
   openGroupDocument,
@@ -78,6 +79,33 @@ beforeEach(async () => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+});
+
+describe('suppression des commentaires de morceau', () => {
+  it('demande au serveur de confirmer la ligne réellement supprimée', async () => {
+    const maybeSingle = jest.fn(async () => ({ data: { id: 'comment-1' }, error: null }));
+    const select = jest.fn(() => ({ maybeSingle }));
+    const eq = jest.fn(() => ({ select }));
+    const remove = jest.fn(() => ({ eq }));
+    mockedClient.mockReturnValue({
+      from: jest.fn(() => ({ delete: remove })),
+    } as never);
+
+    await expect(deleteSongComment('comment-1')).resolves.toBeUndefined();
+    expect(select).toHaveBeenCalledWith('id');
+    expect(maybeSingle).toHaveBeenCalledTimes(1);
+  });
+
+  it('échoue clairement si la RLS ne permet de supprimer aucune ligne', async () => {
+    const maybeSingle = jest.fn(async () => ({ data: null, error: null }));
+    const select = jest.fn(() => ({ maybeSingle }));
+    const eq = jest.fn(() => ({ select }));
+    mockedClient.mockReturnValue({
+      from: jest.fn(() => ({ delete: jest.fn(() => ({ eq })) })),
+    } as never);
+
+    await expect(deleteSongComment('forbidden')).rejects.toThrow('group_comment_delete_forbidden');
+  });
 });
 
 describe('catalogue musical partagé', () => {

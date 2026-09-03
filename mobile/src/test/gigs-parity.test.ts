@@ -230,6 +230,12 @@ describe('filtre SOS école de musique', () => {
   it("renvoie une liste vide tant que l'utilisateur n'a pas d'école", () => {
     expect(gigsForScope(gigs, [matching], 'school', [])).toEqual([]);
   });
+
+  it('combine plusieurs écoles par OU exact sans inclure les autres', () => {
+    expect(
+      gigsForScope(gigs, [matching], 'school', ['school-amr', 'school-ema']).map((item) => item.id),
+    ).toEqual(['matching', 'school']);
+  });
 });
 
 describe('états de candidature et décisions serveur', () => {

@@ -349,7 +349,7 @@
   "Cercle": "Círculo",
   "Certains réglages ne peuvent pas être chargés.": "Certains réglages ne peuvent pas être chargés.",
   "Ces musiciens jouent l'instrument que tu cherches et sont dispo le %@. Contacte-les sans attendre.": "Estos músicos tocan el instrumento que buscas y están libres el %@. Contáctalos sin esperar.",
-  "Cette action est définitive.": "Cette action est définitive.",
+  "Cette action est définitive.": "Esta acción no se puede deshacer.",
   "Cette date ou toute la série ?": "¿Esta fecha o toda la serie?",
   "Cette date seulement": "Solo esta fecha",
   "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.": "Esta actualización cambia cosas de sitio en la app. Un minuto de lectura te ahorrará buscarlas.",
@@ -378,7 +378,7 @@
   "Chargement du SOS…": "Chargement du SOS…",
   "Chargement impossible.": "Chargement impossible.",
   "Chargement…": "Chargement…",
-  "Charger plus": "Charger plus",
+  "Charger plus": "Cargar más",
   "Cherche": "Busca",
   "CHERCHE": "Busca",
   "Cherche {{instrument}}": "Cherche {{instrument}}",
@@ -2211,5 +2211,12 @@
   "Lire": "Reproducir",
   "Sans date": "Sin fecha",
   "Lire la vidéo": "Reproducir vídeo",
-  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "No se ha podido leer este vídeo; elige otro archivo."
+  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "No se ha podido leer este vídeo; elige otro archivo.",
+  "Supprimer ce commentaire ?": "¿Eliminar este comentario?",
+  "Le commentaire n'a pas pu être supprimé. Réessaie.": "No se pudo eliminar el comentario. Inténtalo de nuevo.",
+  "Le commentaire n'a pas pu être enregistré. Réessaie.": "No se pudo guardar el comentario. Inténtalo de nuevo.",
+  "Aucun SOS ne correspond aux écoles sélectionnées.": "Ningún SOS coincide con las escuelas seleccionadas.",
+  "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "Selecciona una o varias escuelas para filtrar los SOS.",
+  "Aucun SOS pour ces écoles": "No hay SOS para estas escuelas",
+  "Aucune école sélectionnée": "Ninguna escuela seleccionada"
 }

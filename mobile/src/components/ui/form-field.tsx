@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { forwardRef, type ComponentProps } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { AppText } from './app-text';
@@ -11,7 +11,10 @@ interface FormFieldProps extends ComponentProps<typeof TextInput> {
   label: string;
 }
 
-export function FormField({ error, label, style, ...props }: FormFieldProps) {
+export const FormField = forwardRef<TextInput, FormFieldProps>(function FormField(
+  { error, label, style, ...props },
+  ref,
+) {
   const { palette } = useDispoTheme();
   return (
     <View style={styles.wrapper}>
@@ -19,6 +22,7 @@ export function FormField({ error, label, style, ...props }: FormFieldProps) {
         {label}
       </AppText>
       <TextInput
+        ref={ref}
         {...props}
         placeholderTextColor={palette.muted}
         selectionColor={palette.electric}
@@ -39,7 +43,7 @@ export function FormField({ error, label, style, ...props }: FormFieldProps) {
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   input: {

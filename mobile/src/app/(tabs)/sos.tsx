@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { ChoiceChip } from '@/components/ui/choice-chip';
 import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigCard } from '@/features/gigs/gig-card';
 import {
@@ -25,6 +27,7 @@ import {
 import { loadSosScope, saveSosScope } from '@/features/gigs/gig-preferences';
 import { useGigs, useHostedGigs } from '@/features/gigs/gig-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
+import { useSchoolDirectory } from '@/features/schools/school-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
@@ -86,12 +89,15 @@ export default function GigsScreen() {
   const { t } = useTranslation();
   const query = useGigs();
   const hostedQuery = useHostedGigs();
+  const schoolDirectory = useSchoolDirectory();
   const { refetch: refetchFeed } = query;
   const { refetch: refetchHosted } = hostedQuery;
   const profile = useProfile(userId, userId);
   const [segment, setSegment] = useState<Segment>('feed');
   const [scope, setScope] = useState<SosFeedScope>('matching');
   const [opened, setOpened] = useState<Set<string>>(new Set());
+  const [selectedSchoolIds, setSelectedSchoolIds] = useState<string[]>([]);
+  const schoolSelectionInitialized = useRef(false);
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -147,9 +153,18 @@ export default function GigsScreen() {
     () => profile.data?.schools.map((school) => school.id) ?? [],
     [profile.data?.schools],
   );
+  const schools = useMemo(
+    () => schoolDirectory.data?.pages.flatMap((page) => page.items) ?? [],
+    [schoolDirectory.data?.pages],
+  );
+  useEffect(() => {
+    if (!profile.data || schoolSelectionInitialized.current) return;
+    schoolSelectionInitialized.current = true;
+    setSelectedSchoolIds(viewerSchoolIds);
+  }, [profile.data, viewerSchoolIds]);
   const visible = useMemo(
-    () => gigsForScope(publicFeed, matching, scope, viewerSchoolIds),
-    [matching, publicFeed, scope, viewerSchoolIds],
+    () => gigsForScope(publicFeed, matching, scope, selectedSchoolIds),
+    [matching, publicFeed, scope, selectedSchoolIds],
   );
   const freshCount = profile.data
     ? countUnopenedCompatibleGigs(publicFeed, profile.data, opened)
@@ -289,6 +304,88 @@ export default function GigsScreen() {
                 );
               })}
             </View>
+            {scope === 'school' ? (
+              <Card style={styles.schoolFilter}>
+                <View style={styles.schoolHeader}>
+                  <SectionHeader
+                    subtitle={`${selectedSchoolIds.length}`}
+                    title={t('Écoles de musique')}
+                  />
+                  {selectedSchoolIds.length > 0 ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setSelectedSchoolIds([])}
+                      style={({ pressed }) => [styles.clearSchools, pressed && styles.pressed]}
+                    >
+                      <Ionicons color={palette.electric} name="close-circle-outline" size={16} />
+                      <AppText
+                        color={palette.electric}
+                        style={styles.clearSchoolsLabel}
+                        variant="caption"
+                      >
+                        {t('Effacer les écoles')}
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+                {schoolDirectory.isLoading ? (
+                  <AppText color={palette.muted} variant="caption">
+                    {t('Chargement des écoles…')}
+                  </AppText>
+                ) : schoolDirectory.isError ? (
+                  <View style={styles.schoolError}>
+                    <AppText
+                      color={palette.signal}
+                      style={styles.schoolErrorText}
+                      variant="caption"
+                    >
+                      {t("L'annuaire des écoles n'a pas pu être chargé.")}
+                    </AppText>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => void schoolDirectory.refetch()}
+                      style={styles.schoolRetry}
+                    >
+                      <AppText color={palette.electric} variant="caption">
+                        {t('Réessayer')}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                ) : schools.length > 0 ? (
+                  <>
+                    <View style={styles.schoolChoices}>
+                      {schools.map((school) => (
+                        <ChoiceChip
+                          key={school.id}
+                          label={school.name}
+                          onPress={() =>
+                            setSelectedSchoolIds((current) =>
+                              current.includes(school.id)
+                                ? current.filter((id) => id !== school.id)
+                                : [...current, school.id],
+                            )
+                          }
+                          selected={selectedSchoolIds.includes(school.id)}
+                        />
+                      ))}
+                    </View>
+                    {schoolDirectory.hasNextPage ? (
+                      <DispoButton
+                        loading={schoolDirectory.isFetchingNextPage}
+                        onPress={() => void schoolDirectory.fetchNextPage()}
+                        variant="secondary"
+                      >
+                        {t('Charger plus')}
+                      </DispoButton>
+                    ) : null}
+                  </>
+                ) : (
+                  <AppText color={palette.muted} variant="caption">
+                    {t("Aucune école active dans l'annuaire.")}
+                  </AppText>
+                )}
+              </Card>
+            ) : null}
             {filteredOut > 0 ? (
               <AppText
                 color={palette.muted}
@@ -327,9 +424,9 @@ export default function GigsScreen() {
                   scope === 'all'
                     ? t('Un musicien te lâche ? Publie ton SOS avec le bouton +.')
                     : scope === 'school'
-                      ? viewerSchoolIds.length > 0
-                        ? t('Les SOS publiés par les membres de ton école apparaîtront ici.')
-                        : t('Ajoute une école de musique à ton profil pour filtrer ta communauté.')
+                      ? selectedSchoolIds.length > 0
+                        ? t('Aucun SOS ne correspond aux écoles sélectionnées.')
+                        : t('Sélectionne une ou plusieurs écoles pour filtrer les SOS.')
                       : t(
                           "Rien à ton instrument et à ton niveau pour l'instant. Passe sur « Tout » pour voir le reste.",
                         )
@@ -338,7 +435,9 @@ export default function GigsScreen() {
                   scope === 'all'
                     ? t('Aucun SOS en cours')
                     : scope === 'school'
-                      ? t('Aucun SOS de ton école')
+                      ? selectedSchoolIds.length > 0
+                        ? t('Aucun SOS pour ces écoles')
+                        : t('Aucune école sélectionnée')
                       : t('Aucun SOS pour toi')
                 }
               />
@@ -396,6 +495,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
   },
   addText: { fontWeight: '900' },
+  clearSchools: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.compact,
+    minHeight: 36,
+  },
+  clearSchoolsLabel: { fontWeight: '800' },
   content: { gap: spacing.md, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   directSection: { gap: spacing.sm, width: '100%' },
   hostingSections: { gap: spacing.lg, width: '100%' },
@@ -415,6 +521,12 @@ const styles = StyleSheet.create({
   },
   scopeRow: { alignItems: 'stretch', flexDirection: 'row', gap: spacing.xs },
   scopeHint: { textAlign: 'right' },
+  schoolChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  schoolError: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  schoolErrorText: { flex: 1 },
+  schoolFilter: { gap: spacing.sm },
+  schoolHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  schoolRetry: { minHeight: 36, paddingHorizontal: spacing.xs, justifyContent: 'center' },
   segment: {
     alignItems: 'center',
     borderColor: 'transparent',

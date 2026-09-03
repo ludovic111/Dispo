@@ -349,7 +349,7 @@
   "Cercle": "围圈弹唱",
   "Certains réglages ne peuvent pas être chargés.": "Certains réglages ne peuvent pas être chargés.",
   "Ces musiciens jouent l'instrument que tu cherches et sont dispo le %@. Contacte-les sans attendre.": "这些音乐人会你需要的乐器，且%@有空。马上联系他们吧。",
-  "Cette action est définitive.": "Cette action est définitive.",
+  "Cette action est définitive.": "此操作无法撤销。",
   "Cette date ou toute la série ?": "只取消这次，还是整个系列？",
   "Cette date seulement": "仅此日期",
   "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.": "本次更新调整了应用里的一些位置。花一分钟读一下，省得到处找。",
@@ -378,7 +378,7 @@
   "Chargement du SOS…": "Chargement du SOS…",
   "Chargement impossible.": "Chargement impossible.",
   "Chargement…": "Chargement…",
-  "Charger plus": "Charger plus",
+  "Charger plus": "加载更多",
   "Cherche": "招募",
   "CHERCHE": "招募",
   "Cherche {{instrument}}": "Cherche {{instrument}}",
@@ -2211,5 +2211,12 @@
   "Lire": "播放",
   "Sans date": "无日期",
   "Lire la vidéo": "播放视频",
-  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "无法读取此视频，请选择其他文件。"
+  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "无法读取此视频，请选择其他文件。",
+  "Supprimer ce commentaire ?": "删除这条评论？",
+  "Le commentaire n'a pas pu être supprimé. Réessaie.": "无法删除评论，请重试。",
+  "Le commentaire n'a pas pu être enregistré. Réessaie.": "无法保存评论，请重试。",
+  "Aucun SOS ne correspond aux écoles sélectionnées.": "没有符合所选学校的SOS。",
+  "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "请选择一个或多个学校来筛选SOS。",
+  "Aucun SOS pour ces écoles": "这些学校没有SOS",
+  "Aucune école sélectionnée": "未选择学校"
 }

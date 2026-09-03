@@ -349,7 +349,7 @@
   "Cercle": "Songkreis",
   "Certains réglages ne peuvent pas être chargés.": "Certains réglages ne peuvent pas être chargés.",
   "Ces musiciens jouent l'instrument que tu cherches et sont dispo le %@. Contacte-les sans attendre.": "Diese Musiker spielen das gesuchte Instrument und sind am %@ frei. Kontaktiere sie direkt.",
-  "Cette action est définitive.": "Cette action est définitive.",
+  "Cette action est définitive.": "Diese Aktion kann nicht rückgängig gemacht werden.",
   "Cette date ou toute la série ?": "Dieser Termin oder die ganze Reihe?",
   "Cette date seulement": "Nur dieser Termin",
   "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.": "Dieses Update verschiebt einiges in der App. Eine Minute Lesen erspart dir das Suchen.",
@@ -378,7 +378,7 @@
   "Chargement du SOS…": "Chargement du SOS…",
   "Chargement impossible.": "Chargement impossible.",
   "Chargement…": "Chargement…",
-  "Charger plus": "Charger plus",
+  "Charger plus": "Mehr laden",
   "Cherche": "Gesucht",
   "CHERCHE": "Gesucht",
   "Cherche {{instrument}}": "Cherche {{instrument}}",
@@ -2211,5 +2211,12 @@
   "Lire": "Abspielen",
   "Sans date": "Ohne Datum",
   "Lire la vidéo": "Video abspielen",
-  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "Dieses Video konnte nicht gelesen werden — wähle eine andere Datei."
+  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "Dieses Video konnte nicht gelesen werden — wähle eine andere Datei.",
+  "Supprimer ce commentaire ?": "Diesen Kommentar löschen?",
+  "Le commentaire n'a pas pu être supprimé. Réessaie.": "Der Kommentar konnte nicht gelöscht werden. Versuche es erneut.",
+  "Le commentaire n'a pas pu être enregistré. Réessaie.": "Der Kommentar konnte nicht gespeichert werden. Versuche es erneut.",
+  "Aucun SOS ne correspond aux écoles sélectionnées.": "Keine SOS-Anfrage entspricht den ausgewählten Schulen.",
+  "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "Wähle eine oder mehrere Schulen aus, um die SOS-Anfragen zu filtern.",
+  "Aucun SOS pour ces écoles": "Keine SOS-Anfrage für diese Schulen",
+  "Aucune école sélectionnée": "Keine Schule ausgewählt"
 }

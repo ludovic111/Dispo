@@ -2211,5 +2211,12 @@
   "Lire": "Lire",
   "Sans date": "Sans date",
   "Lire la vidéo": "Lire la vidéo",
-  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "Cette vidéo n'a pas pu être lue — choisis un autre fichier."
+  "Cette vidéo n'a pas pu être lue — choisis un autre fichier.": "Cette vidéo n'a pas pu être lue — choisis un autre fichier.",
+  "Supprimer ce commentaire ?": "Supprimer ce commentaire ?",
+  "Le commentaire n'a pas pu être supprimé. Réessaie.": "Le commentaire n'a pas pu être supprimé. Réessaie.",
+  "Le commentaire n'a pas pu être enregistré. Réessaie.": "Le commentaire n'a pas pu être enregistré. Réessaie.",
+  "Aucun SOS ne correspond aux écoles sélectionnées.": "Aucun SOS ne correspond aux écoles sélectionnées.",
+  "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "Sélectionne une ou plusieurs écoles pour filtrer les SOS.",
+  "Aucun SOS pour ces écoles": "Aucun SOS pour ces écoles",
+  "Aucune école sélectionnée": "Aucune école sélectionnée"
 }
