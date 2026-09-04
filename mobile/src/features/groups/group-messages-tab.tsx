@@ -9,13 +9,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  Modal,
   Pressable,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   buildGroupMessageTimeline,
@@ -90,6 +90,7 @@ function MessageBubble({
   const own = message.senderId === userId;
   const attachment = groupMessageAttachment(message);
   const reaction = useGroupMessageReaction();
+  const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const remove = useDeleteGroupMessage();
   const confirmDelete = () => {
     const type = attachment?.contentType;
@@ -114,6 +115,7 @@ function MessageBubble({
     ]);
   };
   const react = (emoji: (typeof GROUP_REACTION_EMOJIS)[number]) => {
+    if (reaction.isPending) return;
     reaction.mutate(
       { emoji, groupId: message.groupId, message },
       { onError: () => onError(t('La réaction n’a pas pu être envoyée.')) },
@@ -163,6 +165,7 @@ function MessageBubble({
               <Pressable
                 accessibilityLabel={`${item.emoji}, ${item.count}`}
                 accessibilityRole="button"
+                disabled={reaction.isPending}
                 key={item.emoji}
                 onPress={() => react(item.emoji)}
                 style={[
@@ -181,15 +184,9 @@ function MessageBubble({
             <Pressable
               accessibilityLabel={t('Réagir')}
               accessibilityRole="button"
-              onPress={() => {
-                const current = message.reactions.find((item) => item.reactedByMe)?.emoji;
-                const next =
-                  GROUP_REACTION_EMOJIS[
-                    (Math.max(GROUP_REACTION_EMOJIS.indexOf(current ?? '👍'), -1) + 1) %
-                      GROUP_REACTION_EMOJIS.length
-                  ];
-                if (next) react(next);
-              }}
+              disabled={reaction.isPending}
+              hitSlop={10}
+              onPress={() => setReactionPickerVisible(true)}
             >
               <Ionicons color={palette.muted} name="happy-outline" size={17} />
             </Pressable>
@@ -214,6 +211,50 @@ function MessageBubble({
               </>
             ) : null}
           </View>
+        ) : null}
+        {reactionPickerVisible && !message.deletedAt ? (
+          <Modal
+            animationType="fade"
+            onRequestClose={() => setReactionPickerVisible(false)}
+            transparent
+            visible
+          >
+            <View style={styles.reactionOverlay}>
+              <Pressable
+                accessibilityLabel={t('Fermer')}
+                accessibilityRole="button"
+                onPress={() => setReactionPickerVisible(false)}
+                style={styles.reactionBackdrop}
+              />
+              <SafeAreaView
+                edges={['bottom']}
+                style={[styles.reactionSheet, { backgroundColor: palette.card }]}
+              >
+                <AppText variant="title">{t('Réagir')}</AppText>
+                <View style={styles.reactionChoices}>
+                  {GROUP_REACTION_EMOJIS.map((emoji) => (
+                    <Pressable
+                      accessibilityLabel={`${t('Réagir')} ${emoji}`}
+                      accessibilityRole="button"
+                      accessibilityState={{
+                        selected: message.reactions.some(
+                          (item) => item.emoji === emoji && item.reactedByMe,
+                        ),
+                      }}
+                      key={emoji}
+                      onPress={() => {
+                        setReactionPickerVisible(false);
+                        react(emoji);
+                      }}
+                      style={[styles.reactionChoice, { backgroundColor: palette.inset }]}
+                    >
+                      <AppText style={styles.reactionEmoji}>{emoji}</AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </SafeAreaView>
+            </View>
+          </Modal>
         ) : null}
         <View style={styles.messageMeta}>
           {message.editedAt && !message.deletedAt ? (
@@ -382,11 +423,7 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
 
   const busy = send.isPending || edit.isPending;
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}
-      style={styles.fill}
-    >
+    <View style={styles.fill}>
       <FlatList
         contentContainerStyle={styles.timeline}
         data={timeline}
@@ -547,11 +584,36 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
           )}
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  reactionOverlay: { flex: 1, justifyContent: 'flex-end' },
+  reactionBackdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  reactionSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    gap: spacing.sm,
+    padding: spacing.gutter,
+  },
+  reactionChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  reactionChoice: {
+    minWidth: 44,
+    minHeight: 48,
+    flexGrow: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reactionEmoji: { fontSize: 26, lineHeight: 34 },
   attachmentDraft: { paddingHorizontal: spacing.control, paddingTop: spacing.control },
   bubble: {
     borderRadius: 20,

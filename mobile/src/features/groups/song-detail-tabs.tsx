@@ -33,6 +33,7 @@ export function SongDetailTabs({
           style={[
             styles.tab,
             {
+              flexGrow: Math.max(5, label.length),
               backgroundColor: id === selected ? `${palette.electric}18` : 'transparent',
               borderBottomColor: id === selected ? palette.electric : 'transparent',
             },

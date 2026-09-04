@@ -1288,3 +1288,15 @@ Livraison terminée :
 La règle de livraison automatique a été reconfirmée : les avertissements Expo
 limités aux patchs connus ne justifient pas de demander à nouveau l’accord de
 livraison d’un lot fonctionnellement validé.
+
+## 2026-09-04 — Retours WhatsApp, affichage et optimisation — build 46
+
+- Réactions de groupe : choix explicite des six emojis ; conversations privées et groupes adaptés au clavier natif.
+- Fiche morceau : actions Enregistrer sans doublon dans les onglets, forme complète visible dans les listes et la fiche. Dates de session créées/modifiées via le champ natif commun ; aucun dialogue Android au montage.
+- Cloche : présentation modale déclarée dans la pile racine et rechargement à chaque visite, y compris avec un cache encore frais. Sélection de membres : formulaire redimensionné pour le clavier et appuis conservés.
+- Affichage : titres de section laissant leur place aux actions, textes contenus dans les boutons/pastilles/champs, hauteur des initiales et emojis, largeur des onglets selon leur libellé, paragraphes d’état vide complets et marges des listes de relations.
+- Optimisation sans changement de données : indexation des groupes, réactions et présences avant assemblage ; lecture du stockage des non-lus limitée aux changements de groupes. Comparaison stricte des résultats avant/après sur 100 groupes, 6 000 messages et 2 000 événements : 1 673 ms contre 10 ms dans le benchmark Jest local (mesure du traitement, pas du lancement de l’app).
+- Vérification : 60 suites / 351 tests, TypeScript et lint ; parcours de 32 écrans iOS et Android, reprises ciblées, petit format Android 360×640 avec texte à 130 %, tests natifs du clavier et captures. La date du 18 septembre à 18 h 30, les messages iOS/Android et la réaction 😂 ont été relus dans la base locale. Deux comptes et leur groupe de test supprimés ; configuration production restaurée à l’identique.
+- Expo Doctor : 20/21, 14 écarts de versions patch préexistants laissés hors scope. Aucune migration ni écriture Supabase production, aucun ajout de fonctionnalité produit.
+- Preuves locales : `Dispo-dist/qa-20260904-whatsapp/`. Livraison native et verdict Apple documentés après exécution. Aucun appareil physique Dispo testé.
+- Builds Release iOS Simulator et Android réussis ; build 46 installé et lancé sur les deux plateformes. Configuration de production vérifiée dans les deux bundles ; endpoint QA absent. APK signé vérifié et conservé dans `Dispo-dist/android/Dispo-2.4-build46-direct-test.apk`.

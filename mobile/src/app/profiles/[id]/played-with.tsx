@@ -59,6 +59,6 @@ export default function PlayedWithScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
-  intro: { paddingBottom: spacing.sm, paddingTop: spacing.sm },
+  intro: { paddingBottom: spacing.sm, paddingTop: spacing.sm, paddingHorizontal: spacing.gutter },
   separator: { height: spacing.xs },
 });

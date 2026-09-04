@@ -173,7 +173,7 @@ export function EmptyState({
         <AppText numberOfLines={2} style={styles.centerText} variant="title">
           {title}
         </AppText>
-        <AppText color={palette.muted} numberOfLines={2} style={styles.centerText}>
+        <AppText color={palette.muted} style={styles.centerText}>
           {message}
         </AppText>
       </View>

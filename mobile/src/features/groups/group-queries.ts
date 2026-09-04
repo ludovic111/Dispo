@@ -341,13 +341,14 @@ export function useGroupUnreadState(groups: readonly MusicGroup[]) {
   });
   useEffect(() => {
     if (!userId || !groupSignature) return;
-    void loadAndSeedGroupSeen(
-      userId,
-      groups.map((group) => group.id),
-    ).then((seen) => {
-      queryClient.setQueryData(groupKeys.seen(userId), seen);
+    let cancelled = false;
+    void loadAndSeedGroupSeen(userId, groupSignature.split(',')).then((seen) => {
+      if (!cancelled) queryClient.setQueryData(groupKeys.seen(userId), seen);
     });
-  }, [groupSignature, groups, queryClient, userId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [groupSignature, queryClient, userId]);
   const seen = query.data ?? {};
   return {
     ...query,

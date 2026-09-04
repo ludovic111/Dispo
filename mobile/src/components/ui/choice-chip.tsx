@@ -52,12 +52,14 @@ export function ChoiceChip({
 
 const styles = StyleSheet.create({
   content: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  label: { fontWeight: '700' },
+  label: { flexShrink: 1, fontWeight: '700' },
   pressable: {
     borderRadius: radii.chip,
     borderWidth: 1,
     justifyContent: 'center',
     minHeight: minimumTouchTarget,
+    maxWidth: '100%',
+    paddingVertical: spacing.tight,
     paddingHorizontal: spacing.sm,
   },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },

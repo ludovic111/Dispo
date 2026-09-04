@@ -66,6 +66,15 @@ function Navigation() {
             options={{ gestureEnabled: false, headerShown: false, presentation: 'modal' }}
           />
         ))}
+        <Stack.Screen
+          name="notification-center"
+          options={{ headerShown: true, presentation: 'modal', title: t('Notifications') }}
+        />
+        <Stack.Screen name="groups/new" options={{ title: t('Nouveau groupe') }} />
+        <Stack.Screen
+          name="groups/[id]/songs/[songId]/copy"
+          options={{ gestureEnabled: false, presentation: 'modal', title: t('Copier le morceau') }}
+        />
         <Stack.Screen name="profiles/[id]" options={{ title: t('Profil') }} />
         <Stack.Screen name="gigs/[id]" options={{ title: t('Détail SOS') }} />
         <Stack.Screen name="messages/[id]" options={{ title: t('Conversation') }} />

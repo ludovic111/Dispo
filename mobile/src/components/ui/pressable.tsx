@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   disabled: { opacity: 0.45 },
-  label: { fontSize: 15, fontWeight: '800' },
+  label: { flexShrink: 1, fontSize: 15, fontWeight: '800', textAlign: 'center' },
   outline: { borderWidth: 1 },
   pressable: { borderRadius: radii.button },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },

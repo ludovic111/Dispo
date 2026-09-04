@@ -37,6 +37,7 @@ import {
   type GroupSongCopyTarget,
 } from './group-song-copy';
 
+import { groupBy } from '@/domain/group-by';
 import { pageRange, type Page } from '@/domain/pagination';
 import { normalizeSongText } from '@/domain/song';
 import {
@@ -535,7 +536,7 @@ function mapMembers(
 
 function mapMessages(
   rows: readonly MessageRow[],
-  reactions: readonly ReactionRow[],
+  reactions: ReadonlyMap<string, readonly ReactionRow[]>,
   groupId: string,
   userId: string,
   profiles: ReturnType<typeof profileMap>,
@@ -555,13 +556,11 @@ function mapMessages(
         groupId: row.group_id,
         id: row.id,
         reactions: aggregateGroupReactions(
-          reactions
-            .filter((reaction) => reaction.message_id === row.id)
-            .map((reaction) => ({
-              emoji: reaction.emoji,
-              profileId: reaction.profile_id,
-              removedAt: reaction.removed_at,
-            })),
+          (reactions.get(row.id) ?? []).map((reaction) => ({
+            emoji: reaction.emoji,
+            profileId: reaction.profile_id,
+            removedAt: reaction.removed_at,
+          })),
           userId,
         ),
         senderId: row.sender_id,
@@ -594,7 +593,7 @@ export function groupMessageFromRealtimeRow(
       name: sender.name,
       photo_url: sender.photoUrl,
     });
-  const message = mapMessages([row], [], row.group_id, userId, profiles)[0];
+  const message = mapMessages([row], new Map(), row.group_id, userId, profiles)[0];
   if (!message) throw new Error('group_message_invalid');
   return message;
 }
@@ -663,7 +662,7 @@ function mapPendingMembers(
 
 function mapEvents(
   rows: readonly EventRow[],
-  attendance: readonly AttendanceRow[],
+  attendance: ReadonlyMap<string, readonly AttendanceRow[]>,
   locations: ReadonlyMap<string, EventLocationRow>,
   privateLocationsLoaded: boolean,
   groupId: string,
@@ -680,12 +679,10 @@ function mapEvents(
             ? 'available'
             : 'absent';
       return {
-        attendance: attendance
-          .filter((entry) => entry.event_id === row.id)
-          .map((entry) => ({
-            profileId: entry.profile_id,
-            status: attendanceStatus(entry.status),
-          })),
+        attendance: (attendance.get(row.id) ?? []).map((entry) => ({
+          profileId: entry.profile_id,
+          status: attendanceStatus(entry.status),
+        })),
         city: location?.city || null,
         countryCode: location?.country_code || null,
         date: row.date,
@@ -818,15 +815,27 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     (locationResult.data ?? []).map((location) => [location.event_id, location]),
   );
 
+  const membersByGroup = groupBy(members, (row) => row.group_id);
+  const eventsByGroup = groupBy(events, (row) => row.group_id);
+  const messagesByGroup = groupBy(messages, (row) => row.group_id);
+  const documentsByGroup = groupBy(documents, (row) => row.group_id);
+  const commentsByGroup = groupBy(comments, (row) => row.group_id);
+  const invitationsByGroup = groupBy(invitations, (row) => row.group_id);
+  const attendanceByEvent = groupBy(
+    attendanceResult.data as AttendanceRow[],
+    (row) => row.event_id,
+  );
+  const reactionsByMessage = groupBy(reactionResult.data as ReactionRow[], (row) => row.message_id);
+
   return groups.map((group) => ({
     autoSosEnabled: group.auto_sos_enabled,
     autoSosMinLevel: group.auto_sos_min_level,
-    comments: mapComments(comments, group.id, profiles),
-    documents: mapDocuments(documents, group.id, profiles),
+    comments: mapComments(commentsByGroup.get(group.id) ?? [], group.id, profiles),
+    documents: mapDocuments(documentsByGroup.get(group.id) ?? [], group.id, profiles),
     emoji: group.emoji,
     events: mapEvents(
-      events,
-      attendanceResult.data as AttendanceRow[],
+      eventsByGroup.get(group.id) ?? [],
+      attendanceByEvent,
       locationMap,
       !locationResult.error,
       group.id,
@@ -834,16 +843,20 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     id: group.id,
     isPublic: group.is_public,
     leaderId: group.leader_id,
-    members: mapMembers(members, group, profiles),
+    members: mapMembers(membersByGroup.get(group.id) ?? [], group, profiles),
     messages: mapMessages(
-      messages,
-      reactionResult.data as ReactionRow[],
+      messagesByGroup.get(group.id) ?? [],
+      reactionsByMessage,
       group.id,
       userId,
       profiles,
     ),
     name: group.name,
-    pendingInvitations: mapPendingMembers(invitations, group.id, profiles),
+    pendingInvitations: mapPendingMembers(
+      invitationsByGroup.get(group.id) ?? [],
+      group.id,
+      profiles,
+    ),
     photoUrl: group.photo_url,
     repertoire: groupSongsFromJson(group.repertoire),
   }));
@@ -894,7 +907,7 @@ export async function fetchGroupMessagesPage(
   return {
     items: mapMessages(
       rows,
-      reactionResult.data as ReactionRow[],
+      groupBy(reactionResult.data as ReactionRow[], (row) => row.message_id),
       groupId,
       userId,
       profileMap(profileResult.data),

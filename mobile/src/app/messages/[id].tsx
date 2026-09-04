@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import type { TFunction } from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -72,6 +73,7 @@ function attachmentErrorMessage(error: unknown, t: TFunction): string {
 }
 
 export default function ChatScreen() {
+  const headerHeight = useHeaderHeight();
   const { id = '', name } = useLocalSearchParams<{ id?: string; name?: string }>();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
@@ -291,8 +293,8 @@ export default function ChatScreen() {
   return (
     <Screen nativeHeader>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
         style={styles.flex}
       >
         <FlatList

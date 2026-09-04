@@ -23,6 +23,7 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
       </AppText>
       <TextInput
         ref={ref}
+        numberOfLines={props.multiline ? undefined : 1}
         {...props}
         placeholderTextColor={palette.muted}
         selectionColor={palette.electric}

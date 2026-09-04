@@ -625,7 +625,7 @@ export function GroupSongScreen({
       <Stack.Screen
         options={{
           headerRight: () =>
-            canEdit ? (
+            canEdit && activeTab !== 'comments' && activeTab !== 'documents' ? (
               <NativeHeaderButton
                 disabled={!draft.title.trim() || saveRepertoire.isPending || saveSetlist.isPending}
                 label={isNew ? t('Ajouter') : t('Enregistrer')}
@@ -727,7 +727,6 @@ export function GroupSongScreen({
                       <Ionicons color={palette.bronze} name="speedometer-outline" size={10} />
                       <AppText
                         color={palette.bronze}
-                        numberOfLines={1}
                         style={styles.arrangementText}
                         variant="caption2"
                       >
@@ -1107,7 +1106,7 @@ export function GroupSongScreen({
             ) : null}
           </Card>
         ) : null}
-        {canEdit ? (
+        {canEdit && isNew ? (
           <DispoButton
             disabled={!draft.title.trim()}
             loading={saveRepertoire.isPending || saveSetlist.isPending}

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -56,7 +57,7 @@ function NotificationCard({ item, onPress }: { item: AppNotification; onPress: (
           <View style={styles.copy}>
             <View style={styles.titleRow}>
               <AppText
-                numberOfLines={1}
+                numberOfLines={2}
                 style={[styles.title, item.readAt ? undefined : styles.unreadTitle]}
                 variant="subheadline"
               >
@@ -85,6 +86,15 @@ export function NotificationsCenterScreen() {
   const unreadQuery = useNotificationUnreadCount();
   const markOne = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
+  const { refetch: refetchNotifications } = query;
+  const { refetch: refetchUnread } = unreadQuery;
+  // Refresh on every visit, including when cached data is fresh or realtime
+  // missed an arrival while the app was in the background.
+  useFocusEffect(
+    useCallback(() => {
+      void Promise.all([refetchNotifications(), refetchUnread()]);
+    }, [refetchNotifications, refetchUnread]),
+  );
   const notifications = notificationItems(query.data);
   const unread = unreadQuery.data ?? notifications.filter((item) => !item.readAt).length;
   const nativeHeader = (

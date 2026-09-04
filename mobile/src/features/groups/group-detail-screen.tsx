@@ -1,7 +1,8 @@
 import { router, Stack } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { GroupEventsTab } from './group-events-tab';
 import { GroupMessagesTab } from './group-messages-tab';
@@ -27,6 +28,7 @@ const tabs: { icon: 'calendar' | 'chatbubbles' | 'musical-notes'; id: GroupTab; 
   ];
 
 export function GroupDetailScreen({ groupId }: { groupId: string }) {
+  const headerHeight = useHeaderHeight();
   const { session } = useAuth();
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
@@ -91,39 +93,45 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
           title: group.name,
         }}
       />
-      <AppText color={palette.muted} style={styles.groupSummary} variant="caption">
-        {formatSwiftPlaceholders(
-          t('%lld membres · %@'),
-          group.members.length,
-          formatSwiftPlaceholders(
-            t('%lld morceaux'),
-            group.repertoire.filter((song) => song.isApproved).length,
-          ),
-        )}
-      </AppText>
-      {isLeader || group.isPublic ? (
-        <View style={styles.statusRow}>
-          {isLeader ? <Tag color={palette.bronze} label={t('👑 Leader')} /> : null}
-          {group.isPublic ? <Tag color={palette.jam} label={t('Public')} /> : null}
-        </View>
-      ) : null}
-      <View style={styles.tabs}>
-        {tabs.map((item) => (
-          <View key={item.id} style={styles.tab}>
-            <ChoiceChip
-              icon={item.icon}
-              label={t(item.label)}
-              onPress={() => setTab(item.id)}
-              selected={tab === item.id}
-            />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
+        style={styles.body}
+      >
+        <AppText color={palette.muted} style={styles.groupSummary} variant="caption">
+          {formatSwiftPlaceholders(
+            t('%lld membres · %@'),
+            group.members.length,
+            formatSwiftPlaceholders(
+              t('%lld morceaux'),
+              group.repertoire.filter((song) => song.isApproved).length,
+            ),
+          )}
+        </AppText>
+        {isLeader || group.isPublic ? (
+          <View style={styles.statusRow}>
+            {isLeader ? <Tag color={palette.bronze} label={t('👑 Leader')} /> : null}
+            {group.isPublic ? <Tag color={palette.jam} label={t('Public')} /> : null}
           </View>
-        ))}
-      </View>
-      <View style={styles.body}>
-        {tab === 'messages' ? <GroupMessagesTab group={group} userId={userId} /> : null}
-        {tab === 'repertoire' ? <GroupRepertoireTab group={group} userId={userId} /> : null}
-        {tab === 'events' ? <GroupEventsTab group={group} userId={userId} /> : null}
-      </View>
+        ) : null}
+        <View style={styles.tabs}>
+          {tabs.map((item) => (
+            <View key={item.id} style={styles.tab}>
+              <ChoiceChip
+                icon={item.icon}
+                label={t(item.label)}
+                onPress={() => setTab(item.id)}
+                selected={tab === item.id}
+              />
+            </View>
+          ))}
+        </View>
+        <View style={styles.body}>
+          {tab === 'messages' ? <GroupMessagesTab group={group} userId={userId} /> : null}
+          {tab === 'repertoire' ? <GroupRepertoireTab group={group} userId={userId} /> : null}
+          {tab === 'events' ? <GroupEventsTab group={group} userId={userId} /> : null}
+        </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

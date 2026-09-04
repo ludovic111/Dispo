@@ -48,7 +48,12 @@ export function Avatar({ name, size = 56, uri }: AvatarProps) {
         },
       ]}
     >
-      <AppText color="#FFFFFF" style={{ fontSize: size * 0.38, fontWeight: '800' }}>
+      <AppText
+        color="#FFFFFF"
+        maxFontSizeMultiplier={1}
+        numberOfLines={1}
+        style={{ fontSize: size * 0.38, lineHeight: size * 0.48, fontWeight: '800' }}
+      >
         {initials || 'D'}
       </AppText>
     </LinearGradient>

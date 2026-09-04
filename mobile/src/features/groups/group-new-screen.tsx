@@ -1,8 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { GroupAvatar } from './group-avatar';
 import {
@@ -26,6 +35,7 @@ const emojis = ['🎶', '🎷', '🪘', '🎸', '🎹', '🎺', '🥁', '🎻', 
 
 export function GroupNewScreen() {
   const { session } = useAuth();
+  const headerHeight = useHeaderHeight();
   const { i18n, t } = useTranslation();
   const { palette } = useDispoTheme();
   const candidates = useGroupProfileCandidates();
@@ -100,105 +110,125 @@ export function GroupNewScreen() {
 
   return (
     <Screen nativeHeader>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Card style={styles.section}>
-          <FormField
-            autoCapitalize="words"
-            error={!name.trim() && create.isError ? t('Donne un nom au groupe.') : undefined}
-            label={t('Le groupe')}
-            onChangeText={setName}
-            placeholder={t('Latin Vibes Quartet')}
-            value={name}
-          />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.emojis}>
-              {emojis.map((option) => (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
+        style={styles.body}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+        >
+          <Card style={styles.section}>
+            <FormField
+              autoCapitalize="words"
+              error={!name.trim() && create.isError ? t('Donne un nom au groupe.') : undefined}
+              label={t('Le groupe')}
+              onChangeText={setName}
+              placeholder={t('Latin Vibes Quartet')}
+              value={name}
+            />
+            <ScrollView
+              horizontal
+              keyboardShouldPersistTaps="handled"
+              showsHorizontalScrollIndicator={false}
+            >
+              <View style={styles.emojis}>
+                {emojis.map((option) => (
+                  <Pressable
+                    accessibilityLabel={t('Choisir {{emoji}}', { emoji: option })}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: emoji === option }}
+                    key={option}
+                    onPress={() => setEmoji(option)}
+                    style={[
+                      styles.emoji,
+                      { backgroundColor: emoji === option ? `${palette.bronze}33` : 'transparent' },
+                    ]}
+                  >
+                    <AppText style={styles.emojiText}>{option}</AppText>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+            <AppText color={palette.muted} variant="caption">
+              {t('Membres, répertoire et événements passeront par toi.')}
+            </AppText>
+          </Card>
+
+          <Card style={styles.section}>
+            <View style={styles.memberHeader}>
+              <AppText variant="title">{t('Membres')}</AppText>
+              <AppText color={palette.electric} style={styles.count}>
+                {memberIds.size}
+              </AppText>
+            </View>
+            <FormField
+              label={t('Rechercher')}
+              onChangeText={setSearch}
+              placeholder={t('Nom ou instrument')}
+              value={search}
+            />
+            {visible.map((profile) => {
+              const selected = memberIds.has(profile.id);
+              return (
                 <Pressable
-                  accessibilityLabel={t('Choisir {{emoji}}', { emoji: option })}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: emoji === option }}
-                  key={option}
-                  onPress={() => setEmoji(option)}
-                  style={[
-                    styles.emoji,
-                    { backgroundColor: emoji === option ? `${palette.bronze}33` : 'transparent' },
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  key={profile.id}
+                  onPress={() => toggle(profile.id)}
+                  style={({ pressed }) => [
+                    styles.member,
+                    { borderColor: selected ? palette.electric : palette.border },
+                    pressed && styles.pressed,
                   ]}
                 >
-                  <AppText style={styles.emojiText}>{option}</AppText>
+                  <GroupAvatar
+                    emoji="🎵"
+                    name={profile.name}
+                    photoUrl={profile.photoUrl}
+                    size={40}
+                  />
+                  <View style={styles.memberCopy}>
+                    <AppText numberOfLines={1} style={styles.memberName}>
+                      {profile.name}
+                    </AppText>
+                    <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                      {profile.instruments.map((instrument) => t(instrument)).join(' · ') ||
+                        t('Musicien')}
+                    </AppText>
+                  </View>
+                  <Ionicons
+                    color={selected ? palette.electric : palette.muted}
+                    name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={23}
+                  />
                 </Pressable>
-              ))}
-            </View>
-          </ScrollView>
-          <AppText color={palette.muted} variant="caption">
-            {t('Membres, répertoire et événements passeront par toi.')}
-          </AppText>
-        </Card>
-
-        <Card style={styles.section}>
-          <View style={styles.memberHeader}>
-            <AppText variant="title">{t('Membres')}</AppText>
-            <AppText color={palette.electric} style={styles.count}>
-              {memberIds.size}
+              );
+            })}
+          </Card>
+          {create.error ? (
+            <AppText color={palette.error} style={styles.error} variant="caption">
+              {t(groupCreationErrorMessage(create.error))}
             </AppText>
-          </View>
-          <FormField
-            label={t('Rechercher')}
-            onChangeText={setSearch}
-            placeholder={t('Nom ou instrument')}
-            value={search}
-          />
-          {visible.map((profile) => {
-            const selected = memberIds.has(profile.id);
-            return (
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: selected }}
-                key={profile.id}
-                onPress={() => toggle(profile.id)}
-                style={({ pressed }) => [
-                  styles.member,
-                  { borderColor: selected ? palette.electric : palette.border },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <GroupAvatar emoji="🎵" name={profile.name} photoUrl={profile.photoUrl} size={40} />
-                <View style={styles.memberCopy}>
-                  <AppText numberOfLines={1} style={styles.memberName}>
-                    {profile.name}
-                  </AppText>
-                  <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                    {profile.instruments.map((instrument) => t(instrument)).join(' · ') ||
-                      t('Musicien')}
-                  </AppText>
-                </View>
-                <Ionicons
-                  color={selected ? palette.electric : palette.muted}
-                  name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={23}
-                />
-              </Pressable>
-            );
-          })}
-        </Card>
-        {create.error ? (
-          <AppText color={palette.error} style={styles.error} variant="caption">
-            {t(groupCreationErrorMessage(create.error))}
-          </AppText>
-        ) : null}
-        <DispoButton
-          disabled={!name.trim() || memberIds.size === 0 || create.isPending}
-          icon="add-circle"
-          loading={create.isPending}
-          onPress={submit}
-        >
-          {t('Créer le groupe')}
-        </DispoButton>
-      </ScrollView>
+          ) : null}
+          <DispoButton
+            disabled={!name.trim() || memberIds.size === 0 || create.isPending}
+            icon="add-circle"
+            loading={create.isPending}
+            onPress={submit}
+          >
+            {t('Créer le groupe')}
+          </DispoButton>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  body: { flex: 1 },
   content: { gap: spacing.cluster, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   count: { fontWeight: '800' },
   emoji: {

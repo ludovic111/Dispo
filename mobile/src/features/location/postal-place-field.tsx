@@ -98,6 +98,7 @@ export function PostalPlaceField({
       </AppText>
       <View style={styles.postalRow}>
         <TextInput
+          numberOfLines={1}
           accessibilityLabel={t('Code postal')}
           autoCapitalize="characters"
           autoCorrect={false}

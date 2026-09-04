@@ -70,7 +70,7 @@ describe('ScreenHeader', () => {
 
     expect(getByRole('summary')).toBeTruthy();
     expect(getByText('Rien ici').props.numberOfLines).toBe(2);
-    expect(getByText('Aucune date pour le moment').props.numberOfLines).toBe(2);
+    expect(getByText('Aucune date pour le moment').props.numberOfLines).toBeUndefined();
   });
 
   it('does not add a second top inset below a native Stack header', () => {

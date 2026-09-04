@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  pillText: { fontSize: 15, fontWeight: '600' },
+  pillText: { flexShrink: 1, fontSize: 15, fontWeight: '600' },
   pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   promo: {
     alignItems: 'center',
@@ -213,7 +213,13 @@ const styles = StyleSheet.create({
   promoSubtitle: { opacity: 0.85 },
   promoTitle: { fontSize: 15, fontWeight: '800' },
   sectionAccent: { borderRadius: 2, width: 3 },
-  sectionCopy: { flex: 1, gap: 2 },
-  sectionRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.section },
+  sectionCopy: { flex: 1, minWidth: 0, gap: 2 },
+  sectionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    minWidth: 0,
+    gap: spacing.section,
+  },
   sectionTitle: { fontSize: 19, lineHeight: 23 },
 });

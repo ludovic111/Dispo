@@ -42,7 +42,9 @@ export function GroupAvatar({
         },
       ]}
     >
-      <AppText style={{ fontSize: size * 0.42 }}>{emoji || '🎶'}</AppText>
+      <AppText maxFontSizeMultiplier={1} style={{ fontSize: size * 0.42, lineHeight: size * 0.6 }}>
+        {emoji || '🎶'}
+      </AppText>
     </View>
   );
 }

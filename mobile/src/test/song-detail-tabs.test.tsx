@@ -27,7 +27,10 @@ jest.mock('expo-crypto', () => ({ randomUUID: () => 'unused' }));
 jest.mock('react-native-reanimated', () => ({ useReducedMotion: () => true }));
 jest.mock('expo-router', () => ({
   router: { back: jest.fn(), push: jest.fn() },
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: ({ options }: { options: { headerRight: () => React.ReactNode } }) =>
+      options.headerRight(),
+  },
 }));
 jest.mock('@/components/ui/screen', () => ({
   Screen: ({ children }: { children: React.ReactNode }) => children,
@@ -114,8 +117,12 @@ describe('song detail tabs', () => {
     await fireEvent.press(view.getByText('Ajouter un solo'));
     await fireEvent.press(view.getAllByText('Piano')[0]!);
     await fireEvent.press(view.getByRole('tab', { name: 'Commentaires' }));
+    expect(view.queryByText('Enregistrer')).toBeNull();
+    expect(view.queryByText('Enregistrer le morceau')).toBeNull();
     await fireEvent.changeText(view.getByPlaceholderText('Intro, fin, consigne…'), 'Unsent note');
     await fireEvent.press(view.getByRole('tab', { name: 'Partitions' }));
+    expect(view.queryByText('Enregistrer')).toBeNull();
+    expect(view.queryByText('Enregistrer le morceau')).toBeNull();
     expect(view.getByText('Fichier')).toBeTruthy();
     expect(view.getByText('Photo')).toBeTruthy();
     await fireEvent.press(view.getByRole('tab', { name: 'Commentaires' }));
@@ -123,7 +130,8 @@ describe('song detail tabs', () => {
     await fireEvent.press(view.getByRole('tab', { name: 'Infos' }));
     expect(view.getByDisplayValue('Edited title')).toBeTruthy();
     expect(view.getByDisplayValue('132')).toBeTruthy();
-    await fireEvent.press(view.getByText('Enregistrer le morceau'));
+    expect(view.queryByText('Enregistrer le morceau')).toBeNull();
+    await fireEvent.press(view.getByText('Enregistrer'));
     expect(mockSave).toHaveBeenCalledWith(
       expect.objectContaining({
         desired: [

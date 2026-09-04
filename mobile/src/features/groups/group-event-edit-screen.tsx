@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { NativeDateTimeField } from '@/components/ui/native-date-time-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
@@ -19,7 +19,7 @@ import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location'
 import { canUsePremiumCapability } from '@/features/premium/premium-model';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 const reminderOptions = [0, 1, 2, 7, 14];
 
@@ -84,18 +84,12 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
           <FormField label={t('Titre')} onChangeText={setTitle} value={title} />
-          <View style={[styles.datePicker, { backgroundColor: palette.inset }]}>
-            <DateTimePicker
-              mode="date"
-              onValueChange={(_event, value) => setDate(value)}
-              value={date}
-            />
-            <DateTimePicker
-              mode="time"
-              onValueChange={(_event, value) => setDate(value)}
-              value={date}
-            />
-          </View>
+          <NativeDateTimeField
+            dateLabel={t('Date')}
+            timeLabel={t('Heure')}
+            onChange={setDate}
+            value={date}
+          />
           {dayChanges ? (
             <View style={styles.note}>
               <Ionicons color={palette.signal} name="sync" size={16} />
@@ -298,7 +292,6 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   center: { textAlign: 'center' },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  datePicker: { borderRadius: radii.button, gap: spacing.xs, padding: spacing.xs },
   flex: { flex: 1 },
   note: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   removeAddress: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },

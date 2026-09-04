@@ -25,6 +25,7 @@ export function Tag({ color, label }: TagProps) {
 const styles = StyleSheet.create({
   tag: {
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     borderRadius: radii.chip,
     borderWidth: 1,
     paddingHorizontal: 10,
