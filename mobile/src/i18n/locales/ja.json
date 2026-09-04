@@ -2218,5 +2218,6 @@
   "Aucun SOS ne correspond aux écoles sélectionnées.": "選択した学校に一致するSOSはありません。",
   "Sélectionne une ou plusieurs écoles pour filtrer les SOS.": "SOSを絞り込む学校を1つ以上選択してください。",
   "Aucun SOS pour ces écoles": "これらの学校のSOSはありません",
-  "Aucune école sélectionnée": "学校が選択されていません"
+  "Aucune école sélectionnée": "学校が選択されていません",
+  "Infos": "情報"
 }

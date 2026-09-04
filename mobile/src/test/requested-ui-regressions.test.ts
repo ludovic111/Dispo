@@ -82,8 +82,9 @@ describe('morceaux', () => {
     const event = source('src/features/groups/group-event-detail-screen.tsx');
     expect(row).toContain('showSoloAction && song.solos.length > 0');
     expect(row).toContain("t('Membre retiré')");
-    expect(repertoire).toContain('showSoloAction={!reorderMode}');
-    expect(event).toContain('showSoloAction={!reorderActive}');
+    expect(repertoire).toContain('<SongReorderList');
+    expect(event).toContain('<SongReorderList');
+    expect(source('src/features/groups/song-reorder-list.tsx')).toContain('showSoloAction={false}');
   });
 
   it('propose 24 tonalités, reconnaît les équivalents et préserve les inconnues', () => {

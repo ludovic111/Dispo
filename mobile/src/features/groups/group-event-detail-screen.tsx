@@ -1,21 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import {
-  NestableDraggableFlatList,
-  NestableScrollContainer,
-  ScaleDecorator,
-  type RenderItemParams,
-} from 'react-native-draggable-flatlist';
 
 import {
   attendanceFor,
   groupLineupState,
   missingGroupEventRoles,
-  reorderSongs,
   type GroupSong,
 } from './group-model';
 import {
@@ -30,6 +22,7 @@ import {
 } from './group-queries';
 import { containsGroupSong, copiedGroupSong } from './group-song-copy';
 import { GroupSongRow } from './group-song-row';
+import { SongReorderList } from './song-reorder-list';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -201,10 +194,8 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
     excludedProfileIds,
     includeLeaderData: isLeader === true,
   });
-  const [approvedOrderOverride, setApprovedOrderOverride] = useState<string[] | null>(null);
   const [invitingProfileId, setInvitingProfileId] = useState<string | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
-  const lastPlaceholderIndex = useRef<number | null>(null);
   if (query.isLoading)
     return (
       <Screen nativeHeader>
@@ -255,11 +246,8 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         .map((item) => item.id)
     : [event.id];
   const pendingSongs = event.setlist.filter((song) => !song.isApproved);
-  const approvedIds = event.setlist.filter((song) => song.isApproved).map((song) => song.id);
-  const orderedSetlist = reorderSongs(event.setlist, approvedOrderOverride ?? approvedIds);
-  const approvedSongs = orderedSetlist.filter((song) => song.isApproved);
-  const reorderActive = reorderMode && isLeader && approvedSongs.length > 1;
-  const dragEnabled = reorderActive;
+  const approvedSongs = event.setlist.filter((song) => song.isApproved);
+  const reorderActive = reorderMode && isLeader;
   const repertoireChoices = group.repertoire.filter(
     (song) => song.isApproved && !containsGroupSong(event.setlist, song),
   );
@@ -289,40 +277,6 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         groupId: group.id,
       },
     ]);
-  const persistApprovedOrder = (songIds: string[]) => {
-    if (reorderSetlist.isPending || songIds.join('|') === approvedIds.join('|')) {
-      setApprovedOrderOverride(null);
-      return;
-    }
-    reorderSetlist.reset();
-    setApprovedOrderOverride(songIds);
-    reorderSetlist.mutate(
-      { eventId: event.id, songIds },
-      {
-        onError: () => setApprovedOrderOverride(null),
-        onSuccess: () => setApprovedOrderOverride(null),
-      },
-    );
-  };
-  const moveApprovedSong = (index: number, offset: number) => {
-    const destination = index + offset;
-    if (reorderSetlist.isPending || destination < 0 || destination >= approvedSongs.length) return;
-    const ids = approvedSongs.map((song) => song.id);
-    [ids[index], ids[destination]] = [ids[destination]!, ids[index]!];
-    void Haptics.selectionAsync();
-    persistApprovedOrder(ids);
-  };
-  const chooseApprovedSongMove = (song: GroupSong, index: number) => {
-    const actions: Parameters<typeof Alert.alert>[2] = [];
-    if (index > 0) {
-      actions.push({ onPress: () => moveApprovedSong(index, -1), text: t('Monter') });
-    }
-    if (index < approvedSongs.length - 1) {
-      actions.push({ onPress: () => moveApprovedSong(index, 1), text: t('Descendre') });
-    }
-    actions.push({ style: 'cancel', text: t('Annuler') });
-    Alert.alert(t('Déplacer le morceau'), song.title, actions);
-  };
   const publishSos = () =>
     router.push({
       params: {
@@ -336,76 +290,24 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
       pathname: '/gigs/create',
     } as never);
 
-  const approvedSongRow = ({
-    drag,
-    index,
-    isActive,
-    song,
-  }: {
-    drag?: () => void;
-    index: number;
-    isActive: boolean;
-    song: GroupSong;
-  }) => (
-    <View style={styles.numberedSongRow}>
-      <AppText color={palette.muted} style={styles.songIndex} variant="caption">
-        {index + 1}.
-      </AppText>
-      <View style={styles.flex}>
-        <GroupSongRow
-          {...(isActive ? { cardStyle: { borderColor: palette.electric } } : {})}
-          {...(reorderActive ? {} : { onPress: () => openSong(song) })}
-          members={group.members}
-          showDisclosure={!reorderActive}
-          showListenAction={!reorderActive}
-          showSoloAction={!reorderActive}
-          song={song}
-          trailing={
-            reorderActive ? (
-              <Pressable
-                accessibilityHint={
-                  drag
-                    ? t("Maintiens la poignée puis glisse pour changer l'ordre.")
-                    : t('Déplacer le morceau')
-                }
-                accessibilityLabel={t('Déplacer le morceau')}
-                accessibilityRole="button"
-                accessibilityState={{
-                  disabled: approvedSongs.length < 2 || reorderSetlist.isPending,
-                }}
-                delayLongPress={180}
-                disabled={approvedSongs.length < 2 || reorderSetlist.isPending}
-                onLongPress={drag}
-                onPress={() => chooseApprovedSongMove(song, index)}
-                style={[styles.songActionButton, isActive && styles.songActionActive]}
-              >
-                <Ionicons
-                  color={reorderSetlist.isPending ? palette.border : palette.electric}
-                  name="reorder-three"
-                  size={22}
-                />
-              </Pressable>
-            ) : null
-          }
+  if (reorderActive) {
+    return (
+      <Screen nativeHeader>
+        <Stack.Screen options={{ title: event.title }} />
+        <SongReorderList
+          title={t('Setlist')}
+          songs={approvedSongs}
+          onDone={() => setReorderMode(false)}
+          onSave={(songIds) => reorderSetlist.mutateAsync({ eventId: event.id, songIds })}
         />
-      </View>
-    </View>
-  );
-  const renderDraggableSong = ({ drag, getIndex, isActive, item }: RenderItemParams<GroupSong>) => (
-    <ScaleDecorator activeScale={1.015}>
-      {approvedSongRow({
-        ...(!reorderSetlist.isPending ? { drag } : {}),
-        index: getIndex() ?? approvedSongs.findIndex((song) => song.id === item.id),
-        isActive,
-        song: item,
-      })}
-    </ScaleDecorator>
-  );
+      </Screen>
+    );
+  }
 
   return (
     <Screen nativeHeader>
       <Stack.Screen options={{ title: event.title }} />
-      <NestableScrollContainer contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <AppText color={palette.muted} variant="caption">
           {group.name}
         </AppText>
@@ -796,55 +698,26 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               </Pressable>
             ) : null}
           </View>
-          {dragEnabled ? (
-            <View style={styles.dragInstruction}>
-              <Ionicons color={palette.muted} name="hand-left-outline" size={15} />
-              <AppText color={palette.muted} style={styles.dragInstructionText} variant="caption2">
-                {t("Maintiens la poignée puis glisse pour changer l'ordre.")}
-              </AppText>
-            </View>
-          ) : null}
           {approvedSongs.length ? (
-            dragEnabled ? (
-              <NestableDraggableFlatList
-                activationDistance={8}
-                animationConfig={{ damping: 22, mass: 0.25, stiffness: 180 }}
-                autoscrollSpeed={180}
-                autoscrollThreshold={72}
-                data={approvedSongs}
-                ItemSeparatorComponent={() => <View style={styles.songSeparator} />}
-                keyExtractor={(song) => song.id}
-                onDragBegin={(index) => {
-                  lastPlaceholderIndex.current = index;
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                }}
-                onDragEnd={({ data, from, to }) => {
-                  lastPlaceholderIndex.current = null;
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (from !== to) persistApprovedOrder(data.map((song) => song.id));
-                }}
-                onPlaceholderIndexChange={(index) => {
-                  if (lastPlaceholderIndex.current === index) return;
-                  lastPlaceholderIndex.current = index;
-                  void Haptics.selectionAsync();
-                }}
-                renderItem={renderDraggableSong}
-              />
-            ) : (
-              approvedSongs.map((song, index) => (
-                <View key={song.id}>{approvedSongRow({ index, isActive: false, song })}</View>
-              ))
-            )
+            approvedSongs.map((song, index) => (
+              <View key={song.id} style={styles.numberedSongRow}>
+                <AppText color={palette.muted} style={styles.songIndex} variant="caption">
+                  {index + 1}.
+                </AppText>
+                <View style={styles.flex}>
+                  <GroupSongRow
+                    members={group.members}
+                    song={song}
+                    onPress={() => openSong(song)}
+                  />
+                </View>
+              </View>
+            ))
           ) : (
             <AppText color={palette.muted} variant="caption">
               {t('Setlist vide — pioche dans le répertoire du groupe ou ajoute des morceaux.')}
             </AppText>
           )}
-          {reorderSetlist.isError ? (
-            <AppText color={palette.signal} variant="caption">
-              {t('L’ordre n’a pas pu être enregistré.')}
-            </AppText>
-          ) : null}
         </View>
 
         {repertoireChoices.length ? (
@@ -909,7 +782,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             {t('Annuler la session')}
           </DispoButton>
         ) : null}
-      </NestableScrollContainer>
+      </ScrollView>
     </Screen>
   );
 }
@@ -923,8 +796,6 @@ const styles = StyleSheet.create({
   choiceRow: { flexDirection: 'row', gap: spacing.xs },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   dot: { borderRadius: 999, height: 7, width: 7 },
-  dragInstruction: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  dragInstructionText: { flex: 1, fontWeight: '600' },
   editButton: {
     alignItems: 'center',
     alignSelf: 'flex-end',
@@ -982,7 +853,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   songStack: { gap: spacing.xs },
-  songSeparator: { height: spacing.xs },
   sos: { borderRadius: radii.button, borderWidth: 1, gap: spacing.sm, padding: spacing.sm },
   strong: { fontWeight: '700' },
   summaryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },

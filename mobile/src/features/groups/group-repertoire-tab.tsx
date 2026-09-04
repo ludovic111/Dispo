@@ -1,18 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import {
-  NestableDraggableFlatList,
-  NestableScrollContainer,
-  ScaleDecorator,
-  type RenderItemParams,
-} from 'react-native-draggable-flatlist';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { reorderSongs, type GroupDocument, type GroupSong, type MusicGroup } from './group-model';
+import { type GroupDocument, type GroupSong, type MusicGroup } from './group-model';
 import {
   useDeleteGroupDocument,
   useReorderGroupRepertoire,
@@ -21,6 +14,7 @@ import {
 } from './group-queries';
 import { openGroupDocument } from './group-repository';
 import { GroupSongRow } from './group-song-row';
+import { SongReorderList } from './song-reorder-list';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -29,72 +23,12 @@ import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
-function SongCard({
-  drag,
-  group,
-  index,
-  isActive,
-  onMove,
-  reorderMode,
-  reorderPending,
-  song,
-  total,
-}: {
-  drag?: () => void;
-  group: MusicGroup;
-  index: number;
-  isActive: boolean;
-  onMove: (index: number, offset: -1 | 1) => void;
-  reorderMode: boolean;
-  reorderPending: boolean;
-  song: GroupSong;
-  total: number;
-}) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const chooseMove = () => {
-    const actions: Parameters<typeof Alert.alert>[2] = [];
-    if (index > 0) actions.push({ onPress: () => onMove(index, -1), text: t('Monter') });
-    if (index < total - 1) actions.push({ onPress: () => onMove(index, 1), text: t('Descendre') });
-    actions.push({ style: 'cancel', text: t('Annuler') });
-    Alert.alert(t('Déplacer le morceau'), song.title, actions);
-  };
+function SongCard({ group, song }: { group: MusicGroup; song: GroupSong }) {
   return (
     <GroupSongRow
-      {...(isActive ? { cardStyle: { borderColor: palette.bronze } } : {})}
-      {...(reorderMode
-        ? {}
-        : { onPress: () => router.push(`/groups/${group.id}/songs/${song.id}` as never) })}
+      onPress={() => router.push(`/groups/${group.id}/songs/${song.id}` as never)}
       members={group.members}
-      showDisclosure={!reorderMode}
-      showListenAction={!reorderMode}
-      showSoloAction={!reorderMode}
       song={song}
-      trailing={
-        reorderMode ? (
-          <Pressable
-            accessibilityLabel={t('Déplacer le morceau')}
-            accessibilityRole="button"
-            accessibilityHint={
-              drag
-                ? t("Maintiens la poignée puis glisse pour changer l'ordre.")
-                : t('Déplacer le morceau')
-            }
-            accessibilityState={{ disabled: total < 2 || reorderPending }}
-            delayLongPress={180}
-            disabled={total < 2 || reorderPending}
-            onLongPress={drag}
-            onPress={chooseMove}
-            style={[styles.songActionButton, isActive && styles.songActionActive]}
-          >
-            <Ionicons
-              color={reorderPending ? palette.border : palette.bronze}
-              name="reorder-three"
-              size={22}
-            />
-          </Pressable>
-        ) : null
-      }
     />
   );
 }
@@ -217,20 +151,11 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
   const reorder = useReorderGroupRepertoire();
   const [search, setSearch] = useState('');
   const [documentError, setDocumentError] = useState<string | null>(null);
-  const [approvedOrderOverride, setApprovedOrderOverride] = useState<string[] | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
-  const lastPlaceholderIndex = useRef<number | null>(null);
   const isLeader = group.leaderId === userId;
-  const serverApprovedIds = group.repertoire
-    .filter((song) => song.isApproved)
-    .map((song) => song.id);
-  const approvedSongs = reorderSongs(
-    group.repertoire,
-    approvedOrderOverride ?? serverApprovedIds,
-  ).filter((song) => song.isApproved);
+  const approvedSongs = group.repertoire.filter((song) => song.isApproved);
   const searchActive = Boolean(search.trim());
-  const reorderActive = reorderMode && isLeader && approvedSongs.length > 1;
-  const dragEnabled = reorderActive && !searchActive;
+  const reorderActive = reorderMode && isLeader && !searchActive;
   const approved = useMemo(() => {
     const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
     const needle = search.trim().toLocaleLowerCase(locale);
@@ -241,44 +166,6 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
   }, [approvedSongs, i18n.language, i18n.resolvedLanguage, search]);
   const pending = group.repertoire.filter((song) => !song.isApproved);
   const looseDocuments = group.documents.filter((document) => document.songId === null);
-  const persistApprovedOrder = (songIds: string[]) => {
-    if (reorder.isPending || songIds.join('|') === serverApprovedIds.join('|')) {
-      setApprovedOrderOverride(null);
-      return;
-    }
-    reorder.reset();
-    setApprovedOrderOverride(songIds);
-    reorder.mutate(
-      { groupId: group.id, songIds },
-      {
-        onError: () => setApprovedOrderOverride(null),
-        onSuccess: () => setApprovedOrderOverride(null),
-      },
-    );
-  };
-  const moveApprovedSong = (index: number, offset: -1 | 1) => {
-    const destination = index + offset;
-    if (reorder.isPending || destination < 0 || destination >= approvedSongs.length) return;
-    const ids = approvedSongs.map((song) => song.id);
-    [ids[index], ids[destination]] = [ids[destination]!, ids[index]!];
-    void Haptics.selectionAsync();
-    persistApprovedOrder(ids);
-  };
-  const renderDraggableSong = ({ drag, getIndex, isActive, item }: RenderItemParams<GroupSong>) => (
-    <ScaleDecorator activeScale={1.015}>
-      <SongCard
-        {...(!reorder.isPending ? { drag } : {})}
-        group={group}
-        index={getIndex() ?? approvedSongs.findIndex((song) => song.id === item.id)}
-        isActive={isActive}
-        onMove={moveApprovedSong}
-        reorderMode
-        reorderPending={reorder.isPending}
-        song={item}
-        total={approvedSongs.length}
-      />
-    </ScaleDecorator>
-  );
   const pickDocument = async () => {
     setDocumentError(null);
     try {
@@ -309,11 +196,18 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
       setDocumentError(t("Le document n'a pas pu être importé."));
     }
   };
+  if (reorderActive) {
+    return (
+      <SongReorderList
+        title={t('Répertoire')}
+        songs={approvedSongs}
+        onDone={() => setReorderMode(false)}
+        onSave={(songIds) => reorder.mutateAsync({ groupId: group.id, songIds })}
+      />
+    );
+  }
   return (
-    <NestableScrollContainer
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <SectionHeader
         subtitle={t('{{count}} morceaux validés', { count: approvedSongs.length })}
         title={t('Répertoire')}
@@ -337,10 +231,10 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           <Pressable
             accessibilityLabel={reorderMode ? t('Terminé') : t('Réorganiser')}
             accessibilityRole="button"
-            accessibilityState={{ selected: reorderMode }}
+            accessibilityState={{ selected: reorderMode, disabled: searchActive }}
+            disabled={searchActive}
             onPress={() => {
-              setSearch('');
-              setReorderMode((current) => !current);
+              if (!searchActive) setReorderMode(true);
             }}
             style={({ pressed }) => [
               styles.reorderButton,
@@ -348,7 +242,7 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
                 backgroundColor: reorderMode ? `${palette.jam}1F` : palette.inset,
                 borderColor: reorderMode ? `${palette.jam}66` : palette.border,
               },
-              pressed && styles.addPressed,
+              (pressed || searchActive) && { opacity: 0.4 },
             ]}
           >
             <Ionicons
@@ -398,58 +292,8 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           ) : null}
         </View>
       ) : null}
-      {dragEnabled ? (
-        <View style={styles.dragInstruction}>
-          <Ionicons color={palette.muted} name="hand-left-outline" size={15} />
-          <AppText color={palette.muted} style={styles.dragInstructionText} variant="caption2">
-            {t("Maintiens la poignée puis glisse pour changer l'ordre.")}
-          </AppText>
-        </View>
-      ) : null}
       {approved.length ? (
-        dragEnabled ? (
-          <NestableDraggableFlatList
-            activationDistance={8}
-            animationConfig={{ damping: 22, mass: 0.25, stiffness: 180 }}
-            autoscrollSpeed={180}
-            autoscrollThreshold={72}
-            data={approvedSongs}
-            ItemSeparatorComponent={() => <View style={styles.songSeparator} />}
-            keyExtractor={(song) => song.id}
-            onDragBegin={(index) => {
-              lastPlaceholderIndex.current = index;
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }}
-            onDragEnd={({ data, from, to }) => {
-              lastPlaceholderIndex.current = null;
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              if (from !== to) persistApprovedOrder(data.map((song) => song.id));
-            }}
-            onPlaceholderIndexChange={(index) => {
-              if (lastPlaceholderIndex.current === index) return;
-              lastPlaceholderIndex.current = index;
-              void Haptics.selectionAsync();
-            }}
-            renderItem={renderDraggableSong}
-          />
-        ) : (
-          approved.map((song) => {
-            const orderIndex = approvedSongs.findIndex((item) => item.id === song.id);
-            return (
-              <SongCard
-                group={group}
-                index={orderIndex}
-                isActive={false}
-                key={song.id}
-                onMove={moveApprovedSong}
-                reorderMode={false}
-                reorderPending={reorder.isPending}
-                song={song}
-                total={approvedSongs.length}
-              />
-            );
-          })
-        )
+        approved.map((song) => <SongCard group={group} key={song.id} song={song} />)
       ) : (
         <View style={styles.empty}>
           <Ionicons color={palette.bronze} name="musical-notes-outline" size={34} />
@@ -459,11 +303,6 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           </AppText>
         </View>
       )}
-      {reorder.isError ? (
-        <AppText color={palette.signal} style={styles.emptyText} variant="caption">
-          {t('L’ordre n’a pas pu être enregistré.')}
-        </AppText>
-      ) : null}
       <View style={styles.sectionHeading}>
         <SectionHeader subtitle={t('PDF, grilles et partitions libres')} title={t('Documents')} />
         <Pressable
@@ -492,7 +331,7 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           {t('Aucun document libre pour l’instant.')}
         </AppText>
       ) : null}
-    </NestableScrollContainer>
+    </ScrollView>
   );
 }
 
@@ -522,8 +361,6 @@ const styles = StyleSheet.create({
   documentOpen: { flex: 1, gap: 2, justifyContent: 'center', minHeight: 44 },
   documentRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.control },
   documentTitle: { fontWeight: '700' },
-  dragInstruction: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  dragInstructionText: { flex: 1, fontWeight: '600' },
   empty: { alignItems: 'center', gap: spacing.xs, padding: spacing.xl },
   emptyText: { textAlign: 'center' },
   iconButton: {
@@ -564,7 +401,5 @@ const styles = StyleSheet.create({
     minHeight: 44,
     minWidth: 44,
   },
-  songActionActive: { opacity: 0.72 },
-  songSeparator: { height: spacing.xs },
   stack: { gap: spacing.xs },
 });

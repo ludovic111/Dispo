@@ -51,6 +51,7 @@ import {
 } from './group-repository';
 import { isKnownMusicalKey, musicalKeyOptions, musicalKeysEqual } from './group-song-key-model';
 import { SongArtwork, SongListenSheet } from './group-song-row';
+import { SongDetailTabs, type SongDetailTab } from './song-detail-tabs';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -222,6 +223,7 @@ export function GroupSongScreen({
   const [catalogAnalyzing, setCatalogAnalyzing] = useState(false);
   const analysisRequestRef = useRef(0);
   const enrichedExistingRef = useRef(new Set<string>());
+  const [activeTab, setActiveTab] = useState<SongDetailTab>('info');
   const [commentText, setCommentText] = useState('');
   const [commentError, setCommentError] = useState<string | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -637,176 +639,199 @@ export function GroupSongScreen({
             : draft.title,
         }}
       />
-      <SongKeyboardScrollView keyboardInset={keyboardInset} scrollRef={scrollRef}>
-        {isNew ? (
-          <Card style={styles.card}>
-            <AppText variant="title">{t('Catalogue musical')}</AppText>
-            <View style={styles.searchRow}>
-              <View style={styles.flex}>
-                <FormField
-                  label={t('Chercher')}
-                  onChangeText={updateCatalogTerm}
-                  placeholder={t('Titre ou artiste')}
-                  returnKeyType="search"
-                  value={catalogTerm}
-                />
-              </View>
-              <View style={[styles.searchButton, { backgroundColor: palette.inset }]}>
-                {catalogLoading ? (
-                  <ActivityIndicator color={palette.electric} />
-                ) : (
-                  <Ionicons color={palette.muted} name="search" size={19} />
-                )}
-              </View>
-            </View>
-            {catalogResults.map((item) => (
-              <Pressable
-                key={item.catalogId}
-                onPress={() => chooseCatalog(item)}
-                style={[styles.catalogRow, { borderBottomColor: palette.border }]}
-              >
-                <SongArtwork artworkUrl={item.artworkUrl} radius={8} size={42} />
-                <View style={styles.flex}>
-                  <AppText numberOfLines={1} style={styles.bold}>
-                    {item.title}
-                  </AppText>
-                  <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                    {item.artist}
-                    {item.albumTitle ? ` · ${item.albumTitle}` : ''}
-                  </AppText>
-                </View>
-                <Ionicons
-                  color={draft.catalogId === item.catalogId ? palette.electric : palette.muted}
-                  name={
-                    draft.catalogId === item.catalogId ? 'checkmark-circle' : 'add-circle-outline'
-                  }
-                  size={21}
-                />
-              </Pressable>
-            ))}
-            {catalogAnalyzing ? (
-              <View accessibilityLiveRegion="polite" style={styles.analysisRow}>
-                <ActivityIndicator color={palette.electric} size="small" />
-                <AppText color={palette.muted} variant="caption">
-                  {t('Analyse de la tonalité…')}
-                </AppText>
-              </View>
-            ) : null}
-          </Card>
-        ) : null}
-        <Card style={styles.card}>
-          <SectionHeader subtitle={group.name} title={t('Identité')} />
-          <View style={styles.songHero}>
-            <SongArtwork artworkUrl={draft.artworkUrl} radius={10} size={54} />
-            <View style={styles.heroCopy}>
-              <AppText numberOfLines={2} style={styles.heroTitle} variant="title3">
-                {draft.title || t('Titre')}
-              </AppText>
-              {arrangement.length ? (
-                <View style={[styles.arrangementChip, { backgroundColor: `${palette.bronze}1F` }]}>
-                  <Ionicons color={palette.bronze} name="speedometer-outline" size={10} />
-                  <AppText
-                    color={palette.bronze}
-                    numberOfLines={1}
-                    style={styles.arrangementText}
-                    variant="caption2"
-                  >
-                    {arrangement.join(' · ')}
-                  </AppText>
-                </View>
-              ) : null}
-              {draft.artist ? (
-                <AppText color={palette.muted} numberOfLines={1} variant="caption">
-                  {draft.artist}
-                </AppText>
-              ) : null}
-              {recording.length ? (
-                <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                  {recording.join(' · ')}
-                </AppText>
-              ) : null}
-            </View>
-            <Pressable
-              accessibilityLabel={t('Écouter ce morceau')}
-              accessibilityRole="button"
-              hitSlop={4}
-              onPress={() => setListenVisible(true)}
-              style={[styles.heroAction, { backgroundColor: palette.inset }]}
-            >
-              <Ionicons color={palette.bronze} name="headset" size={18} />
-            </Pressable>
-          </View>
-          {!draft.isApproved ? (
-            <Tag color={palette.signal} label={t('Suggestion à valider')} />
-          ) : null}
-          {canEdit ? (
-            <View style={styles.editorFields}>
-              <FormField
-                label={t('Titre')}
-                onChangeText={(value) => patch('title', value)}
-                value={draft.title}
-              />
-              <FormField
-                label={t('Artiste')}
-                onChangeText={(value) => patch('artist', value)}
-                value={draft.artist}
-              />
-            </View>
-          ) : null}
-        </Card>
-        <SongListenSheet
-          onClose={() => setListenVisible(false)}
-          song={draft}
-          visible={listenVisible}
+      {!isNew ? (
+        <SongDetailTabs
+          selected={activeTab}
+          onSelect={(tab) => {
+            Keyboard.dismiss();
+            commentInputFocusedRef.current = false;
+            if (revealCommentTimerRef.current) clearTimeout(revealCommentTimerRef.current);
+            setKeyboardInset(0);
+            setActiveTab(tab);
+          }}
         />
-        <Card style={styles.card}>
-          <SectionHeader subtitle={t('Arrangement partagé avec le groupe')} title={t('Repères')} />
-          <AppText color={palette.bronze} variant="label">
-            {t('Tonalité')}
-          </AppText>
-          {draft.key?.trim() && !isKnownMusicalKey(draft.key) ? (
-            <AppText color={palette.muted} variant="caption">
-              {t('Tonalité')} : {draft.key}
-            </AppText>
-          ) : null}
-          {canEdit ? (
-            <View style={styles.wrap}>
-              <ChoiceChip
-                label={t('Non renseignée')}
-                onPress={() => patch('key', null)}
-                selected={!draft.key?.trim()}
+      ) : null}
+      <SongKeyboardScrollView key={activeTab} keyboardInset={keyboardInset} scrollRef={scrollRef}>
+        {activeTab === 'info' ? (
+          <>
+            {isNew ? (
+              <Card style={styles.card}>
+                <AppText variant="title">{t('Catalogue musical')}</AppText>
+                <View style={styles.searchRow}>
+                  <View style={styles.flex}>
+                    <FormField
+                      label={t('Chercher')}
+                      onChangeText={updateCatalogTerm}
+                      placeholder={t('Titre ou artiste')}
+                      returnKeyType="search"
+                      value={catalogTerm}
+                    />
+                  </View>
+                  <View style={[styles.searchButton, { backgroundColor: palette.inset }]}>
+                    {catalogLoading ? (
+                      <ActivityIndicator color={palette.electric} />
+                    ) : (
+                      <Ionicons color={palette.muted} name="search" size={19} />
+                    )}
+                  </View>
+                </View>
+                {catalogResults.map((item) => (
+                  <Pressable
+                    key={item.catalogId}
+                    onPress={() => chooseCatalog(item)}
+                    style={[styles.catalogRow, { borderBottomColor: palette.border }]}
+                  >
+                    <SongArtwork artworkUrl={item.artworkUrl} radius={8} size={42} />
+                    <View style={styles.flex}>
+                      <AppText numberOfLines={1} style={styles.bold}>
+                        {item.title}
+                      </AppText>
+                      <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                        {item.artist}
+                        {item.albumTitle ? ` · ${item.albumTitle}` : ''}
+                      </AppText>
+                    </View>
+                    <Ionicons
+                      color={draft.catalogId === item.catalogId ? palette.electric : palette.muted}
+                      name={
+                        draft.catalogId === item.catalogId
+                          ? 'checkmark-circle'
+                          : 'add-circle-outline'
+                      }
+                      size={21}
+                    />
+                  </Pressable>
+                ))}
+                {catalogAnalyzing ? (
+                  <View accessibilityLiveRegion="polite" style={styles.analysisRow}>
+                    <ActivityIndicator color={palette.electric} size="small" />
+                    <AppText color={palette.muted} variant="caption">
+                      {t('Analyse de la tonalité…')}
+                    </AppText>
+                  </View>
+                ) : null}
+              </Card>
+            ) : null}
+            <Card style={styles.card}>
+              <SectionHeader subtitle={group.name} title={t('Identité')} />
+              <View style={styles.songHero}>
+                <SongArtwork artworkUrl={draft.artworkUrl} radius={10} size={54} />
+                <View style={styles.heroCopy}>
+                  <AppText numberOfLines={2} style={styles.heroTitle} variant="title3">
+                    {draft.title || t('Titre')}
+                  </AppText>
+                  {arrangement.length ? (
+                    <View
+                      style={[styles.arrangementChip, { backgroundColor: `${palette.bronze}1F` }]}
+                    >
+                      <Ionicons color={palette.bronze} name="speedometer-outline" size={10} />
+                      <AppText
+                        color={palette.bronze}
+                        numberOfLines={1}
+                        style={styles.arrangementText}
+                        variant="caption2"
+                      >
+                        {arrangement.join(' · ')}
+                      </AppText>
+                    </View>
+                  ) : null}
+                  {draft.artist ? (
+                    <AppText color={palette.muted} numberOfLines={1} variant="caption">
+                      {draft.artist}
+                    </AppText>
+                  ) : null}
+                  {recording.length ? (
+                    <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                      {recording.join(' · ')}
+                    </AppText>
+                  ) : null}
+                </View>
+                <Pressable
+                  accessibilityLabel={t('Écouter ce morceau')}
+                  accessibilityRole="button"
+                  hitSlop={4}
+                  onPress={() => setListenVisible(true)}
+                  style={[styles.heroAction, { backgroundColor: palette.inset }]}
+                >
+                  <Ionicons color={palette.bronze} name="headset" size={18} />
+                </Pressable>
+              </View>
+              {!draft.isApproved ? (
+                <Tag color={palette.signal} label={t('Suggestion à valider')} />
+              ) : null}
+              {canEdit ? (
+                <View style={styles.editorFields}>
+                  <FormField
+                    label={t('Titre')}
+                    onChangeText={(value) => patch('title', value)}
+                    value={draft.title}
+                  />
+                  <FormField
+                    label={t('Artiste')}
+                    onChangeText={(value) => patch('artist', value)}
+                    value={draft.artist}
+                  />
+                </View>
+              ) : null}
+            </Card>
+            <SongListenSheet
+              onClose={() => setListenVisible(false)}
+              song={draft}
+              visible={listenVisible}
+            />
+            <Card style={styles.card}>
+              <SectionHeader
+                subtitle={t('Arrangement partagé avec le groupe')}
+                title={t('Repères')}
               />
-              {musicalKeyOptions.map((key) => (
-                <ChoiceChip
-                  key={key}
-                  label={key}
-                  onPress={() => patch('key', key)}
-                  selected={musicalKeysEqual(draft.key, key)}
-                />
-              ))}
-            </View>
-          ) : (
-            <Tag color={palette.bronze} label={draft.key?.trim() || t('Non renseignée')} />
-          )}
-          <FormField
-            editable={canEdit}
-            keyboardType="number-pad"
-            label={t('Tempo BPM')}
-            onChangeText={(value) => patch('tempoBpm', Number.parseInt(value, 10) || null)}
-            value={draft.tempoBpm?.toString() ?? ''}
-          />
-          <FormField
-            editable={canEdit}
-            label={t('Forme')}
-            onChangeText={(value) => patch('form', value.trim() || null)}
-            placeholder={t('AABA, ABAB…')}
-            value={draft.form ?? ''}
-          />
-        </Card>
-        <DispoButton disabled={!ireal} icon="open-outline" onPress={() => void openIReal()}>
-          {t('Ouvrir dans iReal Pro')}
-        </DispoButton>
-        {!isNew ? (
+              <AppText color={palette.bronze} variant="label">
+                {t('Tonalité')}
+              </AppText>
+              {draft.key?.trim() && !isKnownMusicalKey(draft.key) ? (
+                <AppText color={palette.muted} variant="caption">
+                  {t('Tonalité')} : {draft.key}
+                </AppText>
+              ) : null}
+              {canEdit ? (
+                <View style={styles.wrap}>
+                  <ChoiceChip
+                    label={t('Non renseignée')}
+                    onPress={() => patch('key', null)}
+                    selected={!draft.key?.trim()}
+                  />
+                  {musicalKeyOptions.map((key) => (
+                    <ChoiceChip
+                      key={key}
+                      label={key}
+                      onPress={() => patch('key', key)}
+                      selected={musicalKeysEqual(draft.key, key)}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <Tag color={palette.bronze} label={draft.key?.trim() || t('Non renseignée')} />
+              )}
+              <FormField
+                editable={canEdit}
+                keyboardType="number-pad"
+                label={t('Tempo BPM')}
+                onChangeText={(value) => patch('tempoBpm', Number.parseInt(value, 10) || null)}
+                value={draft.tempoBpm?.toString() ?? ''}
+              />
+              <FormField
+                editable={canEdit}
+                label={t('Forme')}
+                onChangeText={(value) => patch('form', value.trim() || null)}
+                placeholder={t('AABA, ABAB…')}
+                value={draft.form ?? ''}
+              />
+            </Card>
+            <DispoButton disabled={!ireal} icon="open-outline" onPress={() => void openIReal()}>
+              {t('Ouvrir dans iReal Pro')}
+            </DispoButton>
+          </>
+        ) : null}
+        {!isNew && activeTab === 'solos' ? (
           <Card style={styles.card}>
             <SectionHeader
               subtitle={t(
@@ -931,7 +956,7 @@ export function GroupSongScreen({
             ) : null}
           </Card>
         ) : null}
-        {!isNew ? (
+        {!isNew && activeTab === 'documents' ? (
           <Card style={styles.card}>
             <SectionHeader subtitle={t('Partitions liées au morceau')} title={t('Documents')} />
             <View style={styles.wrap}>
@@ -1011,7 +1036,7 @@ export function GroupSongScreen({
             ) : null}
           </Card>
         ) : null}
-        {!isNew ? (
+        {!isNew && activeTab === 'comments' ? (
           <Card style={styles.card}>
             <SectionHeader subtitle={t('Notes du groupe')} title={t('Commentaires')} />
             {comments.map((item) => (
@@ -1095,7 +1120,7 @@ export function GroupSongScreen({
               : t('Enregistrer le morceau')}
           </DispoButton>
         ) : null}
-        {!isNew ? (
+        {!isNew && activeTab === 'info' ? (
           <DispoButton
             icon="copy-outline"
             onPress={() =>
@@ -1113,7 +1138,7 @@ export function GroupSongScreen({
             {t('Copier le morceau')}
           </DispoButton>
         ) : null}
-        {!isNew && isLeader ? (
+        {!isNew && isLeader && activeTab === 'info' ? (
           <DispoButton onPress={removeSong} variant="danger">
             {sourceEvent ? t('Retirer') : t('Retirer du répertoire')}
           </DispoButton>

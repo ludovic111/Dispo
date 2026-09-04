@@ -1232,3 +1232,38 @@ Livraison :
 - aucune App Review, activation de testeurs, publication Google Play ou
   modification des secrets. La validation sur appareils physiques reste la
   prochaine preuve utile.
+
+## 2026-09-04 — Fiche morceau à quatre onglets et réorganisation commune
+
+- Fiche existante répartie en Infos / Partitions / Solos / Commentaires ; Infos
+  par défaut, brouillon parent conservé, sauvegarde/retour et droits inchangés.
+- Composant commun au répertoire et aux setlists : poignée directe, flèches
+  accessibles, placeholder visible, défilement aux bords, mutations existantes
+  avec verrouillage et restauration en erreur. Recherche incompatible avec
+  l’entrée en réorganisation. Aucun backend, migration ou dépendance modifié.
+- Validation : TypeScript, ESLint, 55 suites / 339 tests, format et diff réussis ;
+  CNG/pods, iOS Debug simulateur et Android Debug arm64 (JDK 17) réussis.
+- QA native : iPhone 17 iOS 26.4 sombre et Android medium_phone clair ; onglets,
+  brouillons, solos, accès documents/iReal Pro, setlist de 3 titres et répertoire
+  de 24 titres, flèches/glisser-déposer et ordre retrouvé après réouverture.
+  Trois scénarios XCTest natifs passent, dont défilement au bord et réouverture.
+- Limites : document local HTTP refusé par le contrôle HTTPS existant ; pas de
+  prévisualisation HTTPS complète ni import dans iReal Pro, absent des appareils.
+  Pas de validation physique ni de build Release pour ce lot.
+- Publication arrêtée selon la condition explicite de la demande : Expo Doctor
+  20/21, 14 écarts patch préexistants, correction hors scope. Aucun commit/push,
+  incrément, upload TestFlight, APK distribué ou déploiement Supabase. Version
+  conservée 2.4 (44), fichiers laissés localement pour revue.
+- Fixtures locales supprimées avec contrôle ; configuration temporaire restaurée
+  à l’octet près et Metro arrêté. Aucun contenu métier de production modifié.
+- Commandes, logs, captures, résultats XCTest et limites détaillées :
+  `Dispo-dist/qa-20260904-song-tabs-reorder/RAPPORT.md` (hors dépôt).
+
+### Reprise de livraison — build 45
+
+Ludovic a explicitement reconfirmé la livraison immédiate du lot sur TestFlight.
+Les 14 écarts patch Expo connus sont documentés et ne bloquent pas cette livraison ;
+aucune dépendance ni protection n’est modifiée. Les validations applicatives et
+natives ci-dessus restent acquises. Version de distribution : 2.4 (45).
+La signature de distribution a été vérifiée par un test de signature local réussi.
+Les preuves d’upload et d’import Apple seront consignées après la livraison.

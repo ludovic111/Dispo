@@ -46,10 +46,10 @@ describe('fiche et tuile morceau', () => {
     expect(row).toContain('name="headset"');
     expect(repertoire).toContain('const [reorderMode, setReorderMode]');
     expect(repertoire).toContain('const reorderActive = reorderMode');
-    expect(repertoire).toContain('const dragEnabled = reorderActive');
+    expect(repertoire).toContain('<SongReorderList');
     expect(event).toContain('const [reorderMode, setReorderMode]');
     expect(event).toContain('const reorderActive = reorderMode');
-    expect(event).toContain('const dragEnabled = reorderActive');
+    expect(event).toContain('<SongReorderList');
   });
 
   it('garde uniquement le raccourci permanent de création de groupe sur l’accueil', () => {
