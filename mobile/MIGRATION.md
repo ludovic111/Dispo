@@ -1266,4 +1266,25 @@ Les 14 écarts patch Expo connus sont documentés et ne bloquent pas cette livra
 aucune dépendance ni protection n’est modifiée. Les validations applicatives et
 natives ci-dessus restent acquises. Version de distribution : 2.4 (45).
 La signature de distribution a été vérifiée par un test de signature local réussi.
-Les preuves d’upload et d’import Apple seront consignées après la livraison.
+Livraison terminée :
+
+- commit applicatif `84084a7` poussé sur `origin/main` ;
+- archive Release et export iOS réussis ; IPA finale `ch.dispo.app`, 2.4 (45),
+  APNs production, Apple Sign-In Default, `get-task-allow=false`, signature
+  `codesign --verify --deep --strict` valide ;
+- IPA `Dispo-dist/2.4/Dispo-2.4-build45.ipa`, SHA-256
+  `c147993f417cff2b6775cf8f9616c93be8df6284ddd6245c8cefb79d91a79fef` ;
+- `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, livraison
+  `cbbe505a-230a-4c12-8dc5-ca50a3af9760`, `BUILD-STATUS: VALID`,
+  `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` et présence App Store Connect ;
+- Android Release JDK 17 réussi ; APK direct signé v2 avec le certificat de
+  test existant, versionCode 45, installé et démarré à froid sur Android 36 ;
+  `Dispo-dist/android/Dispo-2.4-build45-direct-test.apk`, SHA-256
+  `a41e6a8d315fe2ec9de6f87ac30c182e2923c8b3c35cae0ebf21bc2265f8de03` ;
+- URL Supabase de production vérifiée dans les deux bundles finaux ; aucun
+  endpoint local de QA. Aucun changement Supabase production, App Review,
+  activation de testeurs ou publication Google Play. Appareils physiques non testés.
+
+La règle de livraison automatique a été reconfirmée : les avertissements Expo
+limités aux patchs connus ne justifient pas de demander à nouveau l’accord de
+livraison d’un lot fonctionnellement validé.
