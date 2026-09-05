@@ -1316,3 +1316,6 @@ livraison d’un lot fonctionnellement validé.
 - Preuves locales : `Dispo-dist/qa-20260905-whatsapp/`. Aucun appareil physique testé.
 
 - Nettoyage local terminé : les trois comptes QA, leur groupe, leurs deux SOS et leur école ont été supprimés ; absence contrôlée en transaction. APK Release arm64 build 47 compilé, signature v2 et configuration production vérifiées.
+- Livraison native : builds Release iOS et Android réussis ; build 47 installé et lancé à froid sur les deux simulateurs. Capture iOS obtenue par XCTest natif supplémentaire, le Mac étant verrouillé. IPA finale ch.dispo.app 2.4 (47), APNs production, Apple Sign In Default, get-task-allow=false et codesign strict vérifiés. Configuration de production confirmée dans les bundles, aucun endpoint QA.
+- Code `896ab69` poussé sur `origin/main`. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, delivery `db8aaf35-1ced-4cb8-b4ea-a9e48920682f`. `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` confirmés par altool et API App Store Connect.
+- Aucune App Review, activation de testeurs ou publication Google Play pour ce build. IPA et APK directs, signatures et empreintes dans `Dispo-dist/2.4/RELEASE-build47.md`.
