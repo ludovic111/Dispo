@@ -3,7 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import type { TFunction } from 'i18next';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -11,12 +11,14 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GroupMessageQuote } from './group-message-quote';
 import {
   buildGroupMessageTimeline,
   GROUP_MESSAGE_MAX_LENGTH,
@@ -25,6 +27,7 @@ import {
   isValidGroupMessage,
   mergeGroupMessagesNewestFirst,
   type GroupMessage,
+  type GroupMessageTimelineItem,
   type MusicGroup,
 } from './group-model';
 import {
@@ -32,6 +35,7 @@ import {
   useEditGroupMessage,
   useGroupMessageReaction,
   useGroupMessages,
+  useGroupReplyMessages,
   useSendGroupMessage,
 } from './group-queries';
 
@@ -67,6 +71,13 @@ function attachmentErrorMessage(error: unknown, t: TFunction): string {
   if (code === 'message_video_too_long') return t('Vidéo trop longue — 2 minutes maximum.');
   if (code === 'message_attachment_unreadable' || code === 'group_attachment_unreadable')
     return t('Le fichier n’a pas pu être importé.');
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    String(error.message).includes('group_reply_unavailable')
+  )
+    return t('Ce message n’est plus disponible pour une réponse.');
   return t('Le message n’a pas pu être envoyé.');
 }
 
@@ -75,6 +86,10 @@ function MessageBubble({
   onEdit,
   onError,
   onOpenAttachment,
+  onReply,
+  onOpenOriginal,
+  original,
+  originalLoading,
   openingAttachmentPath,
   userId,
 }: {
@@ -82,6 +97,10 @@ function MessageBubble({
   onEdit: (message: GroupMessage) => void;
   onError: (message: string) => void;
   onOpenAttachment: (message: GroupMessage) => void;
+  onReply: (message: GroupMessage) => void;
+  onOpenOriginal: (id: string) => void;
+  original: GroupMessage | null;
+  originalLoading: boolean;
   openingAttachmentPath: string | null;
   userId: string;
 }) {
@@ -130,7 +149,9 @@ function MessageBubble({
             {message.senderName}
           </AppText>
         ) : null}
-        <View
+        <Pressable
+          accessible={false}
+          onLongPress={message.deletedAt ? undefined : () => onReply(message)}
           style={[
             styles.bubble,
             {
@@ -148,6 +169,15 @@ function MessageBubble({
             </View>
           ) : (
             <>
+              {message.replyToId ? (
+                <Pressable
+                  accessibilityLabel={t('Afficher le message d’origine')}
+                  accessibilityRole="button"
+                  onPress={() => onOpenOriginal(message.replyToId!)}
+                >
+                  <GroupMessageQuote loading={originalLoading} message={original} />
+                </Pressable>
+              ) : null}
               {attachment ? (
                 <MessageAttachmentCard
                   attachment={attachment}
@@ -155,12 +185,24 @@ function MessageBubble({
                   onOpen={() => onOpenAttachment(message)}
                 />
               ) : null}
-              {message.text ? <AppText variant="subheadline">{message.text}</AppText> : null}
+              {message.text ? (
+                <AppText onPress={() => onReply(message)} variant="subheadline">
+                  {message.text}
+                </AppText>
+              ) : null}
             </>
           )}
-        </View>
+        </Pressable>
         {!message.deletedAt ? (
           <View style={[styles.controls, own && styles.controlsOwn]}>
+            <Pressable
+              accessibilityLabel={t('Répondre')}
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => onReply(message)}
+            >
+              <Ionicons color={palette.muted} name="arrow-undo-outline" size={17} />
+            </Pressable>
             {message.reactions.map((item) => (
               <Pressable
                 accessibilityLabel={`${item.emoji}, ${item.count}`}
@@ -283,6 +325,10 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
   const [text, setText] = useState('');
   const [attachment, setAttachment] = useState<PendingMessageAttachment | null>(null);
   const [editing, setEditing] = useState<GroupMessage | null>(null);
+  const [replying, setReplying] = useState<GroupMessage | null>(null);
+  const [originalId, setOriginalId] = useState<string | null>(null);
+  const inputRef = useRef<TextInput>(null);
+  const listRef = useRef<FlatList<GroupMessageTimelineItem>>(null);
   const [preparingAttachment, setPreparingAttachment] = useState(false);
   const [openingAttachmentPath, setOpeningAttachmentPath] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -294,6 +340,33 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
     () => buildGroupMessageTimeline(messages, query.someoneIsTyping),
     [messages, query.someoneIsTyping],
   );
+  const replyIds = useMemo(
+    () =>
+      messages.flatMap((message) =>
+        message.replyToId && !message.deletedAt ? [message.replyToId] : [],
+      ),
+    [messages],
+  );
+  const replies = useGroupReplyMessages(group.id, replyIds);
+  const originals = useMemo(
+    () =>
+      new Map(
+        mergeGroupMessagesNewestFirst([...messages, ...(replies.data ?? [])]).map((message) => [
+          message.id,
+          message,
+        ]),
+      ),
+    [messages, replies.data],
+  );
+  const selectedReply = replying ? (originals.get(replying.id) ?? replying) : null;
+  const beginReply = (message: GroupMessage) => {
+    if (send.isPending || edit.isPending || message.deletedAt) return;
+    if (editing) setText('');
+    setEditing(null);
+    setReplying(message);
+    setLocalError(null);
+    inputRef.current?.focus();
+  };
 
   const pickDocument = async () => {
     setPreparingAttachment(true);
@@ -375,15 +448,30 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
     }
     const selectedAttachment = attachment;
     if ((!clean && !selectedAttachment) || send.isPending) return;
+    if (selectedReply?.deletedAt) {
+      setLocalError(t('Ce message n’est plus disponible pour une réponse.'));
+      return;
+    }
     setText('');
     setAttachment(null);
+    setReplying(null);
     setLocalError(null);
     send.mutate(
-      { attachment: selectedAttachment, groupId: group.id, text: clean },
       {
+        attachment: selectedAttachment,
+        groupId: group.id,
+        text: clean,
+        replyToId: selectedReply?.id ?? null,
+      },
+      {
+        onSuccess: () =>
+          requestAnimationFrame(() =>
+            listRef.current?.scrollToOffset({ offset: 0, animated: true }),
+          ),
         onError: (error) => {
           setText((current) => current || clean);
           setAttachment((current) => current ?? selectedAttachment);
+          setReplying(selectedReply);
           setLocalError(attachmentErrorMessage(error, t));
         },
       },
@@ -425,6 +513,7 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
   return (
     <View style={styles.fill}>
       <FlatList
+        ref={listRef}
         contentContainerStyle={styles.timeline}
         data={timeline}
         inverted
@@ -439,12 +528,20 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
             <MessageBubble
               message={item.message}
               onEdit={(message) => {
+                if (busy) return;
                 setEditing(message);
+                setReplying(null);
                 setAttachment(null);
                 setText(message.text);
               }}
               onError={setLocalError}
               onOpenAttachment={(message) => void openAttachment(message)}
+              onReply={beginReply}
+              onOpenOriginal={setOriginalId}
+              original={
+                item.message.replyToId ? (originals.get(item.message.replyToId) ?? null) : null
+              }
+              originalLoading={replies.isLoading}
               openingAttachmentPath={openingAttachmentPath}
               userId={userId}
             />
@@ -507,6 +604,24 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
           </Pressable>
         </View>
       ) : null}
+      {selectedReply ? (
+        <View style={[styles.replyBanner, { backgroundColor: palette.inset }]}>
+          <View style={styles.replyDraft}>
+            <AppText color={palette.electric} numberOfLines={1} variant="caption">
+              {t('Réponse à {{name}}', { name: selectedReply.senderName })}
+            </AppText>
+            <GroupMessageQuote message={selectedReply} showSender={false} />
+          </View>
+          <Pressable
+            accessibilityLabel={t('Annuler la réponse')}
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => setReplying(null)}
+          >
+            <Ionicons color={palette.muted} name="close-circle" size={22} />
+          </Pressable>
+        </View>
+      ) : null}
       {attachment ? (
         <View style={styles.attachmentDraft}>
           <PendingAttachmentChip attachment={attachment} onRemove={() => setAttachment(null)} />
@@ -546,6 +661,8 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
         ) : null}
         <TextInput
           accessibilityLabel={t('Message au groupe')}
+          editable={!busy}
+          ref={inputRef}
           maxLength={GROUP_MESSAGE_MAX_LENGTH}
           multiline
           onChangeText={(value) => {
@@ -584,11 +701,61 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
           )}
         </Pressable>
       </View>
+      {originalId ? (
+        <Modal animationType="slide" onRequestClose={() => setOriginalId(null)} transparent visible>
+          <View style={styles.reactionOverlay}>
+            <Pressable
+              accessibilityLabel={t('Fermer')}
+              accessibilityRole="button"
+              onPress={() => setOriginalId(null)}
+              style={styles.reactionBackdrop}
+            />
+            <SafeAreaView
+              edges={['bottom']}
+              style={[
+                styles.reactionSheet,
+                styles.originalSheet,
+                { backgroundColor: palette.card },
+              ]}
+            >
+              <View style={styles.originalHeader}>
+                <AppText style={styles.replyDraft} variant="title">
+                  {t('Message d’origine')}
+                </AppText>
+                <Pressable
+                  accessibilityLabel={t('Fermer')}
+                  accessibilityRole="button"
+                  hitSlop={10}
+                  onPress={() => setOriginalId(null)}
+                >
+                  <Ionicons color={palette.muted} name="close-circle" size={24} />
+                </Pressable>
+              </View>
+              <ScrollView>
+                <GroupMessageQuote
+                  expanded
+                  loading={replies.isLoading}
+                  message={originals.get(originalId) ?? null}
+                />
+              </ScrollView>
+            </SafeAreaView>
+          </View>
+        </Modal>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  originalSheet: { maxHeight: '70%' },
+  originalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  replyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.control,
+  },
+  replyDraft: { flex: 1, minWidth: 0 },
   reactionOverlay: { flex: 1, justifyContent: 'flex-end' },
   reactionBackdrop: {
     position: 'absolute',

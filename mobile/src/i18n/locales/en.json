@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "SOS for {{name}}",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "Could not activate Auto-SOS. Check the leader’s permissions and try again.",
   "Un instrument déjà pourvu ne peut pas être retiré.": "An instrument with an accepted musician cannot be removed.",
-  "Le SOS n’a pas pu être enregistré.": "Could not save the SOS."
+  "Le SOS n’a pas pu être enregistré.": "Could not save the SOS.",
+  "Répondre": "Reply",
+  "Réponse à {{name}}": "Replying to {{name}}",
+  "Annuler la réponse": "Cancel reply",
+  "Afficher le message d’origine": "Show original message",
+  "Message d’origine": "Original message",
+  "Message indisponible": "Message unavailable",
+  "Chargement du message…": "Loading message…",
+  "Ce message n’est plus disponible pour une réponse.": "This message is no longer available to reply to."
 }

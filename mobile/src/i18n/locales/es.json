@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "SOS para {{name}}",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "No se pudo activar Auto-SOS. Comprueba los permisos del líder e inténtalo de nuevo.",
   "Un instrument déjà pourvu ne peut pas être retiré.": "No se puede quitar un instrumento ya cubierto.",
-  "Le SOS n’a pas pu être enregistré.": "No se pudo guardar el SOS."
+  "Le SOS n’a pas pu être enregistré.": "No se pudo guardar el SOS.",
+  "Répondre": "Responder",
+  "Réponse à {{name}}": "Respondiendo a {{name}}",
+  "Annuler la réponse": "Cancelar respuesta",
+  "Afficher le message d’origine": "Ver mensaje original",
+  "Message d’origine": "Mensaje original",
+  "Message indisponible": "Mensaje no disponible",
+  "Chargement du message…": "Cargando mensaje…",
+  "Ce message n’est plus disponible pour une réponse.": "Ya no se puede responder a este mensaje."
 }

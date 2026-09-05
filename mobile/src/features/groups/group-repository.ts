@@ -188,7 +188,7 @@ const commentColumns = 'id,group_id,song_id,author_id,text,created_at' as const;
 const invitationColumns = 'id,group_id,profile_id,invited_by,kind,created_at' as const;
 const profileColumns = 'id,name,photo_url,instruments' as const;
 const messageColumns =
-  'id,group_id,sender_id,text,created_at,edited_at,deleted_at,attachment_path,attachment_name,attachment_type,attachment_size' as const;
+  'id,group_id,sender_id,text,created_at,edited_at,deleted_at,attachment_path,attachment_name,attachment_type,attachment_size,reply_to_id' as const;
 const messageFilesBucket = 'message-files';
 const groupDocsBucket = 'group-docs';
 const attachmentMaxBytes = 25 * 1_024 * 1_024;
@@ -556,6 +556,7 @@ function mapMessages(
         editedAt: row.edited_at,
         groupId: row.group_id,
         id: row.id,
+        replyToId: row.reply_to_id ?? null,
         reactions: aggregateGroupReactions(
           (reactions.get(row.id) ?? []).map((reaction) => ({
             emoji: reaction.emoji,
@@ -918,6 +919,37 @@ export async function fetchGroupMessagesPage(
   };
 }
 
+/** Quotes can refer to messages older than the loaded conversation pages. */
+export async function fetchGroupReplyMessages(
+  groupId: string,
+  userId: string,
+  messageIds: readonly string[],
+  signal?: AbortSignal,
+): Promise<GroupMessage[]> {
+  if (!groupId || !userId || messageIds.length === 0) return [];
+  const supabase = getSupabaseClient();
+  const ids = [...new Set(messageIds)];
+  const rows: MessageRow[] = [];
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const query = supabase
+      .from('group_messages')
+      .select(messageColumns)
+      .eq('group_id', groupId)
+      .in('id', ids.slice(offset, offset + 100));
+    const result = await (signal ? query.abortSignal(signal) : query);
+    if (result.error) throw result.error;
+    rows.push(...result.data);
+  }
+  if (!rows.length) return [];
+  const query = supabase
+    .from('profiles')
+    .select(profileColumns)
+    .in('id', [...new Set(rows.map((row) => row.sender_id))]);
+  const result = await (signal ? query.abortSignal(signal) : query);
+  if (result.error) throw result.error;
+  return mapMessages(rows, new Map(), groupId, userId, profileMap(result.data));
+}
+
 export async function fetchGroupMessageReactions(
   messageId: string,
   userId: string,
@@ -1149,6 +1181,7 @@ export async function sendGroupMessage(
   senderId: string,
   text: string,
   attachment: PendingMessageAttachment | null = null,
+  replyToId: string | null = null,
 ): Promise<GroupMessage> {
   if (!groupId || !senderId) throw new Error('group_message_session_required');
   if (!isValidGroupMessage(text, attachment !== null)) throw new Error('group_message_invalid');
@@ -1163,6 +1196,7 @@ export async function sendGroupMessage(
       attachment_size: uploaded?.size ?? null,
       attachment_type: uploaded?.type ?? null,
       group_id: groupId,
+      reply_to_id: replyToId,
       sender_id: senderId,
       text: text.trim(),
     })

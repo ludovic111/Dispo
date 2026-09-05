@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "SOS für {{name}}",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "Auto-SOS konnte nicht aktiviert werden. Prüfe die Rechte der Leitung und versuche es erneut.",
   "Un instrument déjà pourvu ne peut pas être retiré.": "Ein bereits besetztes Instrument kann nicht entfernt werden.",
-  "Le SOS n’a pas pu être enregistré.": "Das SOS konnte nicht gespeichert werden."
+  "Le SOS n’a pas pu être enregistré.": "Das SOS konnte nicht gespeichert werden.",
+  "Répondre": "Antworten",
+  "Réponse à {{name}}": "Antwort an {{name}}",
+  "Annuler la réponse": "Antwort abbrechen",
+  "Afficher le message d’origine": "Originalnachricht anzeigen",
+  "Message d’origine": "Originalnachricht",
+  "Message indisponible": "Nachricht nicht verfügbar",
+  "Chargement du message…": "Nachricht wird geladen…",
+  "Ce message n’est plus disponible pour une réponse.": "Auf diese Nachricht kann nicht mehr geantwortet werden."
 }

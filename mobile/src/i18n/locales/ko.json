@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "{{name}} 대체 SOS",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "자동 SOS를 활성화하지 못했습니다. 리더의 권한을 확인하고 다시 시도하세요.",
   "Un instrument déjà pourvu ne peut pas être retiré.": "이미 충원된 악기는 삭제할 수 없습니다.",
-  "Le SOS n’a pas pu être enregistré.": "SOS를 저장하지 못했습니다."
+  "Le SOS n’a pas pu être enregistré.": "SOS를 저장하지 못했습니다.",
+  "Répondre": "답장",
+  "Réponse à {{name}}": "{{name}}님에게 답장",
+  "Annuler la réponse": "답장 취소",
+  "Afficher le message d’origine": "원본 메시지 보기",
+  "Message d’origine": "원본 메시지",
+  "Message indisponible": "메시지를 볼 수 없습니다",
+  "Chargement du message…": "메시지 불러오는 중…",
+  "Ce message n’est plus disponible pour une réponse.": "이 메시지에는 더 이상 답장할 수 없습니다."
 }

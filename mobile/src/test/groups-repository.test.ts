@@ -14,10 +14,12 @@ import {
   createGroup,
   deleteSongComment,
   enrichSongCatalogResult,
+  fetchGroupReplyMessages,
   isAllowedGroupDocumentExtension,
   openGroupDocument,
   saveGroupRepertoire,
   searchSongCatalog,
+  sendGroupMessage,
   setGroupMessageReaction,
   updateGroupEvent,
 } from '@/features/groups/group-repository';
@@ -38,6 +40,53 @@ jest.mock('expo-crypto', () => ({
 jest.mock('@/services/supabase/client', () => ({ getSupabaseClient: jest.fn() }));
 
 const mockedClient = jest.mocked(getSupabaseClient);
+
+describe('group reply persistence', () => {
+  it('stores the reference separately from the answer and returns it after sending', async () => {
+    const row = {
+      id: 'answer',
+      group_id: 'group',
+      sender_id: 'me',
+      text: 'En mi bémol',
+      reply_to_id: 'question',
+      created_at: '2026-09-05T12:00:00Z',
+      deleted_at: null,
+      edited_at: null,
+      attachment_name: null,
+      attachment_path: null,
+      attachment_type: null,
+      attachment_size: null,
+    };
+    const insert = jest.fn(() => ({
+      select: () => ({ single: async () => ({ data: row, error: null }) }),
+    }));
+    mockedClient.mockReturnValue({ from: () => ({ insert }) } as never);
+    await expect(
+      sendGroupMessage('group', 'me', ' En mi bémol ', null, 'question'),
+    ).resolves.toEqual(expect.objectContaining({ text: 'En mi bémol', replyToId: 'question' }));
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: 'En mi bémol',
+        reply_to_id: 'question',
+        group_id: 'group',
+        sender_id: 'me',
+      }),
+    );
+  });
+
+  it('scopes quote reads to the current group and does not fabricate an inaccessible original', async () => {
+    const selectIds = jest.fn(async () => ({ data: [], error: null }));
+    const groupFilter = jest.fn(() => ({ in: selectIds }));
+    const from = jest.fn(() => ({ select: () => ({ eq: groupFilter }) }));
+    mockedClient.mockReturnValue({ from } as never);
+    await expect(
+      fetchGroupReplyMessages('group', 'me', ['old', 'old', 'missing']),
+    ).resolves.toEqual([]);
+    expect(groupFilter).toHaveBeenCalledWith('group_id', 'group');
+    expect(selectIds).toHaveBeenCalledWith('id', ['old', 'missing']);
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+});
 
 function song(): GroupSong {
   return {

@@ -53,6 +53,7 @@ const mockMessage: GroupMessage = {
 };
 jest.mock('@/features/groups/group-queries', () => ({
   useGroupMessages: () => ({ data: { pages: [{ items: [mockMessage] }] } }),
+  useGroupReplyMessages: () => ({ data: [] }),
   useGroupMessageReaction: () => ({ mutate: mockReact, isPending: false }),
   useDeleteGroupMessage: () => ({ mutate: jest.fn() }),
   useEditGroupMessage: () => ({ mutate: jest.fn() }),

@@ -50,6 +50,7 @@ import {
   fetchGroupInvitations,
   fetchGroupMessageReactions,
   fetchGroupMessagesPage,
+  fetchGroupReplyMessages,
   fetchGroupProfileCandidates,
   fetchGroups,
   groupMessageFromRealtimeRow,
@@ -103,6 +104,8 @@ export const groupKeys = {
   invitations: (userId: string) => ['groups', 'invitations', userId] as const,
   list: (userId: string) => ['groups', 'list', userId] as const,
   messages: (userId: string, groupId: string) => ['groups', 'messages', userId, groupId] as const,
+  replyMessages: (userId: string, groupId: string) =>
+    ['groups', 'reply-messages', userId, groupId] as const,
   seen: (userId: string) => ['groups', 'seen', userId] as const,
 };
 
@@ -384,6 +387,18 @@ export function useGroup(groupId: string) {
   return { ...query, data: query.data?.find((group) => group.id === groupId) };
 }
 
+export function useGroupReplyMessages(groupId: string, messageIds: readonly string[]) {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const signature = [...new Set(messageIds)].sort().join(',');
+  return useQuery({
+    enabled: Boolean(userId && groupId && signature),
+    queryKey: [...groupKeys.replyMessages(userId, groupId), signature],
+    queryFn: ({ signal }) => fetchGroupReplyMessages(groupId, userId, signature.split(','), signal),
+    refetchOnMount: 'always',
+  });
+}
+
 export function useGroupMessages(groupId: string, active = true) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
@@ -440,6 +455,11 @@ export function useGroupMessages(groupId: string, active = true) {
           row,
           userId,
           senderForGroup(groups, groupId, row.sender_id),
+        );
+        // A referenced message may be outside the paginated thread cache.
+        queryClient.setQueriesData<GroupMessage[]>(
+          { queryKey: groupKeys.replyMessages(userId, groupId) },
+          (cached) => cached?.map((message) => (message.id === incoming.id ? incoming : message)),
         );
         const current = queryClient.getQueryData<GroupMessageCache>(queryKey);
         if (current?.pages.length) {
@@ -676,8 +696,9 @@ export function useSendGroupMessage() {
     mutationFn: (input: {
       attachment: PendingMessageAttachment | null;
       groupId: string;
+      replyToId?: string | null;
       text: string;
-    }) => sendGroupMessage(input.groupId, userId, input.text, input.attachment),
+    }) => sendGroupMessage(input.groupId, userId, input.text, input.attachment, input.replyToId),
     onSuccess: (message, input) => {
       const groups = queryClient.getQueryData<MusicGroup[]>(groupKeys.list(userId));
       const enriched = groupMessageFromRealtimeRow(
@@ -691,6 +712,7 @@ export function useSendGroupMessage() {
           edited_at: message.editedAt,
           group_id: message.groupId,
           id: message.id,
+          reply_to_id: message.replyToId ?? null,
           sender_id: message.senderId,
           text: message.text,
         },

@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "为 {{name}} 寻找替补",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "无法启用自动 SOS。请检查领队权限后重试。",
   "Un instrument déjà pourvu ne peut pas être retiré.": "无法移除已有演奏者的乐器。",
-  "Le SOS n’a pas pu être enregistré.": "无法保存 SOS。"
+  "Le SOS n’a pas pu être enregistré.": "无法保存 SOS。",
+  "Répondre": "回复",
+  "Réponse à {{name}}": "回复 {{name}}",
+  "Annuler la réponse": "取消回复",
+  "Afficher le message d’origine": "查看原消息",
+  "Message d’origine": "原消息",
+  "Message indisponible": "消息不可用",
+  "Chargement du message…": "正在加载消息…",
+  "Ce message n’est plus disponible pour une réponse.": "无法再回复此消息。"
 }

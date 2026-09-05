@@ -587,6 +587,7 @@ export type Database = {
           edited_at: string | null;
           group_id: string;
           id: string;
+          reply_to_id: string | null;
           sender_id: string;
           text: string;
         };
@@ -600,6 +601,7 @@ export type Database = {
           edited_at?: string | null;
           group_id: string;
           id?: string;
+          reply_to_id?: string | null;
           sender_id: string;
           text: string;
         };
@@ -613,10 +615,18 @@ export type Database = {
           edited_at?: string | null;
           group_id?: string;
           id?: string;
+          reply_to_id?: string | null;
           sender_id?: string;
           text?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'group_messages_reply_to_id_fkey';
+            columns: ['reply_to_id'];
+            isOneToOne: false;
+            referencedRelation: 'group_messages';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'group_messages_group_id_fkey';
             columns: ['group_id'];
@@ -1942,6 +1952,7 @@ export type Database = {
           edited_at: string | null;
           group_id: string;
           id: string;
+          reply_to_id: string | null;
           sender_id: string;
           text: string;
         }[];

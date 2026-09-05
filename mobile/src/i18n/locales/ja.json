@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "{{name}}の代奏SOS",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "自動SOSを有効にできませんでした。リーダーの権限を確認して再試行してください。",
   "Un instrument déjà pourvu ne peut pas être retiré.": "担当者が決まった楽器は削除できません。",
-  "Le SOS n’a pas pu être enregistré.": "SOSを保存できませんでした。"
+  "Le SOS n’a pas pu être enregistré.": "SOSを保存できませんでした。",
+  "Répondre": "返信",
+  "Réponse à {{name}}": "{{name}}に返信",
+  "Annuler la réponse": "返信をキャンセル",
+  "Afficher le message d’origine": "元のメッセージを表示",
+  "Message d’origine": "元のメッセージ",
+  "Message indisponible": "メッセージを表示できません",
+  "Chargement du message…": "メッセージを読み込み中…",
+  "Ce message n’est plus disponible pour une réponse.": "このメッセージにはもう返信できません。"
 }

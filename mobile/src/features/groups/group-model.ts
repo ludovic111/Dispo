@@ -70,6 +70,7 @@ export interface GroupMessage {
   groupId: string;
   id: string;
   reactions: GroupReactionSummary[];
+  replyToId?: string | null;
   senderId: string;
   senderName: string;
   senderPhotoUrl: string | null;

@@ -2239,5 +2239,13 @@
   "SOS pour {{name}}": "SOS pour {{name}}",
   "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.": "L’Auto-SOS n’a pas pu être activé. Vérifie les droits du leader et réessaie.",
   "Un instrument déjà pourvu ne peut pas être retiré.": "Un instrument déjà pourvu ne peut pas être retiré.",
-  "Le SOS n’a pas pu être enregistré.": "Le SOS n’a pas pu être enregistré."
+  "Le SOS n’a pas pu être enregistré.": "Le SOS n’a pas pu être enregistré.",
+  "Répondre": "Répondre",
+  "Réponse à {{name}}": "Réponse à {{name}}",
+  "Annuler la réponse": "Annuler la réponse",
+  "Afficher le message d’origine": "Afficher le message d’origine",
+  "Message d’origine": "Message d’origine",
+  "Message indisponible": "Message indisponible",
+  "Chargement du message…": "Chargement du message…",
+  "Ce message n’est plus disponible pour une réponse.": "Ce message n’est plus disponible pour une réponse."
 }
