@@ -122,6 +122,7 @@ export interface GroupSong {
   previewUrl: string | null;
   releaseYear: number | null;
   solos: string[];
+  startsSet?: boolean;
   suggestedBy: string;
   tempoBpm: number | null;
   title: string;
@@ -157,6 +158,7 @@ export interface GroupAttendance {
 }
 
 export interface GroupEvent {
+  scheduleChangedAt?: string | null;
   attendance: GroupAttendance[];
   city?: string | null;
   countryCode?: string | null;
@@ -330,6 +332,7 @@ export function groupSongFromJson(value: unknown): GroupSong | null {
     releaseYear: nullableNumber(source.release_year),
     solos: stringArray(source.solos).map((solo) => solo.toLowerCase()),
     suggestedBy: stringValue(source.suggested_by),
+    ...(source.starts_set === true ? { startsSet: true } : {}),
     tempoBpm: nullableNumber(source.tempo_bpm),
     title,
     trackUrl: nullableString(source.track_url),
@@ -366,8 +369,11 @@ export function groupSongToJson(song: GroupSong): Record<string, unknown> {
     platform_links: song.platformLinks,
     preview_url: song.previewUrl,
     release_year: song.releaseYear,
-    solos: song.solos.map((solo) => solo.toLowerCase()),
+    ...(song.isApproved || song.solos.length > 0
+      ? { solos: song.solos.map((solo) => solo.toLowerCase()) }
+      : {}),
     suggested_by: song.suggestedBy,
+    ...(song.startsSet ? { starts_set: true } : {}),
     tempo_bpm: song.tempoBpm,
     title: song.title,
     track_url: song.trackUrl,

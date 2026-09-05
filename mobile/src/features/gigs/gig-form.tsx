@@ -16,6 +16,7 @@ import {
   type GigCreateInput,
   type GigFormDefaults,
 } from './gig-model';
+import { GigSchoolField } from './gig-school-field';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -31,6 +32,10 @@ import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
 export interface GigFormInitial {
+  exactAddress?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  wantedSchoolIds?: string[];
   date?: string;
   description?: string;
   fee?: number | null;
@@ -43,6 +48,7 @@ export interface GigFormInitial {
 }
 
 interface GigFormProps {
+  lockEventLocation?: boolean;
   availableDates?: string[];
   defaults: GigFormDefaults;
   errorMessage?: string;
@@ -154,6 +160,7 @@ function ChoiceSection({
 
 export function GigForm({
   availableDates = [],
+  lockEventLocation = false,
   defaults,
   errorMessage,
   eventId = null,
@@ -187,7 +194,8 @@ export function GigForm({
   const [postalCode, setPostalCode] = useState(defaults.postalCode);
   const [city, setCity] = useState(defaults.city);
   const [resolvedPlace, setResolvedPlace] = useState<ResolvedPostalPlace | null>(null);
-  const [exactAddress, setExactAddress] = useState('');
+  const [exactAddress, setExactAddress] = useState(initial?.exactAddress ?? '');
+  const [wantedSchoolIds, setWantedSchoolIds] = useState(initial?.wantedSchoolIds ?? []);
   const [wantedInstruments, setWantedInstruments] = useState(initial?.wantedInstruments ?? []);
   const [wantedLevels, setWantedLevels] = useState(initial?.wantedLevels ?? []);
   const [feeMode, setFeeMode] = useState<FeeMode>(
@@ -204,6 +212,7 @@ export function GigForm({
     Boolean(initialPaymentMethod && !initialPaymentIsKnown),
   );
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [locationChanged, setLocationChanged] = useState(false);
   const [localError, setLocalError] = useState('');
 
   const directOptions = useMemo(
@@ -240,8 +249,9 @@ export function GigForm({
         genre,
         groupId,
         hostId,
-        latitude: resolvedPlace?.latitude ?? null,
-        longitude: resolvedPlace?.longitude ?? null,
+        latitude: resolvedPlace?.latitude ?? (locationChanged ? null : (initial?.latitude ?? null)),
+        longitude:
+          resolvedPlace?.longitude ?? (locationChanged ? null : (initial?.longitude ?? null)),
         paymentMethod: defaults.isProfessional
           ? usesCustomPaymentMethod
             ? customPaymentMethod
@@ -256,8 +266,11 @@ export function GigForm({
             : title,
         wantedInstruments,
         wantedLevels: mode === 'direct' ? [] : wantedLevels,
+        wantedSchoolIds: mode === 'direct' ? [] : wantedSchoolIds,
       };
-      const [error] = validateGigCreate(input);
+      const [error] = validateGigCreate(input).filter(
+        (code) => !lockEventLocation || code !== 'gig_public_area_incomplete',
+      );
       if (error) {
         setLocalError(errorLabel(error, t));
         return;
@@ -294,13 +307,21 @@ export function GigForm({
           placeholder={t('Cherche pianiste, soirée salsa')}
           value={title}
         />
-        <NativeDateTimeField
-          dateLabel={t('Date')}
-          minimumDate={new Date()}
-          onChange={setDate}
-          timeLabel={t('Heure')}
-          value={date}
-        />
+        {lockEventLocation ? (
+          <AppText color={palette.muted}>
+            {new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeStyle: 'short' }).format(
+              date,
+            )}
+          </AppText>
+        ) : (
+          <NativeDateTimeField
+            dateLabel={t('Date')}
+            minimumDate={new Date()}
+            onChange={setDate}
+            timeLabel={t('Heure')}
+            value={date}
+          />
+        )}
         {mode === 'direct' && availableDates.length > 0 ? (
           <View style={styles.choiceSection}>
             <AppText color={palette.muted} variant="caption">
@@ -345,65 +366,73 @@ export function GigForm({
         </Card>
       ) : null}
 
-      <Card style={styles.section}>
-        <AppText color={palette.bronze} variant="label">
-          {t('Zone visible avant la réponse')}
-        </AppText>
-        <FormField
-          label={t('Quartier, salle ou repère public (facultatif)')}
-          onChangeText={setPublicPlace}
-          placeholder={t('AMR, Plainpalais…')}
-          value={publicPlace}
-        />
-        <FormField
-          autoCapitalize="characters"
-          label={t('Pays')}
-          maxLength={2}
-          onChangeText={(value) => {
-            setResolvedPlace(null);
-            setCountryCode(value);
-          }}
-          placeholder="CH"
-          value={countryCode}
-        />
-        <PostalPlaceField
-          onChange={(place) => {
-            setResolvedPlace(null);
-            setCountryCode(place.countryCode);
-            setPostalCode(place.postalCode);
-            setCity(place.city);
-          }}
-          onResolved={setResolvedPlace}
-          value={{ city, countryCode, postalCode }}
-        />
-        <AppText color={palette.muted} variant="caption">
-          {t('Tout le monde voit uniquement cette zone générale.')}
-        </AppText>
-      </Card>
+      {mode === 'public' ? (
+        <GigSchoolField selected={wantedSchoolIds} onChange={setWantedSchoolIds} />
+      ) : null}
+      {!lockEventLocation ? (
+        <>
+          <Card style={styles.section}>
+            <AppText color={palette.bronze} variant="label">
+              {t('Zone visible avant la réponse')}
+            </AppText>
+            <FormField
+              label={t('Quartier, salle ou repère public (facultatif)')}
+              onChangeText={setPublicPlace}
+              placeholder={t('AMR, Plainpalais…')}
+              value={publicPlace}
+            />
+            <FormField
+              autoCapitalize="characters"
+              label={t('Pays')}
+              maxLength={2}
+              onChangeText={(value) => {
+                setResolvedPlace(null);
+                setLocationChanged(true);
+                setCountryCode(value);
+              }}
+              placeholder="CH"
+              value={countryCode}
+            />
+            <PostalPlaceField
+              onChange={(place) => {
+                setResolvedPlace(null);
+                setLocationChanged(true);
+                setCountryCode(place.countryCode);
+                setPostalCode(place.postalCode);
+                setCity(place.city);
+              }}
+              onResolved={setResolvedPlace}
+              value={{ city, countryCode, postalCode }}
+            />
+            <AppText color={palette.muted} variant="caption">
+              {t('Tout le monde voit uniquement cette zone générale.')}
+            </AppText>
+          </Card>
 
-      <Card style={styles.section}>
-        <View style={styles.privateTitle}>
-          <Ionicons color={palette.jam} name="lock-closed" size={17} />
-          <AppText color={palette.bronze} variant="label">
-            {t('Rendez-vous privé')}
-          </AppText>
-        </View>
-        <FormField
-          label={t('Rue, numéro, entrée, étage… (facultatif)')}
-          multiline
-          numberOfLines={3}
-          onChangeText={setExactAddress}
-          placeholder={t('Adresse exacte')}
-          style={styles.textareaSmall}
-          value={exactAddress}
-        />
-        <AppText color={palette.jam} variant="caption">
-          {mode === 'direct'
-            ? t('Révélée seulement si la demande est acceptée.')
-            : t('Visible uniquement par toi et les musicien·nes accepté·es.')}
-        </AppText>
-      </Card>
-
+          <Card style={styles.section}>
+            <View style={styles.privateTitle}>
+              <Ionicons color={palette.jam} name="lock-closed" size={17} />
+              <AppText color={palette.bronze} variant="label">
+                {t('Rendez-vous privé')}
+              </AppText>
+            </View>
+            <FormField
+              label={t('Rue, numéro, entrée, étage… (facultatif)')}
+              multiline
+              numberOfLines={3}
+              onChangeText={setExactAddress}
+              placeholder={t('Adresse exacte')}
+              style={styles.textareaSmall}
+              value={exactAddress}
+            />
+            <AppText color={palette.jam} variant="caption">
+              {mode === 'direct'
+                ? t('Révélée seulement si la demande est acceptée.')
+                : t('Visible uniquement par toi et les musicien·nes accepté·es.')}
+            </AppText>
+          </Card>
+        </>
+      ) : null}
       <Card style={styles.section}>
         <AppText color={palette.bronze} variant="label">
           {mode === 'direct' ? t('Instrument recherché') : t('Musicien·nes recherché·es')}

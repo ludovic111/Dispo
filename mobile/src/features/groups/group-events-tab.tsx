@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { useEventHasUnseenChange } from './group-event-changes';
 import { groupEventColor } from './group-event-presentation';
 import {
   attendanceFor,
@@ -29,6 +30,7 @@ function DateTicket({ event }: { event: GroupEvent }) {
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const date = new Date(event.date);
   const day = new Intl.DateTimeFormat(locale, { day: '2-digit' }).format(date);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
   const month = new Intl.DateTimeFormat(locale, { month: 'short' })
     .format(date)
     .replace('.', '')
@@ -36,6 +38,9 @@ function DateTicket({ event }: { event: GroupEvent }) {
   const color = groupEventColor(event.kind, palette) ?? palette.rehearsal;
   return (
     <LinearGradient colors={[color, color]} style={styles.ticket}>
+      <AppText color={billetInk} style={styles.ticketWeekday}>
+        {weekday}
+      </AppText>
       <AppText color={billetInk} style={styles.ticketDay}>
         {day}
       </AppText>
@@ -57,6 +62,7 @@ function EventCard({
 }) {
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
+  const changed = useEventHasUnseenChange(userId, event.id, event.scheduleChangedAt);
   const summary = eventAttendanceSummary(event);
   const status = attendanceFor(event, userId);
   const lineup = groupLineupState(event, group.members);
@@ -68,7 +74,7 @@ function EventCard({
     lineup === 'complete' ? palette.jam : lineup === 'late' ? palette.signal : palette.bronze;
   return (
     <Pressable
-      accessibilityLabel={`${t('Ouvrir')} ${event.title}`}
+      accessibilityLabel={`${t('Ouvrir')} ${t(event.kind)}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
       accessibilityRole="button"
       onPress={() => router.push(`/groups/${group.id}/events/${event.id}` as never)}
       style={({ pressed }) => pressed && styles.pressed}
@@ -79,12 +85,16 @@ function EventCard({
           <View style={styles.eventCopy}>
             <View style={styles.titleLine}>
               <AppText numberOfLines={1} style={styles.eventTitle}>
-                {event.title}
+                {t(event.kind)}
               </AppText>
-              <Tag
-                color={groupEventColor(event.kind, palette) ?? palette.rehearsal}
-                label={t(event.kind)}
-              />
+              {changed ? (
+                <Ionicons
+                  accessibilityLabel={t('Date, heure ou lieu modifié')}
+                  name="alert-circle"
+                  size={20}
+                  color={palette.signal}
+                />
+              ) : null}
             </View>
             <AppText color={palette.muted} numberOfLines={1} variant="caption">
               {date}
@@ -241,6 +251,7 @@ const styles = StyleSheet.create({
     width: 68,
   },
   ticketDay: { fontFamily: typography.display, fontSize: 26, lineHeight: 28 },
+  ticketWeekday: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
   ticketMonth: { fontFamily: typography.monoSemibold, fontSize: 10, letterSpacing: 0.7 },
   titleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
 });

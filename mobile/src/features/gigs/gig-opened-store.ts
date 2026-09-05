@@ -20,6 +20,7 @@ export function shouldFetchNextSosBadgePage(
 }
 
 export interface GigBadgeViewer {
+  schools?: { id: string }[];
   id: string;
   instrumentLevels: Record<string, string> | null;
   instruments: string[];
@@ -80,6 +81,11 @@ export function subscribeToOpenedGigs(
 }
 
 export function gigMatchesBadgeViewer(gig: GigSummary, viewer: GigBadgeViewer): boolean {
+  if (
+    gig.wantedSchoolIds?.length &&
+    !viewer.schools?.some((school) => gig.wantedSchoolIds?.includes(school.id))
+  )
+    return false;
   const open = openGigInstruments(gig);
   if (open.length === 0) return false;
   if (viewer.instruments.length === 0) return true;

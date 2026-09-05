@@ -138,6 +138,7 @@ export interface UpdateGroupSettingsInput {
 }
 
 export interface UpdateGroupEventInput {
+  kind?: GroupEvent['kind'];
   city: string;
   clearExactAddress: boolean;
   countryCode: string;
@@ -178,7 +179,7 @@ const groupColumns =
   'id,name,emoji,photo_url,is_public,leader_id,repertoire,auto_sos_enabled,auto_sos_min_level,created_at,updated_at' as const;
 const memberColumns = 'group_id,profile_id,kind,role,joined_at' as const;
 const eventColumns =
-  'id,group_id,kind,title,venue,public_location_label,date,setlist,series_id,recurrence,reminder_lead_days,created_at' as const;
+  'id,group_id,kind,title,venue,public_location_label,date,setlist,series_id,recurrence,reminder_lead_days,created_at,schedule_changed_at' as const;
 const attendanceColumns = 'event_id,profile_id,status,responded_at' as const;
 const reactionColumns = 'message_id,profile_id,emoji,removed_at,created_at' as const;
 const documentColumns =
@@ -686,6 +687,7 @@ function mapEvents(
         city: location?.city || null,
         countryCode: location?.country_code || null,
         date: row.date,
+        scheduleChangedAt: row.schedule_changed_at,
         exactAddress: location?.exact_address || null,
         groupId: row.group_id,
         id: row.id,
@@ -1284,7 +1286,7 @@ export async function updateGroupEvent(input: UpdateGroupEventInput): Promise<vo
     date: dateForTarget(event).toISOString(),
     exact_address: replaceAddress ? exactAddress : '',
     id: event.id,
-    kind: event.kind,
+    kind: input.kind ?? event.kind,
     latitude: input.latitude,
     longitude: input.longitude,
     postal_code: input.postalCode.trim(),

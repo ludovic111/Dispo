@@ -16,7 +16,7 @@ import {
 
 import { pageRange, type Page } from '@/domain/pagination';
 import { getSupabaseClient } from '@/services/supabase/client';
-import type { Database } from '@/services/supabase/database.types';
+import type { Json, Database } from '@/services/supabase/database.types';
 
 type GigFeedRow = Database['public']['Views']['gig_requests_feed']['Row'];
 type GigRow = Database['public']['Tables']['gig_requests']['Row'];
@@ -44,6 +44,7 @@ type GigProjection = Pick<
   | 'title'
   | 'wanted_instruments'
   | 'wanted_levels'
+  | 'wanted_school_ids'
 >;
 type HostedGigProjection = Pick<
   GigRow,
@@ -66,6 +67,7 @@ type HostedGigProjection = Pick<
   | 'title'
   | 'wanted_instruments'
   | 'wanted_levels'
+  | 'wanted_school_ids'
 >;
 type MappableGigProjection = GigProjection | HostedGigProjection;
 type ApplicationProjection = Pick<
@@ -84,9 +86,9 @@ type MatchProfileProjection = Pick<
 >;
 
 const gigColumns =
-  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,filled_instruments,fee,payment_method,description,is_locked,posted_at,group_id,event_id,target_id,target_status' as const;
+  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,is_locked,posted_at,group_id,event_id,target_id,target_status' as const;
 const hostedGigColumns =
-  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,filled_instruments,fee,payment_method,description,posted_at,group_id,event_id,target_id,target_status' as const;
+  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,posted_at,group_id,event_id,target_id,target_status' as const;
 const applicationColumns = 'id,musician_id,instrument,message,status,created_at' as const;
 const matchProfileColumns =
   'id,name,photo_url,instruments,genres,level,available_dates,is_demo' as const;
@@ -186,6 +188,7 @@ async function mapGigs(rows: MappableGigProjection[], signal?: AbortSignal): Pro
       title: row.title,
       wantedInstruments: row.wanted_instruments ?? [],
       wantedLevels: row.wanted_levels ?? [],
+      wantedSchoolIds: row.wanted_school_ids ?? [],
     };
   });
 }
@@ -367,6 +370,30 @@ export async function fetchGig(
   };
 }
 
+export async function fetchGigForEdit(
+  gigId: string,
+  userId: string,
+  signal?: AbortSignal,
+): Promise<GigDetail> {
+  const query = getSupabaseClient()
+    .from('gig_requests')
+    .select(hostedGigColumns)
+    .eq('id', gigId)
+    .eq('host_id', userId);
+  const result = await (signal ? query.abortSignal(signal) : query).single();
+  if (result.error) throw result.error;
+  const [gig] = await mapGigs([result.data as HostedGigProjection], signal);
+  if (!gig) throw new Error('gig_not_found');
+  const location = await getSupabaseClient().rpc('get_gig_request_location', { p_gig_id: gigId });
+  if (location.error) throw location.error;
+  return {
+    ...gig,
+    applicants: [],
+    myApplication: null,
+    location: resolveGigLocation(location.data?.[0] ?? null),
+  };
+}
+
 export async function fetchGigFormDefaults(
   userId: string,
   signal?: AbortSignal,
@@ -414,6 +441,20 @@ export async function createGig(input: GigCreateInput): Promise<string> {
   }
   await deliverQueuedPush();
   return gigId;
+}
+
+export async function updateGig(
+  gigId: string,
+  input: GigCreateInput,
+  clearExactAddress = false,
+): Promise<void> {
+  const plan = createGigWritePlan(input, new Date(), true);
+  const result = await getSupabaseClient().rpc('update_gig_request', {
+    p_gig_id: gigId,
+    p_changes: plan.insert as unknown as Json,
+    p_location: { ...plan.location, clearExactAddress } as unknown as Json,
+  });
+  if (result.error) throw result.error;
 }
 
 export async function applyToGig(
@@ -526,7 +567,11 @@ export async function fetchGigMatches(
   if (incomingResult.error) throw incomingResult.error;
   const outgoing = new Set(outgoingResult.data.map((follow) => follow.following_id));
   const incoming = new Set(incomingResult.data.map((follow) => follow.follower_id));
+  const schools = gig.wantedSchoolIds?.length
+    ? await visibleSchoolIdsByProfile(profileIds, signal)
+    : new Map<string, string[]>();
   const profiles: GigMatchProfile[] = rows.map((row) => ({
+    schoolIds: schools.get(row.id) ?? [],
     availableDates: row.available_dates,
     genres: row.genres,
     id: row.id,

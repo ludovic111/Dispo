@@ -388,3 +388,18 @@ describe('puce locale des nouveaux SOS', () => {
     expect(countUnopenedCompatibleGigs(values, viewer, new Set(['opened']), now)).toBe(1);
   });
 });
+
+describe('SOS editing requirements', () => {
+  it('keeps the selected schools and removes duplicates from the write plan', () => {
+    const plan = createGigWritePlan(
+      { ...validCreate, wantedSchoolIds: ['school-a', 'school-b', 'school-a'] },
+      now,
+    );
+    expect(plan.insert.wanted_school_ids).toEqual(['school-a', 'school-b']);
+  });
+  it('allows a linked SOS edit with its event location preserved, while still requiring an area for standalone SOS', () => {
+    const linked = { ...validCreate, eventId: 'event', city: '', postalCode: '' };
+    expect(() => createGigWritePlan(linked, now, true)).not.toThrow();
+    expect(() => createGigWritePlan({ ...linked, eventId: null }, now, true)).toThrow();
+  });
+});

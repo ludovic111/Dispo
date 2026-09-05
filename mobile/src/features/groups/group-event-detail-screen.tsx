@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { GroupEventAutoSos } from './group-event-auto-sos';
+import { useMarkEventChangeSeen } from './group-event-changes';
 import {
   attendanceFor,
   groupLineupState,
@@ -180,6 +182,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   const event = group?.events.find((item) => item.id === eventId);
   const userId = session?.user.id ?? '';
   const isLeader = group?.leaderId === userId;
+  useMarkEventChangeSeen(userId, eventId, event?.scheduleChangedAt);
   const excludedProfileIds = useMemo(
     () => [
       ...(group?.members.map((member) => member.id) ?? []),
@@ -285,7 +288,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         groupId: group.id,
         instruments: missingRoles.join('|'),
         place: event.publicLocationLabel || event.venue,
-        title: event.title,
+        title: t(event.kind),
       },
       pathname: '/gigs/create',
     } as never);
@@ -293,12 +296,21 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   if (reorderActive) {
     return (
       <Screen nativeHeader>
-        <Stack.Screen options={{ title: event.title }} />
+        <Stack.Screen options={{ title: t(event.kind) }} />
         <SongReorderList
           title={t('Setlist')}
           songs={approvedSongs}
           onDone={() => setReorderMode(false)}
           onSave={(songIds) => reorderSetlist.mutateAsync({ eventId: event.id, songIds })}
+          onToggleSet={(song) =>
+            saveSetlist.mutateAsync({
+              eventId: event.id,
+              original: event.setlist,
+              desired: event.setlist.map((item) =>
+                item.id === song.id ? { ...item, startsSet: !item.startsSet } : item,
+              ),
+            })
+          }
         />
       </Screen>
     );
@@ -306,7 +318,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
 
   return (
     <Screen nativeHeader>
-      <Stack.Screen options={{ title: event.title }} />
+      <Stack.Screen options={{ title: t(event.kind) }} />
       <ScrollView contentContainerStyle={styles.content}>
         <AppText color={palette.muted} variant="caption">
           {group.name}
@@ -603,6 +615,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         {isLeader ? (
           <LinkedSosCard gigs={linkedGigs} onChanged={() => void resources.refetch()} />
         ) : null}
+        {isLeader ? <GroupEventAutoSos event={event} group={group} /> : null}
         {isLeader ? (
           <DispoButton onPress={publishSos} variant="danger">
             {t('Un membre lâche ? Publier un SOS')}
@@ -661,6 +674,20 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
         ) : null}
 
         <View style={styles.songStack}>
+          <DispoButton
+            icon="add"
+            onPress={() =>
+              router.push({
+                pathname: '/groups/[id]/songs/[songId]',
+                params: { id: group.id, songId: 'new', sourceEventId: event.id },
+              } as never)
+            }
+            variant="secondary"
+          >
+            {isLeader
+              ? t('Ajouter un morceau à cet événement')
+              : t('Suggérer un morceau pour cet événement')}
+          </DispoButton>
           <View style={styles.setlistHeader}>
             <View style={styles.flex}>
               <SectionHeader
@@ -700,16 +727,28 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
           </View>
           {approvedSongs.length ? (
             approvedSongs.map((song, index) => (
-              <View key={song.id} style={styles.numberedSongRow}>
-                <AppText color={palette.muted} style={styles.songIndex} variant="caption">
-                  {index + 1}.
-                </AppText>
-                <View style={styles.flex}>
-                  <GroupSongRow
-                    members={group.members}
-                    song={song}
-                    onPress={() => openSong(song)}
-                  />
+              <View key={song.id} style={styles.songStack}>
+                {(index === 0 && approvedSongs.some((item, i) => i > 0 && item.startsSet)) ||
+                (index > 0 && song.startsSet) ? (
+                  <AppText color={palette.bronze} variant="label">
+                    {t('Set {{number}}', {
+                      number:
+                        1 +
+                        approvedSongs.slice(1, index + 1).filter((item) => item.startsSet).length,
+                    })}
+                  </AppText>
+                ) : null}
+                <View style={styles.numberedSongRow}>
+                  <AppText color={palette.muted} style={styles.songIndex} variant="caption">
+                    {index + 1}.
+                  </AppText>
+                  <View style={styles.flex}>
+                    <GroupSongRow
+                      members={group.members}
+                      song={song}
+                      onPress={() => openSong(song)}
+                    />
+                  </View>
                 </View>
               </View>
             ))

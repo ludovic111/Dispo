@@ -253,6 +253,7 @@ export type Database = {
           target_status: string | null;
           title: string;
           wanted_instruments: string[];
+          wanted_school_ids: string[];
           wanted_levels: string[] | null;
         };
         Insert: {
@@ -276,6 +277,7 @@ export type Database = {
           target_status?: string | null;
           title: string;
           wanted_instruments?: string[];
+          wanted_school_ids?: string[];
           wanted_levels?: string[] | null;
         };
         Update: {
@@ -299,6 +301,7 @@ export type Database = {
           target_status?: string | null;
           title?: string;
           wanted_instruments?: string[];
+          wanted_school_ids?: string[];
           wanted_levels?: string[] | null;
         };
         Relationships: [
@@ -392,6 +395,7 @@ export type Database = {
       };
       group_events: {
         Row: {
+          schedule_changed_at: string | null;
           created_at: string;
           date: string;
           group_id: string;
@@ -406,6 +410,7 @@ export type Database = {
           venue: string;
         };
         Insert: {
+          schedule_changed_at?: string | null;
           created_at?: string;
           date: string;
           group_id: string;
@@ -420,6 +425,7 @@ export type Database = {
           venue?: string;
         };
         Update: {
+          schedule_changed_at?: string | null;
           created_at?: string;
           date?: string;
           group_id?: string;
@@ -1529,6 +1535,7 @@ export type Database = {
           target_status: string | null;
           title: string | null;
           wanted_instruments: string[] | null;
+          wanted_school_ids: string[] | null;
           wanted_levels: string[] | null;
         };
         Insert: {
@@ -1608,6 +1615,10 @@ export type Database = {
       };
     };
     Functions: {
+      update_gig_request: {
+        Args: { p_gig_id: string; p_changes: Json; p_location: Json };
+        Returns: undefined;
+      };
       accept_gig_application: {
         Args: { application_id: string };
         Returns: undefined;

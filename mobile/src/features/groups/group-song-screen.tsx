@@ -370,7 +370,7 @@ export function GroupSongScreen({
         <ErrorState message={t('Le morceau n’a pas pu être chargé.')} />
       </Screen>
     );
-  if (!group || (!isNew && !existing))
+  if (!group || (sourceEventId && !sourceEvent) || (!isNew && !existing))
     return (
       <Screen nativeHeader>
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />

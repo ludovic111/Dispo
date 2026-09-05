@@ -473,13 +473,7 @@ export function GroupSongRow({
           >
             <SongArtwork artworkUrl={song.artworkUrl} radius={11} size={52} />
             <View style={styles.songCopy}>
-              <AppText
-                adjustsFontSizeToFit
-                minimumFontScale={0.82}
-                numberOfLines={1}
-                style={styles.songTitle}
-                variant="subheadline"
-              >
+              <AppText numberOfLines={2} style={styles.songTitle} variant="subheadline">
                 {song.title}
               </AppText>
               {song.artist ? (

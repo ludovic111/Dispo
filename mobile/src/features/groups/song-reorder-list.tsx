@@ -19,11 +19,13 @@ export function SongReorderList({
   title,
   onDone,
   onSave,
+  onToggleSet,
 }: {
   songs: GroupSong[];
   title: string;
   onDone: () => void;
   onSave: (ids: string[]) => Promise<unknown>;
+  onToggleSet?: (song: GroupSong) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
@@ -57,6 +59,19 @@ export function SongReorderList({
       Alert.alert(t('L’ordre n’a pas pu être enregistré.'));
     } finally {
       setOrder(null);
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
+  const toggleSet = async (song: GroupSong) => {
+    if (!onToggleSet || savingRef.current || dragging) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await onToggleSet(song);
+    } catch {
+      Alert.alert(t('La séparation n’a pas pu être enregistrée.'));
+    } finally {
       savingRef.current = false;
       setSaving(false);
     }
@@ -136,6 +151,37 @@ export function SongReorderList({
           return (
             <ScaleDecorator activeScale={1.015}>
               <View style={styles.row}>
+                {onToggleSet ? (
+                  <View style={styles.setControl}>
+                    {index === 0 || item.startsSet ? (
+                      <AppText color={palette.bronze} variant="label">
+                        {t('Set {{number}}', {
+                          number:
+                            1 + data.slice(1, index + 1).filter((song) => song.startsSet).length,
+                        })}
+                      </AppText>
+                    ) : null}
+                    {index > 0 ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t(item.startsSet ? 'Supprimer la séparation' : 'Nouveau set ici')} · ${item.title}`}
+                        disabled={busy}
+                        accessibilityState={{ disabled: busy }}
+                        onPress={() => void toggleSet(item)}
+                        style={[styles.setButton, busy && styles.disabled]}
+                      >
+                        <Ionicons
+                          color={palette.electric}
+                          name={item.startsSet ? 'remove-circle-outline' : 'add-circle-outline'}
+                          size={18}
+                        />
+                        <AppText color={palette.electric} variant="caption">
+                          {t(item.startsSet ? 'Supprimer la séparation' : 'Nouveau set ici')}
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
                 <Card padding={10} style={isActive ? { borderColor: palette.electric } : undefined}>
                   <GroupSongRow
                     embedded
@@ -220,6 +266,8 @@ const styles = StyleSheet.create({
   },
   content: { padding: spacing.gutter, paddingBottom: spacing.xxl },
   row: { paddingBottom: spacing.sm },
+  setControl: { gap: spacing.xs, paddingBottom: spacing.xs },
+  setButton: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, minHeight: 44 },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
   position: { flex: 1 },
   control: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },

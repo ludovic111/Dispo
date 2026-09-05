@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
+import { router } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,7 @@ import {
   useRespondToDirectGig,
   useWithdrawGigApplication,
 } from './gig-queries';
+import { GigSchoolCriteria } from './gig-school-field';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -645,6 +647,7 @@ export function GigDetailContent({
         ) : (
           <AppText color={palette.muted}>{t('Niveau : ouvert à tous')}</AppText>
         )}
+        <GigSchoolCriteria ids={gig.wantedSchoolIds ?? []} />
         {gig.fee !== null ? (
           <View style={styles.feeRow}>
             <Ionicons color={palette.jam} name="cash-outline" size={18} />
@@ -667,7 +670,16 @@ export function GigDetailContent({
       <PrivateLocationCard gig={gig} />
 
       {gig.hostId === userId ? (
-        <OrganizerPanel gig={gig} onDeleted={onDeleted} onShowMatches={onShowMatches} />
+        <>
+          <DispoButton
+            icon="create-outline"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/gigs/edit', params: { id: gig.id } } as never)}
+          >
+            {t('Modifier le SOS')}
+          </DispoButton>
+          <OrganizerPanel gig={gig} onDeleted={onDeleted} onShowMatches={onShowMatches} />
+        </>
       ) : (
         <ViewerPanel gig={gig} userId={userId} />
       )}

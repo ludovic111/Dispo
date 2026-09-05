@@ -4,7 +4,12 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { parseGroupEventVenueLabel, type GroupEvent, type MusicGroup } from './group-model';
+import {
+  parseGroupEventVenueLabel,
+  type GroupEvent,
+  type GroupEventKind,
+  type MusicGroup,
+} from './group-model';
 import { useGroup, useUpdateGroupEvent } from './group-queries';
 
 import { AppText } from '@/components/ui/app-text';
@@ -31,7 +36,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
     event.publicLocationLabel || event.venue,
     event.countryCode ?? 'CH',
   );
-  const [title, setTitle] = useState(event.title);
+  const [kind, setKind] = useState<GroupEventKind>(event.kind);
   const [date, setDate] = useState(new Date(event.date));
   const [venue, setVenue] = useState(parsedPlace.venue);
   const [city, setCity] = useState(event.city ?? parsedPlace.city);
@@ -44,7 +49,6 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
   const [scope, setScope] = useState<'futureOccurrences' | 'thisDate'>('thisDate');
   const [editStartedAt] = useState(Date.now);
   const valid =
-    title.trim().length > 0 &&
     venue.trim().length > 0 &&
     city.trim().length > 0 &&
     postalCode.trim().length > 0 &&
@@ -74,7 +78,8 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
         postalCode,
         reminderLeadDays: canUsePremiumCapability('configurableReminders') ? reminderLeadDays : 2,
         scope,
-        title,
+        title: kind,
+        kind,
         venue,
       },
       { onSuccess: () => router.back() },
@@ -83,7 +88,17 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
     <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
-          <FormField label={t('Titre')} onChangeText={setTitle} value={title} />
+          <AppText variant="title">{t('Titre')}</AppText>
+          <View style={styles.wrap}>
+            {(['Répétition', 'Concert', 'Jam'] as const).map((option) => (
+              <ChoiceChip
+                key={option}
+                label={t(option)}
+                selected={kind === option}
+                onPress={() => setKind(option)}
+              />
+            ))}
+          </View>
           <NativeDateTimeField
             dateLabel={t('Date')}
             timeLabel={t('Heure')}

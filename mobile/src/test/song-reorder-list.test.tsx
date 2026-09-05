@@ -175,3 +175,52 @@ describe('song reorder interactions', () => {
     expect(save).toHaveBeenCalledWith(next.map((s) => s.id));
   });
 });
+
+it('saves and removes a set break without changing song order', async () => {
+  let persisted = [song('a'), song('b')];
+  function Harness() {
+    const [songs, setSongs] = useState(persisted);
+    return (
+      <SongReorderList
+        songs={songs}
+        title="Setlist"
+        onDone={() => {}}
+        onSave={async () => {}}
+        onToggleSet={async (selected) => {
+          persisted = songs.map((item) =>
+            item.id === selected.id ? { ...item, startsSet: !item.startsSet } : item,
+          );
+          setSongs(persisted);
+        }}
+      />
+    );
+  }
+  const view = await render(<Harness />);
+  expect(view.queryByRole('button', { name: 'Nouveau set ici · a' })).toBeNull();
+  await fireEvent.press(view.getByRole('button', { name: 'Nouveau set ici · b' }));
+  await waitFor(() => expect(persisted[1]?.startsSet).toBe(true));
+  expect(persisted.map((item) => item.id)).toEqual(['a', 'b']);
+  await view.unmount();
+  const reopened = await render(<Harness />);
+  await fireEvent.press(reopened.getByRole('button', { name: 'Supprimer la séparation · b' }));
+  await waitFor(() => expect(persisted[1]?.startsSet).toBe(false));
+});
+
+it('keeps the current set break and unlocks controls after a failed save', async () => {
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const view = await render(
+    <SongReorderList
+      songs={[song('a'), { ...song('b'), startsSet: true }]}
+      title="Setlist"
+      onDone={() => {}}
+      onSave={async () => {}}
+      onToggleSet={async () => {
+        throw new Error('offline');
+      }}
+    />,
+  );
+  await fireEvent.press(view.getByRole('button', { name: 'Supprimer la séparation · b' }));
+  await waitFor(() => expect(view.getByRole('button', { name: 'Terminé' })).toBeEnabled());
+  expect(view.getByRole('button', { name: 'Supprimer la séparation · b' })).toBeTruthy();
+  expect(Alert.alert).toHaveBeenCalledWith('La séparation n’a pas pu être enregistrée.');
+});

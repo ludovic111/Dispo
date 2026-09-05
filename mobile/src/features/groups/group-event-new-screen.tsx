@@ -53,7 +53,6 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
   const group = useGroup(groupId);
   const create = useCreateGroupEvents();
   const [kind, setKind] = useState<GroupEventKind>('Répétition');
-  const [title, setTitle] = useState(() => t('Répétition'));
   const [venue, setVenue] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
@@ -95,7 +94,6 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
   const count = recurrence === 'Ponctuel' ? 1 : Math.min(Math.max(occurrenceCount, 2), maxCount);
   const previews = recurrenceDates(date.toISOString(), recurrence, count);
   const valid =
-    title.trim().length > 0 &&
     venue.trim().length > 0 &&
     city.trim().length > 0 &&
     postalCode.trim().length > 0 &&
@@ -115,7 +113,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           postalCode,
           recurrence,
           reminderLeadDays: canConfigureReminder ? reminderLeadDays : 2,
-          title,
+          title: kind,
           venue,
         },
         groupId,
@@ -127,28 +125,18 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
     <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
-          <AppText variant="title">{t('Type de date')}</AppText>
+          <AppText variant="title">{t('Titre')}</AppText>
           <View style={styles.wrap}>
             {eventKinds.map((item) => (
               <ChoiceChip
                 icon={item.icon}
                 key={item.label}
                 label={t(item.label)}
-                onPress={() => {
-                  setKind(item.label);
-                  if (eventKinds.some((option) => title === t(option.label)))
-                    setTitle(t(item.label));
-                }}
+                onPress={() => setKind(item.label)}
                 selected={kind === item.label}
               />
             ))}
           </View>
-          <FormField
-            label={t('Titre')}
-            onChangeText={setTitle}
-            placeholder={t('Répétition générale')}
-            value={title}
-          />
         </Card>
         <Card style={styles.card}>
           <AppText variant="title">{t('Date et heure')}</AppText>

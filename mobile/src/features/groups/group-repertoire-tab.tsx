@@ -41,7 +41,10 @@ function PendingSongCard({ group, song }: { group: MusicGroup; song: GroupSong }
     const desired = approved
       ? group.repertoire.map((item) => (item.id === song.id ? { ...item, isApproved: true } : item))
       : group.repertoire.filter((item) => item.id !== song.id);
-    save.mutate({ desired, groupId: group.id, original: group.repertoire });
+    save.mutate(
+      { desired, groupId: group.id, original: group.repertoire },
+      { onError: () => Alert.alert(t('La suggestion n’a pas pu être mise à jour.')) },
+    );
   };
   return (
     <GroupSongRow
@@ -224,7 +227,7 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
         >
           <Ionicons color={palette.electric} name="add-circle" size={18} />
           <AppText color={palette.electric} style={styles.addLabel}>
-            {isLeader ? t('Ajouter') : t('Suggérer')}
+            {isLeader ? t('Ajouter') : t('Suggérer un morceau')}
           </AppText>
         </Pressable>
         {isLeader && approvedSongs.length > 1 ? (
@@ -256,14 +259,18 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           </Pressable>
         ) : null}
       </View>
-      {isLeader && pending.length ? (
+      {pending.length ? (
         <View style={styles.stack}>
           <AppText color={palette.signal} variant="label">
-            {t('Suggestions à valider')}
+            {isLeader ? t('Suggestions à valider') : t('En attente du leader')}
           </AppText>
-          {pending.map((song) => (
-            <PendingSongCard group={group} key={song.id} song={song} />
-          ))}
+          {pending.map((song) =>
+            isLeader ? (
+              <PendingSongCard group={group} key={song.id} song={song} />
+            ) : (
+              <SongCard group={group} key={song.id} song={song} />
+            ),
+          )}
         </View>
       ) : null}
       {approvedSongs.length > 8 && !reorderActive ? (

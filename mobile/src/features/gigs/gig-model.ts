@@ -36,6 +36,7 @@ export interface GigSummary {
   hostName: string;
   hostPhotoUrl: string | null;
   hostSchoolIds?: string[];
+  wantedSchoolIds?: string[];
   id: string;
   isFresh?: boolean;
   isLocked: boolean;
@@ -73,6 +74,7 @@ export interface GigDetail extends GigSummary {
 }
 
 export interface GigCreateInput {
+  wantedSchoolIds?: string[];
   city: string;
   countryCode: string;
   date: string;
@@ -96,6 +98,7 @@ export interface GigCreateInput {
 }
 
 export interface GigInsertPayload {
+  wanted_school_ids?: string[];
   date: string;
   description: string;
   event_id: string | null;
@@ -138,6 +141,7 @@ export interface GigFormDefaults {
 }
 
 export interface GigMatchProfile {
+  schoolIds?: string[];
   availableDates: string[];
   genres: string[];
   id: string;
@@ -344,8 +348,14 @@ export function validateGigCreate(input: GigCreateInput, now = new Date()): stri
   return errors;
 }
 
-export function createGigWritePlan(input: GigCreateInput, now = new Date()): GigWritePlan {
-  const errors = validateGigCreate(input, now);
+export function createGigWritePlan(
+  input: GigCreateInput,
+  now = new Date(),
+  preserveLinkedLocation = false,
+): GigWritePlan {
+  const errors = validateGigCreate(input, now).filter(
+    (code) => !(preserveLinkedLocation && input.eventId && code === 'gig_public_area_incomplete'),
+  );
   if (errors[0]) throw new Error(errors[0]);
   const area = publicAreaLabel(input.postalCode, input.city, input.countryCode);
   const publicPlace = clean(input.publicPlace) || area;
@@ -371,6 +381,7 @@ export function createGigWritePlan(input: GigCreateInput, now = new Date()): Gig
       target_status: targetId ? 'pending' : null,
       title: clean(input.title),
       wanted_instruments: uniqueClean(input.wantedInstruments),
+      ...(input.wantedSchoolIds ? { wanted_school_ids: [...new Set(input.wantedSchoolIds)] } : {}),
       wanted_levels: uniqueClean(input.wantedLevels).length
         ? uniqueClean(input.wantedLevels)
         : null,
@@ -530,7 +541,7 @@ function availabilityRank(dates: string[], now: Date): number {
 }
 
 export function matchProfilesToGig(
-  gig: Pick<GigSummary, 'date' | 'genre' | 'hostId' | 'wantedInstruments'>,
+  gig: Pick<GigSummary, 'date' | 'genre' | 'hostId' | 'wantedInstruments' | 'wantedSchoolIds'>,
   profiles: GigMatchProfile[],
   now = new Date(),
 ): GigMatch[] {
@@ -538,6 +549,11 @@ export function matchProfilesToGig(
   const wanted = new Set(gig.wantedInstruments);
   return profiles
     .filter((profile) => profile.id !== gig.hostId)
+    .filter(
+      (profile) =>
+        !gig.wantedSchoolIds?.length ||
+        profile.schoolIds?.some((id) => gig.wantedSchoolIds?.includes(id)),
+    )
     .map((profile): GigMatch | null => {
       const matchingInstruments = profile.instruments.filter((instrument) =>
         wanted.has(instrument),

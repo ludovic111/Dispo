@@ -76,6 +76,7 @@ function Navigation() {
           options={{ gestureEnabled: false, presentation: 'modal', title: t('Copier le morceau') }}
         />
         <Stack.Screen name="profiles/[id]" options={{ title: t('Profil') }} />
+        <Stack.Screen name="gigs/edit" options={{ title: t('Modifier le SOS') }} />
         <Stack.Screen name="gigs/[id]" options={{ title: t('Détail SOS') }} />
         <Stack.Screen name="messages/[id]" options={{ title: t('Conversation') }} />
       </Stack>

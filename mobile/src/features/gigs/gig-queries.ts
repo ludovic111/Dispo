@@ -3,9 +3,11 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import {
   applyToGig,
   createGig,
+  updateGig,
   decideGigApplication,
   deleteGig,
   fetchGig,
+  fetchGigForEdit,
   fetchGigFormDefaults,
   fetchGigMatches,
   fetchGigsPage,
@@ -95,6 +97,17 @@ export function useGig(gigId: string) {
   });
 }
 
+export function useGigForEdit(gigId: string) {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  return useQuery({
+    queryKey: ['gigs', 'edit', userId, gigId],
+    queryFn: ({ signal }) => fetchGigForEdit(gigId, userId, signal),
+    enabled: Boolean(userId && gigId),
+    staleTime: 0,
+  });
+}
+
 export function useGigFormDefaults() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
@@ -157,6 +170,22 @@ export function useCreateGig() {
   return useMutation({
     mutationFn: (input: GigCreateInput) => createGig(input),
     onSuccess: (gigId) => invalidate(gigId),
+  });
+}
+
+export function useUpdateGig() {
+  const invalidate = useInvalidateGig();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { gigId: string; values: GigCreateInput; clearExactAddress?: boolean }) =>
+      updateGig(input.gigId, input.values, input.clearExactAddress),
+    onSuccess: async (_data, input) => {
+      await Promise.all([
+        invalidate(input.gigId),
+        client.invalidateQueries({ queryKey: ['groups'] }),
+        client.invalidateQueries({ queryKey: ['gigs', 'edit'] }),
+      ]);
+    },
   });
 }
 

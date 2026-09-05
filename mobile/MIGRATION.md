@@ -1301,3 +1301,18 @@ livraison d’un lot fonctionnellement validé.
 - Preuves locales : `Dispo-dist/qa-20260904-whatsapp/`. Livraison native et verdict Apple documentés après exécution. Aucun appareil physique Dispo testé.
 - Builds Release iOS Simulator et Android réussis ; build 46 installé et lancé sur les deux plateformes. Configuration de production vérifiée dans les deux bundles ; endpoint QA absent. APK signé vérifié et conservé dans `Dispo-dist/android/Dispo-2.4-build46-direct-test.apk`.
 - Livraison Apple : archive/export/signature de l’IPA final contrôlés ; `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, import `VALID`, `APP_STORE_ELIGIBLE`, delivery `b83defbc-6e31-4b76-92cf-012ae61c2a07`. Code `b503b2c` poussé. Groupe « Beta testers » associé sur demande complémentaire explicite, notes FR renseignées ; examen TestFlight ensuite explicitement autorisé par Ludovic, soumis et `APPROVED` ; groupe « Beta testers » en `IN_BETA_TESTING` confirmé. Aucune publication App Store.
+
+
+## 2026-09-05 — Demandes WhatsApp de Raphaël — build 47
+
+- Périmètre : uniquement les messages du 5 septembre, 11 h 20 à 11 h 29. Écoles recherchées dans le formulaire SOS (plusieurs écoles en OU), modification des SOS par leur hôte, Auto-SOS accessible dans l'événement avec l'instrument et le niveau du membre absent.
+- Événements : trois choix Répétition / Concert / Jam, type comme titre de tuile sans doublon, jour de semaine à gauche et témoin des changements de date, heure ou lieu. Le témoin disparaît après consultation de cette révision sur l'appareil du membre.
+- Morceaux : taille de titre uniforme, ajout propre à l'événement sans ajout au répertoire, séparations en sets depuis Réorganiser. Propositions des membres affichées en attente, validation/refus du leader ; correction du champ solos vide qui empêchait la proposition côté serveur.
+- Sécurité métier : édition SOS atomique, conservation des candidatures et des instruments pourvus ; date/lieu des SOS liés toujours pilotés par l'événement. Auto-SOS idempotent et droits membres/leader conservés.
+- Validation : TypeScript, ESLint, 61 suites / 359 tests ; tests SQL transactionnels locaux réussis (permissions, candidatures, édition, écoles, sets, témoin, Auto-SOS). Quatre XCTest natifs réussis ; parcours iPhone 17 iOS 26.4 et Android medium_phone, changements relus dans la base locale. Le dernier parcours a corrigé le clavier sur le nouvel écran d'édition SOS.
+- Migration `20260905095914_whatsapp_event_changes_and_sos_edit` appliquée en production sur demande explicite de pousser partout. Colonnes, trois triggers, RPC invoker réservée aux comptes authentifiés et vue invoker contrôlés après déploiement ; lecture du feed réussie. L'avertissement de cache pg-delta du CLI ne concerne pas l'application de la migration, confirmée dans l'historique distant.
+- Advisors consultés : 52 avertissements sur les RPC definer existantes, trois informations sur les tables privées et 32 informations de performance ; aucun avertissement portant sur une fonction créée par ce lot. Aucun changement hors scope pour ces constats.
+- CNG production / pods régénérés en build 47. Configuration production restaurée à l'octet près, Metro QA arrêté. Expo Doctor 20/21 : 14 écarts patch préexistants, dépendances conservées. Archives et verdict Apple complétés ci-dessous après exécution.
+- Preuves locales : `Dispo-dist/qa-20260905-whatsapp/`. Aucun appareil physique testé.
+
+- Nettoyage local terminé : les trois comptes QA, leur groupe, leurs deux SOS et leur école ont été supprimés ; absence contrôlée en transaction. APK Release arm64 build 47 compilé, signature v2 et configuration production vérifiées.
