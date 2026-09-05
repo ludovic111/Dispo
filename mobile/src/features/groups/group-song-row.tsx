@@ -453,9 +453,11 @@ export function GroupSongRow({
   const reduceMotion = useReducedMotion();
   const [listenVisible, setListenVisible] = useState(false);
   const [solosVisible, setSolosVisible] = useState(false);
-  const metadata = [song.key?.trim(), song.tempoBpm ? `${song.tempoBpm} BPM` : null].filter(
-    (value): value is string => Boolean(value),
-  );
+  const metadata = [
+    song.key?.trim(),
+    song.tempoBpm ? `${song.tempoBpm} BPM` : null,
+    song.form?.trim(),
+  ].filter((value): value is string => Boolean(value));
   return (
     <>
       <SongRowSurface {...(cardStyle ? { cardStyle } : {})} embedded={embedded}>
@@ -496,11 +498,6 @@ export function GroupSongRow({
                   variant="caption2"
                 >
                   {metadata.join(' · ')}
-                </AppText>
-              ) : null}
-              {song.form?.trim() ? (
-                <AppText color={palette.bronze} style={styles.metadata} variant="caption2">
-                  {song.form.trim()}
                 </AppText>
               ) : null}
             </View>

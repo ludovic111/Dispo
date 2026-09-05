@@ -1319,3 +1319,11 @@ livraison d’un lot fonctionnellement validé.
 - Livraison native : builds Release iOS et Android réussis ; build 47 installé et lancé à froid sur les deux simulateurs. Capture iOS obtenue par XCTest natif supplémentaire, le Mac étant verrouillé. IPA finale ch.dispo.app 2.4 (47), APNs production, Apple Sign In Default, get-task-allow=false et codesign strict vérifiés. Configuration de production confirmée dans les bundles, aucun endpoint QA.
 - Code `896ab69` poussé sur `origin/main`. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, delivery `db8aaf35-1ced-4cb8-b4ea-a9e48920682f`. `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` confirmés par altool et API App Store Connect.
 - Aucune App Review, activation de testeurs ou publication Google Play pour ce build. IPA et APK directs, signatures et empreintes dans `Dispo-dist/2.4/RELEASE-build47.md`.
+
+
+## 2026-09-05 — Forme sur la ligne tonalité / tempo — build 48
+
+- Correction limitée à `GroupSongRow` : la forme rejoint les métadonnées existantes, par exemple `Am · 83 BPM · AAB`, dans le même texte sur une ligne. Le bloc séparé de forme est retiré. Styles, titres, actions et données inchangés.
+- Validation : TypeScript, ESLint, 61 suites / 359 tests réussis. Composant réel rendu dans un banc local sans backend, captures iPhone 17 iOS 26.4 et Android medium_phone vérifiées, largeur normale et 320 points ; cas tonalité/tempo/forme, tonalité/forme, tonalité seule et forme seule. XCTest iOS réussi. L'émulateur Android a nécessité un redémarrage après un blocage de son système, puis le rendu est confirmé.
+- Banc temporaire retiré, entrée Expo de production restaurée à l'octet près. Aucun changement Supabase ni dépendance. CNG et pods régénérés ; Expo Doctor 20/21, 14 écarts patch préexistants conservés. Build 48 pour la livraison automatique déjà autorisée.
+- Preuves : `Dispo-dist/qa-20260905-song-metadata/`. Aucun appareil physique testé. Verdicts de distribution ajoutés après exécution.
