@@ -36,6 +36,7 @@ import {
 
 import type { Page } from '@/domain/pagination';
 import { useAuth } from '@/features/auth/auth-context';
+import { useReadThreadNotifications } from '@/features/notifications/use-read-thread-notifications';
 
 export const messageKeys = {
   contact: (userId: string, conversationId: string) =>
@@ -157,6 +158,11 @@ export function useMessages(conversationId: string, active = true) {
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     enabled: Boolean(userId && conversationId && active),
   });
+  const newestLoadedAt = query.data?.pages[0]?.items.reduce<string | undefined>(
+    (latest, message) => (!latest || message.createdAt > latest ? message.createdAt : latest),
+    undefined,
+  );
+  useReadThreadNotifications('messages', conversationId, newestLoadedAt, active && query.isSuccess);
 
   useEffect(() => {
     const becameActive = active && !previousActive.current;

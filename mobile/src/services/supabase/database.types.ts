@@ -8,6 +8,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      group_manual_members: {
+        Row: {
+          id: string;
+          group_id: string;
+          name: string;
+          role: string | null;
+          kind: string;
+          created_at: string;
+        };
+        Insert: { group_id: string; name: string; role?: string | null; kind?: string };
+        Update: { name?: string; role?: string | null; kind?: string };
+        Relationships: [
+          {
+            foreignKeyName: 'group_manual_members_group_id_fkey';
+            columns: ['group_id'];
+            isOneToOne: false;
+            referencedRelation: 'music_groups';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       blocks: {
         Row: {
           blocked_id: string;
@@ -1625,6 +1646,10 @@ export type Database = {
       };
     };
     Functions: {
+      mark_thread_notifications_read: {
+        Args: { p_source_table: string; p_thread_id: string; p_through: string };
+        Returns: undefined;
+      };
       update_gig_request: {
         Args: { p_gig_id: string; p_changes: Json; p_location: Json };
         Returns: undefined;

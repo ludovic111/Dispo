@@ -2247,5 +2247,15 @@
   "Message d’origine": "Message d’origine",
   "Message indisponible": "Message indisponible",
   "Chargement du message…": "Chargement du message…",
-  "Ce message n’est plus disponible pour une réponse.": "Ce message n’est plus disponible pour une réponse."
+  "Ce message n’est plus disponible pour une réponse.": "Ce message n’est plus disponible pour une réponse.",
+  "Sans compte Dispo": "Sans compte Dispo",
+  "Ajouter sans compte Dispo": "Ajouter sans compte Dispo",
+  "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.": "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.",
+  "Nom du membre": "Nom du membre",
+  "Rôle du membre": "Rôle du membre",
+  "Ajouter au groupe": "Ajouter au groupe",
+  "Le membre n’a pas pu être ajouté. Réessaie.": "Le membre n’a pas pu être ajouté. Réessaie.",
+  "Le membre n’a pas pu être enregistré.": "Le membre n’a pas pu être enregistré.",
+  "Le membre n’a pas pu être retiré.": "Le membre n’a pas pu être retiré.",
+  "Ses solos seront retirés du répertoire et des événements.": "Ses solos seront retirés du répertoire et des événements."
 }

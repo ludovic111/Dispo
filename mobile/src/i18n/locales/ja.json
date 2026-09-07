@@ -2247,5 +2247,15 @@
   "Message d’origine": "元のメッセージ",
   "Message indisponible": "メッセージを表示できません",
   "Chargement du message…": "メッセージを読み込み中…",
-  "Ce message n’est plus disponible pour une réponse.": "このメッセージにはもう返信できません。"
+  "Ce message n’est plus disponible pour une réponse.": "このメッセージにはもう返信できません。",
+  "Sans compte Dispo": "Dispoアカウントなし",
+  "Ajouter sans compte Dispo": "Dispoアカウントなしで追加",
+  "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.": "このメンバーはグループに表示され、ソロの担当者として選べます。",
+  "Nom du membre": "メンバー名",
+  "Rôle du membre": "メンバーの役割",
+  "Ajouter au groupe": "グループに追加",
+  "Le membre n’a pas pu être ajouté. Réessaie.": "メンバーを追加できませんでした。もう一度お試しください。",
+  "Le membre n’a pas pu être enregistré.": "メンバーを保存できませんでした。",
+  "Le membre n’a pas pu être retiré.": "メンバーを削除できませんでした。",
+  "Ses solos seront retirés du répertoire et des événements.": "このメンバーのソロ担当がレパートリーとイベントから削除されます。"
 }

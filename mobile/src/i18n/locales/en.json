@@ -2247,5 +2247,15 @@
   "Message d’origine": "Original message",
   "Message indisponible": "Message unavailable",
   "Chargement du message…": "Loading message…",
-  "Ce message n’est plus disponible pour une réponse.": "This message is no longer available to reply to."
+  "Ce message n’est plus disponible pour une réponse.": "This message is no longer available to reply to.",
+  "Sans compte Dispo": "No Dispo account",
+  "Ajouter sans compte Dispo": "Add without a Dispo account",
+  "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.": "This member will appear in the group and can be selected for solos.",
+  "Nom du membre": "Member name",
+  "Rôle du membre": "Member role",
+  "Ajouter au groupe": "Add to group",
+  "Le membre n’a pas pu être ajouté. Réessaie.": "The member could not be added. Try again.",
+  "Le membre n’a pas pu être enregistré.": "The member could not be saved.",
+  "Le membre n’a pas pu être retiré.": "The member could not be removed.",
+  "Ses solos seront retirés du répertoire et des événements.": "Their solos will be removed from the repertoire and events."
 }

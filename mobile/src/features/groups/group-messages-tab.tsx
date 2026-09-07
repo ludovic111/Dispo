@@ -2,10 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import { useIsFocused } from 'expo-router';
 import type { TFunction } from 'i18next';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AppState,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -319,7 +321,15 @@ function MessageBubble({
 export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId: string }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  const query = useGroupMessages(group.id);
+  const isFocused = useIsFocused();
+  const [appIsActive, setAppIsActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) =>
+      setAppIsActive(state === 'active'),
+    );
+    return () => subscription.remove();
+  }, []);
+  const query = useGroupMessages(group.id, isFocused && appIsActive);
   const send = useSendGroupMessage();
   const edit = useEditGroupMessage();
   const [text, setText] = useState('');

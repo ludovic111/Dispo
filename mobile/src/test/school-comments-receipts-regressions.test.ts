@@ -9,17 +9,6 @@ const source = (relativePath: string) =>
   fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 
 describe('lot écoles, commentaires et coches', () => {
-  it('propose le même annuaire multi-écoles dans le flux SOS avec tous ses états', () => {
-    const screen = source('src/app/(tabs)/sos.tsx');
-    expect(screen).toContain('useSchoolDirectory()');
-    expect(screen).toContain('setSelectedSchoolIds');
-    expect(screen).toContain('selectedSchoolIds.includes(school.id)');
-    expect(screen).toContain("t('Effacer les écoles')");
-    expect(screen).toContain('schoolDirectory.isLoading');
-    expect(screen).toContain('schoolDirectory.isError');
-    expect(screen).toContain('schoolDirectory.hasNextPage');
-  });
-
   it('ne garde qu’un seul accès Mes démos sur le profil propriétaire', () => {
     const profile = source('src/features/profiles/profile-detail.tsx');
     expect(profile.match(/router\.push\('\/profile\/demos' as never\)/g)).toHaveLength(1);

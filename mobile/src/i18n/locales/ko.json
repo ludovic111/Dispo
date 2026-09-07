@@ -2247,5 +2247,15 @@
   "Message d’origine": "원본 메시지",
   "Message indisponible": "메시지를 볼 수 없습니다",
   "Chargement du message…": "메시지 불러오는 중…",
-  "Ce message n’est plus disponible pour une réponse.": "이 메시지에는 더 이상 답장할 수 없습니다."
+  "Ce message n’est plus disponible pour une réponse.": "이 메시지에는 더 이상 답장할 수 없습니다.",
+  "Sans compte Dispo": "Dispo 계정 없음",
+  "Ajouter sans compte Dispo": "Dispo 계정 없이 추가",
+  "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.": "이 멤버는 그룹에 표시되며 솔로 담당자로 선택할 수 있습니다.",
+  "Nom du membre": "멤버 이름",
+  "Rôle du membre": "멤버 역할",
+  "Ajouter au groupe": "그룹에 추가",
+  "Le membre n’a pas pu être ajouté. Réessaie.": "멤버를 추가하지 못했습니다. 다시 시도하세요.",
+  "Le membre n’a pas pu être enregistré.": "멤버를 저장하지 못했습니다.",
+  "Le membre n’a pas pu être retiré.": "멤버를 삭제하지 못했습니다.",
+  "Ses solos seront retirés du répertoire et des événements.": "이 멤버의 솔로 배정이 레퍼토리와 이벤트에서 삭제됩니다."
 }

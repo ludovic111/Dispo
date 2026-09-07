@@ -8,6 +8,7 @@ import {
 import { pageRange } from '@/domain/pagination';
 import { getSupabaseClient } from '@/services/supabase/client';
 import type { Database } from '@/services/supabase/database.types';
+import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 type NotificationRow = Database['public']['Tables']['push_notifications']['Row'];
 type NotificationProjection = Pick<
@@ -87,4 +88,51 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
     .eq('user_id', userId)
     .is('read_at', null);
   if (error) throw error;
+}
+
+export async function markThreadNotificationsRead(
+  source: 'group_messages' | 'messages',
+  threadId: string,
+  through: string,
+): Promise<void> {
+  const { error } = await getSupabaseClient().rpc('mark_thread_notifications_read', {
+    p_source_table: source,
+    p_thread_id: threadId,
+    p_through: through,
+  });
+  if (error) throw error;
+}
+
+export function subscribeToThreadNotifications(
+  userId: string,
+  source: 'group_messages' | 'messages',
+  threadId: string,
+  onChange: () => void,
+): () => void {
+  const supabase = getSupabaseClient();
+  const channel = supabase
+    .channel(uniqueRealtimeTopic(`thread-notifications:${userId}:${threadId}`))
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'push_notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      ({ new: row }) => {
+        const data = notificationData(row.data as NotificationRow['data']);
+        if (
+          row.source_table === source &&
+          data[source === 'group_messages' ? 'group_id' : 'conversation_id'] === threadId
+        )
+          onChange();
+      },
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') onChange();
+    });
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }

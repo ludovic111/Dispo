@@ -2247,5 +2247,15 @@
   "Message d’origine": "原消息",
   "Message indisponible": "消息不可用",
   "Chargement du message…": "正在加载消息…",
-  "Ce message n’est plus disponible pour une réponse.": "无法再回复此消息。"
+  "Ce message n’est plus disponible pour une réponse.": "无法再回复此消息。",
+  "Sans compte Dispo": "无 Dispo 账号",
+  "Ajouter sans compte Dispo": "添加无 Dispo 账号的成员",
+  "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.": "此成员将显示在群组中，并可被选为独奏者。",
+  "Nom du membre": "成员姓名",
+  "Rôle du membre": "成员角色",
+  "Ajouter au groupe": "添加到群组",
+  "Le membre n’a pas pu être ajouté. Réessaie.": "无法添加成员，请重试。",
+  "Le membre n’a pas pu être enregistré.": "无法保存成员。",
+  "Le membre n’a pas pu être retiré.": "无法移除成员。",
+  "Ses solos seront retirés du répertoire et des événements.": "该成员的独奏安排将从曲目库和活动中移除。"
 }

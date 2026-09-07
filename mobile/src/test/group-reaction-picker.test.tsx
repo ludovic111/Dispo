@@ -7,6 +7,7 @@ import {
   type GroupMessage,
   type MusicGroup,
 } from '@/features/groups/group-model';
+jest.mock('expo-router', () => ({ useIsFocused: () => true }));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),

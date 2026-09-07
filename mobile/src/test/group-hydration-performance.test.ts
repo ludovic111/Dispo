@@ -10,6 +10,7 @@ export function installGroupFixture(groupCount = 3) {
   const tables: Record<
     | 'music_groups'
     | 'group_members'
+    | 'group_manual_members'
     | 'group_events'
     | 'group_docs'
     | 'song_comments'
@@ -21,6 +22,7 @@ export function installGroupFixture(groupCount = 3) {
   > = {
     music_groups: [],
     group_members: [],
+    group_manual_members: [],
     group_events: [],
     group_docs: [],
     song_comments: [],
@@ -43,6 +45,13 @@ export function installGroupFixture(groupCount = 3) {
       auto_sos_enabled: false,
       auto_sos_min_level: null,
       photo_url: null,
+    });
+    tables.group_manual_members.push({
+      id: `manual-${g}`,
+      group_id: id,
+      name: `Manual ${g}`,
+      role: 'Saxophone',
+      kind: 'permanent',
     });
     tables.group_members.push({ group_id: id, profile_id: 'me', kind: 'permanent', role: null });
     tables.group_docs.push({
@@ -132,6 +141,14 @@ describe('group hydration at scale', () => {
     const result = await fetchGroups('me');
     expect(result).toHaveLength(3);
     for (const group of result) {
+      expect(group.members).toHaveLength(2);
+      expect(group.members[1]).toEqual(
+        expect.objectContaining({
+          id: `manual-${group.id.slice(-1)}`,
+          isManual: true,
+          instruments: ['Saxophone'],
+        }),
+      );
       expect(group.messages).toHaveLength(60);
       expect(group.events).toHaveLength(20);
       expect(group.documents.map((doc) => doc.id)).toEqual([`doc-${group.id.slice(-1)}`]);

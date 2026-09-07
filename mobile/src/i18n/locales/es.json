@@ -2247,5 +2247,15 @@
   "Message d’origine": "Mensaje original",
   "Message indisponible": "Mensaje no disponible",
   "Chargement du message…": "Cargando mensaje…",
-  "Ce message n’est plus disponible pour une réponse.": "Ya no se puede responder a este mensaje."
+  "Ce message n’est plus disponible pour une réponse.": "Ya no se puede responder a este mensaje.",
+  "Sans compte Dispo": "Sin cuenta de Dispo",
+  "Ajouter sans compte Dispo": "Añadir sin cuenta de Dispo",
+  "Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.": "Este miembro aparecerá en el grupo y se podrá elegir para los solos.",
+  "Nom du membre": "Nombre del miembro",
+  "Rôle du membre": "Rol del miembro",
+  "Ajouter au groupe": "Añadir al grupo",
+  "Le membre n’a pas pu être ajouté. Réessaie.": "No se pudo añadir al miembro. Inténtalo de nuevo.",
+  "Le membre n’a pas pu être enregistré.": "No se pudo guardar al miembro.",
+  "Le membre n’a pas pu être retiré.": "No se pudo eliminar al miembro.",
+  "Ses solos seront retirés du répertoire et des événements.": "Sus solos se eliminarán del repertorio y de los eventos."
 }

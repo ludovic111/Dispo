@@ -51,6 +51,7 @@ import { subscribeToRealtimeBroadcast } from '@/services/supabase/realtime-broad
 import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 type GroupRow = Database['public']['Tables']['music_groups']['Row'];
+type ManualMemberRow = Database['public']['Tables']['group_manual_members']['Row'];
 type MemberRow = Database['public']['Tables']['group_members']['Row'];
 type EventRow = Database['public']['Tables']['group_events']['Row'];
 type AttendanceRow = Database['public']['Tables']['event_attendance']['Row'];
@@ -723,6 +724,10 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
   const groupIds = groups.map((group) => group.id);
 
   const memberQuery = supabase.from('group_members').select(memberColumns).in('group_id', groupIds);
+  const manualMemberQuery = supabase
+    .from('group_manual_members')
+    .select('*')
+    .in('group_id', groupIds);
   const eventQuery = supabase.from('group_events').select(eventColumns).in('group_id', groupIds);
   const messageQuery = supabase.rpc('recent_group_messages', { p_limit: 60 });
   const documentQuery = supabase
@@ -740,6 +745,7 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
   const locationQuery = supabase.rpc('visible_group_event_locations');
   const [
     memberResult,
+    manualMemberResult,
     eventResult,
     messageResult,
     documentResult,
@@ -748,6 +754,7 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     locationResult,
   ] = await Promise.all([
     signal ? memberQuery.abortSignal(signal) : memberQuery,
+    signal ? manualMemberQuery.abortSignal(signal) : manualMemberQuery,
     signal ? eventQuery.abortSignal(signal) : eventQuery,
     signal ? messageQuery.abortSignal(signal) : messageQuery,
     signal ? documentQuery.abortSignal(signal) : documentQuery,
@@ -757,6 +764,7 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
   ]);
   for (const result of [
     memberResult,
+    manualMemberResult,
     eventResult,
     messageResult,
     documentResult,
@@ -818,6 +826,10 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     (locationResult.data ?? []).map((location) => [location.event_id, location]),
   );
 
+  const manualMembersByGroup = groupBy(
+    manualMemberResult.data as ManualMemberRow[],
+    (row) => row.group_id,
+  );
   const membersByGroup = groupBy(members, (row) => row.group_id);
   const eventsByGroup = groupBy(events, (row) => row.group_id);
   const messagesByGroup = groupBy(messages, (row) => row.group_id);
@@ -846,7 +858,10 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     id: group.id,
     isPublic: group.is_public,
     leaderId: group.leader_id,
-    members: mapMembers(membersByGroup.get(group.id) ?? [], group, profiles),
+    members: [
+      ...mapMembers(membersByGroup.get(group.id) ?? [], group, profiles),
+      ...(manualMembersByGroup.get(group.id) ?? []).map(mapManualMember),
+    ].sort((a, b) => Number(b.isLeader) - Number(a.isLeader) || a.name.localeCompare(b.name)),
     messages: mapMessages(
       messagesByGroup.get(group.id) ?? [],
       reactionsByMessage,
@@ -1067,6 +1082,71 @@ export async function inviteGroupMember(
 
 export async function cancelGroupInvitation(invitationId: string): Promise<void> {
   return declineGroupInvitation(invitationId);
+}
+
+export function mapManualMember(row: ManualMemberRow): GroupMember {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+    kind: memberKind(row.kind),
+    instruments: row.role ? [row.role] : [],
+    isLeader: false,
+    isManual: true,
+    photoUrl: null,
+  };
+}
+
+export interface ManualGroupMemberInput {
+  groupId: string;
+  name: string;
+  role: string | null;
+  kind: GroupMemberKind;
+}
+
+export async function addManualGroupMember(input: ManualGroupMemberInput): Promise<void> {
+  const name = input.name.trim();
+  const role = input.role?.trim() || null;
+  if (!name || name.length > 120 || (role && role.length > 120))
+    throw new Error('manual_member_invalid');
+  const { error } = await getSupabaseClient().from('group_manual_members').insert({
+    group_id: input.groupId,
+    name,
+    role,
+    kind: input.kind,
+  });
+  if (error) throw error;
+}
+
+export async function updateManualGroupMember(
+  groupId: string,
+  memberId: string,
+  input: { name?: string; role?: string | null; kind?: GroupMemberKind },
+): Promise<void> {
+  const patch = { ...input };
+  if (patch.name !== undefined) patch.name = patch.name.trim();
+  if (patch.role !== undefined) patch.role = patch.role?.trim() || null;
+  if (patch.name === '' || (patch.name?.length ?? 0) > 120 || (patch.role?.length ?? 0) > 120)
+    throw new Error('manual_member_invalid');
+  const { error } = await getSupabaseClient()
+    .from('group_manual_members')
+    .update(patch)
+    .eq('group_id', groupId)
+    .eq('id', memberId)
+    .select('id')
+    .single();
+  if (error) throw error;
+}
+
+export async function removeManualGroupMember(groupId: string, memberId: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from('group_manual_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('id', memberId)
+    .select('id')
+    .single();
+  if (error) throw error;
 }
 
 export async function updateGroupMember(
@@ -1595,6 +1675,7 @@ export function subscribeToGroups(userId: string, onChange: () => void): () => v
   const tables = [
     'music_groups',
     'group_members',
+    'group_manual_members',
     'group_invitations',
     'group_events',
     'event_attendance',

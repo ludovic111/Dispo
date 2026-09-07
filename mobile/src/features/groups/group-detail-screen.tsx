@@ -2,7 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { GroupEventsTab } from './group-events-tab';
 import { GroupMessagesTab } from './group-messages-tab';
@@ -114,7 +114,12 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
             {group.isPublic ? <Tag color={palette.jam} label={t('Public')} /> : null}
           </View>
         ) : null}
-        <View style={styles.tabs}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabs}
+          style={styles.tabStrip}
+        >
           {tabs.map((item) => (
             <View key={item.id} style={styles.tab}>
               <ChoiceChip
@@ -125,7 +130,7 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
               />
             </View>
           ))}
-        </View>
+        </ScrollView>
         <View style={styles.body}>
           {tab === 'messages' ? <GroupMessagesTab group={group} userId={userId} /> : null}
           {tab === 'repertoire' ? <GroupRepertoireTab group={group} userId={userId} /> : null}
@@ -139,8 +144,10 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
 const styles = StyleSheet.create({
   groupSummary: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
   body: { flex: 1 },
-  tab: { flex: 1 },
+  tab: { flexGrow: 1, flexShrink: 0 },
+  tabStrip: { flexGrow: 0, flexShrink: 0 },
   tabs: {
+    flexGrow: 1,
     flexDirection: 'row',
     gap: spacing.tight,
     paddingHorizontal: spacing.gutter,

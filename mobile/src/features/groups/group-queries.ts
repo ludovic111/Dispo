@@ -33,6 +33,10 @@ import {
   applyOptimisticGroupRepertoireOrder,
 } from './group-order';
 import {
+  addManualGroupMember,
+  updateManualGroupMember,
+  removeManualGroupMember,
+  type ManualGroupMemberInput,
   acceptGroupInvitation,
   addSongComment,
   cancelGroupEvent,
@@ -94,6 +98,7 @@ import {
 import type { Page } from '@/domain/pagination';
 import { useAuth } from '@/features/auth/auth-context';
 import type { PendingMessageAttachment } from '@/features/messages/message-model';
+import { useReadThreadNotifications } from '@/features/notifications/use-read-thread-notifications';
 import { sessionKeys } from '@/features/sessions/session-queries';
 
 export const groupKeys = {
@@ -408,6 +413,7 @@ export function useGroupMessages(groupId: string, active = true) {
   const lastTypingPingAt = useRef(0);
   const [typingMembers, setTypingMembers] = useState<Set<string>>(new Set());
   const queryKey = useMemo(() => groupKeys.messages(userId, groupId), [groupId, userId]);
+  const previousActive = useRef(active);
   const query = useInfiniteQuery<
     Page<GroupMessage>,
     Error,
@@ -423,6 +429,19 @@ export function useGroupMessages(groupId: string, active = true) {
     queryKey,
     refetchOnMount: 'always',
   });
+  const newestLoadedAt = query.data?.pages[0]?.items.reduce<string | undefined>(
+    (latest, message) => (!latest || message.createdAt > latest ? message.createdAt : latest),
+    undefined,
+  );
+  useReadThreadNotifications('group_messages', groupId, newestLoadedAt, active && query.isSuccess);
+
+  useEffect(() => {
+    const becameActive = active && !previousActive.current;
+    previousActive.current = active;
+    if (!becameActive || !userId || !groupId) return;
+    void queryClient.invalidateQueries({ exact: true, queryKey, refetchType: 'active' });
+  }, [active, groupId, queryClient, queryKey, userId]);
+
   const loadedMessageIds = useMemo(
     () => [
       ...new Set(
@@ -631,6 +650,33 @@ export function useInviteGroupMember() {
 export function useCancelGroupInvitation() {
   const refresh = useRefreshGroups();
   return useMutation({ mutationFn: cancelGroupInvitation, onSuccess: refresh });
+}
+
+export function useAddManualGroupMember() {
+  const refresh = useRefreshGroups();
+  return useMutation({ mutationFn: addManualGroupMember, onSuccess: refresh });
+}
+
+export function useUpdateManualGroupMember() {
+  const refresh = useRefreshGroups();
+  return useMutation({
+    mutationFn: (input: ManualGroupMemberInput & { memberId: string }) =>
+      updateManualGroupMember(input.groupId, input.memberId, {
+        name: input.name,
+        role: input.role,
+        kind: input.kind,
+      }),
+    onSuccess: refresh,
+  });
+}
+
+export function useRemoveManualGroupMember() {
+  const refresh = useRefreshGroups(true);
+  return useMutation({
+    mutationFn: (input: { groupId: string; memberId: string }) =>
+      removeManualGroupMember(input.groupId, input.memberId),
+    onSuccess: refresh,
+  });
 }
 
 export function useUpdateGroupMember() {

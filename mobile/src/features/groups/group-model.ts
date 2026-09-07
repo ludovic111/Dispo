@@ -14,6 +14,7 @@ export const GROUP_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', 
 export type GroupReactionEmoji = (typeof GROUP_REACTION_EMOJIS)[number];
 
 export interface GroupMember {
+  isManual?: boolean;
   id: string;
   instruments: string[];
   isLeader: boolean;

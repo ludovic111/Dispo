@@ -1,12 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { GroupAvatar } from './group-avatar';
 import type { GroupMember, GroupMemberKind } from './group-model';
 import {
+  useAddManualGroupMember,
+  useUpdateManualGroupMember,
+  useRemoveManualGroupMember,
   useCancelGroupInvitation,
   useGroup,
   useGroupProfileCandidates,
@@ -20,6 +32,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
@@ -162,7 +175,213 @@ function MemberCard({
   );
 }
 
+function ManualMemberCard({
+  member,
+  groupId,
+  isLeader,
+}: {
+  member: GroupMember;
+  groupId: string;
+  isLeader: boolean;
+}) {
+  const { t } = useTranslation();
+  const { palette } = useDispoTheme();
+  const update = useUpdateManualGroupMember();
+  const remove = useRemoveManualGroupMember();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(member.name);
+  const [role, setRole] = useState(member.role ?? '');
+  const [kind, setKind] = useState(member.kind);
+  return (
+    <Card padding={11}>
+      <View style={styles.pendingRow}>
+        <GroupAvatar emoji="🎵" name={member.name} photoUrl={null} size={42} />
+        <View style={styles.memberCopy}>
+          <AppText style={styles.memberName}>{member.name}</AppText>
+          <View style={styles.instruments}>
+            <Tag label={t('Sans compte Dispo')} color={palette.muted} />
+            {member.role ? <Tag label={member.role} color={palette.electric} /> : null}
+            {member.kind === 'guest' ? (
+              <Tag label={t('Special guest')} color={palette.rehearsal} />
+            ) : null}
+          </View>
+        </View>
+      </View>
+      {isLeader && !editing ? (
+        <View style={styles.memberActions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setName(member.name);
+              setRole(member.role ?? '');
+              setKind(member.kind);
+              setEditing(true);
+            }}
+            style={styles.inlineButton}
+          >
+            <AppText color={palette.electric}>{t('Modifier')}</AppText>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            disabled={remove.isPending}
+            style={styles.inlineButton}
+            onPress={() =>
+              Alert.alert(
+                t('Exclure {{name}} ?', { name: member.name }),
+                t('Ses solos seront retirés du répertoire et des événements.'),
+                [
+                  { style: 'cancel', text: t('Annuler') },
+                  {
+                    style: 'destructive',
+                    text: t('Exclure'),
+                    onPress: () => remove.mutate({ groupId, memberId: member.id }),
+                  },
+                ],
+              )
+            }
+          >
+            <AppText color={palette.signal}>{t('Exclure')}</AppText>
+          </Pressable>
+        </View>
+      ) : null}
+      {isLeader && editing ? (
+        <View style={styles.manage}>
+          <FormField
+            label={t('Nom')}
+            accessibilityLabel={t('Nom')}
+            value={name}
+            onChangeText={setName}
+            maxLength={120}
+          />
+          <FormField
+            label={t('Rôle dans le groupe')}
+            accessibilityLabel={t('Rôle dans le groupe')}
+            value={role}
+            onChangeText={setRole}
+            maxLength={120}
+          />
+          <MemberKindPicker kind={kind} onChange={setKind} />
+          <DispoButton
+            loading={update.isPending}
+            disabled={!name.trim()}
+            onPress={() =>
+              update.mutate(
+                { groupId, memberId: member.id, name, role: role.trim() || null, kind },
+                { onSuccess: () => setEditing(false) },
+              )
+            }
+          >
+            {t('Enregistrer')}
+          </DispoButton>
+          <DispoButton
+            variant="secondary"
+            disabled={update.isPending}
+            onPress={() => setEditing(false)}
+          >
+            {t('Annuler')}
+          </DispoButton>
+          {update.isError ? (
+            <AppText color={palette.signal}>{t('Le membre n’a pas pu être enregistré.')}</AppText>
+          ) : null}
+        </View>
+      ) : null}
+      {remove.isError ? (
+        <AppText color={palette.signal}>{t('Le membre n’a pas pu être retiré.')}</AppText>
+      ) : null}
+    </Card>
+  );
+}
+
+function MemberKindPicker({
+  kind,
+  onChange,
+}: {
+  kind: GroupMemberKind;
+  onChange: (kind: GroupMemberKind) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.kindRow}>
+      <View style={styles.flex}>
+        <ChoiceChip
+          label={t('Permanent')}
+          onPress={() => onChange('permanent')}
+          selected={kind === 'permanent'}
+        />
+      </View>
+      <View style={styles.flex}>
+        <ChoiceChip
+          label={t('Special guest')}
+          onPress={() => onChange('guest')}
+          selected={kind === 'guest'}
+        />
+      </View>
+    </View>
+  );
+}
+
+function AddManualMemberCard({ groupId, onClose }: { groupId: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { palette } = useDispoTheme();
+  const add = useAddManualGroupMember();
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [kind, setKind] = useState<GroupMemberKind>('permanent');
+  return (
+    <Card style={styles.inviteCard}>
+      <AppText variant="title">{t('Ajouter sans compte Dispo')}</AppText>
+      <AppText color={palette.muted} variant="caption">
+        {t('Ce membre apparaîtra dans le groupe et pourra être choisi pour les solos.')}
+      </AppText>
+      <FormField
+        label={t('Nom')}
+        accessibilityLabel={t('Nom du membre')}
+        value={name}
+        onChangeText={setName}
+        maxLength={120}
+        autoCapitalize="words"
+      />
+      <FormField
+        label={t('Rôle dans le groupe')}
+        accessibilityLabel={t('Rôle du membre')}
+        placeholder={t('Piano, Batterie…')}
+        value={role}
+        onChangeText={setRole}
+        maxLength={120}
+      />
+      <MemberKindPicker kind={kind} onChange={setKind} />
+      <DispoButton
+        accessibilityLabel={t('Ajouter au groupe')}
+        icon="person-add"
+        disabled={!name.trim()}
+        loading={add.isPending}
+        onPress={() =>
+          add.mutate(
+            { groupId, name, role: role.trim() || null, kind },
+            {
+              onSuccess: () => {
+                setName('');
+                setRole('');
+                onClose();
+              },
+            },
+          )
+        }
+      >
+        {t('Ajouter au groupe')}
+      </DispoButton>
+      <DispoButton variant="secondary" disabled={add.isPending} onPress={onClose}>
+        {t('Annuler')}
+      </DispoButton>
+      {add.isError ? (
+        <AppText color={palette.signal}>{t('Le membre n’a pas pu être ajouté. Réessaie.')}</AppText>
+      ) : null}
+    </Card>
+  );
+}
+
 export function GroupMembersScreen({ groupId }: { groupId: string }) {
+  const headerHeight = useHeaderHeight();
   const { session } = useAuth();
   const { i18n, t } = useTranslation();
   const { palette } = useDispoTheme();
@@ -171,6 +390,7 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
   const invite = useInviteGroupMember();
   const cancel = useCancelGroupInvitation();
   const [search, setSearch] = useState('');
+  const [showManualForm, setShowManualForm] = useState(false);
   const [kind, setKind] = useState<GroupMemberKind>('permanent');
   const group = groupQuery.data;
   const userId = session?.user.id ?? '';
@@ -218,103 +438,144 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
     );
   return (
     <Screen nativeHeader>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {group.members.map((member) => (
-          <MemberCard
-            groupId={group.id}
-            isCurrentLeader={isLeader}
-            key={member.id}
-            member={member}
-            userId={userId}
-          />
-        ))}
-        {group.pendingInvitations.map((pending) => (
-          <Card key={pending.id} padding={11}>
-            <View style={styles.pendingRow}>
-              <View style={styles.dimmed}>
-                <GroupAvatar emoji="🎵" name={pending.name} photoUrl={pending.photoUrl} size={42} />
-              </View>
-              <View style={styles.memberCopy}>
-                <AppText color={palette.muted} style={styles.memberName}>
-                  {pending.name}
-                </AppText>
-                <AppText color={palette.bronze} variant="caption2">
-                  ⏳ {t('Invitation en attente')}
-                  {pending.kind === 'guest' ? ` · 🌠 ${t('Special guest')}` : ''}
-                </AppText>
-              </View>
-              {isLeader ? (
-                <Pressable
-                  accessibilityLabel={t('Annuler l’invitation')}
-                  onPress={() => cancel.mutate(pending.id)}
-                >
-                  <Ionicons color={palette.muted} name="close-circle" size={23} />
-                </Pressable>
-              ) : null}
-            </View>
-          </Card>
-        ))}
-        {isLeader ? (
-          <Card style={styles.inviteCard}>
-            <AppText variant="title">{t('Inviter un musicien')}</AppText>
-            <FormField
-              label={t('Rechercher')}
-              onChangeText={setSearch}
-              placeholder={t('Nom ou instrument')}
-              value={search}
-            />
-            <View style={styles.kindRow}>
-              <View style={styles.flex}>
-                <ChoiceChip
-                  label={t('Permanent')}
-                  onPress={() => setKind('permanent')}
-                  selected={kind === 'permanent'}
-                />
-              </View>
-              <View style={styles.flex}>
-                <ChoiceChip
-                  label={`🌠 ${t('Special guest')}`}
-                  onPress={() => setKind('guest')}
-                  selected={kind === 'guest'}
-                />
-              </View>
-            </View>
-            {inviteCandidates.slice(0, 20).map((profile) => (
-              <View
-                key={profile.id}
-                style={[styles.pendingRow, { borderBottomColor: palette.border }]}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {isLeader ? (
+            showManualForm ? (
+              <AddManualMemberCard groupId={group.id} onClose={() => setShowManualForm(false)} />
+            ) : (
+              <DispoButton
+                variant="secondary"
+                icon="person-add"
+                accessibilityLabel={t('Ajouter sans compte Dispo')}
+                onPress={() => setShowManualForm(true)}
               >
-                <GroupAvatar emoji="🎵" name={profile.name} photoUrl={profile.photoUrl} size={38} />
+                {t('Ajouter sans compte Dispo')}
+              </DispoButton>
+            )
+          ) : null}
+          {group.members.map((member) =>
+            member.isManual ? (
+              <ManualMemberCard
+                member={member}
+                groupId={group.id}
+                isLeader={isLeader}
+                key={member.id}
+              />
+            ) : (
+              <MemberCard
+                groupId={group.id}
+                isCurrentLeader={isLeader}
+                key={member.id}
+                member={member}
+                userId={userId}
+              />
+            ),
+          )}
+          {group.pendingInvitations.map((pending) => (
+            <Card key={pending.id} padding={11}>
+              <View style={styles.pendingRow}>
+                <View style={styles.dimmed}>
+                  <GroupAvatar
+                    emoji="🎵"
+                    name={pending.name}
+                    photoUrl={pending.photoUrl}
+                    size={42}
+                  />
+                </View>
                 <View style={styles.memberCopy}>
-                  <AppText style={styles.memberName}>{profile.name}</AppText>
-                  <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                    {profile.instruments.map((instrument) => t(instrument)).join(' · ') ||
-                      t('Musicien')}
+                  <AppText color={palette.muted} style={styles.memberName}>
+                    {pending.name}
+                  </AppText>
+                  <AppText color={palette.bronze} variant="caption2">
+                    ⏳ {t('Invitation en attente')}
+                    {pending.kind === 'guest' ? ` · 🌠 ${t('Special guest')}` : ''}
                   </AppText>
                 </View>
-                <Pressable
-                  accessibilityLabel={t('Inviter {{name}}', { name: profile.name })}
-                  onPress={() => invite.mutate({ groupId: group.id, kind, profileId: profile.id })}
-                  style={[styles.inviteButton, { backgroundColor: `${palette.electric}22` }]}
-                >
-                  <Ionicons color={palette.electric} name="person-add" size={18} />
-                </Pressable>
+                {isLeader ? (
+                  <Pressable
+                    accessibilityLabel={t('Annuler l’invitation')}
+                    onPress={() => cancel.mutate(pending.id)}
+                  >
+                    <Ionicons color={palette.muted} name="close-circle" size={23} />
+                  </Pressable>
+                ) : null}
               </View>
-            ))}
-            {!inviteCandidates.length ? (
-              <EmptyState
-                icon="search-outline"
-                message={t('Aucun autre profil visible ne correspond.')}
-                title={t('Personne à inviter')}
+            </Card>
+          ))}
+          {isLeader ? (
+            <Card style={styles.inviteCard}>
+              <AppText variant="title">{t('Inviter un musicien')}</AppText>
+              <FormField
+                label={t('Rechercher')}
+                onChangeText={setSearch}
+                placeholder={t('Nom ou instrument')}
+                value={search}
               />
-            ) : null}
-          </Card>
-        ) : (
-          <AppText color={palette.muted} style={styles.note} variant="caption">
-            {t('Seul le leader peut inviter, changer les rôles ou retirer un membre.')}
-          </AppText>
-        )}
-      </ScrollView>
+              <View style={styles.kindRow}>
+                <View style={styles.flex}>
+                  <ChoiceChip
+                    label={t('Permanent')}
+                    onPress={() => setKind('permanent')}
+                    selected={kind === 'permanent'}
+                  />
+                </View>
+                <View style={styles.flex}>
+                  <ChoiceChip
+                    label={`🌠 ${t('Special guest')}`}
+                    onPress={() => setKind('guest')}
+                    selected={kind === 'guest'}
+                  />
+                </View>
+              </View>
+              {inviteCandidates.slice(0, 20).map((profile) => (
+                <View
+                  key={profile.id}
+                  style={[styles.pendingRow, { borderBottomColor: palette.border }]}
+                >
+                  <GroupAvatar
+                    emoji="🎵"
+                    name={profile.name}
+                    photoUrl={profile.photoUrl}
+                    size={38}
+                  />
+                  <View style={styles.memberCopy}>
+                    <AppText style={styles.memberName}>{profile.name}</AppText>
+                    <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+                      {profile.instruments.map((instrument) => t(instrument)).join(' · ') ||
+                        t('Musicien')}
+                    </AppText>
+                  </View>
+                  <Pressable
+                    accessibilityLabel={t('Inviter {{name}}', { name: profile.name })}
+                    onPress={() =>
+                      invite.mutate({ groupId: group.id, kind, profileId: profile.id })
+                    }
+                    style={[styles.inviteButton, { backgroundColor: `${palette.electric}22` }]}
+                  >
+                    <Ionicons color={palette.electric} name="person-add" size={18} />
+                  </Pressable>
+                </View>
+              ))}
+              {!inviteCandidates.length ? (
+                <EmptyState
+                  icon="search-outline"
+                  message={t('Aucun autre profil visible ne correspond.')}
+                  title={t('Personne à inviter')}
+                />
+              ) : null}
+            </Card>
+          ) : (
+            <AppText color={palette.muted} style={styles.note} variant="caption">
+              {t('Seul le leader peut inviter, changer les rôles ou retirer un membre.')}
+            </AppText>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
