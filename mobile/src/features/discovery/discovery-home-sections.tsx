@@ -112,8 +112,10 @@ export function HomeGroupsSection({
         >
           <Card tone="inset">
             <View style={styles.row}>
-              <View style={[styles.groupIcon, { backgroundColor: `${palette.electric}14` }]}>
-                <AppText>{group.emoji}</AppText>
+              <View style={[styles.groupIcon, { backgroundColor: palette.jazzGlow }]}>
+                <AppText maxFontSizeMultiplier={1.3} style={styles.groupEmoji}>
+                  {group.emoji}
+                </AppText>
               </View>
               <View style={[styles.flex, styles.groupCopy]}>
                 <AppText style={styles.actionText} variant="subheadline">
@@ -299,6 +301,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xl },
   flex: { flex: 1, minWidth: 0 },
   groupCopy: { gap: spacing.xxs },
+  groupEmoji: { fontSize: 22, lineHeight: 28 },
   groupIcon: {
     alignItems: 'center',
     borderRadius: radii.input,

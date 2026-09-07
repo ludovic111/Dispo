@@ -1374,3 +1374,11 @@ livraison d’un lot fonctionnellement validé.
 
 - Livraison terminée : iOS Release et XCTest de démarrage à froid réussis. Archive/export puis IPA finale 2.4 (50), signature Apple Distribution: Raphaël Herrera (2YBQQ56HH8), codesign strict, APNs production, Apple Sign In Default, get-task-allow=false et configuration production vérifiés. Code `392be69` poussé. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` confirmés. Delivery UUID : `265b578a-85ab-4d22-b738-8fd9aa42b3c4`. Build 50 relu par son ID via API App Store Connect : `VALID`. Aucun App Review, activation de testeurs ni Google Play.
 - Preuves finales et empreintes : `Dispo-dist/2.4/RELEASE-build50.md` et `Dispo-dist/qa-20260907-home/`. Banc QA supprimé des sources, configuration/package.json restaurés à l’identique, serveurs de test et émulateur Android arrêtés. Le simulateur iOS conserve le Release 50. Aucun appareil physique testé.
+
+
+## 2026-09-07 — Pastilles de groupe et titre des solos — build 51
+
+- Retours WhatsApp de Raphaël, périmètre complété explicitement par Ludovic : notes des pastilles de groupe peu visibles et risque de confondre les listes de solos de deux morceaux.
+- Accueil : fond opaque jazzGlow de la palette existante, emojis 22/28 ; aucune autre couleur ou surface modifiée. Solos : titre complet et artiste optionnel visibles au-dessus de la liste défilante, ordre/affectations inchangés.
+- TypeScript, ESLint, Prettier et 66 suites / 375 tests réussis. Vrais composants vérifiés dans un banc natif iOS/Android en sombre/clair et avec titre long ; banc retiré, package restauré à l’identique et empreinte de configuration production inchangée. Aucun compte ni migration nécessaire ; aucun test physique de Dispo.
+- Build iOS/Android incrémenté à 51. Preuves et verdicts de livraison dans `Dispo-dist/qa-20260907-group-badges/` ; builds natifs et import Apple complétés après exécution.

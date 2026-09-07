@@ -373,6 +373,14 @@ export function SongSoloOrderSheet({
               <Ionicons color={palette.text} name="close" size={18} />
             </Pressable>
           </View>
+          <View style={styles.soloSongIdentity}>
+            <AppText variant="title3">{song.title}</AppText>
+            {song.artist ? (
+              <AppText color={palette.muted} variant="subheadline">
+                {song.artist}
+              </AppText>
+            ) : null}
+          </View>
           <ScrollView contentContainerStyle={styles.soloSheetContent}>
             <AppText color={palette.muted} variant="caption">
               {t("Les noms apparaissent dans l'ordre de passage.")}
@@ -624,6 +632,7 @@ const styles = StyleSheet.create({
   },
   soloIndexText: { fontWeight: '700' },
   soloMemberName: { fontWeight: '700' },
+  soloSongIdentity: { gap: spacing.xxs, paddingHorizontal: spacing.gutter, paddingTop: spacing.md },
   soloSheetContent: { gap: spacing.xs, padding: spacing.gutter, paddingBottom: spacing.xxl },
   soloSheetRow: {
     alignItems: 'center',
