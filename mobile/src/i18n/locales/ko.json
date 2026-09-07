@@ -2257,5 +2257,10 @@
   "Le membre n’a pas pu être ajouté. Réessaie.": "멤버를 추가하지 못했습니다. 다시 시도하세요.",
   "Le membre n’a pas pu être enregistré.": "멤버를 저장하지 못했습니다.",
   "Le membre n’a pas pu être retiré.": "멤버를 삭제하지 못했습니다.",
-  "Ses solos seront retirés du répertoire et des événements.": "이 멤버의 솔로 배정이 레퍼토리와 이벤트에서 삭제됩니다."
+  "Ses solos seront retirés du répertoire et des événements.": "이 멤버의 솔로 배정이 레퍼토리와 이벤트에서 삭제됩니다.",
+  "Crée ton premier groupe": "첫 그룹 만들기",
+  "1 membre": "멤버 1명",
+  "Les musiciens disponibles": "참여 가능한 뮤지션",
+  "Essaie une autre date ou explore les musiciens à proximité.": "다른 날짜를 선택하거나 근처 뮤지션을 찾아보세요.",
+  "Voir les musiciens à proximité": "근처 뮤지션 보기"
 }

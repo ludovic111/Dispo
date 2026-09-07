@@ -2257,5 +2257,10 @@
   "Le membre n’a pas pu être ajouté. Réessaie.": "メンバーを追加できませんでした。もう一度お試しください。",
   "Le membre n’a pas pu être enregistré.": "メンバーを保存できませんでした。",
   "Le membre n’a pas pu être retiré.": "メンバーを削除できませんでした。",
-  "Ses solos seront retirés du répertoire et des événements.": "このメンバーのソロ担当がレパートリーとイベントから削除されます。"
+  "Ses solos seront retirés du répertoire et des événements.": "このメンバーのソロ担当がレパートリーとイベントから削除されます。",
+  "Crée ton premier groupe": "最初のグループを作成",
+  "1 membre": "メンバー1人",
+  "Les musiciens disponibles": "参加可能なミュージシャン",
+  "Essaie une autre date ou explore les musiciens à proximité.": "別の日付を選ぶか、近くのミュージシャンを探してみましょう。",
+  "Voir les musiciens à proximité": "近くのミュージシャンを見る"
 }
