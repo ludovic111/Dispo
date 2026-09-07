@@ -1403,3 +1403,17 @@ livraison d’un lot fonctionnellement validé.
 - Retour IMG_1203 transmis par Ludovic : ajout de la date et de l’heure sous chaque commentaire de morceau, avec la coche existante pour son auteur. Horodatage createdAt déjà chargé, langue de l’app et fuseau local via Intl ; valeur invalide omise sans planter. Aucun backend ni changement de saisie/suppression.
 - TypeScript, ESLint, formats et 66 suites / 376 tests réussis. Garde de régression de la coche adaptée au composant extrait. Métadonnées du composant vérifiées sur iOS/Android en sombre/clair, FR/EN, commentaires anciens et changement d’année local. Banc de contenu illustratif sans compte/backend, retiré ; package/configuration production restaurés à l’identique. Aucun appareil physique ni parcours clavier retesté, saisie inchangée.
 - Build incrémenté à 53 ; preuves Dispo-dist/qa-20260907-comment-date/. Builds natifs et verdict Apple complétés après exécution.
+
+
+### Livraison finale — build 53
+
+- Correctif : date et heure de création sous chaque commentaire de morceau, langue de l’app et fuseau local ; coche de son auteur conservée. Aucun changement backend.
+- Code : `6a5ca482a502ed0fb623b79c4ccb966b1a7dbcc4`, poussé sur `origin/main`.
+- Validation : TypeScript, ESLint, formatage, 376 tests / 66 suites ; CNG et pods réussis. Expo Doctor 20/21, 14 écarts de versions patch préexistants conservés.
+- Visuel : composant réel dans des commentaires illustratifs sur simulateur iOS sombre/clair FR et émulateur Android sombre FR/clair EN, date ancienne et changement d’année. Builds Release iOS et Android 53 compilés, installés et démarrés à l’écran de connexion. Aucun appareil physique ni session réelle testé ; parcours clavier complet non retesté.
+- Archive et export iOS réussis ; signature stricte Apple Distribution Raphaël Herrera, équipe 2YBQQ56HH8, APNs production et Apple Sign In, débogage désactivé. Configuration de production et absence du banc QA vérifiées.
+- IPA : `Dispo-dist/2.4/Dispo-2.4-build53.ipa`, SHA-256 `83663a04e9c89f3f2025d997ca9d1b1436749d0f4f67245fd6931a8e6b084344`.
+- APK direct : `Dispo-dist/android/Dispo-2.4-build53-direct-test.apk`, SHA-256 `5f161e2c296d0592d33cc8ff2f06d49044385f6240da069e70a98fbe7a237d9e`, signature v2 vérifiée ; aucune publication Google Play.
+- Apple : validation et upload sans erreur, livraison `521d9875-4ab0-44f4-ad6f-54f5a194496a`, import/build `VALID`, `APP_STORE_ELIGIBLE`.
+- Groupe externe `Beta testers` associé au build 53 ; examen bêta `APPROVED`, distribution externe `IN_BETA_TESTING` vérifiées via API. Aucun nouvel utilisateur ni lien public ajouté, aucune soumission App Review publique.
+- Nettoyage : banc QA retiré, package.json restauré à l’identique, empreinte .env.local inchangée ; Metro et émulateur arrêtés, préférences et redirection de débogage retirées.
