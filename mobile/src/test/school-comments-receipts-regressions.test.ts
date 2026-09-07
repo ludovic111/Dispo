@@ -34,7 +34,9 @@ describe('lot écoles, commentaires et coches', () => {
   it('confirme la suppression et n’affiche qu’une coche persistée sur ses commentaires', () => {
     const song = source('src/features/groups/group-song-screen.tsx');
     expect(song).toContain("Alert.alert(t('Supprimer ce commentaire ?')");
-    expect(song).toContain('<ReceiptChecks receipt="sent" />');
+    expect(source('src/features/groups/song-comment-meta.tsx')).toContain(
+      'isAuthor ? <ReceiptChecks receipt="sent" /> : null',
+    );
     expect(song).toContain('item.authorId === userId');
   });
 

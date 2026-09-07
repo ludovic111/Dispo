@@ -51,6 +51,7 @@ import {
 } from './group-repository';
 import { isKnownMusicalKey, musicalKeyOptions, musicalKeysEqual } from './group-song-key-model';
 import { SongArtwork, SongListenSheet } from './group-song-row';
+import { SongCommentMeta } from './song-comment-meta';
 import { SongDetailTabs, type SongDetailTab } from './song-detail-tabs';
 
 import { AppText } from '@/components/ui/app-text';
@@ -65,7 +66,6 @@ import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { irealDestination } from '@/domain/song';
 import { useAuth } from '@/features/auth/auth-context';
-import { ReceiptChecks } from '@/features/messages/message-controls';
 import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, spacing } from '@/theme/tokens';
 
@@ -1046,7 +1046,7 @@ export function GroupSongScreen({
                     {item.authorName}
                   </AppText>
                   <AppText>{item.text}</AppText>
-                  {item.authorId === userId ? <ReceiptChecks receipt="sent" /> : null}
+                  <SongCommentMeta createdAt={item.createdAt} isAuthor={item.authorId === userId} />
                 </View>
                 {isLeader || item.authorId === userId ? (
                   <Pressable

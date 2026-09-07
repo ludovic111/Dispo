@@ -1396,3 +1396,10 @@ livraison d’un lot fonctionnellement validé.
 - Livraison : iOS Release Simulator et Android Release arm64 52 compilés, installés et démarrés à froid. Build 2.4 (52) : archive/export réussis, IPA signée Apple Distribution: Raphaël Herrera (2YBQQ56HH8), codesign strict, APNs production, Apple Sign In Default et get-task-allow=false. Configuration production et absence de banc QA vérifiées. Apple VERIFY SUCCEEDED, UPLOAD SUCCEEDED, BUILD-STATUS VALID, IMPORT-STATUS VALID, APP_STORE_ELIGIBLE. Delivery 62d68a96-49c3-48dc-ba18-687789e00023. Code b170378149ff950074aa6c1de79facd26c5ba756 poussé sur main. Preuves : Dispo-dist/2.4/RELEASE-build52.md. Aucun appareil physique testé.
 
 - Distribution externe : dans la continuité de la demande de Ludovic pour Beta testers, build 52 associé au groupe 33339e1f-d3b2-4022-9750-52da27991f12, soumission bêta APPROVED et externalBuildState IN_BETA_TESTING relus. Le groupe contient le build 52 ; autoNotifyEnabled=true conservé. Aucune soumission App Store publique.
+
+
+## 2026-09-07 — Date des commentaires de morceaux — build 53
+
+- Retour IMG_1203 transmis par Ludovic : ajout de la date et de l’heure sous chaque commentaire de morceau, avec la coche existante pour son auteur. Horodatage createdAt déjà chargé, langue de l’app et fuseau local via Intl ; valeur invalide omise sans planter. Aucun backend ni changement de saisie/suppression.
+- TypeScript, ESLint, formats et 66 suites / 376 tests réussis. Garde de régression de la coche adaptée au composant extrait. Métadonnées du composant vérifiées sur iOS/Android en sombre/clair, FR/EN, commentaires anciens et changement d’année local. Banc de contenu illustratif sans compte/backend, retiré ; package/configuration production restaurés à l’identique. Aucun appareil physique ni parcours clavier retesté, saisie inchangée.
+- Build incrémenté à 53 ; preuves Dispo-dist/qa-20260907-comment-date/. Builds natifs et verdict Apple complétés après exécution.
