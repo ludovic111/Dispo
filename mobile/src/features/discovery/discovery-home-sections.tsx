@@ -1,4 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
@@ -17,6 +19,33 @@ export interface HomeGroup {
   id: string;
   memberCount: number;
   name: string;
+  photoUrl: string | null;
+}
+
+function HomeGroupIcon({ group }: { group: HomeGroup }) {
+  const { palette } = useDispoTheme();
+  const { t } = useTranslation();
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  if (group.photoUrl && group.photoUrl !== failedUri) {
+    return (
+      <Image
+        accessibilityLabel={t('Photo de {{name}}', { name: group.name })}
+        contentFit="cover"
+        onError={() => setFailedUri(group.photoUrl)}
+        recyclingKey={group.photoUrl}
+        source={{ uri: group.photoUrl }}
+        style={styles.groupIcon}
+        transition={180}
+      />
+    );
+  }
+  return (
+    <View style={[styles.groupIcon, { backgroundColor: palette.jazzGlow }]}>
+      <AppText maxFontSizeMultiplier={1.3} style={styles.groupEmoji}>
+        {group.emoji}
+      </AppText>
+    </View>
+  );
 }
 
 export function HomeGroupsSection({
@@ -112,11 +141,7 @@ export function HomeGroupsSection({
         >
           <Card tone="inset">
             <View style={styles.row}>
-              <View style={[styles.groupIcon, { backgroundColor: palette.jazzGlow }]}>
-                <AppText maxFontSizeMultiplier={1.3} style={styles.groupEmoji}>
-                  {group.emoji}
-                </AppText>
-              </View>
+              <HomeGroupIcon group={group} />
               <View style={[styles.flex, styles.groupCopy]}>
                 <AppText style={styles.actionText} variant="subheadline">
                   {group.name}

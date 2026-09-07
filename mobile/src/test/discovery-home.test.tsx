@@ -43,10 +43,11 @@ it('opens the chosen group, keeps cached groups on refresh error and exposes cre
           id: 'one',
           name: 'Jam by the lake',
           emoji: '🎷',
+          photoUrl: null,
           memberCount: 4,
           date: '2026-09-10T18:00:00Z',
         },
-        { id: 'two', name: 'Mon groupe', emoji: '🎶', memberCount: 1, date: null },
+        { id: 'two', name: 'Mon groupe', emoji: '🎶', photoUrl: null, memberCount: 1, date: null },
       ]}
       isError
       isLoading={false}
@@ -102,5 +103,40 @@ it('switches dates independently of groups and offers nearby exploration then fi
   expect(view.getByRole('button', { name: 'Près de chez toi · 0', selected: true })).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: 'Filtres' }));
   expect(onFilters).toHaveBeenCalledTimes(1);
+  await view.unmount();
+});
+
+it('uses the group photo, falls back on load failure and accepts a replacement photo', async () => {
+  const group = {
+    id: 'photo',
+    name: 'Jam',
+    emoji: '🎶',
+    memberCount: 2,
+    date: null,
+    photoUrl: 'https://example.com/group.jpg',
+  };
+  const props = {
+    isError: false,
+    isLoading: false,
+    onCreate: jest.fn(),
+    onOpen: jest.fn(),
+    onRetry: jest.fn(),
+  };
+  const view = await render(<HomeGroupsSection {...props} groups={[group]} />);
+  expect(view.queryByText('🎶')).toBeNull();
+  await fireEvent(view.getByLabelText('Photo de {{name}}'), 'error', {
+    nativeEvent: { error: 'Unavailable' },
+  });
+  expect(view.getByText('🎶')).toBeTruthy();
+  await view.rerender(
+    <HomeGroupsSection
+      {...props}
+      groups={[{ ...group, photoUrl: 'https://example.com/replacement.jpg' }]}
+    />,
+  );
+  expect(view.getByLabelText('Photo de {{name}}')).toBeTruthy();
+  expect(view.queryByText('🎶')).toBeNull();
+  await view.rerender(<HomeGroupsSection {...props} groups={[{ ...group, photoUrl: null }]} />);
+  expect(view.getByText('🎶')).toBeTruthy();
   await view.unmount();
 });

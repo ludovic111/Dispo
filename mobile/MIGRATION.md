@@ -1384,3 +1384,11 @@ livraison d’un lot fonctionnellement validé.
 - Build iOS/Android incrémenté à 51. Preuves et verdicts de livraison dans `Dispo-dist/qa-20260907-group-badges/` ; builds natifs et import Apple complétés après exécution.
 
 - Livraison terminée : code 496f4225ab00473d52c4b425cf190c98e13dd30a poussé sur origin/main. iOS Release Simulator et Android Release arm64 compilés, installés et démarrés à froid. IPA signée et vérifiée, Apple VERIFY SUCCEEDED, UPLOAD SUCCEEDED, BUILD-STATUS VALID, IMPORT-STATUS VALID et APP_STORE_ELIGIBLE. Delivery UUID : 260e44e5-4e94-4b85-856d-48f1f1a7be27. Aucun Supabase, site, App Review, groupe de testeurs ni Google Play modifié. Preuves : `Dispo-dist/2.4/RELEASE-build51.md`. Banc retiré, préférences Metro/redirection Android supprimées, Metro/émulateur/Gradle arrêtés. Aucun appareil physique testé.
+
+
+## 2026-09-07 — Photo du groupe sur l’accueil — build 52
+
+- Demande explicite de Ludovic : reprendre la photo du groupe dans sa pastille d’accueil. La tentative de relecture WhatsApp a échoué (connexion iPhone Mirroring interrompue) ; implémentation fondée sur sa consigne directe.
+- photoUrl est transmis depuis le groupe existant. Photo cadrée cover dans la pastille ; emoji conservé en l’absence de photo ou en cas d’erreur. Une URL de remplacement réactive la photo. Aucun backend, téléversement ou changement de permissions.
+- TypeScript, ESLint, formats et 66 suites / 376 tests réussis, dont photo, erreur, remplacement et suppression. Captures des vrais composants sur iOS/Android, sombre/clair, avec photo illustrative locale et groupe sans photo. Banc retiré avant production, package restauré à l’identique, configuration .env.local inchangée par empreinte. Aucun appareil physique testé.
+- Build incrémenté à 52. Preuves : `Dispo-dist/qa-20260907-group-photo/`. CNG réussi ; Expo Doctor 20/21 avec 14 écarts patch préexistants. Builds natifs et verdict Apple complétés après exécution.

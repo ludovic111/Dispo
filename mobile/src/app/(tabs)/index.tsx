@@ -90,6 +90,7 @@ export default function DiscoveryScreen() {
       (groupsQuery.data ?? []).map((group) => ({
         date: upcomingGroupEvents(group.events)[0]?.date ?? null,
         emoji: group.emoji,
+        photoUrl: group.photoUrl,
         id: group.id,
         name: group.name,
         memberCount: group.members.length,
