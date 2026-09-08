@@ -1,6 +1,6 @@
 # Dispo Expo / React Native — état courant et historique de migration
 
-Dernière mise à jour documentaire : 2 septembre 2026.
+Dernière mise à jour documentaire : 8 septembre 2026.
 
 Ce fichier conserve le contrat historique de migration et les preuves du
 client commun. Depuis la décision explicite de Ludovic du 1er septembre 2026,
@@ -12,10 +12,10 @@ La validation de Ludovic autorise la bascule produit et le nettoyage des
 anciens clients. Elle ne remplace pas les preuves techniques propres à chaque
 parcours, intégration native, appareil physique ou livraison Store.
 
-La section suivante est la source de vérité au 2 septembre 2026. Les matrices
+Les lots datés complètent l'état de référence du 2 septembre 2026. Les matrices
 plus bas conservent la photographie détaillée du socle du 30 août et la cible
-finale ; en cas d’écart de statut, l’état du 2 septembre prévaut. Aucune
-présence de code n’est assimilée à une validation métier, visuelle ou sur
+finale ; en cas d’écart, le lot le plus récent prévaut pour les surfaces concernées.
+Aucune présence de code n’est assimilée à une validation métier, visuelle ou sur
 appareil.
 
 ## Lot du 8 septembre 2026 — build 54
@@ -37,8 +37,18 @@ Les parcours métier ont été testés sur trois comptes locaux. Les contrôles
 visuels couvrent iPhone 17/iOS 26.4, Android 16 et les tarifs web FR/EN.
 Les migrations `20260908140606` et `20260908145624` ont été validées localement
 puis appliquées au backend existant. Aucun répertoire n'a été rendu public.
-Les preuves de builds et de livraison seront consignées dans le rapport du lot
-`Dispo-dist/qa-20260908-personal-repertoire/REPORT.md`.
+La validation compte 382 tests dans 68 suites, TypeScript, ESLint et formatage.
+Les builds Release iOS et Android ont compilé et démarré. La copie iOS de test
+utilise les droits de simulateur générés par Xcode. Le dernier contrôle visuel
+Release a été empêché par le verrouillage du Mac ; les contrôles visuels métier
+avaient été effectués avant ce verrouillage. Aucun appareil physique testé.
+Expo Doctor conserve un échec préexistant sur 14 versions patch (20/21 contrôles).
+
+Le code `bee93a7` est poussé ; le site FR/EN `f05174c` est publié sur
+`https://dispoapp.net`. L'IPA 2.4 (54) est validé, uploadé et importé par Apple
+(`VALID`, `APP_STORE_ELIGIBLE`), build `bef80b7f-79e3-410f-a68f-49a04b22668f`.
+Aucun groupe de testeurs ni examen App Review n'a été activé. Les preuves sont
+consignées dans `Dispo-dist/qa-20260908-personal-repertoire/REPORT.md`.
 
 ## État faisant autorité — 2 septembre 2026
 
