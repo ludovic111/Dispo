@@ -35,6 +35,7 @@ import { fetchOnboardingDraft, saveOnboardingDraft } from './onboarding-service'
 import { AppText } from '@/components/ui/app-text';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
+import { communityContentMessage } from '@/domain/community-content';
 import { shortProfileLevel } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
 import { signOut } from '@/features/auth/auth-service';
@@ -153,8 +154,15 @@ export function OnboardingScreen() {
       await saveOnboardingDraft(session.user.id, draft);
       await queryClient.invalidateQueries({ queryKey: profileKeys.me(session.user.id) });
       router.replace('/(tabs)');
-    } catch {
-      setErrorText(t("Impossible d'enregistrer ton profil — vérifie le réseau."));
+    } catch (error) {
+      setErrorText(
+        t(
+          communityContentMessage(
+            error,
+            "Impossible d'enregistrer ton profil — vérifie le réseau.",
+          ),
+        ),
+      );
     } finally {
       setSaving(false);
     }

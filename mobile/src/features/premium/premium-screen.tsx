@@ -64,22 +64,6 @@ export function PremiumScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <PremiumHero />
 
-          <Card accessible accessibilityRole="summary" style={styles.betaCard}>
-            <View style={styles.betaRow}>
-              <View style={[styles.betaIcon, { backgroundColor: `${palette.electric}1F` }]}>
-                <Ionicons color={palette.electric} name="checkmark-circle" size={24} />
-              </View>
-              <View style={styles.betaCopy}>
-                <AppText variant="headline">{t('Premium est inclus dans cette bêta')}</AppText>
-                <AppText color={palette.muted} variant="callout">
-                  {t(
-                    "Aucun abonnement n'est proposé à la vente. Aucun achat ni débit ne peut être effectué depuis cette version.",
-                  )}
-                </AppText>
-              </View>
-            </View>
-          </Card>
-
           <SubscriptionPlans />
 
           <View style={styles.section}>

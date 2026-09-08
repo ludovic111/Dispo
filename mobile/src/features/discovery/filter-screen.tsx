@@ -22,6 +22,7 @@ import {
   instrumentCategories,
   levelOptions,
 } from '@/features/onboarding/onboarding-model';
+import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { useSchoolDirectory } from '@/features/schools/school-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
@@ -80,6 +81,11 @@ function ClearSelectionButton({ label, onPress }: { label: string; onPress: () =
 export function FilterScreen() {
   const { filters, resetFilters, scope, setFilters, setScope } = useDiscoveryState();
   const schoolDirectory = useSchoolDirectory();
+  const canAdvanced = usePremiumCapability('advancedFilters');
+  const advanced = (action: () => void) => {
+    if (canAdvanced) action();
+    else router.push('/premium');
+  };
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
@@ -218,7 +224,13 @@ export function FilterScreen() {
 
         <View style={styles.section}>
           <SectionHeader
-            subtitle={filters.genres.length ? `${filters.genres.length}` : t('Tous')}
+            subtitle={
+              !canAdvanced
+                ? t('Premium')
+                : filters.genres.length
+                  ? `${filters.genres.length}`
+                  : t('Tous')
+            }
             title={t('Styles')}
           />
           {filters.genres.length > 0 ? (
@@ -270,7 +282,9 @@ export function FilterScreen() {
                         key={genre}
                         label={t(genre)}
                         onPress={() =>
-                          setFilters({ ...filters, genres: toggle(filters.genres, genre) })
+                          advanced(() =>
+                            setFilters({ ...filters, genres: toggle(filters.genres, genre) }),
+                          )
                         }
                         selected={filters.genres.includes(genre)}
                       />
@@ -340,7 +354,13 @@ export function FilterScreen() {
 
         <View style={styles.section}>
           <SectionHeader
-            subtitle={filters.levels.length ? `${filters.levels.length}` : t('Tous')}
+            subtitle={
+              !canAdvanced
+                ? t('Premium')
+                : filters.levels.length
+                  ? `${filters.levels.length}`
+                  : t('Tous')
+            }
             title={t('Niveaux')}
           />
           <Card>
@@ -349,7 +369,11 @@ export function FilterScreen() {
                 <ChoiceChip
                   key={level}
                   label={t(shortProfileLevel(level))}
-                  onPress={() => setFilters({ ...filters, levels: toggle(filters.levels, level) })}
+                  onPress={() =>
+                    advanced(() =>
+                      setFilters({ ...filters, levels: toggle(filters.levels, level) }),
+                    )
+                  }
                   selected={filters.levels.includes(level)}
                 />
               ))}
@@ -435,7 +459,9 @@ export function FilterScreen() {
               <View style={[styles.divider, { backgroundColor: palette.border }]} />
               <FilterSwitch
                 label={t('A joué avec un ami')}
-                onValueChange={(playedWithFriend) => setFilters({ ...filters, playedWithFriend })}
+                onValueChange={(playedWithFriend) =>
+                  advanced(() => setFilters({ ...filters, playedWithFriend }))
+                }
                 value={filters.playedWithFriend}
               />
               <View style={[styles.divider, { backgroundColor: palette.border }]} />
@@ -447,7 +473,7 @@ export function FilterScreen() {
               <View style={[styles.divider, { backgroundColor: palette.border }]} />
               <FilterSwitch
                 label={t('Bien notés')}
-                onValueChange={(wellRated) => setFilters({ ...filters, wellRated })}
+                onValueChange={(wellRated) => advanced(() => setFilters({ ...filters, wellRated }))}
                 value={filters.wellRated}
               />
             </View>

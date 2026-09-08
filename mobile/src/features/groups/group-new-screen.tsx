@@ -28,6 +28,8 @@ import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
+import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
+import { useSubscription } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -40,6 +42,7 @@ export function GroupNewScreen() {
   const { palette } = useDispoTheme();
   const candidates = useGroupProfileCandidates();
   const create = useCreateGroup();
+  const subscription = useSubscription();
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🎶');
   const [search, setSearch] = useState('');
@@ -56,6 +59,34 @@ export function GroupNewScreen() {
           instrument.toLocaleLowerCase(locale).includes(needle),
         )),
   );
+
+  if (subscription.isLoading)
+    return (
+      <Screen nativeHeader>
+        <LoadingState />
+      </Screen>
+    );
+  if (subscription.isError)
+    return (
+      <Screen nativeHeader>
+        <ErrorState
+          message={t('Les abonnements n’ont pas pu être chargés.')}
+          onRetry={() => void subscription.refetch()}
+        />
+      </Screen>
+    );
+  if (
+    !subscription.data ||
+    subscription.data.tier === 'free' ||
+    (subscription.data.tier === 'group' && subscription.data.groupCount >= 1)
+  )
+    return (
+      <Screen nativeHeader>
+        <View style={{ padding: 18 }}>
+          <SubscriptionAccessCard groupCreation />
+        </View>
+      </Screen>
+    );
 
   if (candidates.isLoading)
     return (

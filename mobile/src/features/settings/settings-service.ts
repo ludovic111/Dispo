@@ -132,14 +132,6 @@ export async function updateLocationPrecision(
   await persistLocationPrecision(userId, precision, true);
 }
 
-/** Foreground refresh: never opens a system permission prompt by itself. */
-export async function refreshSharedLocation(
-  userId: string,
-  precision: Exclude<LocationPrecision, 'hidden'>,
-): Promise<void> {
-  await persistLocationPrecision(userId, precision, false);
-}
-
 export async function deleteCurrentAccount(): Promise<void> {
   const supabase = getSupabaseClient();
   const userResult = await supabase.auth.getUser();

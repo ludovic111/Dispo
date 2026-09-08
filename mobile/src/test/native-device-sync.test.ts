@@ -3,8 +3,6 @@ import { describe, expect, it, jest } from '@jest/globals';
 import {
   pushPreferencesForTests,
   synchronizePushRegistration,
-  synchronizeSharedLocation,
-  type LocationSyncDependencies,
   type PushSyncDependencies,
 } from '@/features/settings/native-device-sync';
 
@@ -45,37 +43,5 @@ describe('synchronisation native au retour au premier plan', () => {
     );
     expect(dependencies.register).not.toHaveBeenCalled();
     expect(dependencies.saveToken).not.toHaveBeenCalled();
-  });
-
-  it('rafraîchit seulement une position déjà partagée', async () => {
-    const refresh = jest.fn(async () => undefined);
-    const shared: LocationSyncDependencies = {
-      fetchProfile: jest.fn(async () => ({
-        city: 'Genève',
-        country: 'CH',
-        location_precision: 'exact_friends',
-        name: 'Ludovic',
-        photo_url: null,
-        postal_code: '1201',
-      })),
-      refresh,
-    };
-    await expect(synchronizeSharedLocation('user-id', shared)).resolves.toBe(true);
-    expect(refresh).toHaveBeenCalledWith('user-id', 'exact_friends');
-
-    const hidden: LocationSyncDependencies = {
-      ...shared,
-      fetchProfile: jest.fn(async () => ({
-        city: 'Genève',
-        country: 'CH',
-        location_precision: 'hidden',
-        name: 'Ludovic',
-        photo_url: null,
-        postal_code: '1201',
-      })),
-    };
-    refresh.mockClear();
-    await expect(synchronizeSharedLocation('user-id', hidden)).resolves.toBe(false);
-    expect(refresh).not.toHaveBeenCalled();
   });
 });

@@ -20,7 +20,7 @@ export async function fetchPersonalRepertoire(
   for (let offset = 0; ; offset += 200) {
     const result = await client
       .from('personal_repertoire')
-      .select('id,song,mastery,style,origin')
+      .select('id,song,arrangement,mastery,style,origin')
       .eq('profile_id', profileId)
       .eq('hidden', false)
       .order('id')
@@ -32,7 +32,13 @@ export async function fetchPersonalRepertoire(
         typeof row.song === 'object' && row.song !== null && !Array.isArray(row.song)
           ? row.song
           : {};
-      const song = groupSongFromJson({ ...source, id: row.id, is_approved: true });
+      const arrangement =
+        typeof row.arrangement === 'object' &&
+        row.arrangement !== null &&
+        !Array.isArray(row.arrangement)
+          ? row.arrangement
+          : {};
+      const song = groupSongFromJson({ ...source, ...arrangement, id: row.id, is_approved: true });
       if (song)
         songs.push({
           id: row.id,
@@ -75,4 +81,15 @@ export async function setPersonalRepertoireVisibility(
     .from('personal_repertoire_settings')
     .upsert({ profile_id: profileId, is_public: isPublic });
   if (result.error) throw result.error;
+}
+
+export async function savePersonalArrangement(
+  id: string,
+  changes: Record<string, Json>,
+): Promise<void> {
+  const { error } = await getSupabaseClient().rpc('update_personal_arrangement', {
+    p_id: id,
+    p_changes: changes,
+  });
+  if (error) throw error;
 }

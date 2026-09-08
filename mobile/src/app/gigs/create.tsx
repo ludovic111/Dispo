@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { AppText } from '@/components/ui/app-text';
 import { LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction } from '@/components/ui/section';
+import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm, type GigFormInitial } from '@/features/gigs/gig-form';
 import type { GigFormDefaults } from '@/features/gigs/gig-model';
@@ -81,7 +82,13 @@ export default function CreateGigScreen() {
             })
           }
           submitLabel={t('Publier le SOS')}
-          {...(create.error ? { errorMessage: t("L'annonce n'a pas pu être publiée.") } : {})}
+          {...(create.error
+            ? {
+                errorMessage: t(
+                  communityContentMessage(create.error, "L'annonce n'a pas pu être publiée."),
+                ),
+              }
+            : {})}
         />
       </ScrollView>
     </Screen>

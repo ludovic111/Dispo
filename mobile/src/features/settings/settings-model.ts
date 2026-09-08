@@ -121,3 +121,5 @@ export function whatsNewDecision(
   if (!previousVersion) return 'first-install';
   return previousVersion === currentVersion ? 'current' : 'updated';
 }
+
+export const termsPage = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';

@@ -41,6 +41,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { MessageDayDivider } from '@/features/messages/message-controls';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -283,7 +284,8 @@ export function SchoolCommunityScreen({ schoolId }: { schoolId: string }) {
       edit.mutate(
         { channelId: community.channelId, messageId: editing.id, text: clean },
         {
-          onError: () => setLocalError(t('Le message n’a pas pu être modifié.')),
+          onError: (error) =>
+            setLocalError(t(communityContentMessage(error, 'Le message n’a pas pu être modifié.'))),
           onSuccess: () => {
             setEditing(null);
             setText('');
@@ -296,9 +298,9 @@ export function SchoolCommunityScreen({ schoolId }: { schoolId: string }) {
     send.mutate(
       { channelId: community.channelId, text: clean },
       {
-        onError: () => {
+        onError: (error) => {
           setText((current) => current || clean);
-          setLocalError(t('Le message n’a pas pu être envoyé.'));
+          setLocalError(t(communityContentMessage(error, 'Le message n’a pas pu être envoyé.')));
         },
       },
     );

@@ -20,6 +20,7 @@ import {
   notificationStatusLabel,
   normalizeMarketingVersion,
   privacyPage,
+  termsPage,
   supportPage,
   type AppearancePreference,
   type LocationPrecision,
@@ -253,7 +254,7 @@ export function SettingsScreen() {
 
       <SettingsSection
         footer={t(
-          "Ta position est relevée quand tu ouvres l'app, jamais en arrière-plan. En approximatif, les autres te situent à ~5 km près — assez pour te trouver dans les recherches, sans révéler ton adresse. En masqué, aucune coordonnée n'est publiée : ton profil reste trouvable par nom, instrument et style.",
+          'Ta position est relevée uniquement quand tu touches un mode de partage ci-dessous. Pour l’actualiser, touche à nouveau ce mode. Aucun suivi automatique ni en arrière-plan. Tu peux retirer ta position à tout moment sans masquer ton profil.',
         )}
         title={t('Ma position')}
       >
@@ -287,12 +288,10 @@ export function SettingsScreen() {
         ))}
       </SettingsSection>
 
-      <SettingsSection title={t('Les formules au lancement')}>
+      <SettingsSection title={t('Abonnements')}>
         <SettingsRow
           color={palette.electric}
-          detail={t(
-            'Choisis un groupe ou toutes les possibilités. Tout reste inclus gratuitement pendant la bêta.',
-          )}
+          detail={t('Un groupe avec Dispo Groupe, tous les outils avec Premium.')}
           icon="pricetags"
           onPress={() => router.push('/premium' as Href)}
           right={<Ionicons color={palette.muted} name="chevron-forward" size={16} />}
@@ -332,6 +331,14 @@ export function SettingsScreen() {
           onPress={() => void Linking.openURL(privacyPage(i18n.resolvedLanguage ?? 'fr'))}
           right={<Ionicons color={palette.muted} name="open-outline" size={16} />}
           title={t('Confidentialité')}
+        />
+        <SettingsDivider />
+        <SettingsRow
+          color={palette.bronze}
+          icon="document-text"
+          onPress={() => void Linking.openURL(termsPage)}
+          right={<Ionicons color={palette.muted} name="open-outline" size={16} />}
+          title={t('Conditions d’utilisation')}
         />
         <SettingsDivider />
         <SettingsRow

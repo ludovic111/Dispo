@@ -14,35 +14,6 @@ export const premiumCapabilities = [
 
 export type PremiumCapability = (typeof premiumCapabilities)[number];
 
-/**
- * Dispo 2.4 is an open beta. There is no purchasable offer in this build and
- * every Premium capability is deliberately available to every beta account.
- */
-export const premiumBetaPolicy = Object.freeze({
-  capabilities: Object.freeze({
-    advancedFilters: true,
-    autoSOS: true,
-    configurableReminders: true,
-    expandedPortfolio: true,
-    personalRepertoire: true,
-    leadAdditionalGroup: true,
-    recurringEvents: true,
-  }) satisfies Readonly<Record<PremiumCapability, true>>,
-  isBeta: true,
-  purchasesEnabled: false,
-  visibleSections: Object.freeze([
-    'hero',
-    'betaNotice',
-    'plans',
-    'perks',
-    'freeFoundations',
-  ] as const),
-});
-
-export function canUsePremiumCapability(capability: PremiumCapability): boolean {
-  return premiumBetaPolicy.capabilities[capability];
-}
-
 export type SubscriptionTier = 'free' | 'group' | 'premium';
 export type BillingPeriod = 'monthly' | 'annual';
 export const subscriptionPlans = Object.freeze({
@@ -50,26 +21,25 @@ export const subscriptionPlans = Object.freeze({
   premium: { name: 'Dispo Premium', monthly: 690, annual: 6900, groupLimit: Infinity },
 });
 export const partnerSchoolDiscountPercent = 30;
-/** Amounts in CHF cents. These are the launch prices, not purchasable beta offers. */
+/** Reference prices in CHF cents; checkout always uses localized StoreKit prices. */
 export function subscriptionPrice(
   tier: Exclude<SubscriptionTier, 'free'>,
   period: BillingPeriod,
   partnerSchool = false,
 ): number {
   const amount = subscriptionPlans[tier][period];
-  return partnerSchool ? Math.round((amount * (100 - partnerSchoolDiscountPercent)) / 100) : amount;
+  const partner = {
+    group: { monthly: 200, annual: 2000 },
+    premium: { monthly: 480, annual: 4800 },
+  };
+  return partnerSchool ? partner[tier][period] : amount;
 }
-export function subscriptionGroupLimit(
-  tier: SubscriptionTier,
-  beta: boolean = premiumBetaPolicy.isBeta,
-): number {
-  if (beta) return Infinity;
+export function subscriptionGroupLimit(tier: SubscriptionTier): number {
   return tier === 'free' ? 0 : subscriptionPlans[tier].groupLimit;
 }
 export function subscriptionCanUse(
   tier: SubscriptionTier,
   _capability: PremiumCapability,
-  beta: boolean = premiumBetaPolicy.isBeta,
 ): boolean {
-  return beta || tier === 'premium';
+  return tier === 'premium';
 }

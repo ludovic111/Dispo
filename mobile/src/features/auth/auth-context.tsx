@@ -1,4 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useLinkingURL } from 'expo-linking';
 import {
   createContext,
   useCallback,
@@ -6,10 +8,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AppState, Linking } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { handleAuthCallbackUrl, isAuthCallbackUrl, restoreSession } from './auth-service';
 
@@ -28,6 +31,8 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const { t } = useTranslation();
+  const linkingUrl = useLinkingURL();
+  const handledCallback = useRef<string | null>(null);
   const configurationReady = hasSupabaseConfiguration();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(configurationReady);
@@ -48,22 +53,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setSession(nextSession);
       if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true);
       setIsLoading(false);
-    });
-
-    const openAuthCallback = async (url: string | null) => {
-      if (!active || !url || !isAuthCallbackUrl(url)) return;
-      setAuthCallbackError(null);
-      try {
-        const result = await handleAuthCallbackUrl(url);
-        if (active && result.recovery) setIsPasswordRecovery(true);
-      } catch {
-        if (active) setAuthCallbackError(t('Lien de connexion invalide ou expiré.'));
-      }
-    };
-
-    void Linking.getInitialURL().then(openAuthCallback);
-    const linking = Linking.addEventListener('url', ({ url }) => {
-      void openAuthCallback(url);
     });
 
     void restoreSession(supabase.auth)
@@ -88,11 +77,67 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       active = false;
       data.subscription.unsubscribe();
-      linking.remove();
       appState.remove();
       supabase.auth.stopAutoRefresh();
     };
-  }, [configurationReady, t]);
+  }, [configurationReady]);
+
+  useEffect(() => {
+    if (
+      !configurationReady ||
+      !linkingUrl ||
+      !isAuthCallbackUrl(linkingUrl) ||
+      handledCallback.current === linkingUrl
+    )
+      return;
+    // Expo's native event also covers URLs handled by another app-delegate subscriber.
+    // Consume the original URL once, before routing discards its auth parameters.
+    handledCallback.current = linkingUrl;
+    let active = true;
+    setAuthCallbackError(null);
+    void handleAuthCallbackUrl(linkingUrl)
+      .then((result) => {
+        if (active && result.recovery) setIsPasswordRecovery(true);
+      })
+      .catch(() => {
+        if (active) setAuthCallbackError(t('Lien de connexion invalide ou expiré.'));
+      });
+    return () => {
+      active = false;
+    };
+  }, [configurationReady, linkingUrl, t]);
+
+  const appleSubject = session?.user.identities?.find((identity) => identity.provider === 'apple')
+    ?.identity_data?.sub;
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || typeof appleSubject !== 'string') return;
+    let active = true;
+    const signOutRevoked = () => {
+      if (active)
+        void getSupabaseClient()
+          .auth.signOut({ scope: 'local' })
+          .catch(() => undefined);
+    };
+    const check = async () => {
+      try {
+        const state = await AppleAuthentication.getCredentialStateAsync(appleSubject);
+        if (state === AppleAuthentication.AppleAuthenticationCredentialState.REVOKED)
+          signOutRevoked();
+      } catch {
+        // The system may be offline; a failed check must not revoke a valid session.
+      }
+    };
+    const revoked = AppleAuthentication.addRevokeListener(signOutRevoked);
+    const foreground = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void check();
+    });
+    void check();
+    return () => {
+      active = false;
+      revoked.remove();
+      foreground.remove();
+    };
+  }, [appleSubject]);
 
   const value = useMemo(
     () => ({

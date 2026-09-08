@@ -435,3 +435,7 @@ verify_jwt = false
 # serveur optionnel ; Odesli/song.link résout les liens même sans abonnement.
 [functions.song-enrichment]
 verify_jwt = false
+
+# Handler validates the user JWT with Auth before reading their own purchases.
+[functions.sync-subscription]
+verify_jwt = false

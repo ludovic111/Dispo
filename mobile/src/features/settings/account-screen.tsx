@@ -62,6 +62,24 @@ export function AccountScreen() {
                   // L'identité n'existe déjà plus : le retour au portail reste correct.
                 }
                 router.replace('/(auth)/sign-in');
+                if (session?.user.identities?.some((identity) => identity.provider === 'apple')) {
+                  Alert.alert(
+                    t('Compte supprimé'),
+                    t(
+                      'Tes données Dispo ont été supprimées. Pour retirer aussi l’autorisation Apple, ouvre les réglages de connexion avec Apple et supprime Dispo.',
+                    ),
+                    [
+                      { text: t('Fermer'), style: 'cancel' },
+                      {
+                        text: t('Ouvrir les instructions Apple'),
+                        onPress: () =>
+                          void Linking.openURL('https://support.apple.com/102571').catch(
+                            () => undefined,
+                          ),
+                      },
+                    ],
+                  );
+                }
               })
               .catch(() => {
                 setErrorText(

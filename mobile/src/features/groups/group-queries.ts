@@ -600,6 +600,7 @@ export function groupRefreshFilters(
   const filters: InvalidateQueryFilters[] = [
     { exact: true, queryKey: groupKeys.list(userId) },
     { exact: true, queryKey: groupKeys.invitations(userId) },
+    { exact: true, queryKey: ['subscription', userId] },
     { queryKey: ['groups', 'event-resources'] as const },
   ];
   return includeSessions ? [...filters, { queryKey: sessionKeys.all }] : filters;

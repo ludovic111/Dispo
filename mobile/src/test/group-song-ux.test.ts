@@ -12,7 +12,12 @@ describe('fiche et tuile morceau', () => {
 
     expect(source).not.toContain("label={t('Grille d’accords')}");
     expect(source).not.toContain("label={t('Lien iReal Pro')}");
-    expect(source).toContain("{t('Ouvrir dans iReal Pro')}");
+    const panel = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/features/groups/song-info-panel.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('<SongInfoPanel');
+    expect(panel).toContain("{t('Ouvrir dans iReal Pro')}");
   });
 
   it('rend les solos comme une liste numérotée et garde la copie explicite', () => {

@@ -1,9 +1,7 @@
-import type { LocationPrecision, PushPreferences } from './settings-model';
+import type { PushPreferences } from './settings-model';
 import { permissionAllowsDelivery } from './settings-model';
 import {
-  fetchSettingsProfile,
   getNotificationPermission,
-  refreshSharedLocation,
   registerPushDevice,
   unregisterPushDevice,
 } from './settings-service';
@@ -61,33 +59,6 @@ export async function synchronizePushRegistration(
     await dependencies.unregister(previousToken).catch(() => undefined);
   }
   return 'registered';
-}
-
-export interface LocationSyncDependencies {
-  fetchProfile: typeof fetchSettingsProfile;
-  refresh: typeof refreshSharedLocation;
-}
-
-const defaultLocationSyncDependencies: LocationSyncDependencies = {
-  fetchProfile: fetchSettingsProfile,
-  refresh: refreshSharedLocation,
-};
-
-function sharedPrecision(value: string): Exclude<LocationPrecision, 'hidden'> | null {
-  if (value === 'city' || value === 'exact_friends' || value === 'exact_everyone') return value;
-  return null;
-}
-
-/** Refreshes an already-authorized location without opening a permission dialog. */
-export async function synchronizeSharedLocation(
-  userId: string,
-  dependencies: LocationSyncDependencies = defaultLocationSyncDependencies,
-): Promise<boolean> {
-  const profile = await dependencies.fetchProfile(userId);
-  const precision = sharedPrecision(profile.location_precision);
-  if (!precision) return false;
-  await dependencies.refresh(userId, precision);
-  return true;
 }
 
 export function pushPreferencesForTests(value?: Partial<PushPreferences>): PushPreferences {

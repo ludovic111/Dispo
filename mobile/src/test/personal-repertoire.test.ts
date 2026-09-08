@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { groupSongFromJson } from '@/features/groups/group-model';
 import {
   personalSongStyle,
+  personalArrangementChanges,
   visiblePersonalSongs,
   type PersonalSong,
 } from '@/features/repertoire/repertoire-model';
@@ -41,4 +42,17 @@ describe('personal repertoire filtering', () => {
     ]);
     expect(items.map((s) => s.id)).toEqual(['a', 'b', 'c']);
   });
+});
+
+it('only sends changed arrangement fields and supports explicitly clearing a key', () => {
+  const original = { ...make('a', 'All of Me', 2, '').song, key: 'C', tempoBpm: 120, form: 'AABA' };
+  expect(personalArrangementChanges(original, { ...original, key: null })).toEqual({ key: null });
+  expect(
+    personalArrangementChanges(original, {
+      ...original,
+      tempoBpm: 160,
+      title: 'All of Me · version trio',
+    }),
+  ).toEqual({ tempo_bpm: 160, title: 'All of Me · version trio' });
+  expect(original.key).toBe('C');
 });

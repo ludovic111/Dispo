@@ -1,10 +1,11 @@
 import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import {
   headerlessModalStackRoutes,
   headerlessStackRoutes,
@@ -79,6 +80,14 @@ function Navigation() {
         <Stack.Screen name="gigs/edit" options={{ title: t('Modifier le SOS') }} />
         <Stack.Screen name="gigs/[id]" options={{ title: t('Détail SOS') }} />
         <Stack.Screen name="messages/[id]" options={{ title: t('Conversation') }} />
+        <Stack.Screen
+          name="settings"
+          options={{
+            title: t('Réglages'),
+            presentation: 'modal',
+            headerRight: () => <NativeHeaderButton label={t('OK')} onPress={() => router.back()} />,
+          }}
+        />
       </Stack>
       <StatusBar style={dark ? 'light' : 'dark'} />
     </ThemeProvider>

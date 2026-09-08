@@ -23,6 +23,7 @@ import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { communityContentMessage } from '@/domain/community-content';
 import { shortProfileLevel } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
 import { GIG_GENRE_GROUPS } from '@/features/gigs/gig-model';
@@ -106,9 +107,14 @@ export function ProfileEditScreen() {
       router.back();
     } catch (error) {
       setErrorText(
-        error instanceof Error && error.message === 'profile_required_fields_missing'
-          ? t('Renseigne ton nom, au moins un instrument, ta ville et ton code postal.')
-          : t("Impossible d'enregistrer ton profil — vérifie le réseau."),
+        t(
+          communityContentMessage(
+            error,
+            error instanceof Error && error.message === 'profile_required_fields_missing'
+              ? 'Renseigne ton nom, au moins un instrument, ta ville et ton code postal.'
+              : "Impossible d'enregistrer ton profil — vérifie le réseau.",
+          ),
+        ),
       );
     } finally {
       setSaving(false);

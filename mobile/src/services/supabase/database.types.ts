@@ -1,56 +1,33 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '14.5';
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
-      personal_repertoire: {
-        Row: {
-          id: string;
-          profile_id: string;
-          song: Json;
-          identity: string;
-          mastery: number;
-          style: string;
-          origin: string;
-          hidden: boolean;
-          created_at: string;
-        };
-        Insert: { profile_id: string; song: Json; identity: string };
-        Update: { mastery?: number; style?: string; hidden?: boolean };
-        Relationships: [];
-      };
-      personal_repertoire_settings: {
-        Row: { profile_id: string; is_public: boolean };
-        Insert: { profile_id: string; is_public?: boolean };
-        Update: { is_public?: boolean };
-        Relationships: [];
-      };
-      group_manual_members: {
-        Row: {
-          id: string;
-          group_id: string;
-          name: string;
-          role: string | null;
-          kind: string;
-          created_at: string;
-        };
-        Insert: { group_id: string; name: string; role?: string | null; kind?: string };
-        Update: { name?: string; role?: string | null; kind?: string };
-        Relationships: [
-          {
-            foreignKeyName: 'group_manual_members_group_id_fkey';
-            columns: ['group_id'];
-            isOneToOne: false;
-            referencedRelation: 'music_groups';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       blocks: {
         Row: {
           blocked_id: string;
@@ -296,8 +273,8 @@ export type Database = {
           target_status: string | null;
           title: string;
           wanted_instruments: string[];
-          wanted_school_ids: string[];
           wanted_levels: string[] | null;
+          wanted_school_ids: string[];
         };
         Insert: {
           auto_sos_absent_profile_id?: string | null;
@@ -320,8 +297,8 @@ export type Database = {
           target_status?: string | null;
           title: string;
           wanted_instruments?: string[];
-          wanted_school_ids?: string[];
           wanted_levels?: string[] | null;
+          wanted_school_ids?: string[];
         };
         Update: {
           auto_sos_absent_profile_id?: string | null;
@@ -344,8 +321,8 @@ export type Database = {
           target_status?: string | null;
           title?: string;
           wanted_instruments?: string[];
-          wanted_school_ids?: string[];
           wanted_levels?: string[] | null;
+          wanted_school_ids?: string[];
         };
         Relationships: [
           {
@@ -438,7 +415,6 @@ export type Database = {
       };
       group_events: {
         Row: {
-          schedule_changed_at: string | null;
           created_at: string;
           date: string;
           group_id: string;
@@ -447,13 +423,13 @@ export type Database = {
           public_location_label: string;
           recurrence: string | null;
           reminder_lead_days: number | null;
+          schedule_changed_at: string | null;
           series_id: string | null;
           setlist: Json;
           title: string;
           venue: string;
         };
         Insert: {
-          schedule_changed_at?: string | null;
           created_at?: string;
           date: string;
           group_id: string;
@@ -462,13 +438,13 @@ export type Database = {
           public_location_label?: string;
           recurrence?: string | null;
           reminder_lead_days?: number | null;
+          schedule_changed_at?: string | null;
           series_id?: string | null;
           setlist?: Json;
           title: string;
           venue?: string;
         };
         Update: {
-          schedule_changed_at?: string | null;
           created_at?: string;
           date?: string;
           group_id?: string;
@@ -477,6 +453,7 @@ export type Database = {
           public_location_label?: string;
           recurrence?: string | null;
           reminder_lead_days?: number | null;
+          schedule_changed_at?: string | null;
           series_id?: string | null;
           setlist?: Json;
           title?: string;
@@ -537,6 +514,41 @@ export type Database = {
             columns: ['profile_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      group_manual_members: {
+        Row: {
+          created_at: string;
+          group_id: string;
+          id: string;
+          kind: string;
+          name: string;
+          role: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          group_id: string;
+          id?: string;
+          kind?: string;
+          name: string;
+          role?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          group_id?: string;
+          id?: string;
+          kind?: string;
+          name?: string;
+          role?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'group_manual_members_group_id_fkey';
+            columns: ['group_id'];
+            isOneToOne: false;
+            referencedRelation: 'music_groups';
             referencedColumns: ['id'];
           },
         ];
@@ -664,17 +676,17 @@ export type Database = {
         };
         Relationships: [
           {
-            foreignKeyName: 'group_messages_reply_to_id_fkey';
-            columns: ['reply_to_id'];
-            isOneToOne: false;
-            referencedRelation: 'group_messages';
-            referencedColumns: ['id'];
-          },
-          {
             foreignKeyName: 'group_messages_group_id_fkey';
             columns: ['group_id'];
             isOneToOne: false;
             referencedRelation: 'music_groups';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'group_messages_reply_to_id_fkey';
+            columns: ['reply_to_id'];
+            isOneToOne: false;
+            referencedRelation: 'group_messages';
             referencedColumns: ['id'];
           },
           {
@@ -960,6 +972,76 @@ export type Database = {
           website_url?: string | null;
         };
         Relationships: [];
+      };
+      personal_repertoire: {
+        Row: {
+          arrangement: Json;
+          created_at: string;
+          hidden: boolean;
+          id: string;
+          identity: string;
+          mastery: number;
+          origin: string;
+          profile_id: string;
+          song: Json;
+          style: string;
+        };
+        Insert: {
+          arrangement?: Json;
+          created_at?: string;
+          hidden?: boolean;
+          id?: string;
+          identity: string;
+          mastery?: number;
+          origin?: string;
+          profile_id: string;
+          song: Json;
+          style?: string;
+        };
+        Update: {
+          arrangement?: Json;
+          created_at?: string;
+          hidden?: boolean;
+          id?: string;
+          identity?: string;
+          mastery?: number;
+          origin?: string;
+          profile_id?: string;
+          song?: Json;
+          style?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'personal_repertoire_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      personal_repertoire_settings: {
+        Row: {
+          is_public: boolean;
+          profile_id: string;
+        };
+        Insert: {
+          is_public?: boolean;
+          profile_id: string;
+        };
+        Update: {
+          is_public?: boolean;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'personal_repertoire_settings_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: true;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       profile_locations: {
         Row: {
@@ -1588,8 +1670,8 @@ export type Database = {
           target_status: string | null;
           title: string | null;
           wanted_instruments: string[] | null;
-          wanted_school_ids: string[] | null;
           wanted_levels: string[] | null;
+          wanted_school_ids: string[] | null;
         };
         Insert: {
           date?: string | null;
@@ -1612,6 +1694,7 @@ export type Database = {
           title?: never;
           wanted_instruments?: string[] | null;
           wanted_levels?: string[] | null;
+          wanted_school_ids?: string[] | null;
         };
         Update: {
           date?: string | null;
@@ -1634,6 +1717,7 @@ export type Database = {
           title?: never;
           wanted_instruments?: string[] | null;
           wanted_levels?: string[] | null;
+          wanted_school_ids?: string[] | null;
         };
         Relationships: [
           {
@@ -1668,15 +1752,6 @@ export type Database = {
       };
     };
     Functions: {
-      add_personal_song: { Args: { p_song: Json }; Returns: string };
-      mark_thread_notifications_read: {
-        Args: { p_source_table: string; p_thread_id: string; p_through: string };
-        Returns: undefined;
-      };
-      update_gig_request: {
-        Args: { p_gig_id: string; p_changes: Json; p_location: Json };
-        Returns: undefined;
-      };
       accept_gig_application: {
         Args: { application_id: string };
         Returns: undefined;
@@ -1685,6 +1760,7 @@ export type Database = {
         Args: { invitation_id: string };
         Returns: undefined;
       };
+      add_personal_song: { Args: { p_song: Json }; Returns: string };
       apply_approved_song_order: {
         Args: { p_items: Json; p_song_ids: string[] };
         Returns: Json;
@@ -1694,6 +1770,15 @@ export type Database = {
           p_checked_at: string;
           p_is_premium: boolean;
           p_profile_id: string;
+        };
+        Returns: boolean;
+      };
+      apply_revenuecat_subscription_state: {
+        Args: {
+          p_checked_at: string;
+          p_expires_at: string;
+          p_profile_id: string;
+          p_tier: string;
         };
         Returns: boolean;
       };
@@ -1824,6 +1909,7 @@ export type Database = {
           public_location_label: string;
         }[];
       };
+      get_my_subscription: { Args: never; Returns: Json };
       is_conversation_member: { Args: { conv_id: string }; Returns: boolean };
       is_group_leader: { Args: { p_group_id: string }; Returns: boolean };
       is_group_member: { Args: { p_group_id: string }; Returns: boolean };
@@ -1858,6 +1944,10 @@ export type Database = {
       leave_music_school: { Args: { p_school_id: string }; Returns: boolean };
       mark_conversation_read: { Args: { conv_id: string }; Returns: undefined };
       mark_messages_delivered: { Args: never; Returns: undefined };
+      mark_thread_notifications_read: {
+        Args: { p_source_table: string; p_thread_id: string; p_through: string };
+        Returns: undefined;
+      };
       merge_event_setlist_snapshot: {
         Args: {
           p_desired_songs: Json;
@@ -2182,6 +2272,14 @@ export type Database = {
         Returns: undefined;
       };
       try_uuid: { Args: { value: string }; Returns: string };
+      update_gig_request: {
+        Args: { p_changes: Json; p_gig_id: string; p_location: Json };
+        Returns: undefined;
+      };
+      update_personal_arrangement: {
+        Args: { p_changes: Json; p_id: string };
+        Returns: undefined;
+      };
       verify_push_worker_token: { Args: { p_token: string }; Returns: boolean };
       viewer_is_pro: { Args: never; Returns: boolean };
       visible_gig_request_locations: {
@@ -2352,6 +2450,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

@@ -40,7 +40,6 @@ jest.mock('@/features/groups/group-song-row', () => ({
   SongListenSheet: () => null,
 }));
 jest.mock('@/features/messages/message-controls', () => ({ ReceiptChecks: () => null }));
-jest.mock('../../modules/dispo-song-analysis', () => ({ analyzeSongPreview: jest.fn() }));
 jest.mock('@/features/groups/group-repository', () => ({
   enrichSongCatalogResult: jest.fn(),
   openGroupDocument: jest.fn(),

@@ -17,8 +17,23 @@ describe('native authentication routing', () => {
     }
   });
   it('preserves ordinary deep links and relative routes', () => {
-    for (const path of ['dispo://repertoire/profile-id', '/groups/example', 'invalid URL']) {
+    for (const path of [
+      'dispo://repertoire/profile-id',
+      '/groups/example',
+      'invalid URL',
+      'dispo://search?text=Gen%C3%A8ve',
+    ]) {
       expect(redirectSystemPath({ path, initial: false })).toBe(path);
+    }
+  });
+  it('rejects malformed or oversized external links before query decoding', () => {
+    for (const initial of [true, false]) {
+      for (const path of [
+        `dispo://search?text=${'%FF'.repeat(1_000)}`,
+        'dispo://search?text=%E0%A4%A',
+        `dispo://search?text=${'x'.repeat(8_192)}`,
+      ])
+        expect(redirectSystemPath({ path, initial })).toBe('/');
     }
   });
 });

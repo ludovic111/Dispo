@@ -21,7 +21,7 @@ import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
-import { canUsePremiumCapability } from '@/features/premium/premium-model';
+import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -31,6 +31,7 @@ const reminderOptions = [0, 1, 2, 7, 14];
 function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
+  const canConfigureReminder = usePremiumCapability('configurableReminders');
   const update = useUpdateGroupEvent();
   const parsedPlace = parseGroupEventVenueLabel(
     event.publicLocationLabel || event.venue,
@@ -76,7 +77,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
         leaderId: group.leaderId,
         longitude: resolvedPlace?.longitude ?? event.longitude ?? null,
         postalCode,
-        reminderLeadDays: canUsePremiumCapability('configurableReminders') ? reminderLeadDays : 2,
+        reminderLeadDays: canConfigureReminder ? reminderLeadDays : 2,
         scope,
         title: kind,
         kind,
@@ -211,7 +212,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
         </Card>
         <Card style={styles.card}>
           <AppText variant="title">{t('Rappel')}</AppText>
-          {canUsePremiumCapability('configurableReminders') ? (
+          {canConfigureReminder ? (
             <View style={styles.wrap}>
               {reminderOptions.map((days) => (
                 <ChoiceChip

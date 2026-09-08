@@ -96,7 +96,9 @@ describe('morceaux', () => {
     expect(isKnownMusicalKey('mode historique')).toBe(false);
     const songScreen = source('src/features/groups/group-song-screen.tsx');
     expect(songScreen).not.toContain("placeholder={t('Bb, F#m…')}");
-    expect(songScreen).toContain('!isKnownMusicalKey(draft.key)');
+    expect(source('src/features/groups/song-info-panel.tsx')).toContain(
+      '!isKnownMusicalKey(draft.key)',
+    );
   });
 });
 

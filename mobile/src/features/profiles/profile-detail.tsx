@@ -105,33 +105,11 @@ function ProfileManagementRow({
   );
 }
 
-function MyProfileControls({
-  availableDates,
-  demoCount,
-  tripCount,
-}: {
-  availableDates: string[];
-  demoCount: number;
-  tripCount: number;
-}) {
+function MyProfileControls({ demoCount }: { demoCount: number }) {
   const { palette } = useDispoTheme();
-  const { i18n, t } = useTranslation();
-  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
+  const { t } = useTranslation();
   const schools = useMySchoolAffiliations();
   const affiliations = schools.data ?? [];
-  const nextDate = availableDates[0]
-    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', weekday: 'short' }).format(
-        new Date(`${availableDates[0]}T12:00:00`),
-      )
-    : null;
-  const availabilitySubtitle = nextDate
-    ? availableDates.length === 1
-      ? t('1 date cochée · {{date}}', { date: nextDate })
-      : t('{{count}} dates cochées · prochaine {{date}}', {
-          count: availableDates.length,
-          date: nextDate,
-        })
-    : t('Aucune date cochée — ajoute les jours où tu peux dépanner.');
   return (
     <View style={styles.selfControls}>
       <Card padding={0}>
@@ -141,28 +119,6 @@ function MyProfileControls({
           onPress={() => router.push('/profile/edit' as never)}
           subtitle={t('Photo, bio, instruments, styles et réseaux sociaux')}
           title={t('Modifier mon profil')}
-        />
-        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
-        <ProfileManagementRow
-          color={palette.jam}
-          icon="flash"
-          onPress={() => router.push('/profile/availability' as never)}
-          subtitle={availabilitySubtitle}
-          title={t('Mes disponibilités')}
-        />
-        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
-        <ProfileManagementRow
-          color={palette.electric}
-          icon="airplane-outline"
-          onPress={() => router.push('/profile/travel' as never)}
-          subtitle={
-            tripCount
-              ? tripCount === 1
-                ? t('1 voyage enregistré')
-                : t('{{count}} voyages enregistrés', { count: tripCount })
-              : t('Ajoute tes prochains déplacements, séparément de tes dates.')
-          }
-          title={t('Mes voyages')}
         />
         <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
         <ProfileManagementRow
@@ -214,6 +170,102 @@ function MyProfileControls({
           ) : null}
         </Card>
       </Pressable>
+    </View>
+  );
+}
+
+export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSummary }) {
+  const { palette } = useDispoTheme();
+  const { i18n, t } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
+  const availableDates = profile.availableDates
+    .filter((date) => date.slice(0, 10) >= todayKey())
+    .sort();
+  const trips = (profile.availabilityPlaces ?? [])
+    .filter((trip) => trip.to >= todayKey())
+    .sort((a, b) => a.from.localeCompare(b.from));
+  const tripCount = trips.length;
+  const nextDate = availableDates[0]
+    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', weekday: 'short' }).format(
+        new Date(`${availableDates[0]}T12:00:00`),
+      )
+    : null;
+  const availabilitySubtitle = nextDate
+    ? availableDates.length === 1
+      ? t('1 date cochée · {{date}}', { date: nextDate })
+      : t('{{count}} dates cochées · prochaine {{date}}', {
+          count: availableDates.length,
+          date: nextDate,
+        })
+    : t('Aucune date cochée — ajoute les jours où tu peux dépanner.');
+  return (
+    <View style={styles.root}>
+      <Card padding={0}>
+        <ProfileManagementRow
+          color={palette.jam}
+          icon="flash"
+          onPress={() => router.push('/profile/availability' as never)}
+          subtitle={availabilitySubtitle}
+          title={t('Mes disponibilités')}
+        />
+        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
+        <ProfileManagementRow
+          color={palette.electric}
+          icon="airplane-outline"
+          onPress={() => router.push('/profile/travel' as never)}
+          subtitle={
+            tripCount
+              ? tripCount === 1
+                ? t('1 voyage enregistré')
+                : t('{{count}} voyages enregistrés', { count: tripCount })
+              : t('Ajoute tes prochains déplacements, séparément de tes dates.')
+          }
+          title={t('Mes voyages')}
+        />
+        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
+      </Card>
+      {availableDates.length > 0 ? (
+        <Card style={styles.section}>
+          <SectionTitle icon="calendar-outline" title={t('Mes disponibilités')} />
+          <View style={styles.tags}>
+            {availableDates.map((date) => (
+              <Tag
+                key={date}
+                color={palette.jam}
+                label={new Intl.DateTimeFormat(locale, {
+                  day: 'numeric',
+                  month: 'short',
+                  weekday: 'short',
+                }).format(new Date(`${date.slice(0, 10)}T12:00:00`))}
+              />
+            ))}
+          </View>
+        </Card>
+      ) : null}
+      {trips.length > 0 ? (
+        <Card style={styles.section}>
+          <SectionTitle icon="airplane-outline" title={t('Mes voyages')} />
+          {trips.map((trip) => (
+            <View key={trip.id} style={styles.tripRow}>
+              <Ionicons name="location-outline" size={16} color={palette.bronze} />
+              <View style={styles.tripCopy}>
+                <AppText variant="subheadline">
+                  {[trip.city, trip.country].filter(Boolean).join(' · ')}
+                </AppText>
+                <AppText variant="caption" color={palette.muted}>
+                  {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
+                    new Date(`${trip.from}T12:00:00`),
+                  )}{' '}
+                  →{' '}
+                  {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
+                    new Date(`${trip.to}T12:00:00`),
+                  )}
+                </AppText>
+              </View>
+            </View>
+          ))}
+        </Card>
+      ) : null}
     </View>
   );
 }
@@ -445,11 +497,7 @@ export function ProfileDetail({
       </View>
 
       {self ? (
-        <MyProfileControls
-          availableDates={futureDates}
-          demoCount={profile.demoVideos?.length ?? 0}
-          tripCount={upcomingTrips.length}
-        />
+        <MyProfileControls demoCount={profile.demoVideos?.length ?? 0} />
       ) : (
         <View style={styles.actions}>
           {upcomingDates.length > 0 ? (
@@ -490,7 +538,7 @@ export function ProfileDetail({
         </AppText>
       ) : null}
 
-      {upcomingDates.length > 0 ? (
+      {!self && upcomingDates.length > 0 ? (
         <View style={styles.tags}>
           <Ionicons color={palette.muted} name="calendar-outline" size={14} />
           {upcomingDates.map((date) => (
@@ -507,7 +555,7 @@ export function ProfileDetail({
         </View>
       ) : null}
 
-      {upcomingTrips.length > 0 ? (
+      {!self && upcomingTrips.length > 0 ? (
         <Card style={styles.section}>
           <SectionTitle icon="airplane-outline" title={t('Disponible ailleurs')} />
           {upcomingTrips.map((trip) => (
@@ -568,7 +616,7 @@ export function ProfileDetail({
         </Card>
       ) : null}
 
-      <PersonalRepertoireLink profileId={profile.id} self={self} />
+      {!self ? <PersonalRepertoireLink profileId={profile.id} self={false} /> : null}
 
       {!self ? (
         <Card style={styles.section}>

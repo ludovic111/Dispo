@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { AppText } from '@/components/ui/app-text';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm } from '@/features/gigs/gig-form';
 import { useGigForEdit, useGigFormDefaults, useUpdateGig } from '@/features/gigs/gig-queries';
@@ -111,9 +112,12 @@ export default function EditGigScreen() {
           errorMessage={
             update.error
               ? t(
-                  update.error.message === 'accepted_instrument_cannot_be_removed'
-                    ? 'Un instrument déjà pourvu ne peut pas être retiré.'
-                    : 'Le SOS n’a pas pu être enregistré.',
+                  communityContentMessage(
+                    update.error,
+                    update.error.message === 'accepted_instrument_cannot_be_removed'
+                      ? 'Un instrument déjà pourvu ne peut pas être retiré.'
+                      : 'Le SOS n’a pas pu être enregistré.',
+                  ),
                 )
               : ''
           }

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -29,6 +29,9 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
+import { GroupSongRow } from '@/features/groups/group-song-row';
+import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
+import { useSubscription } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -60,47 +63,49 @@ export function PersonalSongRow({ item, onPress }: { item: PersonalSong; onPress
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      <Card padding={14} style={styles.row}>
-        <View style={styles.flex}>
-          <AppText numberOfLines={1} variant="headline">
-            {item.song.title}
-          </AppText>
-          {item.song.artist ? (
-            <AppText numberOfLines={1} color={palette.muted} variant="caption">
-              {item.song.artist}
-            </AppText>
-          ) : null}
-          <AppText numberOfLines={1} color={palette.bronze} variant="caption">
-            {[personalSongStyle(item) && t(personalSongStyle(item)), item.song.key]
-              .filter(Boolean)
-              .join(' · ') || t('Style à préciser')}
-          </AppText>
-        </View>
-        <View style={styles.mastery}>
+    <GroupSongRow
+      song={item.song}
+      onPress={onPress}
+      showSoloAction={false}
+      showDisclosure={false}
+      trailing={
+        <View
+          accessible
+          accessibilityLabel={`${t('Maîtrise')} : ${t(masteryLabels[item.mastery] ?? masteryLabels[0])}`}
+          style={styles.mastery}
+        >
           <View style={styles.dots}>
             {[1, 2, 3].map((level) => (
               <View
                 key={level}
                 style={[
                   styles.dot,
-                  { backgroundColor: item.mastery >= level ? palette.electric : palette.inset },
+                  {
+                    backgroundColor:
+                      item.mastery >= level ? palette.electric : `${palette.muted}70`,
+                  },
                 ]}
               />
             ))}
           </View>
-          <AppText numberOfLines={1} color={palette.muted} variant="caption2">
-            {t(masteryLabels[item.mastery] ?? masteryLabels[0])}
-          </AppText>
         </View>
-      </Card>
-    </Pressable>
+      }
+    />
   );
 }
 
-export function RepertoireScreen({ profileId }: { profileId: string }) {
+export function RepertoireScreen({
+  profileId,
+  embedded = false,
+}: {
+  profileId: string;
+  embedded?: boolean;
+}) {
+  const Container = embedded ? Fragment : Screen;
   const { session } = useAuth();
   const self = profileId === session?.user.id;
+  const subscription = useSubscription();
+  const canEdit = subscription.data?.tier === 'premium';
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   const query = usePersonalRepertoire(profileId);
@@ -119,30 +124,30 @@ export function RepertoireScreen({ profileId }: { profileId: string }) {
   );
   if (query.isLoading)
     return (
-      <Screen nativeHeader>
+      <Container {...(!embedded ? { nativeHeader: true } : {})}>
         <LoadingState />
-      </Screen>
+      </Container>
     );
   if (query.isError)
     return (
-      <Screen nativeHeader>
+      <Container {...(!embedded ? { nativeHeader: true } : {})}>
         <ErrorState
           message={t('Le répertoire n’a pas pu être chargé.')}
           onRetry={() => void query.refetch()}
         />
-      </Screen>
+      </Container>
     );
   if (!self && !query.data?.isPublic)
     return (
-      <Screen nativeHeader>
+      <Container {...(!embedded ? { nativeHeader: true } : {})}>
         <View style={styles.empty}>
           <Ionicons name="lock-closed-outline" color={palette.muted} size={32} />
           <AppText variant="headline">{t('Ce répertoire est privé.')}</AppText>
         </View>
-      </Screen>
+      </Container>
     );
   return (
-    <Screen nativeHeader>
+    <Container {...(!embedded ? { nativeHeader: true } : {})}>
       <FlatList
         data={visible}
         keyExtractor={(item) => item.id}
@@ -170,6 +175,7 @@ export function RepertoireScreen({ profileId }: { profileId: string }) {
           <View style={styles.header}>
             {self ? (
               <>
+                {!canEdit ? <SubscriptionAccessCard /> : null}
                 <Card style={styles.row}>
                   <Ionicons
                     name={query.data?.isPublic ? 'globe-outline' : 'lock-closed-outline'}
@@ -181,14 +187,16 @@ export function RepertoireScreen({ profileId }: { profileId: string }) {
                     <AppText variant="caption" color={palette.muted}>
                       {t(
                         query.data?.isPublic
-                          ? 'Visible depuis ton profil.'
+                          ? canEdit
+                            ? 'Visible depuis ton profil.'
+                            : 'Le partage public est suspendu sans Premium.'
                           : 'Toi seul peux le consulter.',
                       )}
                     </AppText>
                   </View>
                   <Switch
                     accessibilityLabel={t('Répertoire public')}
-                    disabled={visibility.isPending}
+                    disabled={visibility.isPending || (!canEdit && !query.data?.isPublic)}
                     value={query.data?.isPublic ?? false}
                     trackColor={{ true: palette.electric, false: palette.inset }}
                     onValueChange={(value) =>
@@ -203,7 +211,10 @@ export function RepertoireScreen({ profileId }: { profileId: string }) {
                     'Les morceaux de tes groupes sont ajoutés automatiquement. Ta maîtrise reste personnelle.',
                   )}
                 </AppText>
-                <DispoButton icon="add" onPress={() => router.push('/repertoire/add' as never)}>
+                <DispoButton
+                  icon={canEdit ? 'add' : 'lock-closed-outline'}
+                  onPress={() => router.push(canEdit ? ('/repertoire/add' as never) : '/premium')}
+                >
                   {t('Ajouter un morceau')}
                 </DispoButton>
               </>
@@ -269,7 +280,7 @@ export function RepertoireScreen({ profileId }: { profileId: string }) {
           </View>
         }
       />
-    </Screen>
+    </Container>
   );
 }
 const styles = StyleSheet.create({

@@ -71,7 +71,7 @@ export function CompactProfileCard({
                 <AppText
                   color={palette.muted}
                   numberOfLines={1}
-                  style={styles.school}
+                  style={[styles.school, { backgroundColor: palette.inset }]}
                   variant="caption"
                 >
                   {schoolAcronym(school)}
@@ -89,7 +89,10 @@ export function CompactProfileCard({
             <AppText
               color={relation === 'Ami' ? palette.jam : palette.muted}
               numberOfLines={1}
-              style={styles.relation}
+              style={[
+                styles.relation,
+                { backgroundColor: relation === 'Ami' ? `${palette.jam}18` : palette.inset },
+              ]}
               variant="caption"
             >
               {t(relation)}
@@ -106,7 +109,22 @@ const styles = StyleSheet.create({
   copy: { flex: 1, minWidth: 0, gap: 2 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
   name: { flexShrink: 1 },
-  school: { flexShrink: 0, maxWidth: 48 },
-  relation: { flexShrink: 0, maxWidth: 66, fontWeight: '700' },
+  school: {
+    flexShrink: 0,
+    maxWidth: 58,
+    borderRadius: 7,
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  relation: {
+    flexShrink: 0,
+    maxWidth: 76,
+    fontWeight: '700',
+    borderRadius: 10,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
   pressed: { opacity: 0.75 },
 });

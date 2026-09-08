@@ -1,25 +1,51 @@
-import { router } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { router, Stack } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
-import { masteryLabels, personalSongStyle, repertoireStyles } from './repertoire-model';
+import {
+  masteryLabels,
+  personalSongStyle,
+  repertoireStyles,
+  personalArrangementChanges,
+} from './repertoire-model';
 import { usePersonalRepertoire, usePersonalRepertoireActions } from './repertoire-queries';
+import { savePersonalArrangement } from './repertoire-repository';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
-import { directStreamingDestinations, irealDestination } from '@/domain/song';
 import { useAuth } from '@/features/auth/auth-context';
+import type { GroupSong } from '@/features/groups/group-model';
+import { SongInfoPanel } from '@/features/groups/song-info-panel';
+import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 
 export function RepertoireSongScreen({ profileId, songId }: { profileId: string; songId: string }) {
   const { session } = useAuth();
   const self = session?.user.id === profileId;
+  const premium = usePremiumCapability('personalRepertoire');
+  const canEdit = self && premium;
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   const query = usePersonalRepertoire(profileId);
+  const client = useQueryClient();
+  const [draft, setDraft] = useState<GroupSong | null>(null);
+  const [original, setOriginal] = useState<GroupSong | null>(null);
+  const save = useMutation({
+    mutationFn: () =>
+      savePersonalArrangement(songId, personalArrangementChanges(original!, draft!)),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['personal-repertoire'] });
+      setDraft(null);
+      setOriginal(null);
+    },
+    onError: () => Alert.alert(t('La modification n’a pas pu être enregistrée.')),
+  });
   const { update } = usePersonalRepertoireActions();
   const item = query.data?.songs.find((song) => song.id === songId);
   if (query.isLoading)
@@ -44,10 +70,6 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
       </Screen>
     );
   const fail = () => Alert.alert(t('La modification n’a pas pu être enregistrée.'));
-  const ireal = irealDestination(item.song);
-  const open = (url: string) => {
-    void Linking.openURL(url).catch(() => Alert.alert(t('Ce lien n’a pas pu être ouvert.')));
-  };
   const remove = () =>
     Alert.alert(
       t('Retirer ce morceau ?'),
@@ -65,26 +87,61 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
         },
       ],
     );
+  const song = draft ?? item.song;
+  const changed =
+    draft !== null &&
+    original !== null &&
+    Object.keys(personalArrangementChanges(original, draft)).length > 0;
+  const valid =
+    Boolean(song.title.trim()) &&
+    song.title.length <= 200 &&
+    song.artist.length <= 200 &&
+    (song.tempoBpm === null ||
+      (Number.isInteger(song.tempoBpm) && song.tempoBpm >= 1 && song.tempoBpm <= 400));
+  const patch = <K extends keyof GroupSong>(key: K, value: GroupSong[K]) => {
+    if (save.isPending) return;
+    setOriginal((current) => current ?? item.song);
+    setDraft((current) => ({ ...(current ?? item.song), [key]: value }));
+  };
   return (
     <Screen nativeHeader>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.section}>
-          <AppText variant="title2">{item.song.title}</AppText>
-          {item.song.artist ? <AppText color={palette.muted}>{item.song.artist}</AppText> : null}
-          <AppText color={palette.bronze} variant="caption">
-            {[personalSongStyle(item) && t(personalSongStyle(item)), item.song.key]
-              .filter(Boolean)
-              .join(' · ')}
-          </AppText>
-          {self ? (
-            <AppText color={palette.muted} variant="caption">
-              {t(item.origin === 'group' ? 'Ajouté depuis tes groupes' : 'Ajouté par toi')}
-            </AppText>
-          ) : null}
-        </Card>
+      <Stack.Screen
+        options={{
+          title: song.title,
+          headerRight: () =>
+            canEdit ? (
+              <NativeHeaderButton
+                label={t('Enregistrer')}
+                disabled={!changed || !valid || save.isPending}
+                onPress={() => save.mutate()}
+              />
+            ) : null,
+        }}
+      />
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.content}
+      >
+        <SongInfoPanel
+          draft={song}
+          canEdit={canEdit && !save.isPending}
+          patch={patch}
+          subtitle={t(self ? 'Mon répertoire' : 'Répertoire musical')}
+          arrangementSubtitle={t(
+            self
+              ? 'Tes repères personnels ne modifient pas les morceaux de tes groupes.'
+              : 'Arrangement personnel du musicien.',
+          )}
+        />
+        {canEdit && changed ? (
+          <DispoButton loading={save.isPending} disabled={!valid} onPress={() => save.mutate()}>
+            {t('Enregistrer')}
+          </DispoButton>
+        ) : null}
         <Card style={styles.section}>
           <AppText variant="headline">{t(self ? 'Ma maîtrise' : 'Maîtrise')}</AppText>
-          {self ? (
+          {canEdit ? (
             <View style={styles.chips}>
               {masteryLabels.map((label, mastery) => (
                 <ChoiceChip
@@ -104,7 +161,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
             </AppText>
           )}
         </Card>
-        {self ? (
+        {canEdit ? (
           <Card style={styles.section}>
             <AppText variant="headline">{t('Style')}</AppText>
             <View style={styles.chips}>
@@ -124,40 +181,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
             </AppText>
           </Card>
         ) : null}
-        {directStreamingDestinations(item.song).map((link) => (
-          <DispoButton
-            key={
-              {
-                appleMusic: 'Apple Music',
-                spotify: 'Spotify',
-                youtubeMusic: 'YouTube Music',
-                deezer: 'Deezer',
-                tidal: 'TIDAL',
-                amazonMusic: 'Amazon Music',
-              }[link.platform]
-            }
-            variant="secondary"
-            icon="play-outline"
-            onPress={() => open(link.url)}
-          >
-            {
-              {
-                appleMusic: 'Apple Music',
-                spotify: 'Spotify',
-                youtubeMusic: 'YouTube Music',
-                deezer: 'Deezer',
-                tidal: 'TIDAL',
-                amazonMusic: 'Amazon Music',
-              }[link.platform]
-            }
-          </DispoButton>
-        ))}
-        {ireal ? (
-          <DispoButton variant="secondary" icon="musical-notes" onPress={() => open(ireal.url)}>
-            iReal Pro
-          </DispoButton>
-        ) : null}
-        {self && item.origin === 'manual' ? (
+        {canEdit && item.origin === 'manual' ? (
           <DispoButton
             icon="copy-outline"
             onPress={() => router.push(`/repertoire/songs/${songId}/copy` as never)}

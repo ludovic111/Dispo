@@ -51,3 +51,20 @@ export function visiblePersonalSongs(
         a.id.localeCompare(b.id),
     );
 }
+
+/** Only send edited fields, preserving concurrent imports and unrelated edits. */
+export function personalArrangementChanges(original: GroupSong, desired: GroupSong) {
+  const result: Record<string, string | number | null> = {};
+  const fields = {
+    title: 'title',
+    artist: 'artist',
+    key: 'key',
+    tempoBpm: 'tempo_bpm',
+    form: 'form',
+  } as const;
+  for (const key of Object.keys(fields) as (keyof typeof fields)[]) {
+    const value = desired[key];
+    if (value !== original[key]) result[fields[key]] = value;
+  }
+  return result;
+}

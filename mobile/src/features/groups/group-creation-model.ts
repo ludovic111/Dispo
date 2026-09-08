@@ -1,3 +1,5 @@
+import { communityContentMessage } from '@/domain/community-content';
+
 export type GroupCreationErrorKind = 'auth' | 'limit' | 'network' | 'unknown';
 
 interface GroupCreationLock {
@@ -16,7 +18,11 @@ export function groupCreationErrorKind(error: unknown): GroupCreationErrorKind {
   const combined = [code, message, errorField(error, 'details'), errorField(error, 'hint')]
     .join(' ')
     .toLocaleLowerCase('en');
-  if (combined.includes('premium_required_for_additional_group')) return 'limit';
+  if (
+    combined.includes('premium_required_for_additional_group') ||
+    combined.includes('subscription_required_for_group')
+  )
+    return 'limit';
   if (
     combined.includes('group_auth_required') ||
     combined.includes('authsessionmissingerror') ||
@@ -40,6 +46,8 @@ export function groupCreationErrorKind(error: unknown): GroupCreationErrorKind {
 }
 
 export function groupCreationErrorMessage(error: unknown): string {
+  const contentMessage = communityContentMessage(error, '');
+  if (contentMessage) return contentMessage;
   switch (groupCreationErrorKind(error)) {
     case 'auth':
       return 'Ta session a expiré. Reconnecte-toi pour créer un groupe.';

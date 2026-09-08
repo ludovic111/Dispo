@@ -1,14 +1,10 @@
-import {
-  focusManager,
-  onlineManager,
-  QueryClient,
-  QueryClientProvider,
-  useQueryClient,
-} from '@tanstack/react-query';
+import { focusManager, onlineManager } from '@tanstack/react-query';
 import * as Network from 'expo-network';
-import { type PropsWithChildren, useEffect, useRef, useState } from 'react';
+import { type PropsWithChildren, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+import { SessionQueryProvider } from './session-query-provider';
 
 import { AuthProvider, useAuth } from '@/features/auth/auth-context';
 import { NetworkBanner } from '@/features/connectivity/network-banner';
@@ -16,6 +12,7 @@ import { DiscoveryProvider } from '@/features/discovery/discovery-context';
 import { GigRealtimeBridge } from '@/features/gigs/gig-realtime-bridge';
 import { GroupEventReminderBridge } from '@/features/groups/group-event-reminder-bridge';
 import { NativeNotificationBridge } from '@/features/notifications/native-notification-bridge';
+import { SubscriptionSyncBridge } from '@/features/premium/subscription-queries';
 import { SchoolRealtimeBridge } from '@/features/schools/school-realtime-bridge';
 import { NativeDeviceSyncBridge } from '@/features/settings/native-device-sync-bridge';
 import { hydrateAppLanguage } from '@/i18n';
@@ -24,31 +21,22 @@ import { DispoThemeProvider } from '@/theme/theme-context';
 
 function SessionScopedProviders({ children }: PropsWithChildren) {
   const { session } = useAuth();
-  const queryClient = useQueryClient();
   const userId = session?.user.id ?? null;
-  const previousUserId = useRef<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    if (previousUserId.current === undefined) {
-      previousUserId.current = userId;
-      return;
-    }
-    if (previousUserId.current !== userId) {
-      queryClient.clear();
-      previousUserId.current = userId;
-    }
-  }, [queryClient, userId]);
 
   return (
-    <DiscoveryProvider key={userId ?? 'signed-out'}>
-      <GigRealtimeBridge />
-      <GroupEventReminderBridge />
-      <SchoolRealtimeBridge />
-      <NativeNotificationBridge />
-      <NativeDeviceSyncBridge />
-      {children}
-      <NetworkBanner />
-    </DiscoveryProvider>
+    <SessionQueryProvider userId={userId}>
+      <QueryLifecycleBridge />
+      <DiscoveryProvider>
+        <GigRealtimeBridge />
+        <GroupEventReminderBridge />
+        <SchoolRealtimeBridge />
+        <NativeNotificationBridge />
+        <NativeDeviceSyncBridge />
+        <SubscriptionSyncBridge />
+        {children}
+        <NetworkBanner />
+      </DiscoveryProvider>
+    </SessionQueryProvider>
   );
 }
 
@@ -77,15 +65,6 @@ function QueryLifecycleBridge() {
 
 export function AppProviders({ children }: PropsWithChildren) {
   const [languageReady, setLanguageReady] = useState(false);
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: { staleTime: 30_000, retry: 2, refetchOnWindowFocus: true },
-          mutations: { retry: 0 },
-        },
-      }),
-  );
 
   useEffect(() => {
     void migrateLegacyNativePreferences()
@@ -98,12 +77,9 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <DispoThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <QueryLifecycleBridge />
-          <AuthProvider>
-            <SessionScopedProviders>{children}</SessionScopedProviders>
-          </AuthProvider>
-        </QueryClientProvider>
+        <AuthProvider>
+          <SessionScopedProviders>{children}</SessionScopedProviders>
+        </AuthProvider>
       </DispoThemeProvider>
     </GestureHandlerRootView>
   );

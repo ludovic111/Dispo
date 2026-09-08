@@ -17,7 +17,7 @@ import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
-import { canUsePremiumCapability } from '@/features/premium/premium-model';
+import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -63,8 +63,8 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
   const [recurrence, setRecurrence] = useState<GroupRecurrence>('Ponctuel');
   const [occurrenceCount, setOccurrenceCount] = useState(1);
   const [reminderLeadDays, setReminderLeadDays] = useState(2);
-  const canRepeat = canUsePremiumCapability('recurringEvents');
-  const canConfigureReminder = canUsePremiumCapability('configurableReminders');
+  const canRepeat = usePremiumCapability('recurringEvents');
+  const canConfigureReminder = usePremiumCapability('configurableReminders');
   if (group.isLoading)
     return (
       <Screen nativeHeader>

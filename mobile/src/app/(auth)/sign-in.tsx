@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { AppText } from '@/components/ui/app-text';
 import { BrandLogo } from '@/components/ui/brand';
 import { Card } from '@/components/ui/card';
+import { LegalLinks } from '@/components/ui/legal-links';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
@@ -477,8 +478,11 @@ export default function SignInScreen() {
             </View>
 
             <AppText color={palette.muted} style={styles.legal} variant="caption">
-              {t('En continuant, tu acceptes que ton profil soit visible des autres musiciens.')}
+              {t(
+                'En continuant, tu confirmes avoir au moins 18 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.',
+              )}
             </AppText>
+            <LegalLinks />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

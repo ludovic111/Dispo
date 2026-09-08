@@ -15,7 +15,9 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
+import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -30,6 +32,7 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
   const { palette } = useDispoTheme();
   const query = useGroup(groupId);
   const save = useUpdateGroupSettings();
+  const canAutoSOS = usePremiumCapability('autoSOS');
   const photo = useGroupPhoto();
   const remove = useDeleteGroup();
   const group = query.data;
@@ -194,12 +197,15 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
               </AppText>
             </View>
             <Switch
-              onValueChange={setAutoSosOverride}
+              onValueChange={(value) => {
+                if (value && !canAutoSOS) router.push('/premium');
+                else setAutoSosOverride(value);
+              }}
               trackColor={{ false: palette.inset, true: palette.electric }}
               value={autoSosEnabled}
             />
           </View>
-          {autoSosEnabled ? (
+          {autoSosEnabled && canAutoSOS ? (
             <View style={styles.levels}>
               <AppText color={palette.bronze} variant="label">
                 {t('Niveau demandé')}
@@ -219,7 +225,7 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
         </Card>
         {save.error || photo.error ? (
           <AppText color={palette.error} style={styles.center} variant="caption">
-            {t('La modification n’a pas pu être enregistrée.')}
+            {t(communityContentMessage(save.error, 'La modification n’a pas pu être enregistrée.'))}
           </AppText>
         ) : null}
         <DispoButton disabled={!name.trim()} loading={save.isPending} onPress={submit}>
