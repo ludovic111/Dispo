@@ -1228,7 +1228,7 @@
   "Ouvre les offres Premium pour personnaliser le rappel": "打开Premium方案以自定义提醒",
   "Ouvre les réglages d'abonnements Apple": "打开 Apple 订阅设置",
   "Ouvrir": "打开",
-  "Ouvrir {{title}}": "Ouvrir {{title}}",
+  "Ouvrir {{title}}": "打开{{title}}",
   "Ouvrir dans iReal Pro": "在 iReal Pro 中打开",
   "Ouvrir dans Plans": "Ouvrir dans Plans",
   "Ouvrir iReal Pro": "打开 iReal Pro",
@@ -2388,5 +2388,7 @@
   "Réponses attendues_other": "{{count}} 个待回复",
   "Dates à venir": "{{count}} 个即将到来的日程",
   "Dates jouées": "{{count}} 个过去的日程",
-  "Réponses attendues": "{{count}} 个待回复"
+  "Réponses attendues": "{{count}} 个待回复",
+  "Lieu communiqué après confirmation": "确认后提供地点",
+  "Lieu communiqué aux participants": "向参与者提供地点"
 }

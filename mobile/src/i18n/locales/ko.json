@@ -1228,7 +1228,7 @@
   "Ouvre les offres Premium pour personnaliser le rappel": "Open Premium은 알림을 사용자 정의합니다.",
   "Ouvre les réglages d'abonnements Apple": "Apple 구독 설정 열기",
   "Ouvrir": "기타",
-  "Ouvrir {{title}}": "Ouvrir {{title}}",
+  "Ouvrir {{title}}": "{{title}} 열기",
   "Ouvrir dans iReal Pro": "iReal Pro에서 열기",
   "Ouvrir dans Plans": "Ouvrir dans Plans",
   "Ouvrir iReal Pro": "iReal Pro를 엽니다",
@@ -2388,5 +2388,7 @@
   "Réponses attendues_other": "응답 대기 {{count}}건",
   "Dates à venir": "예정 {{count}}건",
   "Dates jouées": "지난 일정 {{count}}건",
-  "Réponses attendues": "응답 대기 {{count}}건"
+  "Réponses attendues": "응답 대기 {{count}}건",
+  "Lieu communiqué après confirmation": "확인 후 장소 공개",
+  "Lieu communiqué aux participants": "참가자에게 장소 공개"
 }

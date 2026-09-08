@@ -2388,5 +2388,7 @@
   "Réponses attendues_other": "{{count}} réponses attendues",
   "Dates à venir": "{{count}} dates à venir",
   "Dates jouées": "{{count}} dates jouées",
-  "Réponses attendues": "{{count}} réponses attendues"
+  "Réponses attendues": "{{count}} réponses attendues",
+  "Lieu communiqué après confirmation": "Lieu communiqué après confirmation",
+  "Lieu communiqué aux participants": "Lieu communiqué aux participants"
 }

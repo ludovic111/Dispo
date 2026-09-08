@@ -48,6 +48,16 @@ function dateParts(value: string, locale: string) {
   };
 }
 
+function sessionPlaceLabel(place: string, translate: (key: string) => string) {
+  if (place === 'Lieu communique apres confirmation') {
+    return translate('Lieu communiqué après confirmation');
+  }
+  if (place === 'Lieu communiqué aux participants') {
+    return translate('Lieu communiqué aux participants');
+  }
+  return place;
+}
+
 export function sessionMonthLabel(key: string, locale = 'fr'): string {
   const date = new Date(`${key}-01T12:00:00`);
   if (Number.isNaN(date.getTime())) return key;
@@ -227,7 +237,7 @@ export function SessionRow({
             {item.title}
           </AppText>
           <AppText color={palette.muted} numberOfLines={1} variant="caption">
-            {item.place ? `${date.time} · ${item.place}` : date.time}
+            {item.place ? `${date.time} · ${sessionPlaceLabel(item.place, t)}` : date.time}
           </AppText>
           <SessionTags isPast={isPast} item={item} />
         </View>
@@ -271,7 +281,9 @@ function LineupLine({ item }: { item: SessionItem }) {
         <Ionicons color={palette.signal} name="warning" size={15} />
         <AppText color={palette.signal} numberOfLines={2} style={styles.lineupText}>
           {item.missingRoles.length > 0
-            ? t('Il manque : {{roles}}', { roles: item.missingRoles.join(', ') })
+            ? t('Il manque : {{roles}}', {
+                roles: item.missingRoles.map((role) => t(role)).join(', '),
+              })
             : t('Il manque encore des réponses')}
         </AppText>
       </View>
@@ -313,7 +325,7 @@ export function NextSessionCard({
           <View style={styles.metaLine}>
             <Ionicons color={palette.muted} name="location-outline" size={14} />
             <AppText color={palette.muted} numberOfLines={2} variant="caption">
-              {item.place ? `${date.time} · ${item.place}` : date.time}
+              {item.place ? `${date.time} · ${sessionPlaceLabel(item.place, t)}` : date.time}
             </AppText>
           </View>
           {left ? (

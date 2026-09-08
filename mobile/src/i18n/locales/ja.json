@@ -1228,7 +1228,7 @@
   "Ouvre les offres Premium pour personnaliser le rappel": "リマインダーをカスタマイズするにはPremiumプランを開いてください",
   "Ouvre les réglages d'abonnements Apple": "Appleのサブスクリプション設定を開きます",
   "Ouvrir": "開く",
-  "Ouvrir {{title}}": "Ouvrir {{title}}",
+  "Ouvrir {{title}}": "{{title}}を開く",
   "Ouvrir dans iReal Pro": "iReal Pro で開く",
   "Ouvrir dans Plans": "Ouvrir dans Plans",
   "Ouvrir iReal Pro": "iReal Pro を開く",
@@ -2388,5 +2388,7 @@
   "Réponses attendues_other": "回答待ち {{count}} 件",
   "Dates à venir": "今後の予定 {{count}} 件",
   "Dates jouées": "過去の予定 {{count}} 件",
-  "Réponses attendues": "回答待ち {{count}} 件"
+  "Réponses attendues": "回答待ち {{count}} 件",
+  "Lieu communiqué après confirmation": "確認後に場所を共有",
+  "Lieu communiqué aux participants": "参加者に場所を共有"
 }

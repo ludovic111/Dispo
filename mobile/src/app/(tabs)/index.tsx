@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -39,6 +39,7 @@ export default function DiscoveryScreen() {
   const meQuery = useProfile(userId, userId);
   const groupsQuery = useGroups();
   const notificationsQuery = useNotificationUnreadCount();
+  const [refreshing, setRefreshing] = useState(false);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = profilesQuery;
 
   const profiles = useMemo(
@@ -80,13 +81,19 @@ export default function DiscoveryScreen() {
     [groupsQuery.data],
   );
 
-  const refresh = () =>
-    Promise.all([
-      profilesQuery.refetch(),
-      meQuery.refetch(),
-      groupsQuery.refetch(),
-      notificationsQuery.refetch(),
-    ]);
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        profilesQuery.refetch(),
+        meQuery.refetch(),
+        groupsQuery.refetch(),
+        notificationsQuery.refetch(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (profilesQuery.isLoading || meQuery.isLoading) {
     return (
@@ -167,12 +174,7 @@ export default function DiscoveryScreen() {
           <RefreshControl
             colors={[palette.electric]}
             onRefresh={() => void refresh()}
-            refreshing={
-              profilesQuery.isRefetching ||
-              meQuery.isRefetching ||
-              groupsQuery.isRefetching ||
-              notificationsQuery.isRefetching
-            }
+            refreshing={refreshing}
             tintColor={palette.electric}
           />
         }

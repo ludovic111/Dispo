@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "55",
+      "buildNumber": "56",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -164,16 +164,13 @@
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 55,
+      "versionCode": 56,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ]
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
     "web": {
       "output": "static",

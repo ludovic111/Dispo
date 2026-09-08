@@ -1228,7 +1228,7 @@
   "Ouvre les offres Premium pour personnaliser le rappel": "Öffne die Premium-Angebote, um die Erinnerung anzupassen",
   "Ouvre les réglages d'abonnements Apple": "Öffnet die Apple-Abonnementeinstellungen",
   "Ouvrir": "Öffnen",
-  "Ouvrir {{title}}": "Ouvrir {{title}}",
+  "Ouvrir {{title}}": "{{title}} öffnen",
   "Ouvrir dans iReal Pro": "In iReal Pro öffnen",
   "Ouvrir dans Plans": "Ouvrir dans Plans",
   "Ouvrir iReal Pro": "iReal Pro öffnen",
@@ -2388,5 +2388,7 @@
   "Réponses attendues_other": "{{count}} ausstehende Antworten",
   "Dates à venir": "{{count}} kommende Termine",
   "Dates jouées": "{{count}} vergangene Termine",
-  "Réponses attendues": "{{count}} ausstehende Antworten"
+  "Réponses attendues": "{{count}} ausstehende Antworten",
+  "Lieu communiqué après confirmation": "Ort nach Bestätigung verfügbar",
+  "Lieu communiqué aux participants": "Ort wird Teilnehmenden mitgeteilt"
 }
