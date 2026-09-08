@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
+import { IosTabs } from '@/features/navigation/ios-tabs';
 import { tabBadgeValue } from '@/features/navigation/tab-badge-model';
 import { useTabBadgeCounts } from '@/features/navigation/tab-badge-queries';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -24,6 +25,10 @@ export default function TabsLayout() {
       </Screen>
     );
   if (!session) return <Redirect href="/(auth)/sign-in" />;
+
+  if (Platform.OS === 'ios') {
+    return <IosTabs badges={{ messages: messagesBadge, sessions: sessionsBadge, sos: sosBadge }} />;
+  }
 
   return (
     <NativeTabs

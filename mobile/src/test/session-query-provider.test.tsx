@@ -13,6 +13,8 @@ it('loads the new account without exposing or canceling its data when an old req
   function Profile({ user }: { user: string }) {
     const query = useQuery({
       queryKey: ['profile'],
+      // This test covers account isolation, not delayed cache eviction.
+      gcTime: Infinity,
       queryFn: () => (user === 'old' ? oldRequest : Promise.resolve('New account')),
     });
     return <Text>{query.data ?? 'Loading'}</Text>;
