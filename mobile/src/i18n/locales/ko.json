@@ -2379,5 +2379,14 @@
   "Règles de la communauté": "커뮤니티 규칙",
   "Ce texte ne respecte pas les règles de la communauté. Modifie-le avant de publier.": "이 글은 커뮤니티 규칙을 준수하지 않습니다. 게시하기 전에 수정해 주세요.",
   "En continuant, tu confirmes avoir au moins 18 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.": "계속하면 만 18세 이상임을 확인하고 이용 약관, 커뮤니티 규칙 및 개인정보 처리방침에 동의하게 됩니다.",
-  "Disponibilités": "가능한 날짜"
+  "Disponibilités": "가능한 날짜",
+  "Dates à venir_one": "예정 {{count}}건",
+  "Dates à venir_other": "예정 {{count}}건",
+  "Dates jouées_one": "지난 일정 {{count}}건",
+  "Dates jouées_other": "지난 일정 {{count}}건",
+  "Réponses attendues_one": "응답 대기 {{count}}건",
+  "Réponses attendues_other": "응답 대기 {{count}}건",
+  "Dates à venir": "예정 {{count}}건",
+  "Dates jouées": "지난 일정 {{count}}건",
+  "Réponses attendues": "응답 대기 {{count}}건"
 }

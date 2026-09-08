@@ -2379,5 +2379,14 @@
   "Règles de la communauté": "コミュニティルール",
   "Ce texte ne respecte pas les règles de la communauté. Modifie-le avant de publier.": "この文章はコミュニティルールに違反しています。修正してから投稿してください。",
   "En continuant, tu confirmes avoir au moins 18 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.": "続行すると、18歳以上であることを確認し、利用規約、コミュニティルール、プライバシーポリシーに同意したものとみなされます。",
-  "Disponibilités": "予定"
+  "Disponibilités": "予定",
+  "Dates à venir_one": "今後の予定 {{count}} 件",
+  "Dates à venir_other": "今後の予定 {{count}} 件",
+  "Dates jouées_one": "過去の予定 {{count}} 件",
+  "Dates jouées_other": "過去の予定 {{count}} 件",
+  "Réponses attendues_one": "回答待ち {{count}} 件",
+  "Réponses attendues_other": "回答待ち {{count}} 件",
+  "Dates à venir": "今後の予定 {{count}} 件",
+  "Dates jouées": "過去の予定 {{count}} 件",
+  "Réponses attendues": "回答待ち {{count}} 件"
 }

@@ -28,7 +28,6 @@ import {
   useSessions,
   useSetSessionAttendance,
 } from '@/features/sessions/session-queries';
-import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -76,10 +75,10 @@ export default function SessionsScreen() {
   const waiting = data?.pendingResponses.length ?? 0;
   const subtitle =
     scope === 'past'
-      ? formatSwiftPlaceholders(t('%lld date·s jouée·s'), sessions.length)
+      ? t('Dates jouées', { count: sessions.length })
       : waiting > 0
-        ? formatSwiftPlaceholders(t('%lld réponse·s attendue·s'), waiting)
-        : formatSwiftPlaceholders(t('%lld date·s à venir'), sessions.length);
+        ? t('Réponses attendues', { count: waiting })
+        : t('Dates à venir', { count: sessions.length });
   const mutationError = attendanceMutation.error ?? directMutation.error;
 
   return (

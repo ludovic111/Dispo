@@ -505,12 +505,23 @@ export function countdownLabel(value: string, now = new Date(), locale = 'fr'): 
       : unit === 'hour'
         ? Math.floor(seconds / 3600)
         : Math.max(1, Math.floor(seconds / 60));
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    style: 'unit',
-    unit,
-    unitDisplay: 'short',
-  }).format(valueInUnit);
+  // iOS Hermes can convert unit-formatted hours back to seconds. Keep the
+  // chosen unit explicit while still localizing digits and compact unit names.
+  const language = locale.toLowerCase().split(/[-_]/)[0] ?? 'fr';
+  const units: Record<string, Record<typeof unit, string>> = {
+    fr: { day: 'j', hour: 'h', minute: 'min' },
+    en: { day: 'days', hour: 'hr', minute: 'min' },
+    de: { day: 'Tg.', hour: 'Std.', minute: 'Min.' },
+    es: { day: 'd', hour: 'h', minute: 'min' },
+    it: { day: 'g', hour: 'h', minute: 'min' },
+    pt: { day: 'd', hour: 'h', minute: 'min' },
+    ja: { day: '日', hour: '時間', minute: '分' },
+    ko: { day: '일', hour: '시간', minute: '분' },
+    zh: { day: '天', hour: '小时', minute: '分钟' },
+  };
+  const label = (units[language] ?? units.en)?.[unit] ?? unit;
+  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(valueInUnit);
+  return `${number}${language === 'fr' ? '\u202f' : ' '}${label}`;
 }
 
 export function attendancePayload(

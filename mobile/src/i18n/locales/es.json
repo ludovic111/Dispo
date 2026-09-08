@@ -2379,5 +2379,14 @@
   "Règles de la communauté": "Normas de la comunidad",
   "Ce texte ne respecte pas les règles de la communauté. Modifie-le avant de publier.": "Este texto no cumple las normas de la comunidad. Modifícalo antes de publicarlo.",
   "En continuant, tu confirmes avoir au moins 18 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.": "Al continuar, confirmas que tienes al menos 18 años y aceptas las condiciones de uso, las normas de la comunidad y la política de privacidad.",
-  "Disponibilités": "Disponibilidad"
+  "Disponibilités": "Disponibilidad",
+  "Dates à venir_one": "{{count}} fecha próxima",
+  "Dates à venir_other": "{{count}} fechas próximas",
+  "Dates jouées_one": "{{count}} fecha pasada",
+  "Dates jouées_other": "{{count}} fechas pasadas",
+  "Réponses attendues_one": "{{count}} respuesta pendiente",
+  "Réponses attendues_other": "{{count}} respuestas pendientes",
+  "Dates à venir": "{{count}} fechas próximas",
+  "Dates jouées": "{{count}} fechas pasadas",
+  "Réponses attendues": "{{count}} respuestas pendientes"
 }

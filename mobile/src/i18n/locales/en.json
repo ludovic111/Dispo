@@ -2379,5 +2379,14 @@
   "Règles de la communauté": "Community rules",
   "Ce texte ne respecte pas les règles de la communauté. Modifie-le avant de publier.": "This text does not follow the community rules. Edit it before posting.",
   "En continuant, tu confirmes avoir au moins 18 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.": "By continuing, you confirm you are at least 18 and accept the Terms of Use, community rules and privacy policy.",
-  "Disponibilités": "Availability"
+  "Disponibilités": "Availability",
+  "Dates à venir_one": "{{count}} upcoming date",
+  "Dates à venir_other": "{{count}} upcoming dates",
+  "Dates jouées_one": "{{count}} past date",
+  "Dates jouées_other": "{{count}} past dates",
+  "Réponses attendues_one": "{{count}} response pending",
+  "Réponses attendues_other": "{{count}} responses pending",
+  "Dates à venir": "{{count}} upcoming dates",
+  "Dates jouées": "{{count}} past dates",
+  "Réponses attendues": "{{count}} responses pending"
 }
