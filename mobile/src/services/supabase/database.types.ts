@@ -8,6 +8,28 @@ export type Database = {
   };
   public: {
     Tables: {
+      personal_repertoire: {
+        Row: {
+          id: string;
+          profile_id: string;
+          song: Json;
+          identity: string;
+          mastery: number;
+          style: string;
+          origin: string;
+          hidden: boolean;
+          created_at: string;
+        };
+        Insert: { profile_id: string; song: Json; identity: string };
+        Update: { mastery?: number; style?: string; hidden?: boolean };
+        Relationships: [];
+      };
+      personal_repertoire_settings: {
+        Row: { profile_id: string; is_public: boolean };
+        Insert: { profile_id: string; is_public?: boolean };
+        Update: { is_public?: boolean };
+        Relationships: [];
+      };
       group_manual_members: {
         Row: {
           id: string;
@@ -1646,6 +1668,7 @@ export type Database = {
       };
     };
     Functions: {
+      add_personal_song: { Args: { p_song: Json }; Returns: string };
       mark_thread_notifications_read: {
         Args: { p_source_table: string; p_thread_id: string; p_through: string };
         Returns: undefined;

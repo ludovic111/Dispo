@@ -18,11 +18,14 @@ const DiscoveryContext = createContext<DiscoveryState | null>(null);
 
 export function DiscoveryProvider({ children }: PropsWithChildren) {
   const [filters, setFilters] = useState<DiscoveryFilters>(defaultDiscoveryFilters);
-  const [scope, setScope] = useState<AvailabilityScope>('today');
+  const [scope, setScope] = useState<AvailabilityScope>('nearby');
   const value = useMemo(
     () => ({
       filters,
-      resetFilters: () => setFilters(defaultDiscoveryFilters),
+      resetFilters: () => {
+        setFilters(defaultDiscoveryFilters);
+        setScope('nearby');
+      },
       scope,
       setFilters,
       setScope,

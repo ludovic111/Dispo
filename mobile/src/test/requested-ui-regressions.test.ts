@@ -113,19 +113,22 @@ describe('présentation des profils', () => {
     expect(stored).toBe('Professionnel');
   });
 
-  it('limite l’école à la propriété optionnelle de la tuile d’accueil', () => {
+  it('partage la carte compacte et conserve l’acronyme choisi', () => {
     const home = source('src/app/(tabs)/index.tsx');
     const row = source('src/features/discovery/discovery-profile-row.tsx');
     const search = source('src/features/discovery/search-screen.tsx');
     expect(home).toContain('primarySchool={item.schools[0] ?? null}');
     expect(row).toContain('primarySchool?: SchoolAffiliation | null');
-    expect(row).toContain('accessibilityLabel={primarySchool.name}');
+    expect(row).toContain('CompactProfileCard');
+    expect(source('src/features/profiles/compact-profile-card.tsx')).toContain(
+      'schoolAcronym(school)',
+    );
     expect(search).not.toContain('primarySchool=');
   });
 
   it('utilise le helper Pro dans tous les écrans de niveau court demandés', () => {
     const paths = [
-      'src/features/discovery/discovery-profile-row.tsx',
+      'src/features/profiles/compact-profile-card.tsx',
       'src/features/discovery/filter-screen.tsx',
       'src/features/onboarding/onboarding-screen.tsx',
       'src/features/profiles/profile-connection-row.tsx',

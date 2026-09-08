@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SubscriptionPlans } from './subscription-plans';
+
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoBackground } from '@/components/ui/dispo-background';
@@ -17,9 +19,14 @@ const billetPaper = '#F0F4FF';
 
 const perks = [
   {
+    icon: 'musical-notes' as const,
+    title: 'Ton répertoire personnel',
+    text: 'Retrouve les morceaux de tes groupes, ajoute les tiens et suis ta maîtrise. Partage ton répertoire ou garde-le privé.',
+  },
+  {
     icon: 'people' as const,
     text: 'Centralise les membres, répertoires, setlists et événements de chacun de tes projets.',
-    title: 'Dirige plusieurs groupes',
+    title: 'Crée des groupes sans limite',
   },
   {
     icon: 'options' as const,
@@ -73,9 +80,11 @@ export function PremiumScreen() {
             </View>
           </Card>
 
+          <SubscriptionPlans />
+
           <View style={styles.section}>
             <SectionHeader
-              subtitle={t('Quatre outils concrets, sans limiter le cœur du réseau')}
+              subtitle={t('Des outils pour tes projets musicaux')}
               title={t('Premium te rend du temps')}
             />
 

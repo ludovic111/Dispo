@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTranslation } from 'react-i18next';
+import { Platform } from 'react-native';
 
 import { LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
@@ -25,7 +26,18 @@ export default function TabsLayout() {
   if (!session) return <Redirect href="/(auth)/sign-in" />;
 
   return (
-    <NativeTabs minimizeBehavior="automatic" tintColor={palette.electric}>
+    <NativeTabs
+      minimizeBehavior="automatic"
+      tintColor={palette.electric}
+      {...Platform.select({
+        android: {
+          backgroundColor: palette.card,
+          iconColor: { default: palette.muted, selected: palette.electric },
+          labelStyle: { default: { color: palette.muted }, selected: { color: palette.electric } },
+          indicatorColor: palette.inset,
+        },
+      })}
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon
           md={{ default: 'home', selected: 'home_filled' }}

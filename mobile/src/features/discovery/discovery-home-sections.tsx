@@ -170,79 +170,33 @@ export function HomeGroupsSection({
 }
 
 export function HomeAvailabilitySection({
-  counts,
+  count,
   filterCount,
   onFilters,
-  onScopeChange,
   scope,
 }: {
-  counts: Record<AvailabilityScope, number>;
+  count: number;
   filterCount: number;
   onFilters: () => void;
-  onScopeChange: (scope: AvailabilityScope) => void;
   scope: AvailabilityScope;
 }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
+  const label =
+    scope === 'today'
+      ? "Aujourd'hui"
+      : scope === 'weekend'
+        ? 'Ce week-end'
+        : scope === 'thisWeek'
+          ? 'Cette semaine'
+          : 'Près de chez toi';
   return (
     <View style={[styles.availability, { borderTopColor: palette.border }]}>
       <SectionHeader subtitle={t('Les musiciens disponibles')} title={t('Dispo')} />
-      <View style={styles.scopes}>
-        {(['today', 'weekend'] as const).map((item) => {
-          const selected = scope === item;
-          return (
-            <Pressable
-              accessibilityLabel={`${t(item === 'today' ? "Aujourd'hui" : 'Ce week-end')} · ${counts[item]}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              key={item}
-              onPress={() => onScopeChange(item)}
-              style={({ pressed }) => [
-                styles.scope,
-                {
-                  backgroundColor: selected ? `${palette.electric}1F` : palette.cardMuted,
-                  borderColor: selected ? `${palette.electric}80` : palette.border,
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons
-                color={selected ? palette.electric : palette.muted}
-                name={item === 'today' ? 'flash-outline' : 'calendar-outline'}
-                size={16}
-              />
-              <AppText
-                color={selected ? palette.electric : palette.text}
-                style={[styles.scopeLabel, selected && styles.actionText]}
-                variant="subheadline"
-              >
-                {t(item === 'today' ? "Aujourd'hui" : 'Ce week-end')} · {counts[item]}
-              </AppText>
-            </Pressable>
-          );
-        })}
-      </View>
       <View style={styles.availabilityActions}>
-        <Pressable
-          accessibilityLabel={`${t('Près de chez toi')} · ${counts.nearby}`}
-          accessibilityRole="button"
-          accessibilityState={{ selected: scope === 'nearby' }}
-          onPress={() => onScopeChange('nearby')}
-          style={({ pressed }) => [styles.nearbyAction, pressed && styles.pressed]}
-        >
-          <Ionicons
-            color={scope === 'nearby' ? palette.electric : palette.muted}
-            name={scope === 'nearby' ? 'checkmark-circle' : 'location-outline'}
-            size={16}
-          />
-          <AppText
-            color={scope === 'nearby' ? palette.electric : palette.muted}
-            style={styles.scopeLabel}
-            variant="caption"
-          >
-            {t('Près de chez toi')} · {counts.nearby}
-          </AppText>
-        </Pressable>
+        <AppText color={palette.muted} style={styles.flex} variant="label">
+          {t(label)} · {count}
+        </AppText>
         <PillButton
           active={filterCount > 0}
           icon="options"
@@ -286,7 +240,9 @@ export function HomeEmptyState({
             ? "Personne aujourd'hui"
             : scope === 'weekend'
               ? 'Personne ce week-end'
-              : 'Aucun musicien trouvé',
+              : scope === 'thisWeek'
+                ? 'Personne cette semaine'
+                : 'Aucun musicien trouvé',
         )}
       </AppText>
       <AppText color={palette.muted} style={styles.centered} variant="subheadline">

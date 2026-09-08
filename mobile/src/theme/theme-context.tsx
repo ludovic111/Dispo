@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance, useColorScheme } from 'react-native';
 
 import { paletteFor, type DispoPalette } from './tokens';
 
@@ -41,6 +41,10 @@ export function DispoThemeProvider({ children }: PropsWithChildren) {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    Appearance.setColorScheme(preference === 'system' ? 'unspecified' : preference);
+  }, [preference]);
 
   const setPreference = useCallback((next: ThemePreference) => {
     setStoredPreference(next);

@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 
@@ -17,7 +17,6 @@ import {
   activeFilterCount,
   dateForAvailabilityScope,
   matchesDiscoveryFilters,
-  openingScope,
   profileAvailability,
   profilesForScope,
   rankProfiles,
@@ -40,7 +39,6 @@ export default function DiscoveryScreen() {
   const meQuery = useProfile(userId, userId);
   const groupsQuery = useGroups();
   const notificationsQuery = useNotificationUnreadCount();
-  const pickedOpeningScope = useRef(false);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = profilesQuery;
 
   const profiles = useMemo(
@@ -55,22 +53,6 @@ export default function DiscoveryScreen() {
       .sort((left, right) => rankProfiles(left, right, referenceProfile, rankingDate));
   }, [filters, meQuery.data, profiles]);
   const visible = useMemo(() => profilesForScope(filtered, scope), [filtered, scope]);
-  const scopeCounts = useMemo(
-    () => ({
-      nearby: profilesForScope(filtered, 'nearby').length,
-      today: profilesForScope(filtered, 'today').length,
-      weekend: profilesForScope(filtered, 'weekend').length,
-    }),
-    [filtered],
-  );
-
-  useEffect(() => {
-    if (!pickedOpeningScope.current && filtered.length > 0) {
-      pickedOpeningScope.current = true;
-      setScope(openingScope(filtered));
-    }
-  }, [filtered, setScope]);
-
   const unread = notificationsQuery.data ?? 0;
   const now = new Date();
   const myAvailability = meQuery.data ? profileAvailability(meQuery.data, now) : null;
@@ -150,10 +132,9 @@ export default function DiscoveryScreen() {
         onRetry={() => void groupsQuery.refetch()}
       />
       <HomeAvailabilitySection
-        counts={scopeCounts}
-        filterCount={activeFilterCount(filters)}
+        count={visible.length}
+        filterCount={activeFilterCount(filters) + Number(scope !== 'nearby')}
         onFilters={() => router.push('/filters' as never)}
-        onScopeChange={setScope}
         scope={scope}
       />
     </View>

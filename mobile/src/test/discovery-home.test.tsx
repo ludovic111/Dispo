@@ -65,7 +65,7 @@ it('opens the chosen group, keeps cached groups on refresh error and exposes cre
   await view.unmount();
 });
 
-it('switches dates independently of groups and offers nearby exploration then filters', async () => {
+it('keeps periods in filters and offers nearby exploration from an empty result', async () => {
   const onFilters = jest.fn();
   function Home() {
     const [scope, setScope] = useState<AvailabilityScope>('today');
@@ -79,13 +79,7 @@ it('switches dates independently of groups and offers nearby exploration then fi
           onOpen={() => undefined}
           onRetry={() => undefined}
         />
-        <HomeAvailabilitySection
-          counts={{ today: 0, weekend: 0, nearby: 0 }}
-          filterCount={1}
-          onFilters={onFilters}
-          onScopeChange={setScope}
-          scope={scope}
-        />
+        <HomeAvailabilitySection count={0} filterCount={1} onFilters={onFilters} scope={scope} />
         <HomeEmptyState
           onExplore={() => (scope === 'nearby' ? onFilters() : setScope('nearby'))}
           scope={scope}
@@ -94,13 +88,13 @@ it('switches dates independently of groups and offers nearby exploration then fi
     );
   }
   const view = await render(<Home />);
-  await fireEvent.press(view.getByText('Ce week-end · 0'));
-  expect(view.getByText('Personne ce week-end')).toBeTruthy();
-  expect(view.getByRole('button', { name: 'Ce week-end · 0', selected: true })).toBeTruthy();
+  expect(view.queryByRole('button', { name: 'Ce week-end · 0' })).toBeNull();
+  expect(view.queryByRole('button', { name: "Aujourd'hui · 0" })).toBeNull();
+  expect(view.getByText("Personne aujourd'hui")).toBeTruthy();
   expect(view.getByText('Crée ton premier groupe')).toBeTruthy();
   await fireEvent.press(view.getByText('Voir les musiciens à proximité'));
   expect(view.getByText('Aucun musicien trouvé')).toBeTruthy();
-  expect(view.getByRole('button', { name: 'Près de chez toi · 0', selected: true })).toBeTruthy();
+  expect(view.getByText('Près de chez toi · 0')).toBeTruthy();
   await fireEvent.press(view.getByRole('button', { name: 'Filtres' }));
   expect(onFilters).toHaveBeenCalledTimes(1);
   await view.unmount();

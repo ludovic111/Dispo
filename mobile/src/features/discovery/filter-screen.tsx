@@ -78,7 +78,7 @@ function ClearSelectionButton({ label, onPress }: { label: string; onPress: () =
 }
 
 export function FilterScreen() {
-  const { filters, resetFilters, setFilters } = useDiscoveryState();
+  const { filters, resetFilters, scope, setFilters, setScope } = useDiscoveryState();
   const schoolDirectory = useSchoolDirectory();
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
@@ -112,6 +112,72 @@ export function FilterScreen() {
     <Screen>
       <ScreenHeader action={close} title={t('Filtres')} />
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.section}>
+          <SectionHeader title={t('Disponibilité')} />
+          <Card style={styles.card}>
+            <View style={styles.choices}>
+              {(['nearby', 'today', 'weekend', 'thisWeek'] as const).map((period) => (
+                <ChoiceChip
+                  key={period}
+                  label={t(
+                    period === 'today'
+                      ? "Aujourd'hui"
+                      : period === 'weekend'
+                        ? 'Ce week-end'
+                        : period === 'thisWeek'
+                          ? 'Cette semaine'
+                          : 'Toutes les dates',
+                  )}
+                  selected={scope === period && !filters.neededDate}
+                  onPress={() => {
+                    setScope(period);
+                    setFilters({ ...filters, neededDate: null });
+                  }}
+                />
+              ))}
+            </View>
+            <FilterSwitch
+              label={t('Dispo à une date précise')}
+              onValueChange={(enabled) => {
+                setScope('nearby');
+                setFilters({ ...filters, neededDate: enabled ? inputDate(new Date()) : null });
+                setShowDatePicker(enabled && Platform.OS === 'android');
+              }}
+              value={Boolean(filters.neededDate)}
+            />
+            {filters.neededDate ? (
+              Platform.OS === 'ios' || showDatePicker ? (
+                <DateTimePicker
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  minimumDate={new Date()}
+                  mode="date"
+                  onDismiss={() => {
+                    if (Platform.OS === 'android') setShowDatePicker(false);
+                  }}
+                  onValueChange={(_event, value) => {
+                    if (Platform.OS === 'android') setShowDatePicker(false);
+                    setFilters({ ...filters, neededDate: inputDate(value) });
+                  }}
+                  value={date}
+                />
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowDatePicker(true)}
+                  style={[styles.dateButton, { backgroundColor: palette.inset }]}
+                >
+                  <Ionicons color={palette.electric} name="calendar" size={17} />
+                  <AppText>
+                    {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
+                      dateStyle: 'long',
+                    }).format(date)}
+                  </AppText>
+                </Pressable>
+              )
+            ) : null}
+          </Card>
+        </View>
+
         <View style={styles.section}>
           <SectionHeader
             subtitle={filters.instruments.length ? `${filters.instruments.length}` : t('Tous')}
@@ -214,50 +280,6 @@ export function FilterScreen() {
               </Card>
             );
           })}
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader title={t('Disponibilité')} />
-          <Card style={styles.card}>
-            <FilterSwitch
-              label={t('Dispo à une date précise')}
-              onValueChange={(enabled) => {
-                setFilters({ ...filters, neededDate: enabled ? inputDate(new Date()) : null });
-                setShowDatePicker(enabled && Platform.OS === 'android');
-              }}
-              value={Boolean(filters.neededDate)}
-            />
-            {filters.neededDate ? (
-              Platform.OS === 'ios' || showDatePicker ? (
-                <DateTimePicker
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  minimumDate={new Date()}
-                  mode="date"
-                  onDismiss={() => {
-                    if (Platform.OS === 'android') setShowDatePicker(false);
-                  }}
-                  onValueChange={(_event, value) => {
-                    if (Platform.OS === 'android') setShowDatePicker(false);
-                    setFilters({ ...filters, neededDate: inputDate(value) });
-                  }}
-                  value={date}
-                />
-              ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setShowDatePicker(true)}
-                  style={[styles.dateButton, { backgroundColor: palette.inset }]}
-                >
-                  <Ionicons color={palette.electric} name="calendar" size={17} />
-                  <AppText>
-                    {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
-                      dateStyle: 'long',
-                    }).format(date)}
-                  </AppText>
-                </Pressable>
-              )
-            ) : null}
-          </Card>
         </View>
 
         <View style={styles.section}>

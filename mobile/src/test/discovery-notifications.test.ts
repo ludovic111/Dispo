@@ -3,6 +3,8 @@ import { describe, expect, it } from '@jest/globals';
 import { relationTags, socialRelationTags, type ProfileSummary } from '@/domain/profile';
 import {
   activeFilterCount,
+  profilesForScope,
+  weekendDays,
   availabilityPlaceForDate,
   boundedEditDistance,
   dateForAvailabilityScope,
@@ -419,4 +421,12 @@ describe('centre de notifications', () => {
       }),
     ).toBe('/schools/school-7/community');
   });
+});
+
+it('limits this week to upcoming calendar days and Sunday weekend to Sunday', () => {
+  const now = new Date('2026-09-09T12:00:00');
+  const friday = profile({ id: 'friday', availableDates: ['2026-09-11'] });
+  const monday = profile({ id: 'monday', availableDates: ['2026-09-14'] });
+  expect(profilesForScope([friday, monday], 'thisWeek', now).map((p) => p.id)).toEqual(['friday']);
+  expect(weekendDays(new Date('2026-09-13T12:00:00')).map((d) => d.getDate())).toEqual([13]);
 });

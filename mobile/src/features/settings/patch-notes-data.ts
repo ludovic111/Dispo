@@ -4,22 +4,26 @@ export interface PatchNote {
   version: string;
 }
 
-/** Exact chronological copy of SwiftUI PatchNote.all, newest first. */
+/** Release notes, newest first. Historical versions remain available below. */
 export const patchNotes: readonly PatchNote[] = [
   {
     version: '2.4',
-    title: 'Ton école, ta communauté, tes lieux protégés',
+    title: 'Ton répertoire, tes groupes, ton réseau',
     points: [
+      'Les cartes des musiciens sont compactes et de même taille. Ouvre un profil pour voir les détails.',
+      'Aujourd’hui, ce week-end et cette semaine se choisissent dans les filtres.',
+      'Ton répertoire rassemble les morceaux de tes groupes et tes ajouts, avec une maîtrise et un style pour chaque morceau.',
+      'Choisis un répertoire public ou privé et copie tes morceaux vers tes groupes ou événements.',
+      'Deux formules au lancement : un groupe ou Premium illimité, avec −30 % pour les écoles partenaires.',
+
       'Ajoute AMR Genève, EPI Genève ou EMA Genève à ton profil avec ton rôle et sa visibilité',
       'Retrouve les membres de ton école et échange dans sa conversation réservée',
       "Les affiliations restent déclaratives tant que l'établissement ne les a pas vérifiées",
       "L'adresse exacte d'un SOS n'apparaît qu'à l'organisateur et aux musiciens acceptés",
       'Pour un événement de groupe, seuls le leader et les participants confirmés voient le rendez-vous exact',
       "Toutes les fonctions d'organisation sont ouvertes aux bêta-testeurs, sans paywall ni achat",
-      'Le futur modèle Premium reste en réflexion et apparaît clairement comme work in progress dans les réglages',
       "Chaque compte crée désormais son propre profil : aucun nom, instrument, ville ou texte de bio n'est prérempli",
       "Copie un morceau complet entre répertoires et événements : artiste, tonalité, grille iReal Pro et liens d'écoute suivent",
-      'Les écoles apparaissent sur les cartes musiciens, et « Même école » signale immédiatement une communauté partagée',
       'Toutes les fonctionnalités sont ouvertes gratuitement à tout le monde pendant la bêta',
       'Le bouton Modifier la session est maintenant visible directement dans chaque date que tu diriges',
       'Si le mauvais compte ouvre le profil express, Changer de compte ramène immédiatement à la connexion',

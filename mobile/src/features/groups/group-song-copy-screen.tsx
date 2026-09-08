@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import type { GroupSong } from './group-model';
 import { useCopyGroupSong, useGroups } from './group-queries';
 import {
   copiedGroupSong,
@@ -146,10 +147,12 @@ function resultMessage(
 }
 
 export function GroupSongCopyScreen({
+  personalSong,
   songId,
   sourceEventId,
   sourceGroupId,
 }: {
+  personalSong?: GroupSong;
   songId: string;
   sourceEventId: string | null;
   sourceGroupId: string;
@@ -165,9 +168,11 @@ export function GroupSongCopyScreen({
   const sourceEvent = sourceEventId
     ? sourceGroup?.events.find((event) => event.id === sourceEventId)
     : null;
-  const song = sourceEventId
-    ? sourceEvent?.setlist.find((item) => item.id === songId)
-    : sourceGroup?.repertoire.find((item) => item.id === songId);
+  const song =
+    personalSong ??
+    (sourceEventId
+      ? sourceEvent?.setlist.find((item) => item.id === songId)
+      : sourceGroup?.repertoire.find((item) => item.id === songId));
   const userId = session?.user.id ?? '';
   const destinations = useMemo(
     () =>
@@ -192,7 +197,7 @@ export function GroupSongCopyScreen({
         />
       </Screen>
     );
-  if (!sourceGroup || !song)
+  if ((!sourceGroup && !personalSong) || !song)
     return (
       <Screen nativeHeader>
         <ErrorState message={t('Ce morceau n’est plus accessible.')} />
@@ -290,7 +295,7 @@ export function GroupSongCopyScreen({
         {selectedDestinations.length ? (
           <View style={styles.footer}>
             <AppText color={palette.muted} style={styles.selection} variant="caption">
-              {selectedDestinations.length} {t('destination(s) sélectionnée(s)')}
+              {t('{{count}} destination sélectionnée', { count: selectedDestinations.length })}
             </AppText>
             <DispoButton
               disabled={!userId}

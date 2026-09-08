@@ -1,14 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { CompactProfileCard } from './compact-profile-card';
 
 import { AppText } from '@/components/ui/app-text';
-import { Avatar } from '@/components/ui/avatar';
-import { Card } from '@/components/ui/card';
-import { Tag } from '@/components/ui/tag';
 import {
-  relationTags,
   schoolLogoPresentation,
   type ProfileSummary,
   type SchoolAffiliation,
@@ -23,50 +19,7 @@ export function ProfileCard({
   onPress: () => void;
   profile: ProfileSummary;
 }) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
-    >
-      <Card padding={12}>
-        <View style={styles.row}>
-          <Avatar name={profile.name} size={64} uri={profile.photoUrl} />
-          <View style={styles.content}>
-            <View style={styles.titleRow}>
-              <AppText numberOfLines={1} style={styles.name} variant="title">
-                {profile.name}
-              </AppText>
-              {profile.isPremium ? (
-                <Ionicons color={palette.electric} name="sparkles" size={15} />
-              ) : null}
-            </View>
-            <AppText color={palette.electric} numberOfLines={1} style={styles.instrument}>
-              {profile.instruments.map((instrument) => t(instrument)).join(' · ') || t('Musicien')}
-            </AppText>
-            <View style={styles.tags}>
-              {relationTags(profile).map((tag) => (
-                <Tag key={tag} label={t(tag)} />
-              ))}
-              {profile.genres.slice(0, 2).map((genre) => (
-                <Tag color={palette.bronze} key={genre} label={t(genre)} />
-              ))}
-            </View>
-            <View style={styles.meta}>
-              <Ionicons color={palette.muted} name="location-outline" size={13} />
-              <AppText color={palette.muted} numberOfLines={1} variant="caption">
-                {[profile.city, profile.country].filter(Boolean).join(', ') ||
-                  t('Lieu non renseigné')}
-              </AppText>
-            </View>
-          </View>
-          <Ionicons color={palette.bronze} name="chevron-forward" size={18} />
-        </View>
-      </Card>
-    </Pressable>
-  );
+  return <CompactProfileCard onPress={onPress} profile={profile} />;
 }
 
 export function SchoolBadge({ school }: { school: SchoolAffiliation }) {

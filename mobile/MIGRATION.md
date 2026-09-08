@@ -18,6 +18,28 @@ finale ; en cas d’écart de statut, l’état du 2 septembre prévaut. Aucune
 présence de code n’est assimilée à une validation métier, visuelle ou sur
 appareil.
 
+## Lot du 8 septembre 2026 — build 54
+
+Ce lot complète et supersède les informations correspondantes du 2 septembre :
+cartes de musiciens uniformes (avatar, nom/acronyme, instruments/niveau sur une
+ligne, lieu et relation), périodes uniquement dans les filtres avec « Cette
+semaine », répertoire personnel privé/public, imports des groupes et événements,
+maîtrise, styles, exclusions durables et copie des ajouts manuels. Les anciens
+morceaux de profil sont transférés avant de retirer leur copie publique.
+
+Les formules Groupe (2.90/29 CHF) et Premium (6.90/69 CHF), avec réduction
+partenaire de 30 %, sont présentées pour le lancement. La bêta reste gratuite ;
+aucun achat intégré ni restriction payante n'est activé. Le contrat et les
+prochaines étapes commerciales sont décrits dans
+[personal-repertoire-and-plans.md](docs/personal-repertoire-and-plans.md).
+
+Les parcours métier ont été testés sur trois comptes locaux. Les contrôles
+visuels couvrent iPhone 17/iOS 26.4, Android 16 et les tarifs web FR/EN.
+Les migrations `20260908140606` et `20260908145624` ont été validées localement
+puis appliquées au backend existant. Aucun répertoire n'a été rendu public.
+Les preuves de builds et de livraison seront consignées dans le rapport du lot
+`Dispo-dist/qa-20260908-personal-repertoire/REPORT.md`.
+
 ## État faisant autorité — 2 septembre 2026
 
 ### Surfaces désormais présentes dans le client Expo
@@ -1302,7 +1324,6 @@ livraison d’un lot fonctionnellement validé.
 - Builds Release iOS Simulator et Android réussis ; build 46 installé et lancé sur les deux plateformes. Configuration de production vérifiée dans les deux bundles ; endpoint QA absent. APK signé vérifié et conservé dans `Dispo-dist/android/Dispo-2.4-build46-direct-test.apk`.
 - Livraison Apple : archive/export/signature de l’IPA final contrôlés ; `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, import `VALID`, `APP_STORE_ELIGIBLE`, delivery `b83defbc-6e31-4b76-92cf-012ae61c2a07`. Code `b503b2c` poussé. Groupe « Beta testers » associé sur demande complémentaire explicite, notes FR renseignées ; examen TestFlight ensuite explicitement autorisé par Ludovic, soumis et `APPROVED` ; groupe « Beta testers » en `IN_BETA_TESTING` confirmé. Aucune publication App Store.
 
-
 ## 2026-09-05 — Demandes WhatsApp de Raphaël — build 47
 
 - Périmètre : uniquement les messages du 5 septembre, 11 h 20 à 11 h 29. Écoles recherchées dans le formulaire SOS (plusieurs écoles en OU), modification des SOS par leur hôte, Auto-SOS accessible dans l'événement avec l'instrument et le niveau du membre absent.
@@ -1320,7 +1341,6 @@ livraison d’un lot fonctionnellement validé.
 - Code `896ab69` poussé sur `origin/main`. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, delivery `db8aaf35-1ced-4cb8-b4ea-a9e48920682f`. `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` confirmés par altool et API App Store Connect.
 - Aucune App Review, activation de testeurs ou publication Google Play pour ce build. IPA et APK directs, signatures et empreintes dans `Dispo-dist/2.4/RELEASE-build47.md`.
 
-
 ## 2026-09-05 — Forme sur la ligne tonalité / tempo — build 48
 
 - Correction limitée à `GroupSongRow` : la forme rejoint les métadonnées existantes, par exemple `Am · 83 BPM · AAB`, dans le même texte sur une ligne. Le bloc séparé de forme est retiré. Styles, titres, actions et données inchangés.
@@ -1331,7 +1351,6 @@ livraison d’un lot fonctionnellement validé.
 - Livraison : Release iOS Simulator et Android arm64 réussis, build 48 installé et démarré à froid sur les deux plateformes. Capture iOS reprise après stabilisation de la transition native ; écran de connexion normal confirmé. APK signé v2 ; IPA 2.4 (48), APNs production, Apple Sign In Default, get-task-allow=false et codesign strict vérifiés. Bundles de production sans banc QA.
 - Code `baa3b99` poussé. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, delivery `211cee99-b65d-4a19-9d4e-c181cbd4e000`, `BUILD-STATUS VALID`, `IMPORT-STATUS VALID`, `APP_STORE_ELIGIBLE` ; build 48 relu en `VALID` via API App Store Connect. Artefacts et empreintes dans `Dispo-dist/2.4/RELEASE-build48.md`.
 - Aucune App Review, activation de testeurs, publication Google Play ou écriture Supabase. Metro et émulateur Android arrêtés ; version iOS Release 48 laissée installée.
-
 
 ## 2026-09-05 — Réponses ciblées dans les conversations de groupe — build 49
 
@@ -1345,7 +1364,6 @@ livraison d’un lot fonctionnellement validé.
 - Livraison native : Release iOS Simulator et Android arm64 réussis, build 49 installé et démarré à froid sur les deux plateformes. XCTest supplémentaire de lancement iOS réussi et captures finales inspectées. Premier build simulateur repris après une extraction concurrente de ReactNativeDependencies, sans changement de dépendance. IPA 2.4 (49), APNs production, Apple Sign In Default, get-task-allow=false et codesign strict contrôlés ; APK signé v2. Les trois bundles utilisent la configuration production et contiennent les réponses ciblées sans montage QA.
 - Code `834b0cd` poussé sur `origin/main`. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, delivery `aa227837-3291-4869-96a8-cde20aee363a`, `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` ; build 49 relu en `VALID` via API App Store Connect.
 - Aucune App Review, activation de testeurs ou publication Google Play. Serveurs QA locaux, Colima et émulateur Android arrêtés ; préférences Metro et redirections Android retirées. Version iOS Release 49 laissée installée. Artefacts et empreintes dans `Dispo-dist/2.4/RELEASE-build49.md`.
-
 
 ## 2026-09-07 — Membres sans compte, cloche, onglets et SOS — livraison différée
 
@@ -1361,7 +1379,6 @@ livraison d’un lot fonctionnellement validé.
 
 - Clôture native : builds Release iOS Simulator arm64 et Android arm64 réussis, installés et lancés à froid sur les deux plateformes. Bundles finaux vérifiés : backend de production présent, endpoint et comptes QA absents, nouvelles fonctions présentes. APK de test signé v2 vérifié ; aucune archive Apple ni IPA de distribution générée. Metro, Supabase local et Colima arrêtés. Les commandes et résultats sont conservés dans le dossier QA.
 
-
 ## 2026-09-07 — Accueil groupes / Dispo — build 50
 
 - Maquettes approuvées puis adaptées aux polices et palettes de l’app : Mes groupes toujours visible, invitation à créer le premier groupe, cartes avec prochaine date et effectif incluant les membres sans compte ; Dispo séparé avec Aujourd’hui / Ce week-end et accès aux profils à proximité. Recherche, filtres, cloche, profil, données et choix automatique de période conservés. Aucun remplacement de thème ni dépendance.
@@ -1375,7 +1392,6 @@ livraison d’un lot fonctionnellement validé.
 - Livraison terminée : iOS Release et XCTest de démarrage à froid réussis. Archive/export puis IPA finale 2.4 (50), signature Apple Distribution: Raphaël Herrera (2YBQQ56HH8), codesign strict, APNs production, Apple Sign In Default, get-task-allow=false et configuration production vérifiés. Code `392be69` poussé. Apple `VERIFY SUCCEEDED`, `UPLOAD SUCCEEDED`, `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE` confirmés. Delivery UUID : `265b578a-85ab-4d22-b738-8fd9aa42b3c4`. Build 50 relu par son ID via API App Store Connect : `VALID`. Aucun App Review, activation de testeurs ni Google Play.
 - Preuves finales et empreintes : `Dispo-dist/2.4/RELEASE-build50.md` et `Dispo-dist/qa-20260907-home/`. Banc QA supprimé des sources, configuration/package.json restaurés à l’identique, serveurs de test et émulateur Android arrêtés. Le simulateur iOS conserve le Release 50. Aucun appareil physique testé.
 
-
 ## 2026-09-07 — Pastilles de groupe et titre des solos — build 51
 
 - Retours WhatsApp de Raphaël, périmètre complété explicitement par Ludovic : notes des pastilles de groupe peu visibles et risque de confondre les listes de solos de deux morceaux.
@@ -1384,7 +1400,6 @@ livraison d’un lot fonctionnellement validé.
 - Build iOS/Android incrémenté à 51. Preuves et verdicts de livraison dans `Dispo-dist/qa-20260907-group-badges/` ; builds natifs et import Apple complétés après exécution.
 
 - Livraison terminée : code 496f4225ab00473d52c4b425cf190c98e13dd30a poussé sur origin/main. iOS Release Simulator et Android Release arm64 compilés, installés et démarrés à froid. IPA signée et vérifiée, Apple VERIFY SUCCEEDED, UPLOAD SUCCEEDED, BUILD-STATUS VALID, IMPORT-STATUS VALID et APP_STORE_ELIGIBLE. Delivery UUID : 260e44e5-4e94-4b85-856d-48f1f1a7be27. Aucun Supabase, site, App Review, groupe de testeurs ni Google Play modifié. Preuves : `Dispo-dist/2.4/RELEASE-build51.md`. Banc retiré, préférences Metro/redirection Android supprimées, Metro/émulateur/Gradle arrêtés. Aucun appareil physique testé.
-
 
 ## 2026-09-07 — Photo du groupe sur l’accueil — build 52
 
@@ -1397,13 +1412,11 @@ livraison d’un lot fonctionnellement validé.
 
 - Distribution externe : dans la continuité de la demande de Ludovic pour Beta testers, build 52 associé au groupe 33339e1f-d3b2-4022-9750-52da27991f12, soumission bêta APPROVED et externalBuildState IN_BETA_TESTING relus. Le groupe contient le build 52 ; autoNotifyEnabled=true conservé. Aucune soumission App Store publique.
 
-
 ## 2026-09-07 — Date des commentaires de morceaux — build 53
 
 - Retour IMG_1203 transmis par Ludovic : ajout de la date et de l’heure sous chaque commentaire de morceau, avec la coche existante pour son auteur. Horodatage createdAt déjà chargé, langue de l’app et fuseau local via Intl ; valeur invalide omise sans planter. Aucun backend ni changement de saisie/suppression.
 - TypeScript, ESLint, formats et 66 suites / 376 tests réussis. Garde de régression de la coche adaptée au composant extrait. Métadonnées du composant vérifiées sur iOS/Android en sombre/clair, FR/EN, commentaires anciens et changement d’année local. Banc de contenu illustratif sans compte/backend, retiré ; package/configuration production restaurés à l’identique. Aucun appareil physique ni parcours clavier retesté, saisie inchangée.
 - Build incrémenté à 53 ; preuves Dispo-dist/qa-20260907-comment-date/. Builds natifs et verdict Apple complétés après exécution.
-
 
 ### Livraison finale — build 53
 

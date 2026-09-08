@@ -31,6 +31,7 @@ import {
 } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
 import { ensureDirectConversation } from '@/features/messages/message-repository';
+import { PersonalRepertoireLink } from '@/features/repertoire/repertoire-screen';
 import { SchoolAffiliationChip } from '@/features/schools/school-components';
 import { useMySchoolAffiliations } from '@/features/schools/school-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
@@ -567,17 +568,7 @@ export function ProfileDetail({
         </Card>
       ) : null}
 
-      {profile.repertoire?.length ? (
-        <Card style={styles.section}>
-          <SectionTitle icon="musical-notes" title={t('Répertoire')} />
-          {profile.repertoire.map((piece) => (
-            <View key={piece} style={styles.repertoireRow}>
-              <Ionicons color={palette.bronze} name="musical-note" size={14} />
-              <AppText variant="subheadline">{piece}</AppText>
-            </View>
-          ))}
-        </Card>
-      ) : null}
+      <PersonalRepertoireLink profileId={profile.id} self={self} />
 
       {!self ? (
         <Card style={styles.section}>

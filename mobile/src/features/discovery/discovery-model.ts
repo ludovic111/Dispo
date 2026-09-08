@@ -1,7 +1,7 @@
 import { shortProfileLevel, type ProfileSummary } from '@/domain/profile';
 import { GIG_GENRE_GROUPS, type GigSummary } from '@/features/gigs/gig-model';
 
-export type AvailabilityScope = 'nearby' | 'today' | 'weekend';
+export type AvailabilityScope = 'nearby' | 'today' | 'thisWeek' | 'weekend';
 
 export interface DiscoveryFilters {
   friendsOnly: boolean;
@@ -410,13 +410,23 @@ export function profileMatchesPlace(
 
 export function weekendDays(now = new Date()): Date[] {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const result: Date[] = [];
-  for (let offset = 0; offset <= 7 && result.length < 2; offset += 1) {
+  const saturday = new Date(start);
+  saturday.setDate(start.getDate() + ((6 - start.getDay() + 7) % 7));
+  if (start.getDay() === 0) return [start];
+  const sunday = new Date(saturday);
+  sunday.setDate(saturday.getDate() + 1);
+  const result = [saturday, sunday];
+  return result;
+}
+
+export function remainingWeekDays(now = new Date()): Date[] {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = 7 - ((start.getDay() + 6) % 7);
+  return Array.from({ length: days }, (_, offset) => {
     const day = new Date(start);
     day.setDate(start.getDate() + offset);
-    if (day.getDay() === 0 || day.getDay() === 6) result.push(day);
-  }
-  return result;
+    return day;
+  });
 }
 
 export function dateForAvailabilityScope(
@@ -595,8 +605,8 @@ export function profilesForScope(
   now = new Date(),
 ): ProfileSummary[] {
   if (scope === 'today') return profiles.filter((profile) => isAvailableOn(profile, now));
-  if (scope === 'weekend') {
-    const days = weekendDays(now);
+  if (scope === 'weekend' || scope === 'thisWeek') {
+    const days = scope === 'weekend' ? weekendDays(now) : remainingWeekDays(now);
     return profiles.filter((profile) => days.some((day) => isAvailableOn(profile, day)));
   }
   return [...profiles];

@@ -287,16 +287,16 @@ export function SettingsScreen() {
         ))}
       </SettingsSection>
 
-      <SettingsSection title={t('Projet Premium')}>
+      <SettingsSection title={t('Les formules au lancement')}>
         <SettingsRow
           color={palette.electric}
           detail={t(
-            "Work in progress : le modèle économique n'est pas décidé. Toutes les fonctionnalités sont ouvertes gratuitement aux bêta-testeurs.",
+            'Choisis un groupe ou toutes les possibilités. Tout reste inclus gratuitement pendant la bêta.',
           )}
-          icon="construct"
+          icon="pricetags"
           onPress={() => router.push('/premium' as Href)}
           right={<Ionicons color={palette.muted} name="chevron-forward" size={16} />}
-          title={t('Premium — en réflexion')}
+          title={t('Dispo Groupe & Premium')}
         />
       </SettingsSection>
 
