@@ -170,7 +170,10 @@
         "foregroundImage": "./assets/images/dispo/app-icon.png"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -215,7 +218,7 @@
           "locationWhenInUsePermission": "Dispo utilise ta position uniquement à ta demande pour les distances et la recherche à proximité. Tu choisis la précision partagée dans les réglages.",
           "locationAlwaysAndWhenInUsePermission": false,
           "locationAlwaysPermission": false,
-          "motionUsagePermission": false,
+          "motionUsagePermission": "Dispo n’utilise pas tes données de mouvement ou d’activité physique. Tu peux refuser cet accès.",
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false,
