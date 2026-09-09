@@ -28,6 +28,7 @@ import {
   streamingSearchFallbacks,
   type StreamingPlatformId,
 } from '@/domain/song';
+import { appleArtworkPromotion, type ArtworkSong } from '@/domain/song-artwork';
 import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, radii, spacing, typography } from '@/theme/tokens';
 
@@ -113,21 +114,22 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
 }
 
 export function SongArtwork({
-  artworkUrl,
+  song,
   radius,
   size,
 }: {
-  artworkUrl: string | null;
+  song: ArtworkSong;
   radius: number;
   size: number;
 }) {
   const { palette } = useDispoTheme();
-  if (artworkUrl) {
+  const promotion = appleArtworkPromotion(song);
+  if (promotion) {
     return (
       <Image
         accessibilityIgnoresInvertColors
         contentFit="cover"
-        source={{ uri: artworkUrl }}
+        source={{ uri: promotion.artworkUrl }}
         style={{ borderRadius: radius, height: size, width: size }}
         transition={120}
       />
@@ -142,6 +144,37 @@ export function SongArtwork({
     >
       <Ionicons color={palette.bronze} name="musical-note" size={size * 0.42} />
     </View>
+  );
+}
+
+export function SongStoreBadge({ song }: { song: ArtworkSong }) {
+  const { t, i18n } = useTranslation();
+  const storeName = 'iTunes Store';
+  const promotion = appleArtworkPromotion(song);
+  if (!promotion) return null;
+  return (
+    <Pressable
+      accessibilityLabel={`${t('Ouvrir')} ${song.title} — ${storeName}`}
+      accessibilityRole="link"
+      onPress={(event) => {
+        event.stopPropagation();
+        void Linking.openURL(promotion.storeUrl).catch(() =>
+          Alert.alert(t('Erreur'), t('Ce lien ne peut pas être ouvert.')),
+        );
+      }}
+      style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44, padding: 4 }}
+    >
+      <Image
+        accessibilityIgnoresInvertColors
+        contentFit="contain"
+        source={
+          i18n.language.startsWith('fr')
+            ? require('../../../assets/images/apple/itunes-fr.svg')
+            : require('../../../assets/images/apple/itunes-en.svg')
+        }
+        style={{ height: 30, width: 103 }}
+      />
+    </Pressable>
   );
 }
 
@@ -212,7 +245,7 @@ export function SongListenSheet({
           </View>
           <ScrollView contentContainerStyle={styles.sheetContent}>
             <View style={styles.sheetSong}>
-              <SongArtwork artworkUrl={song.artworkUrl} radius={12} size={54} />
+              <SongArtwork song={song} radius={12} size={54} />
               <View style={styles.flex}>
                 <AppText numberOfLines={2} style={styles.sheetSongTitle} variant="headline">
                   {song.title}
@@ -222,6 +255,7 @@ export function SongListenSheet({
                     {song.artist}
                   </AppText>
                 ) : null}
+                <SongStoreBadge song={song} />
               </View>
             </View>
             <View style={styles.destinationStack}>
@@ -481,7 +515,7 @@ export function GroupSongRow({
               pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
             ]}
           >
-            <SongArtwork artworkUrl={song.artworkUrl} radius={11} size={52} />
+            <SongArtwork song={song} radius={11} size={52} />
             <View style={styles.songCopy}>
               <AppText numberOfLines={2} style={styles.songTitle} variant="subheadline">
                 {song.title}
@@ -508,6 +542,7 @@ export function GroupSongRow({
                   {metadata.join(' · ')}
                 </AppText>
               ) : null}
+              <SongStoreBadge song={song} />
             </View>
             {onPress && showDisclosure ? (
               <Ionicons color={palette.muted} name="chevron-forward" size={16} />

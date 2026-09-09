@@ -37,6 +37,7 @@ jest.mock('@/components/ui/screen', () => ({
 }));
 jest.mock('@/features/groups/group-song-row', () => ({
   SongArtwork: () => null,
+  SongStoreBadge: () => null,
   SongListenSheet: () => null,
 }));
 jest.mock('@/features/messages/message-controls', () => ({ ReceiptChecks: () => null }));

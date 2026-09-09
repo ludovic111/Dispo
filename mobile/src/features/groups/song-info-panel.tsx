@@ -5,7 +5,7 @@ import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-nat
 
 import type { GroupSong } from './group-model';
 import { isKnownMusicalKey, musicalKeyOptions, musicalKeysEqual } from './group-song-key-model';
-import { SongArtwork, SongListenSheet } from './group-song-row';
+import { SongArtwork, SongListenSheet, SongStoreBadge } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -78,7 +78,7 @@ export function SongInfoPanel({
       <Card style={styles.card}>
         <SectionHeader subtitle={subtitle} title={t('Identité')} />
         <View style={styles.songHero}>
-          <SongArtwork artworkUrl={draft.artworkUrl} radius={10} size={54} />
+          <SongArtwork song={draft} radius={10} size={54} />
           <View style={styles.heroCopy}>
             <AppText numberOfLines={2} style={styles.heroTitle} variant="title3">
               {draft.title || t('Titre')}
@@ -101,6 +101,7 @@ export function SongInfoPanel({
                 {recording.join(' · ')}
               </AppText>
             ) : null}
+            <SongStoreBadge song={draft} />
           </View>
           <Pressable
             accessibilityLabel={t('Écouter ce morceau')}

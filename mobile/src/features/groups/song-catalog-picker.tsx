@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { searchSongCatalog, type SongCatalogResult } from './group-repository';
-import { SongArtwork } from './group-song-row';
+import { SongArtwork, SongStoreBadge } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -63,7 +63,7 @@ export function SongCatalogPicker({
             }}
             style={[styles.row, { borderBottomColor: palette.border }]}
           >
-            <SongArtwork artworkUrl={item.artworkUrl} radius={8} size={42} />
+            <SongArtwork song={item} radius={8} size={42} />
             <View style={styles.copy}>
               <AppText numberOfLines={1} style={styles.bold}>
                 {item.title}
@@ -72,6 +72,7 @@ export function SongCatalogPicker({
                 {item.artist}
                 {item.albumTitle ? ` · ${item.albumTitle}` : ''}
               </AppText>
+              <SongStoreBadge song={item} />
             </View>
             <Ionicons
               color={selectedId === item.catalogId ? palette.electric : palette.muted}
