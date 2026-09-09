@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "58",
+      "buildNumber": "59",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -164,7 +164,7 @@
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 58,
+      "versionCode": 59,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"
@@ -184,11 +184,11 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#050814",
-          "image": "./assets/images/dispo/logo-mark.png",
+          "image": "./assets/images/dispo/logo-mark-blue.png",
           "imageWidth": 112,
           "dark": {
             "backgroundColor": "#050814",
-            "image": "./assets/images/dispo/logo-mark.png"
+            "image": "./assets/images/dispo/logo-mark-blue.png"
           }
         }
       ],

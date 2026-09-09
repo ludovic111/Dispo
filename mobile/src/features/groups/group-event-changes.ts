@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
+export const unseenEventStyle = { borderColor: '#EF4444', borderWidth: 2 } as const;
+
 const key = (userId: string, eventId: string) => `dispo.event.seen.v1:${userId}:${eventId}`;
 const queryKey = (userId: string, eventId: string) => ['event-seen', userId, eventId] as const;
 

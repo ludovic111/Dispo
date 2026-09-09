@@ -125,7 +125,13 @@ export default function SessionsScreen() {
                   loading={
                     directMutation.isPending && directMutation.variables?.gigId === response.gigId
                   }
-                  onAnswer={(accept) => directMutation.mutate({ accept, gigId: response.gigId })}
+                  onAnswer={(accept) =>
+                    directMutation.mutate({
+                      accept,
+                      gigId: response.gigId,
+                      celebration: { title: response.title, date: response.date },
+                    })
+                  }
                   response={response}
                 />
               ) : (

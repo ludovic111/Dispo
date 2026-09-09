@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/features/auth/auth-context';
 import { NetworkBanner } from '@/features/connectivity/network-banner';
 import { DiscoveryProvider } from '@/features/discovery/discovery-context';
 import { GigRealtimeBridge } from '@/features/gigs/gig-realtime-bridge';
+import { SosAcceptanceCelebrationProvider } from '@/features/gigs/sos-acceptance-celebration';
 import { GroupEventReminderBridge } from '@/features/groups/group-event-reminder-bridge';
 import { NativeNotificationBridge } from '@/features/notifications/native-notification-bridge';
 import { SubscriptionSyncBridge } from '@/features/premium/subscription-queries';
@@ -33,7 +34,7 @@ function SessionScopedProviders({ children }: PropsWithChildren) {
         <NativeNotificationBridge />
         <NativeDeviceSyncBridge />
         <SubscriptionSyncBridge />
-        {children}
+        <SosAcceptanceCelebrationProvider>{children}</SosAcceptanceCelebrationProvider>
         <NetworkBanner />
       </DiscoveryProvider>
     </SessionQueryProvider>

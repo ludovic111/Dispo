@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Tag } from '@/components/ui/tag';
 import { Barcode, TicketCard } from '@/components/ui/ticket-card';
+import { useAuth } from '@/features/auth/auth-context';
 import { openGigInstruments, type GigSummary } from '@/features/gigs/gig-model';
+import { useGigMatches } from '@/features/gigs/gig-queries';
 import { billetInk, spacing, typography } from '@/theme/tokens';
 
 function formatGigDate(
@@ -28,10 +31,33 @@ export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const date = formatGigDate(gig.date, locale);
   const openInstruments = openGigInstruments(gig);
+  const { session } = useAuth();
+  const focused = useIsFocused();
+  const canFindMatch =
+    focused &&
+    gig.hostId === session?.user.id &&
+    !gig.targetId &&
+    openInstruments.length > 0 &&
+    Date.parse(gig.date) > new Date().getTime();
+  const matches = useGigMatches(canFindMatch ? gig.id : '', canFindMatch ? 30_000 : false);
+  const hasMatch =
+    canFindMatch &&
+    !matches.isError &&
+    Boolean(
+      matches.data?.pages.some((page) =>
+        page.items.some((match) =>
+          match.matchingInstruments.some((instrument) => openInstruments.includes(instrument)),
+        ),
+      ),
+    );
   const visibleInstruments = openInstruments.slice(0, 3);
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${gig.title} · ${date.day} ${date.month} ${date.time} · ${gig.place} · ${openInstruments.map((instrument) => t(instrument)).join(', ')}${hasMatch ? ` · ${t('Musicien compatible')}` : ''}`}
+      accessibilityHint={
+        hasMatch ? t('Musicien compatible : ouvre le SOS pour envoyer une demande') : undefined
+      }
       onPress={onPress}
       style={({ pressed }) => pressed && styles.pressed}
     >
@@ -85,8 +111,9 @@ export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void
               {openInstruments.length === 0 ? <Tag color="#05856E" label={t('Complet')} /> : null}
             </View>
           </View>
-          <View style={styles.stub}>
-            <View style={styles.perforation} />
+          <View style={[styles.stub, hasMatch && styles.matchedStub]}>
+            {hasMatch ? <View pointerEvents="none" style={styles.matchBorder} /> : null}
+            <View style={[styles.perforation, hasMatch && { borderColor: '#05856E' }]} />
             <AppText color={billetInk} style={styles.day}>
               {date.day}
             </AppText>
@@ -97,6 +124,14 @@ export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void
               {date.time}
             </AppText>
             <Barcode seed={gig.title} />
+            {hasMatch ? (
+              <Ionicons
+                accessibilityLabel={t('Musicien compatible')}
+                color="#05856E"
+                name="person-add"
+                size={16}
+              />
+            ) : null}
           </View>
         </View>
       </TicketCard>
@@ -114,6 +149,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   instruments: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  matchedStub: { backgroundColor: '#D8F1E8' },
+  matchBorder: {
+    backgroundColor: '#05856E',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
   meta: { alignItems: 'center', flexDirection: 'row', gap: 3 },
   month: {
     fontFamily: typography.monoSemibold,

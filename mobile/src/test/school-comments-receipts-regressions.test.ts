@@ -10,9 +10,9 @@ const source = (relativePath: string) =>
 
 describe('lot écoles, commentaires et coches', () => {
   it('ne garde qu’un seul accès Mes démos sur le profil propriétaire', () => {
-    const profile = source('src/features/profiles/profile-detail.tsx');
+    const profile = source('src/features/profiles/my-profile-detail.tsx');
     expect(profile.match(/router\.push\('\/profile\/demos' as never\)/g)).toHaveLength(1);
-    expect(profile).toContain("title={t('Démos')}");
+    expect(profile).toContain("title={t('Mes démos')}");
   });
 
   it('protège le compositeur multiligne du clavier et le révèle à chaque focus', () => {

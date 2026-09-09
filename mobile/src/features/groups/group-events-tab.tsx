@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { useEventHasUnseenChange } from './group-event-changes';
+import { unseenEventStyle, useEventHasUnseenChange } from './group-event-changes';
 import { groupEventColor } from './group-event-presentation';
 import {
   attendanceFor,
@@ -79,7 +79,7 @@ function EventCard({
       onPress={() => router.push(`/groups/${group.id}/events/${event.id}` as never)}
       style={({ pressed }) => pressed && styles.pressed}
     >
-      <Card padding={0}>
+      <Card padding={0} style={changed && unseenEventStyle}>
         <View style={styles.eventRow}>
           <DateTicket event={event} />
           <View style={styles.eventCopy}>
@@ -92,7 +92,7 @@ function EventCard({
                   accessibilityLabel={t('Date, heure ou lieu modifié')}
                   name="alert-circle"
                   size={20}
-                  color={palette.signal}
+                  color={unseenEventStyle.borderColor}
                 />
               ) : null}
             </View>

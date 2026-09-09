@@ -17,6 +17,8 @@ import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
+import { useAuth } from '@/features/auth/auth-context';
+import { unseenEventStyle, useEventHasUnseenChange } from '@/features/groups/group-event-changes';
 import { groupEventColor } from '@/features/groups/group-event-presentation';
 import { useDispoTheme } from '@/theme/theme-context';
 import {
@@ -28,6 +30,15 @@ import {
   typography,
   type DispoPalette,
 } from '@/theme/tokens';
+
+function useSessionChange(item: SessionItem) {
+  const { session } = useAuth();
+  return useEventHasUnseenChange(
+    session?.user.id ?? '',
+    item.eventId ?? '',
+    item.scheduleChangedAt,
+  );
+}
 
 function dateParts(value: string, locale: string) {
   const date = new Date(value);
@@ -225,9 +236,10 @@ export function SessionRow({
 }) {
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
+  const changed = useSessionChange(item);
   const date = dateParts(item.date, i18n.resolvedLanguage ?? i18n.language ?? 'fr');
   const content = (
-    <Card padding={0} style={isPast && styles.pastCard}>
+    <Card padding={0} style={[isPast && styles.pastCard, changed && unseenEventStyle]}>
       <View style={styles.row}>
         <View style={styles.rowTicketWrap}>
           <DateTicket item={item} />
@@ -251,7 +263,7 @@ export function SessionRow({
   if (!onPress) return content;
   return (
     <Pressable
-      accessibilityLabel={t('Ouvrir {{title}}', { title: item.title })}
+      accessibilityLabel={`${t('Ouvrir {{title}}', { title: item.title })}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => pressed && styles.pressed}
@@ -313,9 +325,10 @@ export function NextSessionCard({
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const date = dateParts(item.date, locale);
+  const changed = useSessionChange(item);
   const left = countdownLabel(item.date, new Date(), locale);
   const content = (
-    <Card>
+    <Card style={changed && unseenEventStyle}>
       <View style={styles.nextTop}>
         <DateTicket item={item} large />
         <View style={styles.nextContent}>
@@ -342,7 +355,7 @@ export function NextSessionCard({
   if (!onPress) return content;
   return (
     <Pressable
-      accessibilityLabel={t('Ouvrir {{title}}', { title: item.title })}
+      accessibilityLabel={`${t('Ouvrir {{title}}', { title: item.title })}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => pressed && styles.pressed}

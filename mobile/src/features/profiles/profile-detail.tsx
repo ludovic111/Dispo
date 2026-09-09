@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { MyProfileDetail } from './my-profile-detail';
 import { SchoolBadge } from './profile-card';
 import { canRateProfile } from './profile-social-model';
 import {
@@ -32,8 +33,6 @@ import {
 import { useAuth } from '@/features/auth/auth-context';
 import { ensureDirectConversation } from '@/features/messages/message-repository';
 import { PersonalRepertoireLink } from '@/features/repertoire/repertoire-screen';
-import { SchoolAffiliationChip } from '@/features/schools/school-components';
-import { useMySchoolAffiliations } from '@/features/schools/school-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing, typography } from '@/theme/tokens';
@@ -102,75 +101,6 @@ function ProfileManagementRow({
       </View>
       <Ionicons color={palette.muted} name="chevron-forward" size={17} />
     </Pressable>
-  );
-}
-
-function MyProfileControls({ demoCount }: { demoCount: number }) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const schools = useMySchoolAffiliations();
-  const affiliations = schools.data ?? [];
-  return (
-    <View style={styles.selfControls}>
-      <Card padding={0}>
-        <ProfileManagementRow
-          color={palette.bronze}
-          icon="pencil"
-          onPress={() => router.push('/profile/edit' as never)}
-          subtitle={t('Photo, bio, instruments, styles et réseaux sociaux')}
-          title={t('Modifier mon profil')}
-        />
-        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
-        <ProfileManagementRow
-          color={palette.bronze}
-          icon="play-circle-outline"
-          onPress={() => router.push('/profile/demos' as never)}
-          subtitle={
-            demoCount
-              ? demoCount === 1
-                ? t('1 vidéo sur ton profil')
-                : t('{{count}} vidéos sur ton profil', { count: demoCount })
-              : t('Ajoute une vidéo pour montrer ce que tu joues.')
-          }
-          title={t('Mes démos')}
-        />
-      </Card>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/schools' as never)}
-        style={({ pressed }) => pressed && styles.pressed}
-      >
-        <Card>
-          <View style={styles.schoolManageRow}>
-            <View style={[styles.schoolManageIcon, { backgroundColor: `${palette.bronze}24` }]}>
-              <Ionicons color={palette.bronze} name="business" size={20} />
-            </View>
-            <View style={styles.schoolManageCopy}>
-              <AppText style={styles.sectionHeading} variant="subheadline">
-                {affiliations.length > 0 ? t('Mes écoles') : t('Ajouter mon école de musique')}
-              </AppText>
-              <AppText color={palette.muted} variant="caption">
-                {affiliations.length > 0
-                  ? t('Gère tes affiliations et retrouve les membres.')
-                  : t('Affiche ton affiliation et retrouve ses membres.')}
-              </AppText>
-            </View>
-            <Ionicons
-              color={palette.bronze}
-              name={affiliations.length > 0 ? 'chevron-forward' : 'add-circle'}
-              size={21}
-            />
-          </View>
-          {affiliations.length > 0 ? (
-            <View style={styles.tags}>
-              {affiliations.map((affiliation) => (
-                <SchoolAffiliationChip affiliation={affiliation} key={affiliation.id} />
-              ))}
-            </View>
-          ) : null}
-        </Card>
-      </Pressable>
-    </View>
   );
 }
 
@@ -277,6 +207,10 @@ export function ProfileDetail({
   profile: ProfileSummary;
   self?: boolean;
 }) {
+  return self ? <MyProfileDetail profile={profile} /> : <PublicProfileDetail profile={profile} />;
+}
+
+function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
   const { session } = useAuth();
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
@@ -291,6 +225,7 @@ export function ProfileDetail({
     mutationFn: () => ensureDirectConversation(session?.user.id ?? '', profile.id),
     onSuccess: (id) => router.push(`/messages/${id}?name=${encodeURIComponent(profile.name)}`),
   });
+  const viewingOwnProfile = session?.user.id === profile.id;
   const isFollowing = profile.relationship === 'following' || profile.relationship === 'friend';
   const hasPlayedWith = social.data?.hasPlayedWith ?? false;
   const myRating = social.data?.myRating ?? null;
@@ -413,7 +348,7 @@ export function ProfileDetail({
           {profile.isPremium ? (
             <Ionicons color={palette.electric} name="sparkles" size={17} />
           ) : null}
-          {!self ? (
+          {!viewingOwnProfile ? (
             <Pressable accessibilityLabel={t('Sécurité')} hitSlop={10} onPress={showSafetyMenu}>
               <Ionicons color={palette.muted} name="ellipsis-horizontal-circle" size={21} />
             </Pressable>
@@ -496,9 +431,7 @@ export function ProfileDetail({
         ) : null}
       </View>
 
-      {self ? (
-        <MyProfileControls demoCount={profile.demoVideos?.length ?? 0} />
-      ) : (
+      {viewingOwnProfile ? null : (
         <View style={styles.actions}>
           {upcomingDates.length > 0 ? (
             <DispoButton
@@ -538,7 +471,7 @@ export function ProfileDetail({
         </AppText>
       ) : null}
 
-      {!self && upcomingDates.length > 0 ? (
+      {upcomingDates.length > 0 ? (
         <View style={styles.tags}>
           <Ionicons color={palette.muted} name="calendar-outline" size={14} />
           {upcomingDates.map((date) => (
@@ -555,7 +488,7 @@ export function ProfileDetail({
         </View>
       ) : null}
 
-      {!self && upcomingTrips.length > 0 ? (
+      {upcomingTrips.length > 0 ? (
         <Card style={styles.section}>
           <SectionTitle icon="airplane-outline" title={t('Disponible ailleurs')} />
           {upcomingTrips.map((trip) => (
@@ -616,9 +549,9 @@ export function ProfileDetail({
         </Card>
       ) : null}
 
-      {!self ? <PersonalRepertoireLink profileId={profile.id} self={false} /> : null}
+      <PersonalRepertoireLink profileId={profile.id} self={false} />
 
-      {!self ? (
+      {!viewingOwnProfile ? (
         <Card style={styles.section}>
           <View style={styles.rateHeader}>
             <SectionTitle

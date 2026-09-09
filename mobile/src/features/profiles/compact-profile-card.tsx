@@ -40,9 +40,16 @@ export function CompactProfileCard({
     profile.instruments
       .map(
         (instrument) =>
-          `${t(instrument)} · ${t(shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level))}`,
+          `${t(instrument)} · ${t(shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level, true))}`,
       )
-      .join(' · ') || `${t('Musicien')} · ${t(shortProfileLevel(profile.level))}`;
+      .join(' · ') || `${t('Musicien')} · ${t(shortProfileLevel(profile.level, true))}`;
+  const accessibleInstruments =
+    profile.instruments
+      .map(
+        (instrument) =>
+          `${t(instrument)} · ${t(profile.instrumentLevels[instrument] ?? profile.level)}`,
+      )
+      .join(', ') || `${t('Musicien')} · ${t(profile.level)}`;
   const distance = referenceProfile
     ? profileDistanceLabel(referenceProfile, profile, i18n.resolvedLanguage ?? 'fr-CH')
     : null;
@@ -50,7 +57,13 @@ export function CompactProfileCard({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={[profile.name, school?.name, instruments, place, relation && t(relation)]
+      accessibilityLabel={[
+        profile.name,
+        school?.name,
+        accessibleInstruments,
+        place,
+        relation && t(relation),
+      ]
         .filter(Boolean)
         .join(', ')}
       onPress={onPress}

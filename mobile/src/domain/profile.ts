@@ -95,7 +95,16 @@ export function schoolAcronym(school: Pick<SchoolAffiliation, 'name' | 'shortNam
   return initials || school.name.trim().slice(0, 3).toLocaleUpperCase('fr');
 }
 
-export function shortProfileLevel(level: string): string {
+export function shortProfileLevel(level: string, compact = false): string {
+  if (compact) {
+    const abbreviations: Record<string, string> = {
+      Débutant: 'déb',
+      Intermédiaire: 'int',
+      Avancé: 'av',
+      Professionnel: 'pro',
+    };
+    return abbreviations[level] ?? level;
+  }
   return level === 'Professionnel' ? 'Pro' : level;
 }
 

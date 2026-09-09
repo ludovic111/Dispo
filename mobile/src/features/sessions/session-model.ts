@@ -16,6 +16,7 @@ export interface SessionMemberInput {
 }
 
 export interface SessionEventInput {
+  scheduleChangedAt?: string | null;
   date: string;
   groupId: string;
   id: string;
@@ -75,6 +76,7 @@ export interface BuildSessionsInput {
 }
 
 export interface SessionItem {
+  scheduleChangedAt?: string | null;
   approvedSongCount: number;
   attendanceStatus: AttendanceStatus | null;
   availableCount: number;
@@ -299,6 +301,7 @@ export function buildSessions(input: BuildSessionsInput, now = new Date()): Sess
       confirmDeadline: deadline,
       date: event.date,
       eventId: event.id,
+      scheduleChangedAt: event.scheduleChangedAt ?? null,
       eventKind: event.kind,
       gigId: null,
       groupEmoji: group.emoji,

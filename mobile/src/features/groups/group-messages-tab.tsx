@@ -43,6 +43,7 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 import {
   MessageAttachmentCard,
   PendingAttachmentChip,
@@ -188,9 +189,13 @@ function MessageBubble({
                 />
               ) : null}
               {message.text ? (
-                <AppText onPress={() => onReply(message)} variant="subheadline">
+                <LinkifiedText
+                  onPress={() => onReply(message)}
+                  onLongPress={() => onReply(message)}
+                  variant="subheadline"
+                >
                   {message.text}
-                </AppText>
+                </LinkifiedText>
               ) : null}
             </>
           )}

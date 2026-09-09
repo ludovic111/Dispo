@@ -368,6 +368,20 @@ describe('centre de notifications', () => {
     expect(relativeNotificationDate('2026-08-31T10:00:00.000Z', 'fr', now)).toBe('il y a 1 heure');
   });
 
+  it('ouvre directement un événement modifié', () => {
+    expect(
+      notificationDestination({
+        body: '',
+        category: 'groups',
+        createdAt: '',
+        data: { group_id: 'group-12', event_id: 'event-7', target_tab: 'sessions' },
+        id: 'notification-event',
+        readAt: null,
+        title: 'Une date a changé',
+      }),
+    ).toBe('/groups/group-12/events/event-7');
+  });
+
   it('ouvre la destination précise quand son identifiant existe', () => {
     expect(
       notificationDestination({

@@ -411,7 +411,14 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
           <View style={styles.actionButton}>
             <DispoButton
               loading={respond.isPending}
-              onPress={() => respond.mutate({ accept: true, gigId: gig.id })}
+              onPress={() =>
+                respond.mutate({
+                  accept: true,
+                  gigId: gig.id,
+                  celebration: { title: gig.title, date: gig.date },
+                  onCelebrationComplete: () => router.replace('/(tabs)/sessions'),
+                })
+              }
             >
               {t('Oui, je dépanne')}
             </DispoButton>

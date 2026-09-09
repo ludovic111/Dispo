@@ -8,6 +8,7 @@ import { MessageReactionBar, ReceiptChecks } from './message-controls';
 import { receiptForMessage, type DirectMessage, type MessageReactionEmoji } from './message-model';
 
 import { AppText } from '@/components/ui/app-text';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 import { useDispoTheme } from '@/theme/theme-context';
 import { billetInk, gradients } from '@/theme/tokens';
 
@@ -48,10 +49,15 @@ export function MessageBubble({
           onOpen={onOpenAttachment}
         />
       ) : null}
-      {message.text ? (
-        <AppText color={mine ? billetInk : palette.text} variant="subheadline">
+      {!message.deletedAt && message.text ? (
+        <LinkifiedText
+          color={mine ? billetInk : palette.text}
+          linkColor={mine ? billetInk : palette.electric}
+          onLongPress={onLongPress}
+          variant="subheadline"
+        >
           {message.text}
-        </AppText>
+        </LinkifiedText>
       ) : null}
     </View>
   );
@@ -60,6 +66,7 @@ export function MessageBubble({
     <View style={[styles.wrapper, mine ? styles.mineRow : styles.theirRow]}>
       <View style={[styles.content, mine ? styles.mineContent : styles.theirContent]}>
         <Pressable
+          accessible={false}
           accessibilityHint={
             message.deletedAt ? undefined : t('Maintiens pour afficher les actions')
           }

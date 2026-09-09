@@ -15,6 +15,7 @@ import {
   respondToDirectGig,
   withdrawGigApplication,
 } from './gig-repository';
+import { useSosAcceptanceCelebration, type AcceptedSos } from './sos-acceptance-celebration';
 
 import { useAuth } from '@/features/auth/auth-context';
 import type { GigCreateInput } from '@/features/gigs/gig-model';
@@ -118,11 +119,12 @@ export function useGigFormDefaults() {
   });
 }
 
-export function useGigMatches(gigId: string) {
+export function useGigMatches(gigId: string, refreshInterval: number | false = false) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const query = useInfiniteQuery({
     queryKey: gigKeys.matches(userId, gigId),
+    refetchInterval: refreshInterval,
     queryFn: ({ pageParam, signal }) => fetchGigMatches(gigId, userId, pageParam, 50, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
@@ -225,10 +227,22 @@ export function useGigApplicationDecision() {
 
 export function useRespondToDirectGig() {
   const invalidate = useInvalidateGig();
+  const celebrate = useSosAcceptanceCelebration();
   return useMutation({
-    mutationFn: (input: { accept: boolean; gigId: string }) =>
-      respondToDirectGig(input.gigId, input.accept),
-    onSuccess: (_data, input) => invalidate(input.gigId),
+    mutationFn: (input: {
+      accept: boolean;
+      gigId: string;
+      celebration?: AcceptedSos;
+      onCelebrationComplete?: () => void;
+    }) => respondToDirectGig(input.gigId, input.accept),
+    onSuccess: (_data, input) => {
+      if (input.accept && input.celebration)
+        celebrate({
+          ...input.celebration,
+          ...(input.onCelebrationComplete ? { onComplete: input.onCelebrationComplete } : {}),
+        });
+      return invalidate(input.gigId);
+    },
   });
 }
 

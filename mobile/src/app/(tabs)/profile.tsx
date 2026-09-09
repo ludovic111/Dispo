@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
@@ -11,12 +11,12 @@ import { ProfileAvailabilityOverview, ProfileDetail } from '@/features/profiles/
 import { useProfile } from '@/features/profiles/profile-queries';
 import { RepertoireScreen } from '@/features/repertoire/repertoire-screen';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { minimumTouchTarget, spacing } from '@/theme/tokens';
 
 const profileTabs = [
   { id: 'profile', label: 'Profil' },
-  { id: 'repertoire', label: 'Mon répertoire' },
-  { id: 'availability', label: 'Disponibilités' },
+  { id: 'repertoire', label: 'Répertoire' },
+  { id: 'availability', label: 'Dispos' },
 ] as const;
 
 export default function MyProfileScreen() {
@@ -30,11 +30,24 @@ export default function MyProfileScreen() {
     <Screen nativeTabRoot>
       <ScreenHeader
         action={
-          <HeaderAction
-            icon="settings-outline"
-            label={t('Réglages')}
-            onPress={() => router.push('/settings' as never)}
-          />
+          <View style={styles.headerActions}>
+            <HeaderAction
+              icon="share-outline"
+              label={t('Partager')}
+              disabled={!query.data}
+              onPress={() => {
+                if (!query.data) return;
+                void Share.share({
+                  message: `${query.data.name} · Dispo\ndispo://profiles/${userId}`,
+                }).catch(() => Alert.alert(t('Erreur'), t('Impossible de partager le profil.')));
+              }}
+            />
+            <HeaderAction
+              icon="settings-outline"
+              label={t('Réglages')}
+              onPress={() => router.push('/settings' as never)}
+            />
+          </View>
         }
         eyebrow={t('Compte')}
         title={t('Profil')}
@@ -49,9 +62,7 @@ export default function MyProfileScreen() {
             style={[
               styles.tab,
               {
-                flexGrow: Math.max(7, t(label).length),
                 borderBottomColor: tab === id ? palette.electric : 'transparent',
-                backgroundColor: tab === id ? `${palette.electric}12` : 'transparent',
               },
             ]}
           >
@@ -81,19 +92,21 @@ export default function MyProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, paddingBottom: spacing.xxl },
+  content: { padding: spacing.lg, paddingBottom: 108 },
+  headerActions: { flexDirection: 'row', gap: 8, alignSelf: 'center' },
   tabs: {
     flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    marginHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: 24,
   },
   tab: {
-    flex: 1,
-    minHeight: 50,
+    flexShrink: 1,
+    minHeight: minimumTouchTarget,
     paddingHorizontal: 4,
     paddingVertical: 10,
-    borderBottomWidth: 3,
+    borderBottomWidth: 2,
     justifyContent: 'center',
   },
-  tabLabel: { textAlign: 'center', fontSize: 13, fontWeight: '700' },
+  tabLabel: { textAlign: 'left', fontSize: 14, fontWeight: '700' },
 });

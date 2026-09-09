@@ -39,6 +39,7 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { communityContentMessage } from '@/domain/community-content';
@@ -74,6 +75,7 @@ function SchoolMessageBubble({
           </AppText>
         ) : null}
         <Pressable
+          accessible={false}
           accessibilityActions={[{ label: actionLabel, name: actionName }]}
           accessibilityHint={actionLabel}
           accessibilityLabel={message.deletedAt ? t('Message supprimé') : message.text}
@@ -86,13 +88,15 @@ function SchoolMessageBubble({
         >
           {own ? (
             <LinearGradient colors={gradients.hero} style={styles.bubble}>
-              <AppText
+              <LinkifiedText
+                onLongPress={() => onAction(message)}
+                linkColor={own ? billetInk : palette.electric}
                 color={message.deletedAt ? palette.muted : billetInk}
                 style={message.deletedAt && styles.deleted}
                 variant="subheadline"
               >
                 {message.deletedAt ? t('Message supprimé') : message.text}
-              </AppText>
+              </LinkifiedText>
             </LinearGradient>
           ) : (
             <View
@@ -101,13 +105,15 @@ function SchoolMessageBubble({
                 { backgroundColor: palette.card, borderColor: palette.border },
               ]}
             >
-              <AppText
+              <LinkifiedText
+                onLongPress={() => onAction(message)}
+                linkColor={own ? billetInk : palette.electric}
                 color={message.deletedAt ? palette.muted : palette.text}
                 style={message.deletedAt && styles.deleted}
                 variant="subheadline"
               >
                 {message.deletedAt ? t('Message supprimé') : message.text}
-              </AppText>
+              </LinkifiedText>
             </View>
           )}
         </Pressable>

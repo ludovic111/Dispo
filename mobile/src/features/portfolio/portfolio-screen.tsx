@@ -4,8 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -55,7 +55,7 @@ import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/
 import { HeaderAction, SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { countryOptions, type CountryOption } from '@/features/onboarding/onboarding-model';
-import { usePremiumCapability } from '@/features/premium/subscription-queries';
+import { useSubscription } from '@/features/premium/subscription-queries';
 import { profileKeys } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -222,7 +222,10 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
   const { i18n, t } = useTranslation();
   const [busy, setBusy] = useState<BusyAction>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const expandedPortfolio = usePremiumCapability('expandedPortfolio');
+  const subscription = useSubscription();
+  const expandedPortfolio = subscription.data?.tier === 'premium';
+  const { add } = useLocalSearchParams<{ add?: string }>();
+  const autoAddStarted = useRef(false);
   const [videoDraft, setVideoDraft] = useState<VideoDetailsDraft | null>(null);
   const [tripDraft, setTripDraft] = useState<AvailabilityTripDraft | null>(null);
   const [countryModal, setCountryModal] = useState(false);
@@ -305,6 +308,23 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
       setBusy(null);
     }
   };
+
+  const pickRequestedVideo = useEffectEvent(() => void pickVideo());
+  useEffect(() => {
+    if (
+      add !== '1' ||
+      section !== 'demos' ||
+      !query.isSuccess ||
+      !subscription.isSuccess ||
+      autoAddStarted.current
+    )
+      return;
+    const timer = setTimeout(() => {
+      autoAddStarted.current = true;
+      pickRequestedVideo();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [add, query.isSuccess, section, subscription.isSuccess]);
 
   const editVideo = (video: DemoVideo) => {
     setErrorText(null);

@@ -495,6 +495,7 @@ export function GroupSongRow({
   const reduceMotion = useReducedMotion();
   const [listenVisible, setListenVisible] = useState(false);
   const [solosVisible, setSolosVisible] = useState(false);
+  const promotion = appleArtworkPromotion(song);
   const metadata = [
     song.key?.trim(),
     song.tempoBpm ? `${song.tempoBpm} BPM` : null,
@@ -532,7 +533,7 @@ export function GroupSongRow({
                   {song.artist}
                 </AppText>
               ) : null}
-              {metadata.length ? (
+              {!promotion && metadata.length ? (
                 <AppText
                   color={palette.bronze}
                   numberOfLines={1}
@@ -542,7 +543,6 @@ export function GroupSongRow({
                   {metadata.join(' · ')}
                 </AppText>
               ) : null}
-              <SongStoreBadge song={song} />
             </View>
             {onPress && showDisclosure ? (
               <Ionicons color={palette.muted} name="chevron-forward" size={16} />
@@ -580,6 +580,19 @@ export function GroupSongRow({
           ) : null}
           {trailing}
         </View>
+        {promotion ? (
+          <View style={styles.songFooter}>
+            <AppText
+              color={palette.bronze}
+              numberOfLines={1}
+              style={[styles.metadata, styles.footerMetadata]}
+              variant="caption2"
+            >
+              {metadata.join(' · ')}
+            </AppText>
+            <SongStoreBadge song={song} />
+          </View>
+        ) : null}
       </SongRowSurface>
       <SongListenSheet
         onClose={() => setListenVisible(false)}
@@ -713,6 +726,13 @@ const styles = StyleSheet.create({
   sheetSong: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   sheetSongTitle: { fontWeight: '800' },
   sheetTitle: { flex: 1, fontWeight: '800', textAlign: 'center' },
+  songFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  footerMetadata: { flex: 1 },
   songCopy: { flex: 1, gap: 2, minWidth: 0 },
   songRow: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.xs },
   songTitle: { fontWeight: '700' },

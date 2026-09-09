@@ -55,6 +55,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { LinkifiedText } from '@/components/ui/linkified-text';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
@@ -712,7 +713,7 @@ export function GroupSongScreen({
                   <AppText style={styles.bold} variant="caption">
                     {item.authorName}
                   </AppText>
-                  <AppText>{item.text}</AppText>
+                  <LinkifiedText>{item.text}</LinkifiedText>
                   <SongCommentMeta createdAt={item.createdAt} isAuthor={item.authorId === userId} />
                 </View>
                 {isLeader || item.authorId === userId ? (

@@ -35,6 +35,7 @@ type EventProjection = Pick<
   | 'public_location_label'
   | 'recurrence'
   | 'reminder_lead_days'
+  | 'schedule_changed_at'
   | 'series_id'
   | 'setlist'
   | 'title'
@@ -68,7 +69,7 @@ type GigProjection = Pick<
 const groupColumns = 'id,name,emoji' as const;
 const memberColumns = 'group_id,profile_id,role' as const;
 const eventColumns =
-  'id,group_id,kind,title,venue,public_location_label,date,setlist,series_id,recurrence,reminder_lead_days' as const;
+  'id,group_id,kind,title,venue,public_location_label,date,setlist,schedule_changed_at,series_id,recurrence,reminder_lead_days' as const;
 const attendanceColumns = 'event_id,profile_id,status' as const;
 const applicationColumns = 'gig_id,musician_id,instrument,status' as const;
 const gigColumns =
@@ -175,6 +176,7 @@ export async function fetchSessions(userId: string, signal?: AbortSignal): Promi
   }));
   const mappedEvents: SessionEventInput[] = events.map((event) => ({
     date: event.date,
+    scheduleChangedAt: event.schedule_changed_at,
     groupId: event.group_id,
     id: event.id,
     kind: event.kind,

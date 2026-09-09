@@ -90,6 +90,8 @@ export function notificationDestination(notification: AppNotification): string {
     notification.data.invitation_id !== undefined ||
     notification.title.toLowerCase().includes('invitation');
   if (groupId && isGroupInvitation) return '/(tabs)/messages?segment=groups';
+  if (groupId && notification.data.event_id)
+    return `/groups/${groupId}/events/${notification.data.event_id}`;
   if (groupId) return `/groups/${groupId}`;
 
   const target = notification.data.target_tab ?? notification.category;

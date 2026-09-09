@@ -215,50 +215,52 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
         subtitle={t('{{count}} morceaux validés', { count: approvedSongs.length })}
         title={t('Répertoire')}
       />
-      <View style={styles.primaryActions}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
-          style={({ pressed }) => [
-            styles.addButton,
-            { backgroundColor: `${palette.electric}1F` },
-            pressed && styles.addPressed,
-          ]}
-        >
-          <Ionicons color={palette.electric} name="add-circle" size={18} />
-          <AppText color={palette.electric} style={styles.addLabel}>
-            {isLeader ? t('Ajouter') : t('Suggérer un morceau')}
-          </AppText>
-        </Pressable>
-        {isLeader && approvedSongs.length > 1 ? (
+      {isLeader ? (
+        <View style={styles.primaryActions}>
           <Pressable
-            accessibilityLabel={reorderMode ? t('Terminé') : t('Réorganiser')}
             accessibilityRole="button"
-            accessibilityState={{ selected: reorderMode, disabled: searchActive }}
-            disabled={searchActive}
-            onPress={() => {
-              if (!searchActive) setReorderMode(true);
-            }}
+            onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
             style={({ pressed }) => [
-              styles.reorderButton,
-              {
-                backgroundColor: reorderMode ? `${palette.jam}1F` : palette.inset,
-                borderColor: reorderMode ? `${palette.jam}66` : palette.border,
-              },
-              (pressed || searchActive) && { opacity: 0.4 },
+              styles.addButton,
+              { backgroundColor: `${palette.electric}1F` },
+              pressed && styles.addPressed,
             ]}
           >
-            <Ionicons
-              color={reorderMode ? palette.jam : palette.bronze}
-              name={reorderMode ? 'checkmark' : 'reorder-three'}
-              size={18}
-            />
-            <AppText color={reorderMode ? palette.jam : palette.bronze} style={styles.addLabel}>
-              {reorderMode ? t('Terminé') : t('Réorganiser')}
+            <Ionicons color={palette.electric} name="add-circle" size={18} />
+            <AppText color={palette.electric} style={styles.addLabel}>
+              {t('Ajouter')}
             </AppText>
           </Pressable>
-        ) : null}
-      </View>
+          {isLeader && approvedSongs.length > 1 ? (
+            <Pressable
+              accessibilityLabel={reorderMode ? t('Terminé') : t('Réorganiser')}
+              accessibilityRole="button"
+              accessibilityState={{ selected: reorderMode, disabled: searchActive }}
+              disabled={searchActive}
+              onPress={() => {
+                if (!searchActive) setReorderMode(true);
+              }}
+              style={({ pressed }) => [
+                styles.reorderButton,
+                {
+                  backgroundColor: reorderMode ? `${palette.jam}1F` : palette.inset,
+                  borderColor: reorderMode ? `${palette.jam}66` : palette.border,
+                },
+                (pressed || searchActive) && { opacity: 0.4 },
+              ]}
+            >
+              <Ionicons
+                color={reorderMode ? palette.jam : palette.bronze}
+                name={reorderMode ? 'checkmark' : 'reorder-three'}
+                size={18}
+              />
+              <AppText color={reorderMode ? palette.jam : palette.bronze} style={styles.addLabel}>
+                {reorderMode ? t('Terminé') : t('Réorganiser')}
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {pending.length ? (
         <View style={styles.stack}>
           <AppText color={palette.signal} variant="label">
@@ -310,6 +312,22 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           </AppText>
         </View>
       )}
+      {!isLeader ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push(`/groups/${group.id}/songs/new` as never)}
+          style={({ pressed }) => [
+            styles.addButton,
+            { flex: 0, backgroundColor: `${palette.electric}1F` },
+            pressed && styles.addPressed,
+          ]}
+        >
+          <Ionicons color={palette.electric} name="add-circle" size={18} />
+          <AppText color={palette.electric} style={styles.addLabel}>
+            {t('Suggérer un morceau')}
+          </AppText>
+        </Pressable>
+      ) : null}
       <View style={styles.sectionHeading}>
         <SectionHeader subtitle={t('PDF, grilles et partitions libres')} title={t('Documents')} />
         <Pressable
