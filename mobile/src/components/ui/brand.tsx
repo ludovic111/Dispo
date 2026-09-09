@@ -20,7 +20,7 @@ export function BrandLogo({
       <Image
         accessibilityIgnoresInvertColors
         contentFit="contain"
-        source={require('../../../assets/images/dispo/logo-mark.png')}
+        source={require('../../../assets/images/dispo/logo-mark-blue.png')}
         style={{ borderRadius: markSize * 0.235, height: markSize, width: markSize }}
       />
       {showWordmark ? (

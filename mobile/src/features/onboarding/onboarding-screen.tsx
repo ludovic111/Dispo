@@ -214,7 +214,7 @@ export function OnboardingScreen() {
             <Image
               accessibilityIgnoresInvertColors
               contentFit="contain"
-              source={require('../../../assets/images/dispo/logo-mark.png')}
+              source={require('../../../assets/images/dispo/logo-mark-blue.png')}
               style={styles.logo}
             />
             <AppText color={palette.electric} style={styles.wordmark} variant="displayItalic">
