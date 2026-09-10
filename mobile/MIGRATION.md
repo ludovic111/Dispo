@@ -1495,3 +1495,10 @@ livraison d’un lot fonctionnellement validé.
 - Solos : choix successif ou «4 ×4» au-dessus de l’ordre des musiciens, quatre mesures chacun ; mode partagé via les snapshots existants du répertoire et des événements. Les anciens morceaux restent successifs ; copies vers un autre groupe réinitialisées avec les participants.
 - Validation :422tests/79suites, TypeScript/ESLint, format ciblé, ExpoDoctor21/21, CNG/pods ; builds natifs iOS/Android Release et tests Gradle. Tests authentifiés locaux des droits, départ/réadhésion/écoles multiples, accès communauté retiré, sauvegarde répertoire/événement et compatibilité des anciens clients. Parcours natifs iOS annulation/changement/réadhésion et solos sauvegardés/réouverts ; Android départ et lecture du mode sauvegardé sur iOS. Captures dans Dispo-dist/qa-20260910-school-solos.
 - Livraison TestFlight en préparation ; App Review59 reste inchangée. Aucun backend production, groupe de testeurs ou Google Play modifié. Pas de test physique pour ce lot.
+
+
+### Livraison et soumission finale — build 60
+
+- Code `3d41366` poussé ; IPA/APK de production signés et inspectés. Android final installé/démarré à la connexion. Validation/upload Apple réussis, build/import VALID et APP_STORE_ELIGIBLE : `764282a0-757f-47e0-8eb9-1a3cafeda92c`.
+- Instruction vocale ultérieure de Ludovic le 10 septembre : soumettre également ce lot en App Review. Cette instruction remplace la limite précédente. Dossier59 retiré, dossier60 `d6d615ce-541a-4a54-88d3-9c2e955fce2d` soumis à `2026-09-10T07:25:18.358Z`, app + quatre abonnements + groupe. Version/dossier WAITING_FOR_REVIEW confirmés, notes60 actualisées, captures FR/EN et accès reviewer conservés. Suisse uniquement et AFTER_APPROVAL maintenus. L’app n’est pas encore publiée.
+- Preuves et limites : Dispo-dist/2.4/RELEASE-build60.md et qa-20260910-school-solos. Sessions/comptes/groupe QA nettoyés, identifiants temporaires retirés, environnements locaux arrêtés et émulateur temporaire supprimé ; données antérieures conservées. Aucun backend production, compte/secret, groupe de testeurs ni Google Play modifié. Pas de test physique ni nouvel achat/restauration complet.
