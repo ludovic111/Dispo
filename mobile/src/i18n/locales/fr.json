@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "{{rating}}/5 sur {{count}} notes. Les notes restent anonymes.",
   "Musicien compatible": "Musicien compatible",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "Musicien compatible : ouvre le SOS pour envoyer une demande",
-  "Retrouve ce rendez-vous dans Sessions": "Retrouve ce rendez-vous dans Sessions"
+  "Retrouve ce rendez-vous dans Sessions": "Retrouve ce rendez-vous dans Sessions",
+  "Changer d’école ?": "Changer d’école ?",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.",
+  "Quitter et choisir": "Quitter et choisir",
+  "Changer d’école": "Changer d’école",
+  "Chacun son tour": "Chacun son tour",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre."
 }

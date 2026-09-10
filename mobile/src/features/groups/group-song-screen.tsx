@@ -506,6 +506,22 @@ export function GroupSongScreen({
               )}
               title={t('Solos')}
             />
+            <View style={styles.soloModes}>
+              {(['successive', 'trading_fours'] as const).map((mode) => (
+                <ChoiceChip
+                  key={mode}
+                  disabled={!isLeader}
+                  label={mode === 'trading_fours' ? '4 × 4' : t('Chacun son tour')}
+                  selected={(draft.soloMode ?? 'successive') === mode}
+                  onPress={() => patch('soloMode', mode)}
+                />
+              ))}
+            </View>
+            {draft.soloMode === 'trading_fours' ? (
+              <AppText color={palette.muted} variant="caption">
+                {t('Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.')}
+              </AppText>
+            ) : null}
             {draft.solos.length === 0 ? (
               <AppText color={palette.muted} style={styles.soloEmpty} variant="subheadline">
                 {t('Aucun solo prévu')}
@@ -821,6 +837,7 @@ export function GroupSongScreen({
 }
 
 const styles = StyleSheet.create({
+  soloModes: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   analysisRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   arrangementChip: {
     alignItems: 'center',

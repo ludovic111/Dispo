@@ -8,11 +8,13 @@ import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
 
 export function ChoiceChip({
+  disabled = false,
   icon,
   label,
   onPress,
   selected,
 }: {
+  disabled?: boolean;
   icon?: ComponentProps<typeof Ionicons>['name'];
   label: string;
   onPress: () => void;
@@ -22,7 +24,8 @@ export function ChoiceChip({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityState={{ disabled, selected }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,

@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "{{count}} 个评分，平均 {{rating}}/5。评分保持匿名。",
   "Musicien compatible": "匹配的乐手",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "找到匹配的乐手：打开SOS发送邀请",
-  "Retrouve ce rendez-vous dans Sessions": "可在场次中查看此活动"
+  "Retrouve ce rendez-vous dans Sessions": "可在场次中查看此活动",
+  "Changer d’école ?": "更换学校？",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "你将退出这所学校，然后在目录中选择新学校。其他学校关系将保留。",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "此学校关系将从个人资料中移除，你将无法访问其社区。其他学校和账号将保留。",
+  "Quitter et choisir": "退出并选择",
+  "Changer d’école": "更换学校",
+  "Chacun son tour": "依次独奏",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "每位乐手演奏四小节，然后按此顺序交给下一位。"
 }

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { SchoolAvatar } from './school-components';
 import {
@@ -15,12 +15,18 @@ import {
   type SchoolRole,
   type SchoolVisibility,
 } from './school-model';
-import { useMySchoolAffiliations, useSaveSchoolAffiliation, useSchool } from './school-queries';
+import {
+  useLeaveSchool,
+  useMySchoolAffiliations,
+  useSaveSchoolAffiliation,
+  useSchool,
+} from './school-queries';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { HeaderAction } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -32,6 +38,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   const schoolQuery = useSchool(schoolId);
   const mine = useMySchoolAffiliations();
   const saveMutation = useSaveSchoolAffiliation();
+  const leaveMutation = useLeaveSchool();
   const [role, setRole] = useState<SchoolRole>('student');
   const [visibility, setVisibility] = useState<SchoolVisibility>('school_only');
   const [roleLabel, setRoleLabel] = useState('');
@@ -98,7 +105,35 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
       : roleLabel.trim().length > 80
         ? t('80 caractères maximum.')
         : undefined;
-  const disabled = saveMutation.isPending || Boolean(roleLabelError);
+  const busy = saveMutation.isPending || leaveMutation.isPending;
+  const disabled = busy || Boolean(roleLabelError);
+  const confirmLeave = (changeSchool: boolean) => {
+    if (busy) return;
+    Alert.alert(
+      t(changeSchool ? 'Changer d’école ?' : 'Quitter cette école ?'),
+      t(
+        changeSchool
+          ? 'Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.'
+          : 'Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.',
+      ),
+      [
+        { text: t('Annuler'), style: 'cancel' },
+        {
+          text: t(changeSchool ? 'Quitter et choisir' : 'Quitter l’école'),
+          style: 'destructive',
+          onPress: () => {
+            setErrorText(null);
+            void leaveMutation
+              .mutateAsync(school.id)
+              .then(() => router.replace(changeSchool ? '/schools' : '/(tabs)/profile'))
+              .catch((error: unknown) =>
+                Alert.alert(t('Impossible de quitter l’école'), t(schoolErrorMessage(error))),
+              );
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <Screen>
@@ -142,6 +177,22 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
             </View>
           </View>
         </Card>
+
+        {affiliation ? (
+          <View style={styles.section}>
+            <DispoButton
+              disabled={busy}
+              icon="swap-horizontal-outline"
+              onPress={() => confirmLeave(true)}
+              variant="secondary"
+            >
+              {t('Changer d’école')}
+            </DispoButton>
+            <DispoButton disabled={busy} onPress={() => confirmLeave(false)} variant="danger">
+              {leaveMutation.isPending ? t('Départ…') : t('Quitter cette école')}
+            </DispoButton>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <AppText color={palette.bronze} variant="label">

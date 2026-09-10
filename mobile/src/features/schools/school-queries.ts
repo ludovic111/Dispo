@@ -277,6 +277,7 @@ function useInvalidateSchools() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: schoolKeys.all }),
       queryClient.invalidateQueries({ queryKey: ['profiles'] }),
+      queryClient.invalidateQueries({ queryKey: ['gigs'] }),
     ]);
   };
 }

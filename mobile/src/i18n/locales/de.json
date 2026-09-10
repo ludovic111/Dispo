@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "{{rating}}/5 aus {{count}} Bewertungen. Bewertungen bleiben anonym.",
   "Musicien compatible": "Passender Musiker",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "Passender Musiker: Öffne den SOS, um eine Anfrage zu senden",
-  "Retrouve ce rendez-vous dans Sessions": "Du findest diesen Termin unter Sessions"
+  "Retrouve ce rendez-vous dans Sessions": "Du findest diesen Termin unter Sessions",
+  "Changer d’école ?": "Schule wechseln?",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Du verlässt diese Schule und wählst danach eine neue im Verzeichnis. Deine anderen Zugehörigkeiten bleiben erhalten.",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Diese Zugehörigkeit wird aus deinem Profil entfernt und du verlierst den Zugang zur Community. Deine anderen Schulen und dein Konto bleiben erhalten.",
+  "Quitter et choisir": "Verlassen und wählen",
+  "Changer d’école": "Schule wechseln",
+  "Chacun son tour": "Nacheinander",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Jede Person spielt vier Takte und übergibt dann in dieser Reihenfolge an die nächste."
 }

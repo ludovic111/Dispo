@@ -434,6 +434,7 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
                 <Pressable
                   key={affiliation.id}
                   accessibilityRole="button"
+                  accessibilityLabel={`${affiliation.school.name} — ${t('Modifier mon affiliation')}`}
                   onPress={() => router.push(`/schools/${affiliation.school.id}/join` as never)}
                   style={({ pressed }) => [
                     styles.schoolRow,
@@ -458,6 +459,7 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
                   >
                     {t(verified ? 'Vérifié' : 'À vérifier')}
                   </AppText>
+                  <Ionicons color={palette.muted} name="chevron-forward" size={14} />
                 </Pressable>
               );
             })

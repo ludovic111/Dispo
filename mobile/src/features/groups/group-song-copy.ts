@@ -83,6 +83,7 @@ export function copiedGroupSong(
     platformIds: { ...source.platformIds },
     platformLinks: { ...source.platformLinks },
     solos: [],
+    ...(source.soloMode ? { soloMode: 'successive' as const } : {}),
     ...(source.startsSet === undefined ? {} : { startsSet: false }),
     suggestedBy: input.suggestedBy,
   };

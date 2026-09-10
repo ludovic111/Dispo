@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "평가 {{count}}개, {{rating}}/5. 평가는 익명으로 유지됩니다.",
   "Musicien compatible": "조건에 맞는 뮤지션",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "조건에 맞는 뮤지션이 있습니다. SOS를 열어 요청을 보내세요",
-  "Retrouve ce rendez-vous dans Sessions": "이 일정은 세션에서 확인할 수 있어요"
+  "Retrouve ce rendez-vous dans Sessions": "이 일정은 세션에서 확인할 수 있어요",
+  "Changer d’école ?": "학교를 변경할까요?",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "이 학교에서 탈퇴한 후 목록에서 새 학교를 선택합니다. 다른 소속은 유지됩니다.",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "프로필에서 이 소속이 제거되고 커뮤니티에 접근할 수 없게 됩니다. 다른 학교와 계정은 유지됩니다.",
+  "Quitter et choisir": "탈퇴 후 선택",
+  "Changer d’école": "학교 변경",
+  "Chacun son tour": "한 명씩",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "각 음악가가 네 마디를 연주한 뒤 이 순서대로 다음 사람에게 넘깁니다."
 }

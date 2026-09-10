@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "{{rating}}/5 from {{count}} ratings. Ratings remain anonymous.",
   "Musicien compatible": "Compatible musician",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "Compatible musician: open the SOS to send a request",
-  "Retrouve ce rendez-vous dans Sessions": "Find this date in Sessions"
+  "Retrouve ce rendez-vous dans Sessions": "Find this date in Sessions",
+  "Changer d’école ?": "Change school?",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "You will leave this school, then choose a new one from the directory. Your other affiliations will be kept.",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "This affiliation will be removed from your profile and you will lose access to its community. Your other schools and your account will be kept.",
+  "Quitter et choisir": "Leave and choose",
+  "Changer d’école": "Change school",
+  "Chacun son tour": "One at a time",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Each musician plays four bars, then passes to the next in this order."
 }

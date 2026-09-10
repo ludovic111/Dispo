@@ -147,7 +147,13 @@ export function SongArtwork({
   );
 }
 
-export function SongStoreBadge({ song }: { song: ArtworkSong }) {
+export function SongStoreBadge({
+  song,
+  compact = false,
+}: {
+  song: ArtworkSong;
+  compact?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const storeName = 'iTunes Store';
   const promotion = appleArtworkPromotion(song);
@@ -162,7 +168,12 @@ export function SongStoreBadge({ song }: { song: ArtworkSong }) {
           Alert.alert(t('Erreur'), t('Ce lien ne peut pas être ouvert.')),
         );
       }}
-      style={{ alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44, padding: 4 }}
+      style={{
+        alignSelf: 'flex-start',
+        justifyContent: 'center',
+        minHeight: 44,
+        padding: compact ? 3 : 4,
+      }}
     >
       <Image
         accessibilityIgnoresInvertColors
@@ -172,7 +183,7 @@ export function SongStoreBadge({ song }: { song: ArtworkSong }) {
             ? require('../../../assets/images/apple/itunes-fr.svg')
             : require('../../../assets/images/apple/itunes-en.svg')
         }
-        style={{ height: 30, width: 103 }}
+        style={{ height: compact ? 24 : 30, width: compact ? 82.4 : 103 }}
       />
     </Pressable>
   );
@@ -408,6 +419,12 @@ export function SongSoloOrderSheet({
             </Pressable>
           </View>
           <View style={styles.soloSongIdentity}>
+            {song.soloMode === 'trading_fours' ? (
+              <AppText color={palette.bronze} variant="caption">
+                4 × 4 ·{' '}
+                {t('Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.')}
+              </AppText>
+            ) : null}
             <AppText variant="title3">{song.title}</AppText>
             {song.artist ? (
               <AppText color={palette.muted} variant="subheadline">
@@ -590,7 +607,7 @@ export function GroupSongRow({
             >
               {metadata.join(' · ')}
             </AppText>
-            <SongStoreBadge song={song} />
+            <SongStoreBadge song={song} compact />
           </View>
         ) : null}
       </SongRowSurface>

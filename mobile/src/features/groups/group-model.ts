@@ -124,6 +124,7 @@ export interface GroupSong {
   previewUrl: string | null;
   releaseYear: number | null;
   solos: string[];
+  soloMode?: 'successive' | 'trading_fours';
   startsSet?: boolean;
   suggestedBy: string;
   tempoBpm: number | null;
@@ -333,6 +334,7 @@ export function groupSongFromJson(value: unknown): GroupSong | null {
     previewUrl: nullableString(source.preview_url),
     releaseYear: nullableNumber(source.release_year),
     solos: stringArray(source.solos).map((solo) => solo.toLowerCase()),
+    ...(source.solo_mode === 'trading_fours' ? { soloMode: 'trading_fours' as const } : {}),
     suggestedBy: stringValue(source.suggested_by),
     ...(source.starts_set === true ? { startsSet: true } : {}),
     tempoBpm: nullableNumber(source.tempo_bpm),
@@ -371,6 +373,7 @@ export function groupSongToJson(song: GroupSong): Record<string, unknown> {
     platform_links: song.platformLinks,
     preview_url: song.previewUrl,
     release_year: song.releaseYear,
+    ...(song.soloMode === 'trading_fours' ? { solo_mode: 'trading_fours' } : {}),
     ...(song.isApproved || song.solos.length > 0
       ? { solos: song.solos.map((solo) => solo.toLowerCase()) }
       : {}),

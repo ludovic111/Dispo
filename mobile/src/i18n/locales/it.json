@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "{{rating}}/5 da {{count}} valutazioni. Le valutazioni restano anonime.",
   "Musicien compatible": "Musicista compatibile",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "Musicista compatibile: apri il SOS per inviare una richiesta",
-  "Retrouve ce rendez-vous dans Sessions": "Trovi questo appuntamento in Sessioni"
+  "Retrouve ce rendez-vous dans Sessions": "Trovi questo appuntamento in Sessioni",
+  "Changer d’école ?": "Cambiare scuola?",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Lascerai questa scuola, poi ne sceglierai una nuova nella directory. Le altre affiliazioni saranno mantenute.",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Questa affiliazione verrà rimossa dal profilo e perderai l’accesso alla sua comunità. Le altre scuole e il tuo account saranno mantenuti.",
+  "Quitter et choisir": "Lascia e scegli",
+  "Changer d’école": "Cambia scuola",
+  "Chacun son tour": "Uno alla volta",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Ogni musicista suona quattro battute, poi passa al successivo in questo ordine."
 }

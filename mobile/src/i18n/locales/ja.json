@@ -2434,5 +2434,12 @@
   "profile.ratingSummary": "{{count}}件の評価で{{rating}}/5。評価は匿名です。",
   "Musicien compatible": "条件に合うミュージシャン",
   "Musicien compatible : ouvre le SOS pour envoyer une demande": "条件に合うミュージシャンがいます。SOSを開いて依頼を送信できます",
-  "Retrouve ce rendez-vous dans Sessions": "この予定はセッションで確認できます"
+  "Retrouve ce rendez-vous dans Sessions": "この予定はセッションで確認できます",
+  "Changer d’école ?": "学校を変更しますか？",
+  "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "この学校を退会してから、一覧で新しい学校を選びます。他の所属は維持されます。",
+  "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "この所属はプロフィールから削除され、コミュニティにアクセスできなくなります。他の学校やアカウントは維持されます。",
+  "Quitter et choisir": "退会して選ぶ",
+  "Changer d’école": "学校を変更",
+  "Chacun son tour": "一人ずつ",
+  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "各ミュージシャンが4小節ずつ演奏し、この順番で次の人に交代します。"
 }
