@@ -171,7 +171,7 @@
   "Ajouté directement": "直接追加",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "曲の追加時にキーを設定し、後から編集して曲名の下で確認できます",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "グループの曲を追加。メンバーが提案し、リーダーが承認します。",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "ソロの順番にメンバーを追加すると、グループ全員に同じリストが表示されます。",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "演奏順にソロを追加すると、グループ全員に同じリストが表示されます。",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "学校を追加するか最初のグループを作成すると、メッセージ、メンバー、今後の日程がここにまとまります。",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "学校をプロフィールに追加すると、コミュニティと会話が自動的に表示されます。",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "近いパートも追加する（例：ピアノに加えてシンセ）",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "この学校を退会してから、一覧で新しい学校を選びます。他の所属は維持されます。",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "この所属はプロフィールから削除され、コミュニティにアクセスできなくなります。他の学校やアカウントは維持されます。",
   "Quitter et choisir": "退会して選ぶ",
-  "Changer d’école": "学校を変更",
-  "Chacun son tour": "一人ずつ",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "各ミュージシャンが4小節ずつ演奏し、この順番で次の人に交代します。"
+  "Changer d’école": "学校を変更"
 }

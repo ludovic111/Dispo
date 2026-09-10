@@ -171,7 +171,7 @@
   "Ajouté directement": "直接添加",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "添加歌曲时设置调性，之后可编辑，并显示在标题下方",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "添加群组曲目——成员可以建议，队长审核。",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "按独奏顺序添加乐手，整个乐队都会看到同一列表。",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "按演奏顺序添加独奏，整个乐队都会看到同一列表。",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "添加你的学校或创建第一个乐队：消息、成员和近期日期都会汇集在这里。",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "将学校添加到个人资料后，其社群和对话会自动出现。",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "增加相近乐器（例如钢琴之外再加合成器）",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "你将退出这所学校，然后在目录中选择新学校。其他学校关系将保留。",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "此学校关系将从个人资料中移除，你将无法访问其社区。其他学校和账号将保留。",
   "Quitter et choisir": "退出并选择",
-  "Changer d’école": "更换学校",
-  "Chacun son tour": "依次独奏",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "每位乐手演奏四小节，然后按此顺序交给下一位。"
+  "Changer d’école": "更换学校"
 }

@@ -44,11 +44,13 @@ import {
   openGroupDocument,
   type SongCatalogResult,
 } from './group-repository';
+import { songSoloOrder, TRADING_FOURS_SOLO_ID, withSoloOrder } from './group-song-row-model';
 import { emptyGroupSong, mergeCatalogEnrichment, selectCatalogSong } from './song-catalog-model';
 import { SongCatalogPicker } from './song-catalog-picker';
 import { SongCommentMeta } from './song-comment-meta';
 import { SongDetailTabs, type SongDetailTab } from './song-detail-tabs';
 import { SongInfoPanel } from './song-info-panel';
+import { TradingFoursIcon } from './trading-fours-icon';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -168,6 +170,7 @@ export function GroupSongScreen({
   const [documentError, setDocumentError] = useState<string | null>(null);
   const baseDraft = existing ?? { ...blankSong, isApproved: isLeader === true };
   const draft = draftOverride ?? baseDraft;
+  const draftSolos = useMemo(() => songSoloOrder(draft), [draft]);
   const documents = useMemo(
     () => group?.documents.filter((document) => document.songId === draft.id) ?? [],
     [draft.id, group?.documents],
@@ -177,8 +180,8 @@ export function GroupSongScreen({
     [draft.id, group?.comments],
   );
   const selectableSoloMembers = useMemo(
-    () => group?.members.filter((member) => !draft.solos.includes(member.id)) ?? [],
-    [draft.solos, group?.members],
+    () => group?.members.filter((member) => !draftSolos.includes(member.id)) ?? [],
+    [draftSolos, group?.members],
   );
   const documentInstruments = useMemo(
     () =>
@@ -286,7 +289,11 @@ export function GroupSongScreen({
     );
   const canEdit = isNew || isLeader;
   const patch = <K extends keyof GroupSong>(key: K, value: GroupSong[K]) =>
-    setDraftOverride((current) => ({ ...(current ?? baseDraft), [key]: value }));
+    setDraftOverride((current) =>
+      key === 'solos'
+        ? withSoloOrder(current ?? baseDraft, value as string[])
+        : { ...(current ?? baseDraft), [key]: value },
+    );
   const chooseCatalog = (item: SongCatalogResult) => {
     const catalogRequest = ++catalogRequestRef.current;
     setDraftOverride((current) => selectCatalogSong(current ?? baseDraft, item));
@@ -427,8 +434,8 @@ export function GroupSongScreen({
   };
   const moveSolo = (index: number, offset: number) => {
     const destination = index + offset;
-    if (destination < 0 || destination >= draft.solos.length) return;
-    const next = [...draft.solos];
+    if (destination < 0 || destination >= draftSolos.length) return;
+    const next = [...draftSolos];
     [next[index], next[destination]] = [next[destination]!, next[index]!];
     void Haptics.selectionAsync();
     patch('solos', next);
@@ -502,34 +509,20 @@ export function GroupSongScreen({
           <Card style={styles.card}>
             <SectionHeader
               subtitle={t(
-                'Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.',
+                'Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.',
               )}
               title={t('Solos')}
             />
-            <View style={styles.soloModes}>
-              {(['successive', 'trading_fours'] as const).map((mode) => (
-                <ChoiceChip
-                  key={mode}
-                  disabled={!isLeader}
-                  label={mode === 'trading_fours' ? '4 × 4' : t('Chacun son tour')}
-                  selected={(draft.soloMode ?? 'successive') === mode}
-                  onPress={() => patch('soloMode', mode)}
-                />
-              ))}
-            </View>
-            {draft.soloMode === 'trading_fours' ? (
-              <AppText color={palette.muted} variant="caption">
-                {t('Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.')}
-              </AppText>
-            ) : null}
-            {draft.solos.length === 0 ? (
+            {draftSolos.length === 0 ? (
               <AppText color={palette.muted} style={styles.soloEmpty} variant="subheadline">
                 {t('Aucun solo prévu')}
               </AppText>
             ) : (
               <View style={styles.soloList}>
-                {draft.solos.map((memberId, index) => {
+                {draftSolos.map((memberId, index) => {
+                  const isTradingFours = memberId === TRADING_FOURS_SOLO_ID;
                   const member = group.members.find((item) => item.id === memberId);
+                  const name = isTradingFours ? TRADING_FOURS_SOLO_ID : (member?.name ?? memberId);
                   return (
                     <View key={memberId} style={[styles.soloRow, { borderColor: palette.border }]}>
                       <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
@@ -537,14 +530,14 @@ export function GroupSongScreen({
                           {index + 1}
                         </AppText>
                       </View>
-                      <Avatar
-                        name={member?.name ?? memberId}
-                        size={34}
-                        uri={member?.photoUrl ?? null}
-                      />
+                      {isTradingFours ? (
+                        <TradingFoursIcon />
+                      ) : (
+                        <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
+                      )}
                       <View style={styles.soloCopy}>
                         <AppText numberOfLines={1} style={styles.bold}>
-                          {member?.name ?? memberId}
+                          {name}
                         </AppText>
                         {member?.instruments.length ? (
                           <AppText color={palette.muted} numberOfLines={1} variant="caption2">
@@ -566,11 +559,11 @@ export function GroupSongScreen({
                           <Pressable
                             accessibilityLabel={t('Descendre')}
                             accessibilityRole="button"
-                            disabled={index === draft.solos.length - 1}
+                            disabled={index === draftSolos.length - 1}
                             onPress={() => moveSolo(index, 1)}
                             style={[
                               styles.iconAction,
-                              index === draft.solos.length - 1 && styles.disabledAction,
+                              index === draftSolos.length - 1 && styles.disabledAction,
                             ]}
                           >
                             <Ionicons color={palette.text} name="chevron-down" size={17} />
@@ -581,7 +574,7 @@ export function GroupSongScreen({
                             onPress={() =>
                               patch(
                                 'solos',
-                                draft.solos.filter((id) => id !== memberId),
+                                draftSolos.filter((id) => id !== memberId),
                               )
                             }
                             style={styles.iconAction}
@@ -597,7 +590,7 @@ export function GroupSongScreen({
             )}
             {isLeader ? (
               <>
-                {selectableSoloMembers.length > 0 ? (
+                {selectableSoloMembers.length > 0 || !draftSolos.includes(TRADING_FOURS_SOLO_ID) ? (
                   <DispoButton
                     icon={soloPickerVisible ? 'chevron-up' : 'add'}
                     onPress={() => setSoloPickerVisible((visible) => !visible)}
@@ -608,11 +601,29 @@ export function GroupSongScreen({
                 ) : null}
                 {soloPickerVisible ? (
                   <View style={styles.soloCandidates}>
+                    {!draftSolos.includes(TRADING_FOURS_SOLO_ID) ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="4-4"
+                        onPress={() => patch('solos', [...draftSolos, TRADING_FOURS_SOLO_ID])}
+                        style={({ pressed }) => [
+                          styles.soloCandidate,
+                          { borderBottomColor: palette.border },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <TradingFoursIcon />
+                        <View style={styles.soloCopy}>
+                          <AppText style={styles.bold}>4-4</AppText>
+                        </View>
+                        <Ionicons color={palette.electric} name="add-circle" size={22} />
+                      </Pressable>
+                    ) : null}
                     {selectableSoloMembers.map((member) => (
                       <Pressable
                         accessibilityRole="button"
                         key={member.id}
-                        onPress={() => patch('solos', [...draft.solos, member.id])}
+                        onPress={() => patch('solos', [...draftSolos, member.id])}
                         style={({ pressed }) => [
                           styles.soloCandidate,
                           { borderBottomColor: palette.border },
@@ -837,7 +848,6 @@ export function GroupSongScreen({
 }
 
 const styles = StyleSheet.create({
-  soloModes: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   analysisRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   arrangementChip: {
     alignItems: 'center',

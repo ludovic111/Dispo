@@ -1502,3 +1502,12 @@ livraison d’un lot fonctionnellement validé.
 - Code `3d41366` poussé ; IPA/APK de production signés et inspectés. Android final installé/démarré à la connexion. Validation/upload Apple réussis, build/import VALID et APP_STORE_ELIGIBLE : `764282a0-757f-47e0-8eb9-1a3cafeda92c`.
 - Instruction vocale ultérieure de Ludovic le 10 septembre : soumettre également ce lot en App Review. Cette instruction remplace la limite précédente. Dossier59 retiré, dossier60 `d6d615ce-541a-4a54-88d3-9c2e955fce2d` soumis à `2026-09-10T07:25:18.358Z`, app + quatre abonnements + groupe. Version/dossier WAITING_FOR_REVIEW confirmés, notes60 actualisées, captures FR/EN et accès reviewer conservés. Suisse uniquement et AFTER_APPROVAL maintenus. L’app n’est pas encore publiée.
 - Preuves et limites : Dispo-dist/2.4/RELEASE-build60.md et qa-20260910-school-solos. Sessions/comptes/groupe QA nettoyés, identifiants temporaires retirés, environnements locaux arrêtés et émulateur temporaire supprimé ; données antérieures conservées. Aucun backend production, compte/secret, groupe de testeurs ni Google Play modifié. Pas de test physique ni nouvel achat/restauration complet.
+
+
+### 2026-09-10 — Correction des solos 4-4 et retour du logo dégradé (build 61)
+
+- Un seul ordre des solos : « Ajouter un solo » propose « 4-4 » comme passage sans musicien assigné, disponible même lorsque tous les membres sont déjà dans la liste. Ajout unique, montée/descente et retrait identiques aux autres solos ; aucun profil ou membre fictif créé.
+- Le répertoire et les setlists utilisent les RPC de fusion existantes et le marqueur texte `4-4` dans `solos`. Les lecteurs du build 61 affichent la même entrée depuis le détail et la feuille d’ordre. Pas de migration ou changement Supabase production.
+- L’ancien `solo_mode=trading_fours` du build 60 est présenté comme un passage final unique. Son snapshot brut reste intact jusqu’à une modification des solos ; la première édition enregistre la liste explicite et retire l’ancien mode via la fusion à trois voies. Les autres musiciens et les modifications distantes sont conservés. La copie intergroupes continue de réinitialiser les solos.
+- Logo bleu/cyan exact restauré depuis `cf01ee7`, version du 9 septembre précédant le bleu uni. Icône et master identiques à ces fichiers ; nouvelle référence `logo-mark-gradient.png` pour éviter l’ancien cache dans l’app et le splash.
+- Preuves et état de livraison : `../../Dispo-dist/qa-20260910-solos-logo/REPORT.md` et `../../Dispo-dist/2.4/RELEASE-build61.md`.

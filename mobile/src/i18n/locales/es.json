@@ -171,7 +171,7 @@
   "Ajouté directement": "Añadido directamente",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "Añade la tonalidad de una canción, edítala después y mírala debajo del título",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "Añade los temas del grupo — los miembros sugieren, el líder valida.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "Añade a los músicos en el orden de sus solos: todo el grupo verá la misma lista.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "Añade los solos en su orden de interpretación: todo el grupo verá la misma lista.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "Añade tu escuela o crea tu primer grupo: aquí se reunirán los mensajes, los miembros y las próximas fechas.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "Añade tu centro al perfil: su comunidad y conversación aparecerán automáticamente.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "Añade un instrumento parecido (p. ej. sinte además de piano)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Saldrás de esta escuela y después elegirás otra en el directorio. Tus otras afiliaciones se conservarán.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Esta afiliación se quitará de tu perfil y perderás el acceso a su comunidad. Tus otras escuelas y tu cuenta se conservarán.",
   "Quitter et choisir": "Salir y elegir",
-  "Changer d’école": "Cambiar de escuela",
-  "Chacun son tour": "Por turnos",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Cada músico toca cuatro compases y después pasa al siguiente en este orden."
+  "Changer d’école": "Cambiar de escuela"
 }

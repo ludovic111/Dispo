@@ -171,7 +171,7 @@
   "Ajouté directement": "Ajouté directement",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "Ajoute un instrument proche (ex. synthé en plus du piano)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.",
   "Quitter et choisir": "Quitter et choisir",
-  "Changer d’école": "Changer d’école",
-  "Chacun son tour": "Chacun son tour",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre."
+  "Changer d’école": "Changer d’école"
 }

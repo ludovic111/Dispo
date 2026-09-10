@@ -17,7 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import type { GroupMember, GroupSong } from './group-model';
-import { soloOrderMembers } from './group-song-row-model';
+import { soloOrderMembers, songSoloOrder, TRADING_FOURS_SOLO_ID } from './group-song-row-model';
+import { TradingFoursIcon } from './trading-fours-icon';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -419,12 +420,6 @@ export function SongSoloOrderSheet({
             </Pressable>
           </View>
           <View style={styles.soloSongIdentity}>
-            {song.soloMode === 'trading_fours' ? (
-              <AppText color={palette.bronze} variant="caption">
-                4 × 4 ·{' '}
-                {t('Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.')}
-              </AppText>
-            ) : null}
             <AppText variant="title3">{song.title}</AppText>
             {song.artist ? (
               <AppText color={palette.muted} variant="subheadline">
@@ -437,10 +432,14 @@ export function SongSoloOrderSheet({
               {t("Les noms apparaissent dans l'ordre de passage.")}
             </AppText>
             {orderedMembers.map((member, index) => {
-              const name = member?.name ?? t('Membre retiré');
+              const soloId = songSoloOrder(song)[index];
+              const isTradingFours = soloId === TRADING_FOURS_SOLO_ID;
+              const name = isTradingFours
+                ? TRADING_FOURS_SOLO_ID
+                : (member?.name ?? t('Membre retiré'));
               return (
                 <View
-                  key={`${song.solos[index]}-${index}`}
+                  key={`${soloId}-${index}`}
                   style={[styles.soloSheetRow, { borderColor: palette.border }]}
                 >
                   <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
@@ -448,7 +447,11 @@ export function SongSoloOrderSheet({
                       {index + 1}
                     </AppText>
                   </View>
-                  <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
+                  {isTradingFours ? (
+                    <TradingFoursIcon />
+                  ) : (
+                    <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
+                  )}
                   <View style={styles.flex}>
                     <AppText numberOfLines={1} style={styles.soloMemberName}>
                       {name}
@@ -580,7 +583,7 @@ export function GroupSongRow({
               <Ionicons color={palette.muted} name="headset" size={14} />
             </Pressable>
           ) : null}
-          {showSoloAction && song.solos.length > 0 ? (
+          {showSoloAction && songSoloOrder(song).length > 0 ? (
             <Pressable
               accessibilityLabel={t('Ordre des solos')}
               accessibilityRole="button"

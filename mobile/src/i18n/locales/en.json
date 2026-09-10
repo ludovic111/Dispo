@@ -171,7 +171,7 @@
   "Ajouté directement": "Added directly",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "Add a song's key, edit it later, and see it below the title",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "Add the group's songs — members can suggest, the leader approves.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "Add musicians in solo order — the whole group will see the same list.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "Add solos in playing order — the whole group will see the same list.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "Add your school or create your first group: messages, members, and upcoming dates will all be here.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "Add your school to your profile: its community and conversation will appear automatically.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "Add a similar instrument (e.g. synth as well as piano)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "You will leave this school, then choose a new one from the directory. Your other affiliations will be kept.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "This affiliation will be removed from your profile and you will lose access to its community. Your other schools and your account will be kept.",
   "Quitter et choisir": "Leave and choose",
-  "Changer d’école": "Change school",
-  "Chacun son tour": "One at a time",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Each musician plays four bars, then passes to the next in this order."
+  "Changer d’école": "Change school"
 }

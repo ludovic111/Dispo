@@ -171,7 +171,7 @@
   "Ajouté directement": "Adicionado diretamente",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "Adicione o tom com uma música, modifique-a então e encontre-a sob o título",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "Adicione as faixas do grupo — os membros podem sugerir, o líder válido.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "Adicione os músicos em sua ordem de passagem — todo o grupo verá a mesma lista.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "Adicione os solos na ordem de execução — todo o grupo verá a mesma lista.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "Adicione sua escola ou crie seu primeiro grupo: mensagens, membros e próximas datas serão reunidas aqui.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "Adicione sua instituição ao perfil: sua comunidade e conversa aparecem automaticamente.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "Adiciona um instrumento próximo (por exemplo, sintetizador para além do piano)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Vais sair desta escola e depois escolher outra no diretório. As tuas outras afiliações serão mantidas.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Esta afiliação será removida do teu perfil e perderás o acesso à comunidade. As outras escolas e a tua conta serão mantidas.",
   "Quitter et choisir": "Sair e escolher",
-  "Changer d’école": "Mudar de escola",
-  "Chacun son tour": "Um de cada vez",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Cada músico toca quatro compassos e depois passa ao seguinte nesta ordem."
+  "Changer d’école": "Mudar de escola"
 }

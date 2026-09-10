@@ -124,6 +124,7 @@ export interface GroupSong {
   previewUrl: string | null;
   releaseYear: number | null;
   solos: string[];
+  /** Legacy build 60 field, retained only for lossless snapshot conversion. */
   soloMode?: 'successive' | 'trading_fours';
   startsSet?: boolean;
   suggestedBy: string;

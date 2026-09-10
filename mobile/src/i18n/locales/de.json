@@ -171,7 +171,7 @@
   "Ajouté directement": "Direkt hinzugefügt",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "Tonart beim Hinzufügen angeben, später ändern und unter dem Titel sehen",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "Füge die Songs der Gruppe hinzu — Mitglieder schlagen vor, der Leader bestätigt.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "Füge die Musiker:innen in ihrer Solo-Reihenfolge hinzu — die ganze Gruppe sieht dieselbe Liste.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "Füge die Solos in ihrer Reihenfolge hinzu — die ganze Gruppe sieht dieselbe Liste.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "Füge deine Schule hinzu oder gründe deine erste Gruppe: Nachrichten, Mitglieder und nächste Termine findest du dann hier.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "Füge deine Einrichtung zum Profil hinzu: Community und Chat erscheinen automatisch.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "Füge ein ähnliches Instrument hinzu (z. B. Synth zusätzlich zum Klavier)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Du verlässt diese Schule und wählst danach eine neue im Verzeichnis. Deine anderen Zugehörigkeiten bleiben erhalten.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Diese Zugehörigkeit wird aus deinem Profil entfernt und du verlierst den Zugang zur Community. Deine anderen Schulen und dein Konto bleiben erhalten.",
   "Quitter et choisir": "Verlassen und wählen",
-  "Changer d’école": "Schule wechseln",
-  "Chacun son tour": "Nacheinander",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Jede Person spielt vier Takte und übergibt dann in dieser Reihenfolge an die nächste."
+  "Changer d’école": "Schule wechseln"
 }

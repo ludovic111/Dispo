@@ -141,6 +141,33 @@ describe('song detail tabs', () => {
       expect.any(Object),
     );
   });
+  it('adds, moves and removes one unassigned 4-4 through the same solo picker', async () => {
+    mockSave.mockClear();
+    const view = await render(<GroupSongScreen groupId="g" songId="a" sourceEventId={null} />);
+    await fireEvent.press(view.getByRole('tab', { name: 'Solos' }));
+    expect(view.queryByText('Chacun son tour')).toBeNull();
+    expect(view.queryByText('4 × 4')).toBeNull();
+    await fireEvent.press(view.getByText('Ajouter un solo'));
+    await fireEvent.press(view.getAllByText('Piano')[0]!);
+    // All members are already assigned; 4-4 remains available.
+    expect(view.getByText('Ajouter un solo')).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: '4-4' }));
+    expect(view.getAllByText('4-4')).toHaveLength(1);
+    expect(view.queryByRole('button', { name: '4-4' })).toBeNull();
+    await fireEvent.press(view.getAllByRole('button', { name: 'Monter' })[1]!);
+    await fireEvent.press(view.getByText('Enregistrer'));
+    expect(mockSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({ desired: [expect.objectContaining({ solos: ['4-4', 'leader'] })] }),
+      expect.any(Object),
+    );
+    await fireEvent.press(view.getAllByRole('button', { name: 'Retirer ce solo' })[0]!);
+    await fireEvent.press(view.getByText('Enregistrer'));
+    expect(mockSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({ desired: [expect.objectContaining({ solos: ['leader'] })] }),
+      expect.any(Object),
+    );
+    await view.unmount();
+  });
   it('keeps read-only access for a member without exposing song save or solo editing', async () => {
     mockUserId = 'member';
     try {

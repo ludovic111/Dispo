@@ -171,7 +171,7 @@
   "Ajouté directement": "직접 추가",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "노래로 톤을 추가하고, 그 다음을 수정하고 제목 아래를 찾으십시오.",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "그룹의 트랙을 추가 - 회원은 제안 할 수 있습니다, 유효한 리더.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "패스의 순서에 음악가 추가 — 전체 그룹은 동일한 목록을 볼 수 있습니다.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "연주 순서대로 솔로를 추가하면 그룹 전체가 같은 목록을 볼 수 있습니다.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "학교 추가 또는 첫 번째 그룹 만들기: 메시지, 회원 및 다음 날짜는 여기에 수집됩니다.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "프로필에 기관을 추가 : 그녀의 커뮤니티와 대화는 자동으로 나타납니다.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "근처에 악기를 추가 (예 : 피아노에 추가)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "이 학교에서 탈퇴한 후 목록에서 새 학교를 선택합니다. 다른 소속은 유지됩니다.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "프로필에서 이 소속이 제거되고 커뮤니티에 접근할 수 없게 됩니다. 다른 학교와 계정은 유지됩니다.",
   "Quitter et choisir": "탈퇴 후 선택",
-  "Changer d’école": "학교 변경",
-  "Chacun son tour": "한 명씩",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "각 음악가가 네 마디를 연주한 뒤 이 순서대로 다음 사람에게 넘깁니다."
+  "Changer d’école": "학교 변경"
 }

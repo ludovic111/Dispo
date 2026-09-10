@@ -80,7 +80,7 @@ describe('morceaux', () => {
     const row = source('src/features/groups/group-song-row.tsx');
     const repertoire = source('src/features/groups/group-repertoire-tab.tsx');
     const event = source('src/features/groups/group-event-detail-screen.tsx');
-    expect(row).toContain('showSoloAction && song.solos.length > 0');
+    expect(row).toContain('showSoloAction && songSoloOrder(song).length > 0');
     expect(row).toContain("t('Membre retiré')");
     expect(repertoire).toContain('<SongReorderList');
     expect(event).toContain('<SongReorderList');

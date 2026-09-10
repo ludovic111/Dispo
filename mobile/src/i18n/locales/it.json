@@ -171,7 +171,7 @@
   "Ajouté directement": "Aggiunto direttamente",
   "Ajoute la tonalité avec un morceau, modifie-la ensuite et retrouve-la sous le titre": "Aggiungi la tonalità di un brano, modificala in seguito e vedila sotto il titolo",
   "Ajoute les morceaux du groupe — les membres peuvent en suggérer, le leader valide.": "Aggiungi i brani del gruppo — i membri suggeriscono, il leader approva.",
-  "Ajoute les musicien·nes dans leur ordre de passage — tout le groupe verra la même liste.": "Aggiungi i musicisti nell'ordine degli assoli: tutto il gruppo vedrà lo stesso elenco.",
+  "Ajoute les solos dans leur ordre de passage — tout le groupe verra la même liste.": "Aggiungi gli assoli in ordine di esecuzione: tutto il gruppo vedrà lo stesso elenco.",
   "Ajoute ton école ou crée ton premier groupe : messages, membres et prochaines dates seront réunis ici.": "Aggiungi la tua scuola o crea il tuo primo gruppo: qui troverai messaggi, membri e prossime date.",
   "Ajoute ton établissement au profil : sa communauté et sa conversation apparaissent automatiquement.": "Aggiungi la scuola al profilo: la sua community e la conversazione appariranno automaticamente.",
   "Ajoute un instrument proche (ex. synthé en plus du piano)": "Aggiungi uno strumento simile (es. synth oltre al pianoforte)",
@@ -2439,7 +2439,5 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Lascerai questa scuola, poi ne sceglierai una nuova nella directory. Le altre affiliazioni saranno mantenute.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Questa affiliazione verrà rimossa dal profilo e perderai l’accesso alla sua comunità. Le altre scuole e il tuo account saranno mantenuti.",
   "Quitter et choisir": "Lascia e scegli",
-  "Changer d’école": "Cambia scuola",
-  "Chacun son tour": "Uno alla volta",
-  "Chaque musicien joue quatre mesures, puis passe au suivant dans cet ordre.": "Ogni musicista suona quattro battute, poi passa al successivo in questo ordine."
+  "Changer d’école": "Cambia scuola"
 }
