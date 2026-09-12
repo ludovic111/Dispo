@@ -479,7 +479,7 @@ export default function SignInScreen() {
 
             <AppText color={palette.muted} style={styles.legal} variant="caption">
               {t(
-                'En continuant, tu confirmes avoir au moins 18 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.',
+                'En continuant, tu confirmes avoir au moins 13 ans et tu acceptes les conditions d’utilisation, les règles de la communauté et la politique de confidentialité.',
               )}
             </AppText>
             <LegalLinks />
