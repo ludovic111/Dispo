@@ -5,6 +5,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import {
   schoolAcronym,
   shortProfileLevel,
@@ -59,6 +60,7 @@ export function CompactProfileCard({
     <Pressable
       accessibilityLabel={[
         profile.name,
+        profile.isPremium ? t('Membre Premium') : null,
         school?.name,
         accessibleInstruments,
         place,
@@ -78,6 +80,7 @@ export function CompactProfileCard({
               <AppText numberOfLines={2} style={styles.name} variant="headline">
                 {profile.name}
               </AppText>
+              {profile.isPremium ? <VerifiedBadge size="sm" /> : null}
               {school ? <Tag color={palette.bronze} label={schoolAcronym(school)} /> : null}
             </View>
             <AppText color={palette.bronze} numberOfLines={1} variant="subheadline">

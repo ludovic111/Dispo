@@ -10,17 +10,22 @@ import type {
   MusicGroup,
 } from '@/features/groups/group-model';
 import {
+  addSongComment,
   cancelGroupEvent,
   createGroup,
   deleteSongComment,
+  editSongComment,
   enrichSongCatalogResult,
   fetchGroupReplyMessages,
+  fetchSongCommentReactions,
   isAllowedGroupDocumentExtension,
+  leaveGroup,
   openGroupDocument,
   saveGroupRepertoire,
   searchSongCatalog,
   sendGroupMessage,
   setGroupMessageReaction,
+  setSongCommentReaction,
   updateGroupEvent,
 } from '@/features/groups/group-repository';
 import {
@@ -609,5 +614,95 @@ describe('repère local vu/non lu identique à Swift', () => {
     expect(unreadGroupMessageCount(current, 'me', before)).toBe(1);
     const after = await markGroupSeen('me', 'group-1', new Date('2026-09-01T10:06:00Z'));
     expect(unreadGroupMessageCount(current, 'me', after)).toBe(0);
+  });
+});
+
+describe('song comment threads and leaving a group', () => {
+  it('inserts a reply with its root, and a root without a parent column for old servers', async () => {
+    const insert = jest.fn(async () => ({ error: null }));
+    mockedClient.mockReturnValue({ from: () => ({ insert }) } as never);
+    await addSongComment('group', 'song', 'me', ' Oui ', 'root');
+    expect(insert).toHaveBeenLastCalledWith({
+      author_id: 'me',
+      group_id: 'group',
+      parent_id: 'root',
+      song_id: 'song',
+      text: 'Oui',
+    });
+    await addSongComment('group', 'song', 'me', 'Racine');
+    expect(insert).toHaveBeenLastCalledWith({
+      author_id: 'me',
+      group_id: 'group',
+      song_id: 'song',
+      text: 'Racine',
+    });
+    await expect(addSongComment('group', 'song', 'me', '   ')).rejects.toThrow(
+      'group_comment_invalid',
+    );
+  });
+
+  it('edits, reacts and leaves through the dedicated RPCs and surfaces server refusals', async () => {
+    const rpc = jest.fn(async (name: string) =>
+      name === 'leave_group' ? { data: true, error: null } : { data: null, error: null },
+    );
+    mockedClient.mockReturnValue({ rpc } as never);
+    await editSongComment('comment', '  Corrigé  ');
+    expect(rpc).toHaveBeenLastCalledWith('edit_song_comment', {
+      p_comment: 'comment',
+      p_text: 'Corrigé',
+    });
+    await setSongCommentReaction('comment', '❤️');
+    expect(rpc).toHaveBeenLastCalledWith('set_song_comment_reaction', {
+      p_comment: 'comment',
+      p_emoji: '❤️',
+    });
+    await setSongCommentReaction('comment', null);
+    expect(rpc).toHaveBeenLastCalledWith('set_song_comment_reaction', {
+      p_comment: 'comment',
+      p_emoji: null,
+    });
+    await expect(leaveGroup('group')).resolves.toBe(true);
+    expect(rpc).toHaveBeenLastCalledWith('leave_group', { p_group: 'group' });
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'leader_must_transfer_or_delete' },
+    } as never);
+    await expect(leaveGroup('group')).rejects.toEqual({
+      message: 'leader_must_transfer_or_delete',
+    });
+  });
+
+  it('aggregates comment reactions per emoji with my own marked', async () => {
+    const rows = [
+      {
+        comment_id: 'c',
+        created_at: '2026-09-13T10:00:00Z',
+        emoji: '👍',
+        profile_id: 'me',
+        removed_at: null,
+      },
+      {
+        comment_id: 'c',
+        created_at: '2026-09-13T10:01:00Z',
+        emoji: '👍',
+        profile_id: 'other',
+        removed_at: null,
+      },
+      {
+        comment_id: 'c',
+        created_at: '2026-09-13T10:02:00Z',
+        emoji: '🎷',
+        profile_id: 'x',
+        removed_at: null,
+      },
+    ];
+    const is = jest.fn(async () => ({ data: rows, error: null }));
+    mockedClient.mockReturnValue({
+      from: () => ({ select: () => ({ eq: () => ({ is }) }) }),
+    } as never);
+    await expect(fetchSongCommentReactions('c', 'me')).resolves.toEqual([
+      { count: 2, emoji: '👍', reactedByMe: true },
+    ]);
+    await expect(fetchSongCommentReactions('', 'me')).resolves.toEqual([]);
   });
 });

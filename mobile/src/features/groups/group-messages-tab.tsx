@@ -56,6 +56,11 @@ import {
   type PendingMessageAttachment,
 } from '@/features/messages/message-model';
 import { openMessageAttachment } from '@/features/messages/message-repository';
+import {
+  isModeratedMessage,
+  ModeratedMessageText,
+  reportSendFailure,
+} from '@/features/messages/moderated-message';
 import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
@@ -112,7 +117,10 @@ function GroupMessageBubble({
   const { t } = useTranslation();
   const own = message.senderId === userId;
   const deleted = Boolean(message.deletedAt);
-  const attachment = groupMessageAttachment(message);
+  // Message retiré par la modération : copie dédiée, ni réaction ni édition.
+  const moderated = !deleted && isModeratedMessage(message);
+  const inert = deleted || moderated;
+  const attachment = moderated ? null : groupMessageAttachment(message);
   const reaction = useGroupMessageReaction();
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const remove = useDeleteGroupMessage();
@@ -149,37 +157,41 @@ function GroupMessageBubble({
     <>
       <ChatBubble
         actions={
-          <>
-            <ChatInlineAction
-              accessibilityLabel={t('Répondre')}
-              icon="arrow-undo-outline"
-              onPress={() => onReply(message)}
-            />
-            <ChatInlineAction
-              accessibilityLabel={t('Réagir')}
-              disabled={reaction.isPending}
-              icon="happy-outline"
-              onPress={() => setReactionPickerVisible(true)}
-            />
-            {own && message.text ? (
+          moderated ? undefined : (
+            <>
               <ChatInlineAction
-                accessibilityLabel={t('Modifier')}
-                icon="pencil-outline"
-                onPress={() => onEdit(message)}
+                accessibilityLabel={t('Répondre')}
+                icon="arrow-undo-outline"
+                onPress={() => onReply(message)}
               />
-            ) : null}
-            {own ? (
               <ChatInlineAction
-                accessibilityLabel={t('Supprimer')}
-                color={palette.error}
-                icon="trash-outline"
-                onPress={confirmDelete}
+                accessibilityLabel={t('Réagir')}
+                disabled={reaction.isPending}
+                icon="happy-outline"
+                onPress={() => setReactionPickerVisible(true)}
               />
-            ) : null}
-          </>
+              {own && message.text ? (
+                <ChatInlineAction
+                  accessibilityLabel={t('Modifier')}
+                  icon="pencil-outline"
+                  onPress={() => onEdit(message)}
+                />
+              ) : null}
+              {own ? (
+                <ChatInlineAction
+                  accessibilityLabel={t('Supprimer')}
+                  color={palette.error}
+                  icon="trash-outline"
+                  onPress={confirmDelete}
+                />
+              ) : null}
+            </>
+          )
         }
         attachment={
-          attachment ? (
+          moderated ? (
+            <ModeratedMessageText mine={own} />
+          ) : attachment ? (
             <MessageAttachmentCard
               attachment={attachment}
               isLoading={openingAttachmentPath === attachment.remotePath}
@@ -189,13 +201,13 @@ function GroupMessageBubble({
         }
         avatar={<Avatar name={message.senderName} size={30} uri={message.senderPhotoUrl} />}
         deleted={deleted}
-        edited={Boolean(message.editedAt)}
+        edited={!moderated && Boolean(message.editedAt)}
         mine={own}
-        onLongPress={deleted ? undefined : () => onReply(message)}
-        onPress={deleted ? undefined : () => onReply(message)}
+        onLongPress={inert ? undefined : () => onReply(message)}
+        onPress={inert ? undefined : () => onReply(message)}
         onReactionPress={(emoji) => react(emoji as (typeof GROUP_REACTION_EMOJIS)[number])}
         quote={
-          message.replyToId ? (
+          message.replyToId && !moderated ? (
             <Pressable
               accessibilityLabel={t('Afficher le message d’origine')}
               accessibilityRole="button"
@@ -206,17 +218,21 @@ function GroupMessageBubble({
             </Pressable>
           ) : null
         }
-        reactions={message.reactions.map((item) => ({
-          count: item.count,
-          emoji: item.emoji,
-          mine: item.reactedByMe,
-        }))}
+        reactions={
+          moderated
+            ? []
+            : message.reactions.map((item) => ({
+                count: item.count,
+                emoji: item.emoji,
+                mine: item.reactedByMe,
+              }))
+        }
         reactionsDisabled={reaction.isPending}
         senderName={message.senderName}
-        text={message.text}
+        text={moderated ? null : message.text}
         timestamp={message.createdAt}
       />
-      {reactionPickerVisible && !deleted ? (
+      {reactionPickerVisible && !inert ? (
         <BottomSheet onClose={() => setReactionPickerVisible(false)} title={t('Réagir')} visible>
           <View style={styles.reactionChoices}>
             {GROUP_REACTION_EMOJIS.map((emoji) => (
@@ -302,7 +318,8 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
   );
   const selectedReply = replying ? (originals.get(replying.id) ?? replying) : null;
   const beginReply = (message: GroupMessage) => {
-    if (send.isPending || edit.isPending || message.deletedAt) return;
+    if (send.isPending || edit.isPending || message.deletedAt || isModeratedMessage(message))
+      return;
     if (editing) setText('');
     setEditing(null);
     setReplying(message);
@@ -379,7 +396,8 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
       edit.mutate(
         { groupId: group.id, messageId: editing.id, text: clean },
         {
-          onError: () => setLocalError(t('Le message n’a pas pu être modifié.')),
+          onError: (error) =>
+            reportSendFailure(error, t, t('Le message n’a pas pu être modifié.'), setLocalError),
           onSuccess: () => {
             setEditing(null);
             setText('');
@@ -414,7 +432,7 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
           setText((current) => current || clean);
           setAttachment((current) => current ?? selectedAttachment);
           setReplying(selectedReply);
-          setLocalError(attachmentErrorMessage(error, t));
+          reportSendFailure(error, t, attachmentErrorMessage(error, t), setLocalError);
         },
       },
     );

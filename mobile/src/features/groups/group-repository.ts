@@ -1,6 +1,7 @@
 import type {
   RealtimePostgresInsertPayload,
   RealtimePostgresUpdatePayload,
+  SupabaseClient,
 } from '@supabase/supabase-js';
 import { randomUUID } from 'expo-crypto';
 import { File } from 'expo-file-system';
@@ -14,6 +15,7 @@ import {
   groupSongsFromJson,
   groupSongToJson,
   isValidGroupMessage,
+  myGroupReaction,
   type GroupAttendanceStatus,
   type GroupDocument,
   type GroupEvent,
@@ -54,10 +56,31 @@ type ManualMemberRow = Database['public']['Tables']['group_manual_members']['Row
 type MemberRow = Database['public']['Tables']['group_members']['Row'];
 type EventRow = Database['public']['Tables']['group_events']['Row'];
 type AttendanceRow = Database['public']['Tables']['event_attendance']['Row'];
-type MessageRow = Database['public']['Tables']['group_messages']['Row'];
+/** `moderated` reste optionnel : la RPC `recent_group_messages` et les anciens
+ * caches Realtime ne le portent pas toujours. */
+type MessageRow = Omit<Database['public']['Tables']['group_messages']['Row'], 'moderated'> & {
+  moderated?: boolean | null;
+};
 type ReactionRow = Database['public']['Tables']['group_message_reactions']['Row'];
 type DocumentRow = Database['public']['Tables']['group_docs']['Row'];
-type CommentRow = Database['public']['Tables']['song_comments']['Row'];
+type CommentRow = Database['public']['Tables']['song_comments']['Row'] & {
+  edited_at: string | null;
+  parent_id: string | null;
+};
+/** Table et RPC des fils de commentaires : absentes des types générés tant
+ * que `database.types.ts` n'est pas regénéré après la migration 20260913151000. */
+interface CommentReactionRow {
+  comment_id: string;
+  created_at: string;
+  emoji: string;
+  profile_id: string;
+  removed_at: string | null;
+}
+
+/** Accès non typé, réservé aux objets postérieurs aux types générés. */
+function untypedClient(): SupabaseClient {
+  return getSupabaseClient() as unknown as SupabaseClient;
+}
 type InvitationRow = Database['public']['Tables']['group_invitations']['Row'];
 type EventLocationRow =
   Database['public']['Functions']['visible_group_event_locations']['Returns'][number];
@@ -184,11 +207,12 @@ const attendanceColumns = 'event_id,profile_id,status,responded_at' as const;
 const reactionColumns = 'message_id,profile_id,emoji,removed_at,created_at' as const;
 const documentColumns =
   'id,group_id,title,path,ext,added_by,created_at,song_id,instrument' as const;
-const commentColumns = 'id,group_id,song_id,author_id,text,created_at' as const;
+const commentColumns = 'id,group_id,song_id,author_id,text,created_at,parent_id,edited_at' as const;
+const commentReactionColumns = 'comment_id,profile_id,emoji,removed_at,created_at' as const;
 const invitationColumns = 'id,group_id,profile_id,invited_by,kind,created_at' as const;
-const profileColumns = 'id,name,photo_url,instruments' as const;
+const profileColumns = 'id,name,photo_url,instruments,is_premium' as const;
 const messageColumns =
-  'id,group_id,sender_id,text,created_at,edited_at,deleted_at,attachment_path,attachment_name,attachment_type,attachment_size,reply_to_id' as const;
+  'id,group_id,sender_id,text,created_at,edited_at,deleted_at,moderated,attachment_path,attachment_name,attachment_type,attachment_size,reply_to_id' as const;
 const messageFilesBucket = 'message-files';
 const groupDocsBucket = 'group-docs';
 const attachmentMaxBytes = 25 * 1_024 * 1_024;
@@ -503,6 +527,7 @@ function profileMap(
   profiles: readonly {
     id: string;
     instruments: string[];
+    is_premium?: boolean | null;
     name: string;
     photo_url: string | null;
   }[],
@@ -523,6 +548,7 @@ function mapMembers(
         id: row.profile_id,
         instruments: profile?.instruments ?? [],
         isLeader: row.profile_id === group.leader_id,
+        isPremium: profile?.is_premium === true,
         kind: memberKind(row.kind),
         name: profile?.name || i18n.t('Musicien'),
         photoUrl: profile?.photo_url ?? null,
@@ -556,6 +582,7 @@ function mapMessages(
         editedAt: row.edited_at,
         groupId: row.group_id,
         id: row.id,
+        moderated: row.moderated === true,
         replyToId: row.reply_to_id ?? null,
         reactions: aggregateGroupReactions(
           (reactions.get(row.id) ?? []).map((reaction) => ({
@@ -566,6 +593,7 @@ function mapMessages(
           userId,
         ),
         senderId: row.sender_id,
+        senderIsPremium: profile?.is_premium === true,
         senderName: profile?.name || i18n.t('Membre'),
         senderPhotoUrl: profile?.photo_url ?? null,
         text: row.text,
@@ -621,24 +649,47 @@ function mapDocuments(
     }));
 }
 
+function commentReactionSummaries(
+  rows: readonly CommentReactionRow[] | undefined,
+  userId: string,
+): GroupSongComment['reactions'] {
+  return aggregateGroupReactions(
+    (rows ?? []).map((reaction) => ({
+      emoji: reaction.emoji,
+      profileId: reaction.profile_id,
+      removedAt: reaction.removed_at,
+    })),
+    userId,
+  );
+}
+
 function mapComments(
   rows: readonly CommentRow[],
+  reactions: ReadonlyMap<string, readonly CommentReactionRow[]>,
   groupId: string,
+  userId: string,
   profiles: ReturnType<typeof profileMap>,
 ): GroupSongComment[] {
   return rows
     .filter((row) => row.group_id === groupId)
-    .map((row) => ({
-      authorId: row.author_id,
-      authorName: row.author_id
-        ? profiles.get(row.author_id)?.name || i18n.t('Membre')
-        : i18n.t('Membre'),
-      createdAt: row.created_at,
-      groupId: row.group_id,
-      id: row.id,
-      songId: row.song_id,
-      text: row.text,
-    }));
+    .map((row) => {
+      const profile = row.author_id ? profiles.get(row.author_id) : undefined;
+      const summaries = commentReactionSummaries(reactions.get(row.id), userId);
+      return {
+        authorId: row.author_id,
+        authorName: profile?.name || i18n.t('Membre'),
+        authorPhotoUrl: profile?.photo_url ?? null,
+        createdAt: row.created_at,
+        editedAt: row.edited_at ?? null,
+        groupId: row.group_id,
+        id: row.id,
+        myReaction: myGroupReaction(summaries),
+        parentId: row.parent_id ?? null,
+        reactions: summaries,
+        songId: row.song_id,
+        text: row.text,
+      };
+    });
 }
 
 function mapPendingMembers(
@@ -733,7 +784,7 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     .from('group_docs')
     .select(documentColumns)
     .in('group_id', groupIds);
-  const commentQuery = supabase
+  const commentQuery = untypedClient()
     .from('song_comments')
     .select(commentColumns)
     .in('group_id', groupIds);
@@ -776,10 +827,11 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
   const events = eventResult.data as EventRow[];
   const messages = messageResult.data as MessageRow[];
   const documents = documentResult.data as DocumentRow[];
-  const comments = commentResult.data as CommentRow[];
+  const comments = (commentResult.data ?? []) as CommentRow[];
   const invitations = invitationResult.data as InvitationRow[];
   const eventIds = events.map((event) => event.id);
   const messageIds = messages.map((message) => message.id);
+  const commentIds = comments.map((comment) => comment.id);
   const profileIds = new Set<string>([
     ...members.map((row) => row.profile_id),
     ...messages.map((row) => row.sender_id),
@@ -796,29 +848,41 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     .from('group_message_reactions')
     .select(reactionColumns)
     .in('message_id', messageIds);
+  const commentReactionQuery = untypedClient()
+    .from('song_comment_reactions')
+    .select(commentReactionColumns)
+    .in('comment_id', commentIds)
+    .is('removed_at', null);
   const profileQuery = supabase
     .from('profiles')
     .select(profileColumns)
     .in('id', [...profileIds]);
-  const [attendanceResult, reactionResult, profileResult] = await Promise.all([
-    eventIds.length === 0
-      ? Promise.resolve({ data: [] as AttendanceRow[], error: null })
-      : signal
-        ? attendanceQuery.abortSignal(signal)
-        : attendanceQuery,
-    messageIds.length === 0
-      ? Promise.resolve({ data: [] as ReactionRow[], error: null })
-      : signal
-        ? reactionQuery.abortSignal(signal)
-        : reactionQuery,
-    profileIds.size === 0
-      ? Promise.resolve({ data: [], error: null })
-      : signal
-        ? profileQuery.abortSignal(signal)
-        : profileQuery,
-  ]);
+  const [attendanceResult, reactionResult, commentReactionResult, profileResult] =
+    await Promise.all([
+      eventIds.length === 0
+        ? Promise.resolve({ data: [] as AttendanceRow[], error: null })
+        : signal
+          ? attendanceQuery.abortSignal(signal)
+          : attendanceQuery,
+      messageIds.length === 0
+        ? Promise.resolve({ data: [] as ReactionRow[], error: null })
+        : signal
+          ? reactionQuery.abortSignal(signal)
+          : reactionQuery,
+      commentIds.length === 0
+        ? Promise.resolve({ data: [] as CommentReactionRow[], error: null })
+        : signal
+          ? commentReactionQuery.abortSignal(signal)
+          : commentReactionQuery,
+      profileIds.size === 0
+        ? Promise.resolve({ data: [], error: null })
+        : signal
+          ? profileQuery.abortSignal(signal)
+          : profileQuery,
+    ]);
   if (attendanceResult.error) throw attendanceResult.error;
   if (reactionResult.error) throw reactionResult.error;
+  if (commentReactionResult.error) throw commentReactionResult.error;
   if (profileResult.error) throw profileResult.error;
   const profiles = profileMap(profileResult.data);
   const locationMap = new Map(
@@ -840,11 +904,21 @@ export async function fetchGroups(userId: string, signal?: AbortSignal): Promise
     (row) => row.event_id,
   );
   const reactionsByMessage = groupBy(reactionResult.data as ReactionRow[], (row) => row.message_id);
+  const reactionsByComment = groupBy(
+    (commentReactionResult.data ?? []) as CommentReactionRow[],
+    (row) => row.comment_id,
+  );
 
   return groups.map((group) => ({
     autoSosEnabled: group.auto_sos_enabled,
     autoSosMinLevel: group.auto_sos_min_level,
-    comments: mapComments(commentsByGroup.get(group.id) ?? [], group.id, profiles),
+    comments: mapComments(
+      commentsByGroup.get(group.id) ?? [],
+      reactionsByComment,
+      group.id,
+      userId,
+      profiles,
+    ),
     documents: mapDocuments(documentsByGroup.get(group.id) ?? [], group.id, profiles),
     emoji: group.emoji,
     events: mapEvents(
@@ -1171,6 +1245,16 @@ export async function removeGroupMember(groupId: string, profileId: string): Pro
     .eq('group_id', groupId)
     .eq('profile_id', profileId);
   if (result.error) throw result.error;
+}
+
+/**
+ * Quitte un groupe (RPC atomique). Le leader est refusé côté serveur avec
+ * `leader_must_transfer_or_delete` : il doit d'abord transmettre son rôle.
+ */
+export async function leaveGroup(groupId: string): Promise<boolean> {
+  const result = await untypedClient().rpc('leave_group', { p_group: groupId });
+  if (result.error) throw result.error;
+  return result.data === true;
 }
 
 export async function transferGroupLeadership(groupId: string, profileId: string): Promise<void> {
@@ -1555,21 +1639,69 @@ export async function copyGroupSongToDestinations(
   return results;
 }
 
+export const SONG_COMMENT_MAX_LENGTH = 1_000;
+
+export function isValidSongComment(text: string): boolean {
+  const cleaned = text.trim();
+  return cleaned.length > 0 && cleaned.length <= SONG_COMMENT_MAX_LENGTH;
+}
+
 export async function addSongComment(
   groupId: string,
   songId: string,
   authorId: string,
   text: string,
+  parentId: string | null = null,
 ): Promise<void> {
   const cleaned = text.trim();
-  if (!cleaned) throw new Error('group_comment_invalid');
-  const result = await getSupabaseClient().from('song_comments').insert({
-    author_id: authorId,
-    group_id: groupId,
-    song_id: songId,
-    text: cleaned,
+  if (!isValidSongComment(cleaned)) throw new Error('group_comment_invalid');
+  const result = await untypedClient()
+    .from('song_comments')
+    .insert({
+      author_id: authorId,
+      group_id: groupId,
+      song_id: songId,
+      text: cleaned,
+      ...(parentId ? { parent_id: parentId } : {}),
+    });
+  if (result.error) throw result.error;
+}
+
+export async function editSongComment(commentId: string, text: string): Promise<void> {
+  const cleaned = text.trim();
+  if (!isValidSongComment(cleaned)) throw new Error('group_comment_invalid');
+  const result = await untypedClient().rpc('edit_song_comment', {
+    p_comment: commentId,
+    p_text: cleaned,
   });
   if (result.error) throw result.error;
+}
+
+export async function setSongCommentReaction(
+  commentId: string,
+  emoji: GroupReactionEmoji | null,
+): Promise<void> {
+  const result = await untypedClient().rpc('set_song_comment_reaction', {
+    p_comment: commentId,
+    p_emoji: emoji,
+  });
+  if (result.error) throw result.error;
+}
+
+export async function fetchSongCommentReactions(
+  commentId: string,
+  userId: string,
+  signal?: AbortSignal,
+): Promise<GroupSongComment['reactions']> {
+  if (!commentId || !userId) return [];
+  const query = untypedClient()
+    .from('song_comment_reactions')
+    .select(commentReactionColumns)
+    .eq('comment_id', commentId)
+    .is('removed_at', null);
+  const result = await (signal ? query.abortSignal(signal) : query);
+  if (result.error) throw result.error;
+  return commentReactionSummaries((result.data ?? []) as CommentReactionRow[], userId);
 }
 
 export async function deleteSongComment(commentId: string): Promise<void> {
@@ -1662,6 +1794,7 @@ export function subscribeToGroups(userId: string, onChange: () => void): () => v
     'event_attendance',
     'group_docs',
     'song_comments',
+    'song_comment_reactions',
   ] as const;
   let channel = supabase.channel(uniqueRealtimeTopic(`groups:${userId}`));
   for (const table of tables) {

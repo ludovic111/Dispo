@@ -50,6 +50,7 @@ interface SchoolMemberRow {
   profile_id: string;
   profiles: {
     instruments: string[];
+    is_premium: boolean;
     level: string;
     name: string;
     photo_url: string | null;
@@ -167,6 +168,7 @@ function mapMember(row: SchoolMemberRow): SchoolMember | null {
   if (!isSchoolRole(row.role) || !isVerificationLevel(row.verification_level)) return null;
   return {
     instruments: row.profiles.instruments,
+    isPremium: row.profiles.is_premium === true,
     isPrimary: row.is_primary,
     joinedAt: row.joined_at,
     level: row.profiles.level,
@@ -363,7 +365,7 @@ export async function fetchSchoolMembersPage(
   const query = getSupabaseClient()
     .from('music_school_memberships')
     .select(
-      'profile_id,role,role_label,verification_level,is_primary,joined_at,profiles!inner(name,photo_url,instruments,level)',
+      'profile_id,role,role_label,verification_level,is_primary,joined_at,profiles!inner(name,photo_url,instruments,level,is_premium)',
     )
     .eq('school_id', schoolId)
     .eq('status', 'active')

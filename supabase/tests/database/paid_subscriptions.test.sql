@@ -21,7 +21,8 @@ select pg_temp.assert_true(public.get_my_subscription()->>'tier'='group','Groupe
 insert into public.music_groups(id,name,leader_id) values('55000000-0000-4000-8000-000000000010','One group',(select auth.uid()));
 do $$ begin
  begin insert into public.music_groups(name,leader_id) values('Second',(select auth.uid())); raise exception 'Groupe can create second group'; exception when insufficient_privilege then null; end;
- begin update public.music_groups set auto_sos_enabled=true where leader_id=(select auth.uid()); raise exception 'Groupe includes Auto-SOS'; exception when insufficient_privilege then null; end;
+ -- Since 2.5 organisation automation (Auto-SOS) is free for every tier.
+ update public.music_groups set auto_sos_enabled=true where leader_id=(select auth.uid());
  begin perform public.add_personal_song('{"title":"Forbidden"}'); raise exception 'Groupe includes personal repertoire'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;

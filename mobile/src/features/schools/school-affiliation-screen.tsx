@@ -29,7 +29,7 @@ import { FormField } from '@/components/ui/form-field';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, ModalHeader, Screen } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
+import { HeaderAction, SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing, tint } from '@/theme/tokens';
 
@@ -187,9 +187,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
         ) : null}
 
         <View style={styles.section}>
-          <AppText color={palette.bronze} variant="label">
-            {t('Lien avec l’école')}
-          </AppText>
+          <SectionHeader title={t('Lien avec l’école')} />
           <View style={styles.choices}>
             {schoolRoles.map((value) => (
               <ChoiceChip
@@ -225,9 +223,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
         </View>
 
         <View style={styles.section}>
-          <AppText color={palette.bronze} variant="label">
-            {t('Qui voit cette affiliation ?')}
-          </AppText>
+          <SectionHeader title={t('Qui voit cette affiliation ?')} />
           <View style={styles.visibilityChoices}>
             {schoolVisibilities.map((value) => (
               <ChoiceChip
@@ -268,13 +264,8 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
 
         {errorText ? (
           <View
-            style={[
-              styles.error,
-              {
-                backgroundColor: tint(palette.signal, 0.09),
-                borderColor: tint(palette.signal, 0.33),
-              },
-            ]}
+            accessibilityLiveRegion="polite"
+            style={[styles.error, { backgroundColor: tint(palette.signal, 0.09) }]}
           >
             <Ionicons color={palette.signal} name="warning" size={17} />
             <AppText color={palette.signal} style={styles.errorCopy} variant="caption">
@@ -293,7 +284,6 @@ const styles = StyleSheet.create({
   error: {
     alignItems: 'center',
     borderRadius: radii.button,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
     padding: spacing.sm,

@@ -1,9 +1,19 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
+import {
+  elevation,
+  insetStyle,
+  keyEdgeWidth,
+  minimumTouchTarget,
+  pressedStyle,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 
 export interface SegmentOption<T extends string> {
   /** Compteur affiché après le libellé (« Annonces · 3 »). */
@@ -12,9 +22,13 @@ export interface SegmentOption<T extends string> {
   value: T;
 }
 
+const railPadding = spacing.xxs;
+const optionGap = spacing.xxs;
+
 /**
- * Contrôle segmenté unique de l'app : rail en creux, option sélectionnée sur
- * carte. Utilisé pour tout choix exclusif entre 2 et 4 vues.
+ * Contrôle segmenté unique de l'app : rail en creux, touche relevée qui
+ * glisse sous l'option choisie (ressort natif, sauté si « Réduire les
+ * animations » est actif). Utilisé pour tout choix exclusif entre 2 et 4 vues.
  */
 export function SegmentedControl<T extends string>({
   onChange,
@@ -26,11 +40,56 @@ export function SegmentedControl<T extends string>({
   value: T;
 }) {
   const { palette } = useDispoTheme();
+  const reduceMotion = useReducedMotion();
+  const [railWidth, setRailWidth] = useState(0);
+  const count = Math.max(1, options.length);
+  const index = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
+  const optionWidth = Math.max(0, (railWidth - railPadding * 2 - optionGap * (count - 1)) / count);
+  const [position] = useState(() => new Animated.Value(index));
+
+  useEffect(() => {
+    if (reduceMotion) {
+      position.setValue(index);
+      return;
+    }
+    Animated.spring(position, {
+      damping: 20,
+      mass: 0.7,
+      stiffness: 260,
+      toValue: index,
+      useNativeDriver: true,
+    }).start();
+  }, [index, position, reduceMotion]);
+
+  const measure = (event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    if (width !== railWidth) setRailWidth(width);
+  };
+  const translateX = Animated.multiply(position, optionWidth + optionGap);
+
   return (
-    <View
-      accessibilityRole="tablist"
-      style={[styles.rail, { backgroundColor: palette.inset, borderColor: palette.border }]}
-    >
+    <View accessibilityRole="tablist" onLayout={measure} style={[styles.rail, insetStyle(palette)]}>
+      {railWidth > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.thumb,
+            elevation(1, palette),
+            {
+              backgroundColor: palette.cardElevated,
+              borderBottomColor: palette.edge,
+              borderColor: palette.edge,
+              transform: [{ translateX }],
+              width: optionWidth,
+            },
+          ]}
+        >
+          <View style={[styles.thumbHighlight, { backgroundColor: palette.highlight }]} />
+        </Animated.View>
+      ) : null}
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -39,11 +98,7 @@ export function SegmentedControl<T extends string>({
             accessibilityState={{ selected }}
             key={option.value}
             onPress={() => onChange(option.value)}
-            style={({ pressed }) => [
-              styles.option,
-              selected && { backgroundColor: palette.card, borderColor: palette.border },
-              pressed && !selected && pressedStyle,
-            ]}
+            style={({ pressed }) => [styles.option, pressed && !selected && pressedStyle]}
           >
             <AppText
               color={selected ? palette.text : palette.muted}
@@ -76,7 +131,7 @@ export function UnderlineTabs<T extends string>({
 }) {
   const { palette } = useDispoTheme();
   return (
-    <View accessibilityRole="tablist" style={[styles.tabs, { borderBottomColor: palette.border }]}>
+    <View accessibilityRole="tablist" style={[styles.tabs, { borderBottomColor: palette.edge }]}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -107,9 +162,7 @@ export function UnderlineTabs<T extends string>({
 const styles = StyleSheet.create({
   option: {
     alignItems: 'center',
-    borderColor: 'transparent',
     borderRadius: radii.sm,
-    borderWidth: StyleSheet.hairlineWidth,
     flex: 1,
     justifyContent: 'center',
     minHeight: minimumTouchTarget - 8,
@@ -117,10 +170,9 @@ const styles = StyleSheet.create({
   },
   rail: {
     borderRadius: radii.control,
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.xxs,
-    padding: spacing.xxs,
+    gap: optionGap,
+    padding: railPadding,
   },
   tab: {
     alignItems: 'center',
@@ -134,6 +186,22 @@ const styles = StyleSheet.create({
   tabs: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
+  },
+  thumb: {
+    borderBottomWidth: keyEdgeWidth,
+    borderRadius: radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    bottom: railPadding,
+    left: railPadding,
+    position: 'absolute',
+    top: railPadding,
+  },
+  thumbHighlight: {
+    height: 1,
+    left: radii.sm,
+    position: 'absolute',
+    right: radii.sm,
+    top: 0,
   },
   underline: { alignSelf: 'stretch', borderRadius: 1, height: 2 },
 });

@@ -25,13 +25,18 @@ import { useCreateGroup, useGroupProfileCandidates } from './group-queries';
 import { AppText } from '@/components/ui/app-text';
 import { CountBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
+import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
+import { canLeadAnotherGroup } from '@/features/premium/premium-model';
 import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
 import { useSubscription } from '@/features/premium/subscription-queries';
+import { useCreateWorkshopGroup } from '@/features/premium/workshop-group-queries';
+import { selectedWorkshopSchool } from '@/features/premium/workshop-groups';
 import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
@@ -44,8 +49,10 @@ export function GroupNewScreen() {
   const { palette } = useDispoTheme();
   const candidates = useGroupProfileCandidates();
   const create = useCreateGroup();
+  const createWorkshop = useCreateWorkshopGroup();
   const subscription = useSubscription();
   const [name, setName] = useState('');
+  const [workshopSchoolId, setWorkshopSchoolId] = useState<string | null>(null);
   const [emoji, setEmoji] = useState('🎶');
   const [search, setSearch] = useState('');
   const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
@@ -77,11 +84,17 @@ export function GroupNewScreen() {
         />
       </Screen>
     );
-  if (
-    !subscription.data ||
-    subscription.data.tier === 'free' ||
-    (subscription.data.tier === 'group' && subscription.data.groupCount >= 1)
-  )
+  const workshopSchools = subscription.data?.workshopSchools ?? [];
+  const canLeadRegularGroup =
+    !!subscription.data &&
+    canLeadAnotherGroup(subscription.data.tier, subscription.data.groupCount);
+  // Without a paid slot, the only possible group is a workshop group: preselect it.
+  const workshopSchool = selectedWorkshopSchool(
+    workshopSchools,
+    workshopSchoolId ?? (canLeadRegularGroup ? null : (workshopSchools[0]?.schoolId ?? null)),
+  );
+  // A workshop group of the member's school skips the paid tier entirely.
+  if (!subscription.data || (!canLeadRegularGroup && workshopSchools.length === 0))
     return (
       <Screen nativeHeader>
         <View style={styles.gate}>
@@ -114,31 +127,35 @@ export function GroupNewScreen() {
       return next;
     });
   };
+  const pending = create.isPending || createWorkshop.isPending;
+  const creationError = workshopSchool ? createWorkshop.error : create.error;
   const submit = () => {
     if (!acquireGroupCreationLock(submitLock)) return;
-    create.mutate(
-      { emoji, memberIds: [...memberIds], name },
-      {
-        onError: (error) => {
-          if (__DEV__) console.warn('[group-create]', groupCreationDiagnostic(error));
-        },
-        onSettled: () => releaseGroupCreationLock(submitLock),
-        onSuccess: ({ failedInvitationCount, groupId }) => {
-          if (failedInvitationCount > 0) {
-            Alert.alert(
-              t('Groupe créé'),
-              failedInvitationCount === 1
-                ? t("Une invitation n'a pas pu partir. Tu peux la renvoyer depuis les membres.")
-                : t(
-                    "{{count}} invitations n'ont pas pu partir. Tu peux les renvoyer depuis les membres.",
-                    { count: failedInvitationCount },
-                  ),
-            );
-          }
-          router.replace(`/groups/${groupId}` as never);
-        },
+    const input = { emoji, memberIds: [...memberIds], name };
+    const mutate = workshopSchool
+      ? (options: Parameters<typeof create.mutate>[1]) =>
+          createWorkshop.mutate({ ...input, schoolId: workshopSchool.schoolId }, options)
+      : (options: Parameters<typeof create.mutate>[1]) => create.mutate(input, options);
+    mutate({
+      onError: (error) => {
+        if (__DEV__) console.warn('[group-create]', groupCreationDiagnostic(error));
       },
-    );
+      onSettled: () => releaseGroupCreationLock(submitLock),
+      onSuccess: ({ failedInvitationCount, groupId }) => {
+        if (failedInvitationCount > 0) {
+          Alert.alert(
+            t('Groupe créé'),
+            failedInvitationCount === 1
+              ? t("Une invitation n'a pas pu partir. Tu peux la renvoyer depuis les membres.")
+              : t(
+                  "{{count}} invitations n'ont pas pu partir. Tu peux les renvoyer depuis les membres.",
+                  { count: failedInvitationCount },
+                ),
+          );
+        }
+        router.replace(`/groups/${groupId}` as never);
+      },
+    });
   };
 
   return (
@@ -156,7 +173,7 @@ export function GroupNewScreen() {
           <Card style={styles.section}>
             <FormField
               autoCapitalize="words"
-              error={!name.trim() && create.isError ? t('Donne un nom au groupe.') : undefined}
+              error={!name.trim() && creationError ? t('Donne un nom au groupe.') : undefined}
               hint={t('Membres, répertoire et événements passeront par toi.')}
               label={t('Le groupe')}
               onChangeText={setName}
@@ -188,6 +205,42 @@ export function GroupNewScreen() {
               </View>
             </ScrollView>
           </Card>
+
+          {workshopSchools.length > 0 ? (
+            <Card style={styles.section}>
+              <SectionHeader
+                subtitle={t(
+                  'Un groupe d’atelier de ton école est gratuit et ne compte pas dans ta formule.',
+                )}
+                title={t('Type de groupe')}
+              />
+              <View style={styles.wrap}>
+                {canLeadRegularGroup ? (
+                  <ChoiceChip
+                    label={t('Mon groupe')}
+                    onPress={() => setWorkshopSchoolId(null)}
+                    selected={workshopSchool === null}
+                  />
+                ) : null}
+                {workshopSchools.map((school) => (
+                  <ChoiceChip
+                    icon="school"
+                    key={school.schoolId}
+                    label={t("Groupe d'atelier de {{school}}", { school: school.schoolShortName })}
+                    onPress={() => setWorkshopSchoolId(school.schoolId)}
+                    selected={workshopSchool?.schoolId === school.schoolId}
+                  />
+                ))}
+              </View>
+              {workshopSchool ? (
+                <Tag
+                  color={palette.electric}
+                  icon="school"
+                  label={t('Atelier {{school}}', { school: workshopSchool.schoolShortName })}
+                />
+              ) : null}
+            </Card>
+          ) : null}
 
           <Card style={styles.section}>
             <View style={styles.memberHeader}>
@@ -240,15 +293,15 @@ export function GroupNewScreen() {
               );
             })}
           </Card>
-          {create.error ? (
+          {creationError ? (
             <AppText color={palette.error} style={styles.error} variant="caption">
-              {t(groupCreationErrorMessage(create.error))}
+              {t(groupCreationErrorMessage(creationError))}
             </AppText>
           ) : null}
           <DispoButton
-            disabled={!name.trim() || memberIds.size === 0 || create.isPending}
+            disabled={!name.trim() || memberIds.size === 0 || pending}
             icon="add-circle"
-            loading={create.isPending}
+            loading={pending}
             onPress={submit}
           >
             {t('Créer le groupe')}
@@ -284,4 +337,5 @@ const styles = StyleSheet.create({
   memberCopy: { flex: 1 },
   memberHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   section: { gap: spacing.sm },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

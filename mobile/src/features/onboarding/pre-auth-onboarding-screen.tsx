@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-na
 
 import {
   CountryPickerModal,
-  OnboardingConceptList,
+  OnboardingConceptCards,
   OnboardingError,
   OnboardingFooter,
   OnboardingHeader,
@@ -120,10 +120,10 @@ export function OnboardingReplayScreen() {
           {step === 1 ? (
             <StepFrame
               icon="flash"
-              subtitle={t('Dispo trouve un remplaçant fiable en quelques minutes.')}
-              title={t('Un musicien te lâche ?')}
+              subtitle={t('SOS, groupes, écoles : tout ce qui compte pour jouer plus.')}
+              title={t('Dispo en 3 idées')}
             >
-              <OnboardingConceptList />
+              <OnboardingConceptCards />
             </StepFrame>
           ) : null}
 

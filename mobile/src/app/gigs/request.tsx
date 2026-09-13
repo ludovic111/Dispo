@@ -1,14 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet } from 'react-native';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
-import { IconButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
+import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm, type GigFormInitial } from '@/features/gigs/gig-form';
-import type { GigFormDefaults } from '@/features/gigs/gig-model';
-import { useCreateGig, useGig, useGigFormDefaults } from '@/features/gigs/gig-queries';
+import { gigErrorMessage, isGigErrorCode, type GigFormDefaults } from '@/features/gigs/gig-model';
+import {
+  useCreateGig,
+  useGig,
+  useGigFormDefaults,
+  useMyPendingDirectTargets,
+} from '@/features/gigs/gig-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -38,6 +43,7 @@ export default function DirectGigRequestScreen() {
   const profile = useProfile(profileId, userId);
   const sourceGig = useGig(gigId);
   const defaults = useGigFormDefaults();
+  const pending = useMyPendingDirectTargets();
   const create = useCreateGig();
   const { t } = useTranslation();
   const back = (
@@ -49,7 +55,10 @@ export default function DirectGigRequestScreen() {
   );
 
   const waiting =
-    profile.isLoading || defaults.isLoading || (Boolean(gigId) && sourceGig.isLoading);
+    profile.isLoading ||
+    defaults.isLoading ||
+    pending.isLoading ||
+    (Boolean(gigId) && sourceGig.isLoading);
   if (waiting) {
     return (
       <Screen>
@@ -71,6 +80,25 @@ export default function DirectGigRequestScreen() {
       <Screen>
         <ScreenHeader leadingAction={back} title={t('Demande de dépannage')} />
         <ErrorState message={t('Profil introuvable.')} />
+      </Screen>
+    );
+  }
+
+  if (pending.data?.includes(profile.data.id)) {
+    return (
+      <Screen>
+        <ScreenHeader leadingAction={back} title={t('Demande de dépannage')} />
+        <EmptyState
+          icon="time-outline"
+          message={t(
+            'Tu as déjà une demande en attente auprès de {{name}}. Attends sa réponse avant d’en envoyer une autre.',
+            { name: profile.data.name },
+          )}
+          title={t('Demande en attente')}
+        />
+        <DispoButton onPress={() => router.back()} variant="secondary">
+          {t('Retour')}
+        </DispoButton>
       </Screen>
     );
   }
@@ -118,13 +146,27 @@ export default function DirectGigRequestScreen() {
           mode="direct"
           onSubmit={(input) =>
             create.mutate(input, {
+              onError: (error) => {
+                if (isGigErrorCode(error, 'direct_request_pending')) {
+                  Alert.alert(
+                    t('Demande en attente'),
+                    t('Tu as déjà une demande en attente auprès de cette personne.'),
+                  );
+                }
+              },
               onSuccess: (id) => router.replace(`/gigs/${id}`),
             })
           }
           submitLabel={t('Envoyer la demande')}
           targetId={profile.data.id}
           targetName={profile.data.name}
-          {...(create.error ? { errorMessage: t("La demande n'a pas pu être envoyée.") } : {})}
+          {...(create.error
+            ? {
+                errorMessage: t(
+                  gigErrorMessage(create.error, "La demande n'a pas pu être envoyée."),
+                ),
+              }
+            : {})}
         />
       </ScrollView>
     </Screen>

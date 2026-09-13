@@ -9,9 +9,9 @@ import { LinkifiedText } from '../linkified-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
 import {
-  billetInk,
   disabledStyle,
-  gradients,
+  gradientsFor,
+  keyHighlight,
   minimumTouchTarget,
   pressedStyle,
   radii,
@@ -91,8 +91,8 @@ export function ChatBubble({
 }: ChatBubbleProps) {
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
-  const ink = mine ? billetInk : palette.text;
-  const mutedInk = mine ? tint(billetInk, 0.6) : palette.muted;
+  const ink = mine ? palette.accentInk : palette.text;
+  const mutedInk = mine ? tint(palette.accentInk, 0.7) : palette.muted;
   const contents = (
     <View style={styles.contents}>
       {deleted ? (
@@ -109,7 +109,7 @@ export function ChatBubble({
           {text ? (
             <LinkifiedText
               color={ink}
-              linkColor={mine ? billetInk : palette.electric}
+              linkColor={mine ? palette.accentInk : palette.electric}
               onLongPress={onLongPress}
               variant="subheadline"
             >
@@ -151,7 +151,14 @@ export function ChatBubble({
           style={({ pressed }) => pressed && pressedStyle}
         >
           {mine ? (
-            <LinearGradient colors={gradients.hero} style={styles.bubble}>
+            <LinearGradient
+              colors={gradientsFor(palette).hero}
+              style={[styles.bubble, styles.bubbleMine, { borderColor: palette.accentDeep }]}
+            >
+              <View
+                pointerEvents="none"
+                style={[styles.bubbleHighlight, { backgroundColor: keyHighlight }]}
+              />
               {contents}
             </LinearGradient>
           ) : (
@@ -159,9 +166,13 @@ export function ChatBubble({
               style={[
                 styles.bubble,
                 styles.bubbleTheirs,
-                { backgroundColor: palette.card, borderColor: palette.border },
+                { backgroundColor: palette.card, borderColor: palette.edge },
               ]}
             >
+              <View
+                pointerEvents="none"
+                style={[styles.bubbleHighlight, { backgroundColor: palette.highlight }]}
+              />
               {contents}
             </View>
           )}
@@ -179,8 +190,8 @@ export function ChatBubble({
                 style={({ pressed }) => [
                   styles.reaction,
                   {
-                    backgroundColor: reaction.mine ? tint(palette.electric, 0.18) : palette.card,
-                    borderColor: reaction.mine ? palette.electric : palette.border,
+                    backgroundColor: reaction.mine ? palette.accentSoft : palette.card,
+                    borderColor: reaction.mine ? palette.electric : palette.edge,
                   },
                   pressed && pressedStyle,
                   reactionsDisabled && disabledStyle,
@@ -256,6 +267,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
+  bubbleHighlight: { height: 1, left: radii.lg, position: 'absolute', right: radii.lg, top: 0 },
+  bubbleMine: { borderWidth: StyleSheet.hairlineWidth },
   bubbleTheirs: { borderWidth: StyleSheet.hairlineWidth },
   column: { flexShrink: 1, gap: spacing.xxs, maxWidth: '84%' },
   columnMine: { alignItems: 'flex-end' },

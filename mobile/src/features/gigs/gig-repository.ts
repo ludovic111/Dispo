@@ -2,16 +2,19 @@ import {
   applicationDecisionParams,
   createGigWritePlan,
   directResponseParams,
-  matchProfilesToGig,
+  parseGigCandidate,
+  parseGigCandidateProfile,
+  parseGigMatch,
+  parseGigViewerMatch,
   resolveGigLocation,
   type GigApplication,
   type GigApplicationStatus,
+  type GigCandidate,
   type GigCreateInput,
   type GigDetail,
   type GigFormDefaults,
-  type GigMatch,
-  type GigMatchProfile,
   type GigSummary,
+  type GigViewerMatch,
 } from './gig-model';
 
 import { pageRange, type Page } from '@/domain/pagination';
@@ -75,14 +78,10 @@ type ApplicationProjection = Pick<
   'created_at' | 'id' | 'instrument' | 'message' | 'musician_id' | 'status'
 >;
 type PendingApplicationProjection = Pick<ApplicationRow, 'gig_id'>;
-type ApplicantProfileProjection = Pick<ProfileRow, 'id' | 'name' | 'photo_url'>;
+type ApplicantProfileProjection = Pick<ProfileRow, 'id' | 'is_premium' | 'name' | 'photo_url'>;
 type VisibleSchoolProjection = Pick<
   Database['public']['Tables']['music_school_memberships']['Row'],
   'profile_id' | 'school_id'
->;
-type MatchProfileProjection = Pick<
-  ProfileRow,
-  'available_dates' | 'genres' | 'id' | 'instruments' | 'is_demo' | 'level' | 'name' | 'photo_url'
 >;
 
 const gigColumns =
@@ -90,8 +89,32 @@ const gigColumns =
 const hostedGigColumns =
   'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,posted_at,group_id,event_id,target_id,target_status' as const;
 const applicationColumns = 'id,musician_id,instrument,message,status,created_at' as const;
-const matchProfileColumns =
-  'id,name,photo_url,instruments,genres,level,available_dates,is_demo' as const;
+
+interface UntypedRpcResult {
+  data: unknown;
+  error: { message: string } | null;
+}
+interface UntypedRpcBuilder extends PromiseLike<UntypedRpcResult> {
+  abortSignal(signal: AbortSignal): PromiseLike<UntypedRpcResult>;
+}
+
+/** Les RPC de matching 2.5 ne sont pas encore dans les types générés. */
+function matchingRpc(
+  name: string,
+  args: Record<string, unknown>,
+  signal?: AbortSignal,
+): PromiseLike<UntypedRpcResult> {
+  const client = getSupabaseClient() as unknown as {
+    rpc: (fn: string, params: Record<string, unknown>) => UntypedRpcBuilder;
+  };
+  const builder = client.rpc(name, args);
+  return signal ? builder.abortSignal(signal) : builder;
+}
+
+function rpcRows(result: UntypedRpcResult): unknown[] {
+  if (result.error) throw result.error;
+  return Array.isArray(result.data) ? result.data : [];
+}
 
 function applicationStatus(value: string): GigApplicationStatus {
   if (value === 'accepted' || value === 'declined') return value;
@@ -121,7 +144,7 @@ async function profileMap(
   if (uniqueIds.length === 0) return new Map();
   const query = getSupabaseClient()
     .from('profiles')
-    .select('id,name,photo_url')
+    .select('id,name,photo_url,is_premium')
     .in('id', uniqueIds);
   const result = await (signal ? query.abortSignal(signal) : query);
   if (result.error) throw result.error;
@@ -171,6 +194,7 @@ async function mapGigs(rows: MappableGigProjection[], signal?: AbortSignal): Pro
       genre: row.genre,
       groupId: row.group_id,
       hostId: row.host_id,
+      hostIsPremium: host?.is_premium === true,
       hostName: host?.name ?? '',
       hostPhotoUrl: host?.photo_url ?? null,
       hostSchoolIds: schoolsByProfile.get(row.host_id) ?? [],
@@ -219,13 +243,43 @@ function mapApplication(
   const profile = profiles.get(row.musician_id);
   return {
     createdAt: row.created_at,
+    hostContactedAt: null,
     id: row.id,
     instrument: row.instrument,
     message: row.message,
     musicianId: row.musician_id,
+    musicianIsPremium: profile?.is_premium === true,
     musicianName: profile?.name ?? '',
     musicianPhotoUrl: profile?.photo_url ?? null,
     status: applicationStatus(row.status),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Candidature enrichie par `gig_applicants` (hôte) : profil + critères de match. */
+function mapServerApplicant(value: unknown): GigApplication | null {
+  if (!isRecord(value) || !isRecord(value.application)) return null;
+  const application = value.application;
+  const profile = parseGigCandidateProfile(value.profile);
+  if (typeof application.id !== 'string' || typeof application.musician_id !== 'string')
+    return null;
+  return {
+    createdAt: typeof application.created_at === 'string' ? application.created_at : '',
+    hostContactedAt:
+      typeof application.host_contacted_at === 'string' ? application.host_contacted_at : null,
+    id: application.id,
+    instrument: typeof application.instrument === 'string' ? application.instrument : null,
+    match: parseGigMatch(value.match),
+    message: typeof application.message === 'string' ? application.message : '',
+    musicianId: application.musician_id,
+    musicianIsPremium: profile?.isPremium === true,
+    ...(profile?.level ? { musicianLevel: profile.level } : {}),
+    musicianName: profile?.name ?? '',
+    musicianPhotoUrl: profile?.photoUrl ?? null,
+    status: applicationStatus(String(application.status ?? 'pending')),
   };
 }
 
@@ -244,26 +298,24 @@ async function fetchApplications(
   const ownResult = await (signal ? ownQuery.abortSignal(signal) : ownQuery).maybeSingle();
   if (ownResult.error) throw ownResult.error;
 
-  let applicantRows: ApplicationProjection[] = [];
-  if (isHost) {
-    const query = supabase
-      .from('gig_applications')
-      .select(applicationColumns)
-      .eq('gig_id', gigId)
-      .order('created_at');
-    const result = await (signal ? query.abortSignal(signal) : query);
-    if (result.error) throw result.error;
-    applicantRows = result.data as ApplicationProjection[];
-  }
+  const applicants = isHost ? await fetchGigApplicants(gigId, signal) : [];
   const ownRow = ownResult.data as ApplicationProjection | null;
-  const profiles = await profileMap(
-    [...applicantRows.map((row) => row.musician_id), ...(ownRow ? [ownRow.musician_id] : [])],
-    signal,
-  );
+  const profiles = await profileMap(ownRow ? [ownRow.musician_id] : [], signal);
   return {
-    applicants: applicantRows.map((row) => mapApplication(row, profiles)),
+    applicants,
     mine: ownRow ? mapApplication(ownRow, profiles) : null,
   };
+}
+
+/** Hôte seulement : chaque candidature avec son profil et ses critères de match. */
+export async function fetchGigApplicants(
+  gigId: string,
+  signal?: AbortSignal,
+): Promise<GigApplication[]> {
+  const result = await matchingRpc('gig_applicants', { p_gig: gigId }, signal);
+  return rpcRows(result)
+    .map(mapServerApplicant)
+    .filter((applicant): applicant is GigApplication => applicant !== null);
 }
 
 async function deliverQueuedPush(): Promise<void> {
@@ -514,84 +566,69 @@ export async function deleteGig(gigId: string): Promise<void> {
   if (result.error) throw result.error;
 }
 
-export async function fetchGigMatches(
+/** Hôte seulement : profils compatibles avec un poste ouvert, triés par score. */
+export async function fetchGigCandidates(
   gigId: string,
-  userId: string,
-  page = 0,
-  pageSize = 50,
+  limit = 50,
   signal?: AbortSignal,
-): Promise<Page<GigMatch> & { gig: GigSummary }> {
-  const supabase = getSupabaseClient();
-  const gigQuery = supabase.from('gig_requests_feed').select(gigColumns).eq('id', gigId);
-  const gigResult = await (signal ? gigQuery.abortSignal(signal) : gigQuery).single();
-  if (gigResult.error) throw gigResult.error;
-  const [gig] = await mapGigs([gigResult.data as GigProjection], signal);
-  if (!gig) throw new Error('gig_not_found');
+): Promise<GigCandidate[]> {
+  const result = await matchingRpc('gig_candidates', { p_gig: gigId, p_limit: limit }, signal);
+  return rpcRows(result)
+    .map(parseGigCandidate)
+    .filter((candidate): candidate is GigCandidate => candidate !== null);
+}
 
-  const { from, to } = pageRange(page, pageSize);
-  let profileQuery = supabase
-    .from('profiles')
-    .select(matchProfileColumns)
-    .neq('id', userId)
-    .or('is_demo.eq.false,is_showcase.eq.true')
-    .neq('name', '')
-    .order('name')
-    .range(from, to + 1);
-  if (gig.wantedInstruments.length > 0) {
-    profileQuery = profileQuery.overlaps('instruments', gig.wantedInstruments);
-  }
-  const profileResult = await (signal ? profileQuery.abortSignal(signal) : profileQuery);
-  if (profileResult.error) throw profileResult.error;
-  const allRows = profileResult.data as MatchProfileProjection[];
-  const rows = allRows.slice(0, pageSize);
-  const profileIds = rows.map((row) => row.id);
-  const [outgoingResult, incomingResult] =
-    profileIds.length === 0
-      ? [
-          { data: [], error: null },
-          { data: [], error: null },
-        ]
-      : await Promise.all([
-          supabase
-            .from('follows')
-            .select('following_id')
-            .eq('follower_id', userId)
-            .in('following_id', profileIds),
-          supabase
-            .from('follows')
-            .select('follower_id')
-            .eq('following_id', userId)
-            .in('follower_id', profileIds),
-        ]);
-  if (outgoingResult.error) throw outgoingResult.error;
-  if (incomingResult.error) throw incomingResult.error;
-  const outgoing = new Set(outgoingResult.data.map((follow) => follow.following_id));
-  const incoming = new Set(incomingResult.data.map((follow) => follow.follower_id));
-  const schools = gig.wantedSchoolIds?.length
-    ? await visibleSchoolIdsByProfile(profileIds, signal)
-    : new Map<string, string[]>();
-  const profiles: GigMatchProfile[] = rows.map((row) => ({
-    schoolIds: schools.get(row.id) ?? [],
-    availableDates: row.available_dates,
-    genres: row.genres,
-    id: row.id,
-    instruments: row.instruments,
-    isDemo: row.is_demo,
-    level: row.level,
-    name: row.name,
-    photoUrl: row.photo_url,
-    relationRank:
-      outgoing.has(row.id) && incoming.has(row.id)
-        ? 40
-        : outgoing.has(row.id)
-          ? 20
-          : incoming.has(row.id)
-            ? 10
-            : 0,
-  }));
-  return {
-    gig,
-    items: matchProfilesToGig(gig, profiles),
-    nextPage: allRows.length > pageSize ? page + 1 : null,
-  };
+/** Hôte seulement : nombre de profils compatibles, sans scoring (talon vert). */
+export async function fetchGigCandidateCount(gigId: string, signal?: AbortSignal): Promise<number> {
+  const result = await matchingRpc('gig_candidate_count', { p_gig: gigId }, signal);
+  if (result.error) throw result.error;
+  return typeof result.data === 'number' ? result.data : 0;
+}
+
+/** Annonces du fil où le viewer joue un poste ouvert, avec leur score. */
+export async function fetchMyGigMatches(
+  limit = 100,
+  signal?: AbortSignal,
+): Promise<GigViewerMatch[]> {
+  const result = await matchingRpc('my_gig_matches', { p_limit: limit }, signal);
+  return rpcRows(result)
+    .map(parseGigViewerMatch)
+    .filter((item): item is GigViewerMatch => item !== null);
+}
+
+/** Contact unique : ouvre (ou retrouve) la conversation et envoie le premier message. */
+export async function contactGigApplicant(applicationId: string, text: string): Promise<string> {
+  const trimmed = text.trim();
+  if (!applicationId) throw new Error('gig_application_missing');
+  if (trimmed.length < 1 || trimmed.length > 500) throw new Error('message_invalid');
+  const result = await matchingRpc('contact_gig_applicant', {
+    p_application: applicationId,
+    p_text: trimmed,
+  });
+  if (result.error) throw result.error;
+  if (typeof result.data !== 'string' || !result.data) throw new Error('conversation_missing');
+  await deliverQueuedPush();
+  return result.data;
+}
+
+/** Personnes à qui le viewer a déjà envoyé une demande directe encore en attente. */
+export async function fetchMyPendingDirectTargets(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const query = getSupabaseClient()
+    .from('gig_requests')
+    .select('target_id')
+    .eq('host_id', userId)
+    .eq('target_status', 'pending')
+    .gte('date', new Date().toISOString());
+  const result = await (signal ? query.abortSignal(signal) : query);
+  if (result.error) throw result.error;
+  return [
+    ...new Set(
+      (result.data as Pick<GigRow, 'target_id'>[])
+        .map((row) => row.target_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    ),
+  ];
 }

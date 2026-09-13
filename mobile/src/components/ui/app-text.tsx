@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { fontWeights, typography } from '@/theme/tokens';
+import { engravedLabelStyle, fontWeights, typography } from '@/theme/tokens';
 
 /**
  * Échelle typographique unique de Dispo.
@@ -12,6 +12,8 @@ import { fontWeights, typography } from '@/theme/tokens';
  * `subheadline`, `footnote`, `caption`, `caption2`.
  * Spline Sans Mono (étiquettes, données) : `label`, `mono`.
  *
+ * `label` est « gravée » : une ombre de 1 pt (claire sur fond clair, sombre
+ * sur fond sombre) la pose dans la surface sans nuire à sa lisibilité.
  * `secondary` est un alias hérité de `subheadline`.
  */
 export type TextVariant =
@@ -35,13 +37,24 @@ export type TextWeight = keyof typeof fontWeights;
 
 interface AppTextProps extends ComponentProps<typeof Text> {
   color?: string;
+  /** Désactive la gravure de la variante `label` (sur dégradé ou billet). */
+  engraved?: boolean;
   variant?: TextVariant;
   /** Graisse système (ignorée par les variantes Fraunces et mono, qui ont leur propre fonte). */
   weight?: TextWeight;
 }
 
-export function AppText({ color, style, variant = 'body', weight, ...props }: AppTextProps) {
-  const { palette } = useDispoTheme();
+const engraved = { dark: engravedLabelStyle(true), light: engravedLabelStyle(false) };
+
+export function AppText({
+  color,
+  engraved: engravedLabel = true,
+  style,
+  variant = 'body',
+  weight,
+  ...props
+}: AppTextProps) {
+  const { dark, palette } = useDispoTheme();
   return (
     <Text
       {...props}
@@ -49,6 +62,7 @@ export function AppText({ color, style, variant = 'body', weight, ...props }: Ap
         styles.base,
         styles[variant],
         weight ? { fontWeight: fontWeights[weight] } : null,
+        variant === 'label' && engravedLabel ? (dark ? engraved.dark : engraved.light) : null,
         { color: color ?? palette.text },
         style,
       ]}

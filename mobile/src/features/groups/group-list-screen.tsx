@@ -21,6 +21,7 @@ import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
+import { isModeratedMessage, moderatedPreview } from '@/features/messages/moderated-message';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { formatRelativeTime } from '@/i18n/relative-time';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -41,7 +42,7 @@ export function InvitationCard({ invitation }: { invitation: PendingGroupInvitat
   const { t } = useTranslation();
   const response = useInvitationResponse();
   return (
-    <Card padding={spacing.sm}>
+    <Card padding={spacing.sm} tone="elevated">
       <View style={styles.invitationTop}>
         <GroupAvatar
           emoji={invitation.groupEmoji}
@@ -109,7 +110,11 @@ export function GroupRow({
   const preview = last
     ? last.deletedAt
       ? t('Message supprimé')
-      : `${last.senderId === userId ? t('Toi') : last.senderName} : ${last.text || last.attachmentName || t('Fichier')}`
+      : `${last.senderId === userId ? t('Toi') : last.senderName} : ${
+          isModeratedMessage(last)
+            ? moderatedPreview(t)
+            : last.text || last.attachmentName || t('Fichier')
+        }`
     : t('Écris le premier message du groupe');
   return (
     <ListRow

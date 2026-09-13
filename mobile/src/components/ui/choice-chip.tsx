@@ -7,14 +7,19 @@ import { AppText } from './app-text';
 import { useDispoTheme } from '@/theme/theme-context';
 import {
   disabledStyle,
+  elevation,
+  insetStyle,
+  keyHighlight,
   minimumTouchTarget,
   pressedStyle,
   radii,
   spacing,
-  tint,
 } from '@/theme/tokens';
 
-/** Puce de choix (filtres, sélections multiples). Sélection = teinte bleu jazz. */
+/**
+ * Puce de choix (filtres, sélections multiples). Au repos : en creux dans la
+ * surface ; sélectionnée : touche accent pleine avec son liseré clair.
+ */
 export function ChoiceChip({
   disabled = false,
   icon,
@@ -29,7 +34,7 @@ export function ChoiceChip({
   selected: boolean;
 }) {
   const { palette } = useDispoTheme();
-  const foreground = selected ? palette.electric : palette.text;
+  const foreground = selected ? palette.accentInk : palette.text;
   return (
     <Pressable
       accessibilityRole="button"
@@ -38,17 +43,22 @@ export function ChoiceChip({
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,
-        {
-          backgroundColor: selected ? tint(palette.electric, 0.16) : palette.card,
-          borderColor: selected ? tint(palette.electric, 0.55) : palette.border,
-        },
+        selected
+          ? [
+              { backgroundColor: palette.accent, borderColor: palette.accentDeep },
+              elevation(1, palette),
+            ]
+          : insetStyle(palette),
         pressed && pressedStyle,
         disabled && disabledStyle,
       ]}
     >
+      {selected ? (
+        <View pointerEvents="none" style={[styles.highlight, { backgroundColor: keyHighlight }]} />
+      ) : null}
       <View style={styles.content}>
         {icon ? (
-          <Ionicons color={selected ? palette.electric : palette.muted} name={icon} size={14} />
+          <Ionicons color={selected ? palette.accentInk : palette.muted} name={icon} size={14} />
         ) : null}
         <AppText
           color={foreground}
@@ -66,6 +76,7 @@ export function ChoiceChip({
 
 const styles = StyleSheet.create({
   content: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
+  highlight: { height: 1, left: radii.md, position: 'absolute', right: radii.md, top: 0 },
   label: { flexShrink: 1 },
   pressable: {
     borderRadius: radii.round,

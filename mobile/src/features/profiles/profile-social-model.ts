@@ -2,6 +2,7 @@ export interface ProfileConnection {
   id: string;
   instruments: string[];
   isDemo: boolean;
+  isPremium: boolean;
   level: string;
   name: string;
   photoUrl: string | null;

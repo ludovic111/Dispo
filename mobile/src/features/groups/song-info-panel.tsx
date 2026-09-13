@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
 
-import type { GroupSong } from './group-model';
+import { resolveSongSuggester, type GroupMember, type GroupSong } from './group-model';
 import { isKnownMusicalKey, musicalKeyOptions, musicalKeysEqual } from './group-song-key-model';
 import { SongArtwork, SongListenSheet, SongStoreBadge } from './group-song-row';
+import { SongSuggesterLine } from './song-suggester';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -26,12 +27,18 @@ function durationLabel(milliseconds: number | null): string | null {
 export function SongInfoPanel({
   draft,
   canEdit,
+  leaderId = null,
+  members,
   patch,
   subtitle,
   arrangementSubtitle,
 }: {
   draft: GroupSong;
   canEdit: boolean;
+  /** Leader du groupe : sa propre suggestion validée n'affiche pas « Suggéré par ». */
+  leaderId?: string | null | undefined;
+  /** Membres du groupe pour résoudre l'auteur de la suggestion (absent hors groupe). */
+  members?: readonly GroupMember[] | undefined;
   patch: <K extends keyof GroupSong>(key: K, value: GroupSong[K]) => void;
   subtitle: string;
   arrangementSubtitle: string;
@@ -39,6 +46,11 @@ export function SongInfoPanel({
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   const [listenVisible, setListenVisible] = useState(false);
+  const suggester = members ? resolveSongSuggester(draft.suggestedBy, members) : null;
+  const showApprovedSuggester =
+    draft.isApproved &&
+    suggester !== null &&
+    (suggester.id === null || suggester.id.toLowerCase() !== (leaderId ?? '').toLowerCase());
   const arrangement = [
     draft.key?.trim(),
     draft.tempoBpm ? `${draft.tempoBpm} BPM` : null,
@@ -106,7 +118,14 @@ export function SongInfoPanel({
           />
         </View>
         {!draft.isApproved ? (
-          <Tag color={palette.signal} label={t('Suggestion à valider')} />
+          <View style={styles.suggestionRow}>
+            <Tag color={palette.signal} label={t('Suggestion à valider')} />
+            {members ? (
+              <SongSuggesterLine members={members} suggestedBy={draft.suggestedBy} />
+            ) : null}
+          </View>
+        ) : showApprovedSuggester && members ? (
+          <SongSuggesterLine members={members} suggestedBy={draft.suggestedBy} />
         ) : null}
         {canEdit ? (
           <View style={styles.editorFields}>
@@ -184,5 +203,6 @@ const styles = StyleSheet.create({
   editorFields: { gap: spacing.sm },
   heroCopy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
   songHero: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  suggestionRow: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

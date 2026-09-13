@@ -4,7 +4,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing, typography } from '@/theme/tokens';
+import { insetInputStyle, radii, spacing, typography } from '@/theme/tokens';
 
 interface FormFieldProps extends ComponentProps<typeof TextInput> {
   error?: string | undefined;
@@ -34,11 +34,15 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
         style={[
           styles.input,
           props.multiline && styles.multiline,
-          {
-            backgroundColor: palette.inset,
-            borderColor: error ? palette.error : palette.border,
-            color: palette.text,
-          },
+          insetInputStyle(palette),
+          { color: palette.text },
+          error
+            ? {
+                borderBottomColor: palette.error,
+                borderColor: palette.error,
+                borderTopColor: palette.error,
+              }
+            : null,
           style,
         ]}
       />
@@ -58,7 +62,6 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
 const styles = StyleSheet.create({
   input: {
     borderRadius: radii.input,
-    borderWidth: 1,
     fontFamily: typography.body,
     fontSize: 16,
     minHeight: 48,

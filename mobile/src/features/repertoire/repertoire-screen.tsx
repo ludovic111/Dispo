@@ -15,6 +15,7 @@ import {
   masteryLabels,
   personalSongStyle,
   visiblePersonalSongs,
+  withoutSongArtwork,
   type PersonalSong,
   type RepertoireOrder,
 } from './repertoire-model';
@@ -30,6 +31,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { GroupSongRow } from '@/features/groups/group-song-row';
 import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
 import { useSubscription } from '@/features/premium/subscription-queries';
+import { hideAlbumCoversKey, useBooleanPreference } from '@/features/settings/settings-storage';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing, tint } from '@/theme/tokens';
 
@@ -49,12 +51,20 @@ export function PersonalRepertoireLink({ profileId, self }: { profileId: string;
   );
 }
 
-function PersonalSongRow({ item, onPress }: { item: PersonalSong; onPress: () => void }) {
+function PersonalSongRow({
+  hideArtwork,
+  item,
+  onPress,
+}: {
+  hideArtwork: boolean;
+  item: PersonalSong;
+  onPress: () => void;
+}) {
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   return (
     <GroupSongRow
-      song={item.song}
+      song={hideArtwork ? withoutSongArtwork(item.song) : item.song}
       onPress={onPress}
       showSoloAction={false}
       showDisclosure={false}
@@ -102,6 +112,7 @@ export function RepertoireScreen({
   const [search, setSearch] = useState('');
   const [style, setStyle] = useState('');
   const [order, setOrder] = useState<RepertoireOrder>('title');
+  const [hideArtwork] = useBooleanPreference(hideAlbumCoversKey);
   const songs = query.data?.songs;
   const stylesPresent = useMemo(
     () => [...new Set((songs ?? []).map(personalSongStyle).filter(Boolean))].sort(),
@@ -155,6 +166,7 @@ export function RepertoireScreen({
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         renderItem={({ item }) => (
           <PersonalSongRow
+            hideArtwork={hideArtwork}
             item={item}
             onPress={() =>
               router.push({

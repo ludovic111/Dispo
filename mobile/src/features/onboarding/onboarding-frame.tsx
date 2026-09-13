@@ -1,9 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps, ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
-import { countryOptions, languageOptions, type CountryOption } from './onboarding-model';
+import {
+  countryOptions,
+  languageOptions,
+  onboardingConcepts,
+  type CountryOption,
+} from './onboarding-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { BrandLogo } from '@/components/ui/brand';
@@ -13,9 +26,10 @@ import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { IconButton } from '@/components/ui/pressable';
 import { ModalHeader, Screen } from '@/components/ui/screen';
 import { PostalPlaceField } from '@/features/location';
+import { RaisedIconWell, SettingsDivider } from '@/features/settings/settings-components';
 import type { SupportedLocale } from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
+import { insetStyle, minimumTouchTarget, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 /** Barre d'en-tête des parcours d'onboarding : logo à gauche, action à droite. */
 export function OnboardingHeader({ action }: { action: ReactNode }) {
@@ -29,19 +43,31 @@ export function OnboardingHeader({ action }: { action: ReactNode }) {
 
 export function OnboardingProgress({ count, step }: { count: number; step: number }) {
   const { palette } = useDispoTheme();
+  const { t } = useTranslation();
   return (
-    <View style={styles.progress}>
-      {Array.from({ length: count }, (_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.progressSegment,
-            {
-              backgroundColor: index <= step ? palette.electric : tint(palette.electric, 0.22),
-            },
-          ]}
-        />
-      ))}
+    <View
+      accessibilityLabel={t('Étape {{step}} sur {{total}}', { step: step + 1, total: count })}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ max: count, min: 0, now: step + 1 }}
+      style={styles.progress}
+    >
+      <View style={[styles.progressTrack, insetStyle(palette)]}>
+        {Array.from({ length: count }, (_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.progressSegment,
+              {
+                backgroundColor: index <= step ? palette.accent : tint(palette.accent, 0.16),
+                borderTopColor: index <= step ? tint(palette.highlight, 0.6) : 'transparent',
+              },
+            ]}
+          />
+        ))}
+      </View>
+      <AppText color={palette.muted} variant="caption2">
+        {t('Étape {{step}} sur {{total}}', { step: step + 1, total: count })}
+      </AppText>
     </View>
   );
 }
@@ -61,9 +87,7 @@ export function StepFrame({
   return (
     <View style={styles.stepFrame}>
       <View style={styles.stepHeading}>
-        <View style={[styles.stepIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
-          <Ionicons color={palette.electric} name={icon} size={26} />
-        </View>
+        <RaisedIconWell icon={icon} size="large" />
         <AppText style={styles.centered} variant="title2">
           {title}
         </AppText>
@@ -85,78 +109,90 @@ export function OnboardingLanguageList({
 }) {
   const { palette } = useDispoTheme();
   return (
-    <View style={styles.languageList}>
-      {languageOptions.map((language) => {
+    <Card accessibilityRole="radiogroup" padding={0} style={styles.languageList} tone="inset">
+      {languageOptions.map((language, index) => {
         const selected = selectedLocale === language.locale;
         return (
-          <Pressable
-            key={language.locale}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            onPress={() => onSelect(language.locale)}
-            style={({ pressed }) => [
-              styles.languageRow,
-              {
-                backgroundColor: selected ? tint(palette.electric, 0.14) : palette.card,
-                borderColor: selected ? tint(palette.electric, 0.6) : palette.border,
-              },
-              pressed && pressedStyle,
-            ]}
-          >
-            <AppText variant="body">{language.flag}</AppText>
-            <AppText style={styles.grow} variant="subheadline" weight="semibold">
-              {language.nativeName}
-            </AppText>
-            {selected ? (
-              <Ionicons color={palette.electric} name="checkmark-circle" size={20} />
-            ) : null}
-          </Pressable>
+          <View key={language.locale} style={styles.languageRow}>
+            {index > 0 ? <SettingsDivider /> : null}
+            <ListRow
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected, selected }}
+              accessory={
+                <Ionicons
+                  color={selected ? palette.electric : palette.muted}
+                  name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={21}
+                />
+              }
+              leading={<AppText variant="body">{language.flag}</AppText>}
+              onPress={() => onSelect(language.locale)}
+              title={language.nativeName}
+              tone="plain"
+            />
+          </View>
         );
       })}
-    </View>
+    </Card>
   );
 }
 
-const concepts = [
-  {
-    icon: 'flash' as const,
-    text: 'Publie « cherche bassiste samedi » — les musiciens dispo et compatibles répondent direct.',
-    title: 'SOS en 30 secondes',
-  },
-  {
-    icon: 'videocam' as const,
-    text: 'Ajoute des vidéos de démo à ton profil. On entend le niveau et le style — zéro mauvaise surprise.',
-    title: "Écoute avant d'engager",
-  },
-  {
-    icon: 'people' as const,
-    text: 'Suis les musiciens fiables : tes amis et abonnés remontent en premier dans tes recherches.',
-    title: "Ton réseau d'abord",
-  },
-] as const;
-
-export function OnboardingConceptList() {
+/** Trois idées de Dispo en cartes à balayer, avec pastilles de position. */
+export function OnboardingConceptCards() {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
+  const [width, setWidth] = useState(0);
+  const [index, setIndex] = useState(0);
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (width <= 0) return;
+    const next = Math.round(event.nativeEvent.contentOffset.x / width);
+    if (next !== index) setIndex(Math.min(Math.max(next, 0), onboardingConcepts.length - 1));
+  };
   return (
-    <View style={styles.conceptList}>
-      {concepts.map((item) => (
-        <Card key={item.title} padding={spacing.sm}>
-          <View style={styles.conceptRow}>
-            <View style={[styles.conceptIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
-              <Ionicons color={palette.electric} name={item.icon} size={19} />
+    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.conceptList}>
+      {width > 0 ? (
+        <FlatList
+          data={onboardingConcepts}
+          decelerationRate="fast"
+          horizontal
+          keyExtractor={(item) => item.title}
+          onMomentumScrollEnd={onScroll}
+          onScroll={onScroll}
+          pagingEnabled
+          renderItem={({ item }) => (
+            <View style={{ width }}>
+              <Card padding={spacing.lg} style={styles.conceptCard} tone="elevated">
+                <RaisedIconWell icon={item.icon} size="large" />
+                <AppText style={styles.centered} variant="title2">
+                  {t(item.title)}
+                </AppText>
+                <AppText color={palette.muted} style={styles.centered} variant="body">
+                  {t(item.text)}
+                </AppText>
+              </Card>
             </View>
-            <View style={styles.conceptCopy}>
-              <AppText variant="subheadline" weight="semibold">
-                {t(item.title)}
-              </AppText>
-              <AppText color={palette.muted} variant="footnote">
-                {t(item.text)}
-              </AppText>
-            </View>
-          </View>
-        </Card>
-      ))}
+          )}
+          scrollEventThrottle={32}
+          showsHorizontalScrollIndicator={false}
+        />
+      ) : null}
+      <View accessibilityElementsHidden style={styles.dots}>
+        {onboardingConcepts.map((item, dotIndex) => (
+          <View
+            key={item.title}
+            style={[
+              styles.dot,
+              {
+                backgroundColor: dotIndex === index ? palette.accent : tint(palette.accent, 0.22),
+                width: dotIndex === index ? spacing.lg : spacing.xs,
+              },
+            ]}
+          />
+        ))}
+      </View>
+      <AppText color={palette.muted} style={styles.centered} variant="caption">
+        {t('Balaie pour découvrir les trois idées.')}
+      </AppText>
     </View>
   );
 }
@@ -181,19 +217,20 @@ export function OnboardingPlaceCard({
   const country = countryOptions.find((option) => option.code === place.countryCode);
   return (
     <>
-      <Card style={styles.placeCard}>
+      <Card style={styles.placeCard} tone="elevated">
         <Pressable
+          accessibilityLabel={t('Pays')}
           accessibilityRole="button"
           onPress={onPressCountry}
           style={({ pressed }) => [
             styles.countryButton,
-            { backgroundColor: palette.inset },
+            insetStyle(palette),
             pressed && pressedStyle,
           ]}
         >
           <AppText variant="body">{country?.flag ?? '🌍'}</AppText>
           <View style={styles.grow}>
-            <AppText color={palette.muted} variant="caption">
+            <AppText color={palette.bronze} variant="label">
               {t('Pays')}
             </AppText>
             <AppText variant="subheadline" weight="semibold">
@@ -314,19 +351,13 @@ export function OnboardingError({ text }: { text: string | null }) {
 
 const styles = StyleSheet.create({
   centered: { textAlign: 'center' },
-  conceptCopy: { flex: 1, gap: spacing.xxs },
-  conceptIcon: {
-    alignItems: 'center',
-    borderRadius: radii.sm,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
+  conceptCard: { alignItems: 'center', gap: spacing.sm, minHeight: 260 },
   conceptList: { gap: spacing.sm },
-  conceptRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
+  dot: { borderRadius: radii.round, height: spacing.xs },
+  dots: { flexDirection: 'row', gap: spacing.tight, justifyContent: 'center' },
   countryButton: {
     alignItems: 'center',
-    borderRadius: radii.button,
+    borderRadius: radii.input,
     flexDirection: 'row',
     gap: spacing.sm,
     minHeight: 56,
@@ -352,25 +383,17 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
   },
   hint: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  languageList: { gap: spacing.xs },
-  languageRow: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
+  languageList: { overflow: 'hidden' },
+  languageRow: { paddingHorizontal: spacing.sm },
   placeCard: { gap: spacing.sm },
-  progress: {
+  progress: { gap: spacing.tight, paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
+  progressSegment: { borderRadius: 2, borderTopWidth: 1, flex: 1, height: 6 },
+  progressTrack: {
+    borderRadius: radii.xs,
     flexDirection: 'row',
-    gap: spacing.tight,
-    paddingHorizontal: spacing.gutter,
-    paddingTop: spacing.xs,
+    gap: spacing.xxs,
+    padding: spacing.xxs,
   },
-  progressSegment: { borderRadius: radii.round, flex: 1, height: 4 },
   separator: { height: StyleSheet.hairlineWidth },
   stepFrame: {
     flex: 1,
@@ -379,12 +402,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   stepHeading: { alignItems: 'center', gap: spacing.xs },
-  stepIcon: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    height: 64,
-    justifyContent: 'center',
-    width: 64,
-  },
   stepSubtitle: { maxWidth: 330, paddingHorizontal: spacing.sm, textAlign: 'center' },
 });

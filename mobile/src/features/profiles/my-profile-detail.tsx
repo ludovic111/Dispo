@@ -10,12 +10,14 @@ import { ProfileSocialLinks, ProfileStatsCard, type ProfileStat } from './profil
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { GrainOverlay } from '@/components/ui/dispo-background';
 import { ListRow } from '@/components/ui/list-row';
 import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { scrimColor } from '@/components/ui/sheet';
 import { Tag } from '@/components/ui/tag';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import {
   profileHandle,
   profileSocialUrl,
@@ -28,7 +30,16 @@ import { schoolRoleLabel } from '@/features/schools/school-model';
 import { useMySchoolAffiliations } from '@/features/schools/school-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, onAccent, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
+import {
+  insetStyle,
+  minimumTouchTarget,
+  onAccent,
+  pressedStyle,
+  radii,
+  spacing,
+  surfaceStyle,
+  tint,
+} from '@/theme/tokens';
 
 const demoTileWidth = 112;
 
@@ -97,41 +108,53 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.identity}>
-        <Avatar name={profile.name} size={72} uri={profile.photoUrl} />
-        <View style={styles.identityCopy}>
-          <View style={styles.nameRow}>
-            <AppText numberOfLines={2} style={styles.name} variant="title2">
-              {profile.name}
-            </AppText>
-            {profile.isPremium ? (
-              <Ionicons
-                accessibilityLabel={t('Premium')}
-                color={palette.electric}
-                name="sparkles"
-                size={16}
-              />
-            ) : null}
+      <Card style={styles.caseCard} tone="elevated">
+        <View style={styles.identity}>
+          <View style={[styles.avatarWell, surfaceStyle(palette, 'default').container]}>
+            <Avatar name={profile.name} size={72} uri={profile.photoUrl} />
           </View>
-          <AppText color={palette.muted} variant="caption">
-            {profileHandle(profile.name)}
-          </AppText>
-          <AppText color={palette.muted} variant="caption">
-            {[
-              profile.instruments[0] ? t(profile.instruments[0]) : null,
-              profile.age ? formatSwiftPlaceholders(t('%lld ans'), profile.age) : null,
-              [
-                profile.neighborhood || profile.city,
-                profile.country ? `(${profile.country})` : null,
+          <View style={styles.identityCopy}>
+            <View style={styles.nameRow}>
+              <AppText numberOfLines={2} style={styles.name} variant="title2">
+                {profile.name}
+              </AppText>
+              {profile.isPremium ? <VerifiedBadge /> : null}
+            </View>
+            <AppText color={palette.bronze} variant="mono">
+              {profileHandle(profile.name)}
+            </AppText>
+            <AppText color={palette.muted} numberOfLines={2} variant="caption">
+              {[
+                profile.age ? formatSwiftPlaceholders(t('%lld ans'), profile.age) : null,
+                [
+                  profile.neighborhood || profile.city,
+                  profile.country ? `(${profile.country})` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' '),
               ]
                 .filter(Boolean)
-                .join(' '),
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </AppText>
+                .join(' · ') || t('Lieu non renseigné')}
+            </AppText>
+          </View>
         </View>
-      </View>
+        <View style={styles.chips}>
+          {profile.instruments.map((instrument) => (
+            <Tag
+              key={instrument}
+              label={`${t(instrument)} · ${t(
+                shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
+              )}`}
+            />
+          ))}
+          {!profile.instruments.length ? (
+            <DispoButton icon="add" onPress={edit} size="compact" variant="ghost">
+              {t('Ajouter un instrument')}
+            </DispoButton>
+          ) : null}
+        </View>
+        <ProfileStatsCard stats={stats} />
+      </Card>
 
       {profile.bio.trim() ? (
         <AppText variant="subheadline">
@@ -161,8 +184,6 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
         </View>
         <IconButton accessibilityLabel={t('Aperçu')} icon="eye-outline" onPress={preview} />
       </View>
-
-      <ProfileStatsCard stats={stats} />
 
       {schools.isSuccess && completion.percent < 100 ? (
         <Card style={styles.completion} tone="inset">
@@ -204,26 +225,15 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
       ) : null}
 
       <View style={styles.section}>
-        <SectionHeader
-          action={{ label: t('Modifier'), onPress: edit }}
-          title={t('Ce que je joue')}
-        />
+        <SectionHeader action={{ label: t('Modifier'), onPress: edit }} title={t('Mes genres')} />
         <View style={styles.chips}>
-          {profile.instruments.map((instrument) => (
-            <Tag
-              key={instrument}
-              label={`${t(instrument)} · ${t(
-                shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
-              )}`}
-            />
-          ))}
           {profile.genres.map((genre) => (
             <Tag color={palette.bronze} key={genre} label={t(genre)} />
           ))}
-          {!profile.instruments.length && !profile.genres.length ? (
-            <DispoButton icon="add" onPress={edit} size="compact" variant="ghost">
-              {t('Ajouter un instrument')}
-            </DispoButton>
+          {!profile.genres.length ? (
+            <AppText color={palette.muted} variant="caption">
+              {t('Ajoute tes genres pour être trouvé sur les bons SOS.')}
+            </AppText>
           ) : null}
         </View>
       </View>
@@ -275,7 +285,7 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
                 }
                 style={({ pressed }) => [
                   styles.videoTile,
-                  { backgroundColor: palette.inset, borderColor: palette.border },
+                  insetStyle(palette),
                   pressed && pressedStyle,
                 ]}
               >
@@ -288,6 +298,7 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
                 ) : (
                   <Ionicons color={palette.muted} name="videocam-outline" size={28} />
                 )}
+                <GrainOverlay />
                 <View style={styles.playBadge}>
                   <Ionicons color={onAccent} name="play" size={12} />
                 </View>
@@ -367,7 +378,11 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
 const styles = StyleSheet.create({
   actionMain: { flex: 1 },
   actions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  addVideo: { borderStyle: 'dashed', gap: spacing.xs, padding: spacing.sm },
+  // Tuile d'ajout : contour pointillé, la seule bordure dessinée par l'écran.
+  addVideo: { borderStyle: 'dashed', borderWidth: 1, gap: spacing.xs, padding: spacing.sm },
+  // Anneau relevé autour de la photo : la surface `default` posée dans l'étui `elevated`.
+  avatarWell: { borderRadius: radii.round, padding: spacing.xxs },
+  caseCard: { gap: spacing.sm },
   addVideoLabel: { textAlign: 'center' },
   carousel: { marginHorizontal: -spacing.gutter },
   carouselContent: { gap: spacing.xs, paddingHorizontal: spacing.gutter },
@@ -415,7 +430,6 @@ const styles = StyleSheet.create({
   videoTile: {
     alignItems: 'center',
     borderRadius: radii.md,
-    borderWidth: 1,
     height: 150,
     justifyContent: 'center',
     overflow: 'hidden',

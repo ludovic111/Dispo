@@ -8,9 +8,11 @@ import { IconButton } from './pressable';
 
 import { useDispoTheme } from '@/theme/theme-context';
 import {
-  billetInk,
   disabledStyle,
-  gradients,
+  elevation,
+  gradientsFor,
+  insetStyle,
+  keyHighlight,
   minimumTouchTarget,
   onAccent,
   pressedStyle,
@@ -83,7 +85,7 @@ export function SectionHeader({
   );
 }
 
-/** Bouton pilule de filtre / segment. */
+/** Bouton pilule de filtre / segment : en creux au repos, accent doux relevé quand actif. */
 export function PillButton({
   active = false,
   badge,
@@ -106,10 +108,12 @@ export function PillButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.pill,
-        {
-          backgroundColor: active ? tint(palette.electric, 0.16) : palette.cardMuted,
-          borderColor: active ? tint(palette.electric, 0.5) : palette.border,
-        },
+        active
+          ? [
+              { backgroundColor: palette.accentSoft, borderColor: tint(palette.electric, 0.5) },
+              elevation(1, palette),
+            ]
+          : insetStyle(palette),
         pressed && pressedStyle,
       ]}
     >
@@ -147,15 +151,21 @@ export function PromoBanner({
   subtitle: string;
   title: string;
 }) {
-  const foreground = style === 'hero' ? billetInk : onAccent;
+  const { palette } = useDispoTheme();
+  const gradients = gradientsFor(palette);
+  const foreground = style === 'hero' ? palette.accentInk : onAccent;
   const colors = style === 'hero' ? gradients.hero : gradients.premium;
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => pressed && pressedStyle}
+      style={({ pressed }) => [styles.promoShadow, elevation(2, palette), pressed && pressedStyle]}
     >
-      <LinearGradient colors={colors} style={styles.promo}>
+      <LinearGradient colors={colors} style={[styles.promo, { borderColor: palette.accentDeep }]}>
+        <View
+          pointerEvents="none"
+          style={[styles.promoHighlight, { backgroundColor: keyHighlight }]}
+        />
         <View style={[styles.promoIcon, { backgroundColor: tint(foreground, 0.14) }]}>
           <Ionicons color={foreground} name={icon} size={20} />
         </View>
@@ -209,7 +219,7 @@ const styles = StyleSheet.create({
   pill: {
     alignItems: 'center',
     borderRadius: radii.round,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.tight,
     minHeight: minimumTouchTarget,
@@ -220,10 +230,20 @@ const styles = StyleSheet.create({
   promo: {
     alignItems: 'center',
     borderRadius: radii.promo,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.sm,
+    overflow: 'hidden',
     padding: spacing.md,
   },
+  promoHighlight: {
+    height: 1,
+    left: radii.promo,
+    position: 'absolute',
+    right: radii.promo,
+    top: 0,
+  },
+  promoShadow: { borderRadius: radii.promo },
   promoCopy: { flex: 1, gap: 2 },
   promoIcon: {
     alignItems: 'center',

@@ -19,12 +19,18 @@ export function CountBadge({
 }) {
   const { palette } = useDispoTheme();
   if (count <= 0) return null;
-  const background = tone === 'signal' ? palette.signal : palette.electric;
-  const foreground = tone === 'signal' ? onAccent : palette.textInverse;
+  const background = tone === 'signal' ? palette.signal : palette.accent;
+  const foreground = tone === 'signal' ? onAccent : palette.accentInk;
   return (
     <View
       accessibilityLabel={String(count)}
-      style={[styles.badge, { backgroundColor: background }]}
+      style={[
+        styles.badge,
+        {
+          backgroundColor: background,
+          borderColor: tone === 'signal' ? palette.error : palette.accentDeep,
+        },
+      ]}
     >
       <AppText color={foreground} style={styles.text} variant="caption2" weight="bold">
         {count > 99 ? '99+' : count}
@@ -42,6 +48,7 @@ export function UnreadDot({ color }: { color?: string }) {
 const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
+    borderBottomWidth: 1,
     borderRadius: radii.round,
     justifyContent: 'center',
     minHeight: 22,

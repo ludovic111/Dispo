@@ -4,28 +4,24 @@ import { useEffect } from 'react';
 import { messageTabBadgeCount } from './tab-badge-model';
 
 import { useAuth } from '@/features/auth/auth-context';
-import type { GigSummary } from '@/features/gigs/gig-model';
 import {
-  countUnopenedCompatibleGigs,
+  countUnopenedMatchedGigs,
   readOpenedGigIds,
-  shouldFetchNextSosBadgePage,
-  SOS_BADGE_PAGE_SIZE,
   subscribeToOpenedGigs,
 } from '@/features/gigs/gig-opened-store';
-import { fetchGigsPage } from '@/features/gigs/gig-repository';
+import { gigKeys } from '@/features/gigs/gig-queries';
+import { fetchMyGigMatches } from '@/features/gigs/gig-repository';
 import {
   useGroupInvitations,
   useGroups,
   useGroupUnreadState,
 } from '@/features/groups/group-queries';
-import { useProfile } from '@/features/profiles/profile-queries';
 import { useSessions } from '@/features/sessions/session-queries';
 import { getSupabaseClient } from '@/services/supabase/client';
 import { uniqueRealtimeTopic } from '@/services/supabase/realtime-topic';
 
 const tabBadgeKeys = {
   directMessages: (userId: string) => ['tab-badges', 'direct-messages', userId] as const,
-  gigs: (userId: string) => ['tab-badges', 'gigs', userId] as const,
   openedGigs: (userId: string) => ['tab-badges', 'opened-gigs', userId] as const,
 };
 
@@ -39,20 +35,6 @@ async function fetchDirectUnreadCount(userId: string, signal?: AbortSignal): Pro
   const result = await (signal ? query.abortSignal(signal) : query);
   if (result.error) throw result.error;
   return result.count ?? 0;
-}
-
-async function fetchActiveGigsForBadge(signal?: AbortSignal): Promise<GigSummary[]> {
-  const gigs: GigSummary[] = [];
-  let page: number | null = 0;
-  let completedPages = 0;
-  while (shouldFetchNextSosBadgePage(completedPages, page)) {
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    const result = await fetchGigsPage(page, SOS_BADGE_PAGE_SIZE, signal);
-    gigs.push(...result.items);
-    page = result.nextPage;
-    completedPages += 1;
-  }
-  return gigs;
 }
 
 export interface TabBadgeCounts {
@@ -69,16 +51,16 @@ export function useTabBadgeCounts(): TabBadgeCounts {
   const groups = useGroups();
   const invitations = useGroupInvitations();
   const groupUnread = useGroupUnreadState(groups.data ?? []);
-  const profile = useProfile(userId, userId);
   const directMessages = useQuery({
     enabled: Boolean(userId),
     queryFn: ({ signal }) => fetchDirectUnreadCount(userId, signal),
     queryKey: tabBadgeKeys.directMessages(userId),
   });
+  // Même requête que le fil « SOS » : le score serveur décide de la compatibilité.
   const gigs = useQuery({
     enabled: Boolean(userId),
-    queryFn: ({ signal }) => fetchActiveGigsForBadge(signal),
-    queryKey: tabBadgeKeys.gigs(userId),
+    queryFn: ({ signal }) => fetchMyGigMatches(100, signal),
+    queryKey: gigKeys.myMatches(userId),
   });
   const openedGigs = useQuery({
     enabled: Boolean(userId),
@@ -112,7 +94,7 @@ export function useTabBadgeCounts(): TabBadgeCounts {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'gig_requests' },
-        () => void queryClient.invalidateQueries({ queryKey: tabBadgeKeys.gigs(userId) }),
+        () => void queryClient.invalidateQueries({ queryKey: gigKeys.myMatches(userId) }),
       )
       .subscribe();
     return () => {
@@ -120,7 +102,6 @@ export function useTabBadgeCounts(): TabBadgeCounts {
     };
   }, [queryClient, userId]);
 
-  const viewer = profile.data;
   return {
     messages: messageTabBadgeCount(
       directMessages.data ?? 0,
@@ -129,8 +110,8 @@ export function useTabBadgeCounts(): TabBadgeCounts {
     ),
     sessions: sessions.data?.pendingResponses.length ?? 0,
     sos:
-      viewer && gigs.data && openedGigs.data
-        ? countUnopenedCompatibleGigs(gigs.data, viewer, openedGigs.data)
+      gigs.data && openedGigs.data
+        ? countUnopenedMatchedGigs(gigs.data, userId, openedGigs.data)
         : 0,
   };
 }

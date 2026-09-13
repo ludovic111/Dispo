@@ -1,3 +1,7 @@
+import {
+  normalizeInstrumentLevels,
+  normalizeInstruments,
+} from '@/features/onboarding/onboarding-model';
 import type { Json } from '@/services/supabase/database.types';
 
 export interface EditableProfile {
@@ -45,19 +49,13 @@ export function normalizeEditableProfile(profile: EditableProfile) {
   const name = profile.name.trim().replace(/\s+/g, ' ');
   const city = profile.city.trim().replace(/\s+/g, ' ');
   const postalCode = profile.postalCode.trim().toUpperCase();
-  const instruments = [
-    ...new Set(profile.instruments.map((value) => value.trim()).filter(Boolean)),
-  ];
+  const instruments = normalizeInstruments(profile.instruments);
   if (name.length < 2 || instruments.length === 0 || city.length < 2 || postalCode.length < 3) {
     throw new Error('profile_required_fields_missing');
   }
-  const instrumentLevels = Object.fromEntries(
-    instruments.flatMap((instrument) => {
-      const level = profile.instrumentLevels[instrument];
-      return level && levelOrder.includes(level as (typeof levelOrder)[number])
-        ? [[instrument, level]]
-        : [];
-    }),
+  const instrumentLevels: Record<string, string> = normalizeInstrumentLevels(
+    profile.instrumentLevels,
+    instruments,
   );
   const globalLevel = instruments
     .map((instrument) => instrumentLevels[instrument])
@@ -83,6 +81,19 @@ export function normalizeEditableProfile(profile: EditableProfile) {
     neighborhood: [postalCode, city].filter(Boolean).join(' '),
     postal_code: postalCode,
     socials,
+  };
+}
+
+/**
+ * Ramène les instruments hérités d'un profil (« Saxophone ») vers ceux des sélecteurs
+ * actuels, pour que la fiche d'édition affiche la bonne puce présélectionnée.
+ */
+export function withCurrentInstruments(profile: EditableProfile): EditableProfile {
+  const instruments = normalizeInstruments(profile.instruments);
+  return {
+    ...profile,
+    instrumentLevels: normalizeInstrumentLevels(profile.instrumentLevels, instruments),
+    instruments,
   };
 }
 

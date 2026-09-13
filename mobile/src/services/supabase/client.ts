@@ -22,6 +22,7 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     publicEnvironment.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       auth: {
+        experimental: { passkey: true },
         storage: secureSessionStorage,
         autoRefreshToken: true,
         persistSession: true,

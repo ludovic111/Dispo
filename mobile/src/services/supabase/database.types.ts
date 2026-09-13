@@ -28,6 +28,24 @@ export type Database = {
   };
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string;
+          updated_at: string;
+          value: Json;
+        };
+        Insert: {
+          key: string;
+          updated_at?: string;
+          value: Json;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          value?: Json;
+        };
+        Relationships: [];
+      };
       blocks: {
         Row: {
           blocked_id: string;
@@ -203,6 +221,7 @@ export type Database = {
         Row: {
           created_at: string;
           gig_id: string;
+          host_contacted_at: string | null;
           id: string;
           instrument: string | null;
           message: string;
@@ -212,6 +231,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           gig_id: string;
+          host_contacted_at?: string | null;
           id?: string;
           instrument?: string | null;
           message?: string;
@@ -221,6 +241,7 @@ export type Database = {
         Update: {
           created_at?: string;
           gig_id?: string;
+          host_contacted_at?: string | null;
           id?: string;
           instrument?: string | null;
           message?: string;
@@ -642,6 +663,7 @@ export type Database = {
           edited_at: string | null;
           group_id: string;
           id: string;
+          moderated: boolean;
           reply_to_id: string | null;
           sender_id: string;
           text: string;
@@ -656,6 +678,7 @@ export type Database = {
           edited_at?: string | null;
           group_id: string;
           id?: string;
+          moderated?: boolean;
           reply_to_id?: string | null;
           sender_id: string;
           text: string;
@@ -670,6 +693,7 @@ export type Database = {
           edited_at?: string | null;
           group_id?: string;
           id?: string;
+          moderated?: boolean;
           reply_to_id?: string | null;
           sender_id?: string;
           text?: string;
@@ -767,6 +791,7 @@ export type Database = {
           delivered_at: string | null;
           edited_at: string | null;
           id: string;
+          moderated: boolean;
           read_at: string | null;
           sender_id: string;
           text: string;
@@ -782,6 +807,7 @@ export type Database = {
           delivered_at?: string | null;
           edited_at?: string | null;
           id?: string;
+          moderated?: boolean;
           read_at?: string | null;
           sender_id: string;
           text: string;
@@ -797,6 +823,7 @@ export type Database = {
           delivered_at?: string | null;
           edited_at?: string | null;
           id?: string;
+          moderated?: boolean;
           read_at?: string | null;
           sender_id?: string;
           text?: string;
@@ -830,6 +857,7 @@ export type Database = {
           name: string;
           photo_url: string | null;
           repertoire: Json;
+          school_id: string | null;
           updated_at: string;
         };
         Insert: {
@@ -843,6 +871,7 @@ export type Database = {
           name: string;
           photo_url?: string | null;
           repertoire?: Json;
+          school_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -856,6 +885,7 @@ export type Database = {
           name?: string;
           photo_url?: string | null;
           repertoire?: Json;
+          school_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -864,6 +894,13 @@ export type Database = {
             columns: ['leader_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'music_groups_school_id_fkey';
+            columns: ['school_id'];
+            isOneToOne: false;
+            referencedRelation: 'music_schools';
             referencedColumns: ['id'];
           },
         ];
@@ -933,6 +970,7 @@ export type Database = {
           city: string;
           country_code: string;
           created_at: string;
+          free_workshops_until: string | null;
           id: string;
           is_active: boolean;
           is_verified: boolean;
@@ -947,6 +985,7 @@ export type Database = {
           city: string;
           country_code?: string;
           created_at?: string;
+          free_workshops_until?: string | null;
           id?: string;
           is_active?: boolean;
           is_verified?: boolean;
@@ -961,6 +1000,7 @@ export type Database = {
           city?: string;
           country_code?: string;
           created_at?: string;
+          free_workshops_until?: string | null;
           id?: string;
           is_active?: boolean;
           is_verified?: boolean;
@@ -1095,6 +1135,8 @@ export type Database = {
           level: string;
           location_precision: string;
           longitude: number | null;
+          moderation_reason: string | null;
+          moderation_status: string;
           name: string;
           neighborhood: string;
           photo_url: string | null;
@@ -1103,6 +1145,8 @@ export type Database = {
           rating_count: number;
           repertoire: string[];
           socials: Json;
+          strikes: number;
+          suspended_until: string | null;
           updated_at: string;
         };
         Insert: {
@@ -1127,6 +1171,8 @@ export type Database = {
           level?: string;
           location_precision?: string;
           longitude?: number | null;
+          moderation_reason?: string | null;
+          moderation_status?: string;
           name?: string;
           neighborhood?: string;
           photo_url?: string | null;
@@ -1135,6 +1181,8 @@ export type Database = {
           rating_count?: number;
           repertoire?: string[];
           socials?: Json;
+          strikes?: number;
+          suspended_until?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -1159,6 +1207,8 @@ export type Database = {
           level?: string;
           location_precision?: string;
           longitude?: number | null;
+          moderation_reason?: string | null;
+          moderation_status?: string;
           name?: string;
           neighborhood?: string;
           photo_url?: string | null;
@@ -1167,6 +1217,8 @@ export type Database = {
           rating_count?: number;
           repertoire?: string[];
           socials?: Json;
+          strikes?: number;
+          suspended_until?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -1343,6 +1395,7 @@ export type Database = {
       };
       reports: {
         Row: {
+          action_taken: string | null;
           created_at: string;
           id: string;
           message_id: string | null;
@@ -1350,10 +1403,13 @@ export type Database = {
           reason: string;
           reported_id: string;
           reporter_id: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           school_message_id: string | null;
           status: string;
         };
         Insert: {
+          action_taken?: string | null;
           created_at?: string;
           id?: string;
           message_id?: string | null;
@@ -1361,10 +1417,13 @@ export type Database = {
           reason: string;
           reported_id: string;
           reporter_id: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           school_message_id?: string | null;
           status?: string;
         };
         Update: {
+          action_taken?: string | null;
           created_at?: string;
           id?: string;
           message_id?: string | null;
@@ -1372,6 +1431,8 @@ export type Database = {
           reason?: string;
           reported_id?: string;
           reporter_id?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           school_message_id?: string | null;
           status?: string;
         };
@@ -1393,6 +1454,13 @@ export type Database = {
           {
             foreignKeyName: 'reports_reporter_id_fkey';
             columns: ['reporter_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'reports_reviewed_by_fkey';
+            columns: ['reviewed_by'];
             isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
@@ -1483,6 +1551,41 @@ export type Database = {
           },
         ];
       };
+      school_premium_grants: {
+        Row: {
+          created_at: string;
+          ends_at: string;
+          id: string;
+          note: string | null;
+          school_id: string;
+          starts_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          ends_at: string;
+          id?: string;
+          note?: string | null;
+          school_id: string;
+          starts_at: string;
+        };
+        Update: {
+          created_at?: string;
+          ends_at?: string;
+          id?: string;
+          note?: string | null;
+          school_id?: string;
+          starts_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'school_premium_grants_school_id_fkey';
+            columns: ['school_id'];
+            isOneToOne: false;
+            referencedRelation: 'music_schools';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       song_catalog: {
         Row: {
           album_title: string | null;
@@ -1558,28 +1661,76 @@ export type Database = {
         };
         Relationships: [];
       };
+      song_comment_reactions: {
+        Row: {
+          comment_id: string;
+          created_at: string;
+          emoji: string;
+          profile_id: string;
+          removed_at: string | null;
+        };
+        Insert: {
+          comment_id: string;
+          created_at?: string;
+          emoji: string;
+          profile_id: string;
+          removed_at?: string | null;
+        };
+        Update: {
+          comment_id?: string;
+          created_at?: string;
+          emoji?: string;
+          profile_id?: string;
+          removed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'song_comment_reactions_comment_id_fkey';
+            columns: ['comment_id'];
+            isOneToOne: false;
+            referencedRelation: 'song_comments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'song_comment_reactions_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       song_comments: {
         Row: {
           author_id: string | null;
           created_at: string;
+          edited_at: string | null;
           group_id: string;
           id: string;
+          moderated: boolean;
+          parent_id: string | null;
           song_id: string;
           text: string;
         };
         Insert: {
           author_id?: string | null;
           created_at?: string;
+          edited_at?: string | null;
           group_id: string;
           id?: string;
+          moderated?: boolean;
+          parent_id?: string | null;
           song_id: string;
           text: string;
         };
         Update: {
           author_id?: string | null;
           created_at?: string;
+          edited_at?: string | null;
           group_id?: string;
           id?: string;
+          moderated?: boolean;
+          parent_id?: string | null;
           song_id?: string;
           text?: string;
         };
@@ -1596,6 +1747,13 @@ export type Database = {
             columns: ['group_id'];
             isOneToOne: false;
             referencedRelation: 'music_groups';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'song_comments_parent_id_fkey';
+            columns: ['parent_id'];
+            isOneToOne: false;
+            referencedRelation: 'song_comments';
             referencedColumns: ['id'];
           },
         ];
@@ -1761,6 +1919,15 @@ export type Database = {
         Returns: undefined;
       };
       add_personal_song: { Args: { p_song: Json }; Returns: string };
+      admin_set_moderation_status: {
+        Args: {
+          p_profile: string;
+          p_reason?: string;
+          p_status: string;
+          p_until?: string;
+        };
+        Returns: Json;
+      };
       apply_approved_song_order: {
         Args: { p_items: Json; p_song_ids: string[] };
         Returns: Json;
@@ -1786,7 +1953,7 @@ export type Database = {
         Args: { p_claim_id: string; p_notification_id: string };
         Returns: number;
       };
-      can_create_music_group: { Args: never; Returns: boolean };
+      can_create_music_group: { Args: { p_school?: string }; Returns: boolean };
       can_see_full_gig: {
         Args: { gig: Database['public']['Tables']['gig_requests']['Row'] };
         Returns: boolean;
@@ -1811,6 +1978,7 @@ export type Database = {
           user_id: string;
         }[];
       };
+      claim_revenuecat_event: { Args: { p_event_id: string }; Returns: boolean };
       claim_song_enrichment_jobs: {
         Args: { p_claim_id: string; p_limit?: number; p_song_id?: string };
         Returns: {
@@ -1831,6 +1999,19 @@ export type Database = {
       complete_song_enrichment_job: {
         Args: { p_claim_id: string; p_result: Json; p_song_id: string };
         Returns: boolean;
+      };
+      consume_edge_call: {
+        Args: {
+          p_fn: string;
+          p_limit: number;
+          p_user: string;
+          p_window: string;
+        };
+        Returns: boolean;
+      };
+      contact_gig_applicant: {
+        Args: { p_application: string; p_text: string };
+        Returns: string;
       };
       create_auto_sos: {
         Args: {
@@ -1868,6 +2049,10 @@ export type Database = {
         Args: { p_message_id: string; p_text: string };
         Returns: undefined;
       };
+      edit_song_comment: {
+        Args: { p_comment: string; p_text: string };
+        Returns: undefined;
+      };
       enqueue_song_enrichment: { Args: { p_song_id: string }; Returns: boolean };
       enqueue_song_enrichment_candidate: {
         Args: { p_apple_id: string; p_apple_url: string };
@@ -1883,6 +2068,7 @@ export type Database = {
         };
         Returns: boolean;
       };
+      get_app_settings: { Args: never; Returns: Json };
       get_gig_request_location: {
         Args: { p_gig_id: string };
         Returns: {
@@ -1909,7 +2095,15 @@ export type Database = {
           public_location_label: string;
         }[];
       };
+      get_my_account_status: { Args: never; Returns: Json };
+      get_my_moderation_state: { Args: never; Returns: Json };
       get_my_subscription: { Args: never; Returns: Json };
+      gig_applicants: { Args: { p_gig: string }; Returns: Json[] };
+      gig_candidate_count: { Args: { p_gig: string }; Returns: number };
+      gig_candidates: {
+        Args: { p_gig: string; p_limit?: number };
+        Returns: Json[];
+      };
       is_conversation_member: { Args: { conv_id: string }; Returns: boolean };
       is_group_leader: { Args: { p_group_id: string }; Returns: boolean };
       is_group_member: { Args: { p_group_id: string }; Returns: boolean };
@@ -1941,6 +2135,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      leave_group: { Args: { p_group: string }; Returns: boolean };
       leave_music_school: { Args: { p_school_id: string }; Returns: boolean };
       mark_conversation_read: { Args: { conv_id: string }; Returns: undefined };
       mark_messages_delivered: { Args: never; Returns: undefined };
@@ -1995,6 +2190,7 @@ export type Database = {
           photo_url: string;
         }[];
       };
+      my_gig_matches: { Args: { p_limit?: number }; Returns: Json[] };
       my_group_invitations: {
         Args: never;
         Returns: {
@@ -2090,6 +2286,7 @@ export type Database = {
           edited_at: string | null;
           group_id: string;
           id: string;
+          moderated: boolean;
           reply_to_id: string | null;
           sender_id: string;
           text: string;
@@ -2114,6 +2311,7 @@ export type Database = {
           delivered_at: string | null;
           edited_at: string | null;
           id: string;
+          moderated: boolean;
           read_at: string | null;
           sender_id: string;
           text: string;
@@ -2150,6 +2348,10 @@ export type Database = {
       release_push_notification_claim: {
         Args: { p_claim_id: string };
         Returns: number;
+      };
+      release_revenuecat_event: {
+        Args: { p_event_id: string };
+        Returns: undefined;
       };
       release_song_enrichment_claim: {
         Args: { p_claim_id: string };
@@ -2265,6 +2467,10 @@ export type Database = {
       };
       set_message_reaction: {
         Args: { p_emoji: string; p_message: string };
+        Returns: undefined;
+      };
+      set_song_comment_reaction: {
+        Args: { p_comment: string; p_emoji: string };
         Returns: undefined;
       };
       transfer_group_leadership: {

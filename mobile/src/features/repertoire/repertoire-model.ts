@@ -68,3 +68,13 @@ export function personalArrangementChanges(original: GroupSong, desired: GroupSo
   }
   return result;
 }
+
+/**
+ * Copie d'affichage d'un morceau sans sa pochette : appliquée quand le réglage
+ * « Masquer les pochettes d'album » est actif. Sans `artworkUrl`, la ligne et
+ * la fiche montrent la tuile de repli du thème et aucun badge iTunes. Le
+ * morceau enregistré, lui, garde sa pochette.
+ */
+export function withoutSongArtwork<T extends Pick<GroupSong, 'artworkUrl'>>(song: T): T {
+  return song.artworkUrl === null ? song : { ...song, artworkUrl: null };
+}

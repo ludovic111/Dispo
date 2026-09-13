@@ -15,6 +15,7 @@ import { LegalLinks } from '@/components/ui/legal-links';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { AuthCase } from '@/features/auth/auth-case';
 import { useAuth } from '@/features/auth/auth-context';
 import {
   requestEmailSignInLink,
@@ -24,8 +25,13 @@ import {
   signInWithPassword,
   signUpWithPassword,
 } from '@/features/auth/auth-service';
+import {
+  passkeyWasCancelled,
+  signInWithPasskey,
+  supportsPasskeys,
+} from '@/features/auth/passkey-service';
 import { useDispoTheme } from '@/theme/theme-context';
-import { disabledStyle, radii, spacing, tint } from '@/theme/tokens';
+import { disabledStyle, radii, spacing } from '@/theme/tokens';
 
 interface Credentials {
   email: string;
@@ -45,6 +51,7 @@ export default function SignInScreen() {
   const [resetting, setResetting] = useState(false);
   const [appleWorking, setAppleWorking] = useState(false);
   const [googleWorking, setGoogleWorking] = useState(false);
+  const [passkeyWorking, setPasskeyWorking] = useState(false);
   const schema = useMemo(
     () =>
       z.object({
@@ -178,6 +185,32 @@ export default function SignInScreen() {
     }
   };
 
+  const authenticateWithPasskey = async () => {
+    if (
+      passkeyWorking ||
+      formState.isSubmitting ||
+      appleWorking ||
+      googleWorking ||
+      emailLinkWorking ||
+      resetting
+    )
+      return;
+    setPasskeyWorking(true);
+    setServerError(null);
+    setInfoText(null);
+    try {
+      await signInWithPasskey();
+      router.replace('/');
+    } catch (error) {
+      if (!passkeyWasCancelled(error))
+        setServerError(
+          t('Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.'),
+        );
+    } finally {
+      setPasskeyWorking(false);
+    }
+  };
+
   return (
     <Screen>
       <KeyboardAvoidingView
@@ -217,11 +250,11 @@ export default function SignInScreen() {
                     style={[styles.appleButton, appleWorking && disabledStyle]}
                   />
                   <View style={styles.separator}>
-                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                    <View style={[styles.separatorLine, { backgroundColor: palette.edge }]} />
                     <AppText color={palette.muted} style={styles.separatorText} variant="caption">
                       {t('ou par e-mail')}
                     </AppText>
-                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                    <View style={[styles.separatorLine, { backgroundColor: palette.edge }]} />
                   </View>
                 </>
               ) : null}
@@ -244,16 +277,33 @@ export default function SignInScreen() {
                     {t('Se connecter avec Google')}
                   </DispoButton>
                   <View style={styles.separator}>
-                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                    <View style={[styles.separatorLine, { backgroundColor: palette.edge }]} />
                     <AppText color={palette.muted} style={styles.separatorText} variant="caption">
                       {t('ou par e-mail')}
                     </AppText>
-                    <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
+                    <View style={[styles.separatorLine, { backgroundColor: palette.edge }]} />
                   </View>
                 </>
               ) : null}
 
-              <Card padding={spacing.gutter} style={styles.card} tone="elevated">
+              {supportsPasskeys() && !registering ? (
+                <DispoButton
+                  disabled={
+                    !configurationReady ||
+                    passkeyWorking ||
+                    formState.isSubmitting ||
+                    appleWorking ||
+                    googleWorking
+                  }
+                  loading={passkeyWorking}
+                  icon="key"
+                  onPress={() => void authenticateWithPasskey()}
+                  variant="secondary"
+                >
+                  {t('Se connecter avec une clé d’accès')}
+                </DispoButton>
+              ) : null}
+              <AuthCase>
                 <SegmentedControl<AuthMode>
                   onChange={(mode) => selectMode(mode === 'signup')}
                   options={[
@@ -264,21 +314,13 @@ export default function SignInScreen() {
                 />
 
                 {!configurationReady ? (
-                  <View
-                    style={[
-                      styles.notice,
-                      {
-                        backgroundColor: tint(palette.signal, 0.1),
-                        borderColor: tint(palette.signal, 0.33),
-                      },
-                    ]}
-                  >
-                    <AppText color={palette.signal} variant="footnote">
+                  <Card accessibilityRole="alert" padding={spacing.sm} tone="inset">
+                    <AppText color={palette.warning} variant="footnote">
                       {t(
                         'Configuration Supabase manquante. Copie `.env.example` vers `.env.local` et renseigne uniquement les valeurs publiques.',
                       )}
                     </AppText>
-                  </View>
+                  </Card>
                 ) : null}
 
                 <Controller
@@ -362,7 +404,7 @@ export default function SignInScreen() {
                     </DispoButton>
                   </>
                 ) : null}
-              </Card>
+              </AuthCase>
 
               {serverError || authCallbackError ? (
                 <AppText color={palette.error} style={styles.status} variant="caption">
@@ -392,7 +434,6 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   appleButton: { height: 50, width: '100%' },
   authBlock: { gap: spacing.md, width: '100%' },
-  card: { gap: spacing.md, width: '100%' },
   content: {
     alignItems: 'center',
     gap: spacing.xl,
@@ -402,7 +443,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   hero: { alignItems: 'center', gap: spacing.sm, width: '100%' },
   legal: { maxWidth: 360, paddingHorizontal: spacing.sm, textAlign: 'center' },
-  notice: { borderRadius: radii.button, borderWidth: 1, padding: spacing.sm },
   scroll: {
     alignItems: 'center',
     flexGrow: 1,

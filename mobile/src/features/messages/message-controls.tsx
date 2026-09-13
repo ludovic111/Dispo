@@ -64,10 +64,7 @@ export function TypingBubble() {
   return (
     <View accessibilityLabel={t('En train d’écrire…')} style={styles.typingRow}>
       <View
-        style={[
-          styles.typingBubble,
-          { backgroundColor: palette.card, borderColor: palette.border },
-        ]}
+        style={[styles.typingBubble, { backgroundColor: palette.card, borderColor: palette.edge }]}
       >
         {[0, 1, 2].map((dot) => (
           <View

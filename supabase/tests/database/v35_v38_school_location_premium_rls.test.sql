@@ -1,4 +1,6 @@
--- Tests transactionnels v35-v43. A executer uniquement sur la base locale :
+-- Tests transactionnels v35-v43, adaptes aux regles 2.5 (formules Groupe /
+-- Premium, automatisation gratuite, garde de candidature). A executer
+-- uniquement sur la base locale :
 --   docker exec -i supabase_db_dispo \
 --     psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
 --     < supabase/tests/database/v35_v38_school_location_premium_rls.test.sql
@@ -43,38 +45,35 @@ where id in (
   '00000000-0000-4000-8000-0000000000b2',
   '00000000-0000-4000-8000-0000000000c3'
 );
-
--- Depuis la beta 2.4, tout nouveau profil est Premium par trigger. On vérifie
--- d'abord ce contrat courant, puis on neutralise ce seul wrapper dans la
--- transaction afin de continuer à exercer les garde-fous gratuits v35-v43.
--- Le ROLLBACK final réactive automatiquement le trigger et annule les profils.
-do $$
-begin
-  if exists (
-    select 1
-    from public.profiles
-    where id in (
-      '00000000-0000-4000-8000-0000000000a1',
-      '00000000-0000-4000-8000-0000000000b2',
-      '00000000-0000-4000-8000-0000000000c3'
-    )
-      and not is_premium
-  ) then
-    raise exception 'Beta Premium trigger did not cover a new profile';
-  end if;
-end;
-$$;
-
-alter table public.profiles
-  disable trigger profiles_00_enforce_beta_premium;
-
+-- c3 postule plus loin comme batteur : il doit jouer l'instrument (garde 2.5).
 update public.profiles
-set is_premium = false
+set instruments = array['Piano', 'Batterie']::text[]
+where id = '00000000-0000-4000-8000-0000000000c3';
+
+-- Depuis 2.5, profiles.is_premium reflete private.has_active_premium (achat
+-- canonique ou octroi d'ecole). Ces comptes n'ont aucun etat d'abonnement :
+-- ils demarrent en formule free.
+select private.refresh_profile_premium(id)
+from public.profiles
 where id in (
   '00000000-0000-4000-8000-0000000000a1',
   '00000000-0000-4000-8000-0000000000b2',
   '00000000-0000-4000-8000-0000000000c3'
 );
+do $$
+begin
+  if exists (
+    select 1 from public.profiles
+    where id in (
+      '00000000-0000-4000-8000-0000000000a1',
+      '00000000-0000-4000-8000-0000000000b2',
+      '00000000-0000-4000-8000-0000000000c3'
+    ) and is_premium
+  ) then
+    raise exception 'Fresh test profiles are unexpectedly Premium';
+  end if;
+end;
+$$;
 
 -- Ecoles supplementaires pour exercer la limite de cinq affiliations.
 insert into public.music_schools(slug, name, short_name, city, country_code)
@@ -340,11 +339,38 @@ begin
 end;
 $$;
 
--- Le premier groupe dirige est gratuit, le deuxieme exige Premium.
+-- 2.5 : aucun groupe ordinaire sans abonnement (le trigger de quota refuse
+-- avant la RLS). La formule Groupe autorise ensuite exactement un groupe.
+do $$
+begin
+  begin
+    insert into public.music_groups(id, name, leader_id)
+    values (
+      '10000000-0000-4000-8000-000000000001',
+      'Groupe refuse sans abonnement',
+      '00000000-0000-4000-8000-0000000000a1'
+    );
+    raise exception 'Free account unexpectedly created a regular group';
+  exception
+    when sqlstate '42501' then
+      if sqlerrm <> 'subscription_required_for_group'
+         and sqlerrm not like '%row-level security%' then raise; end if;
+  end;
+end;
+$$;
+set local role service_role;
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000a1', 'group',
+  '2099-01-01T00:00:00Z'::timestamptz, '2026-09-01T00:00:00Z'::timestamptz
+);
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
+);
 insert into public.music_groups(id, name, leader_id)
 values (
   '10000000-0000-4000-8000-000000000001',
-  'Premier groupe gratuit',
+  'Premier groupe dirige',
   '00000000-0000-4000-8000-0000000000a1'
 );
 do $$
@@ -356,44 +382,74 @@ begin
       'Deuxieme groupe bloque',
       '00000000-0000-4000-8000-0000000000a1'
     );
-    raise exception 'Second non-Premium group unexpectedly accepted';
+    raise exception 'Second Groupe-tier group unexpectedly accepted';
   exception
     when sqlstate '42501' then
-      if sqlerrm <> 'premium_required_for_additional_group' then raise; end if;
+      if sqlerrm <> 'subscription_required_for_group'
+         and sqlerrm not like '%row-level security%' then raise; end if;
   end;
 end;
 $$;
 
--- Auto-SOS est Premium cote serveur. Une valeur existante reste cependant
--- desactivable apres expiration pour ne jamais enfermer le leader.
+-- 2.5 : Auto-SOS est gratuit pour toutes les formules ; seul le leader du
+-- groupe peut le configurer. A (formule Groupe) l'active, puis le desactive
+-- pour la suite du scenario.
+update public.music_groups
+set auto_sos_enabled = true, auto_sos_min_level = null
+where id = '10000000-0000-4000-8000-000000000001';
+do $$
+begin
+  if not exists (
+    select 1 from public.music_groups
+    where id = '10000000-0000-4000-8000-000000000001'
+      and auto_sos_enabled
+  ) then
+    raise exception 'Groupe-tier leader could not enable auto-SOS';
+  end if;
+end;
+$$;
+-- B n'est ni membre ni leader : la RLS ne lui expose aucune ligne.
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000b2', true
+);
+do $$
+declare
+  v_rows integer;
+begin
+  update public.music_groups
+  set auto_sos_enabled = false
+  where id = '10000000-0000-4000-8000-000000000001';
+  get diagnostics v_rows = row_count;
+  if v_rows <> 0 then
+    raise exception 'Non-leader unexpectedly reconfigured auto-SOS through RLS';
+  end if;
+end;
+$$;
+-- Meme en contournant la RLS, le trigger exige le leader du groupe.
+set local role postgres;
 do $$
 begin
   begin
     update public.music_groups
     set name = 'Nom qui doit rollback',
-        auto_sos_enabled = true,
-        auto_sos_min_level = null
+        auto_sos_enabled = false
     where id = '10000000-0000-4000-8000-000000000001';
-    raise exception 'Non-Premium auto-SOS unexpectedly accepted';
+    raise exception 'Non-leader auto-SOS change unexpectedly accepted';
   exception
     when sqlstate '42501' then
-      if sqlerrm <> 'premium_required_for_auto_sos' then raise; end if;
+      if sqlerrm <> 'only_group_leader_can_configure_auto_sos' then raise; end if;
   end;
   if not exists (
     select 1 from public.music_groups
     where id = '10000000-0000-4000-8000-000000000001'
-      and name = 'Premier groupe gratuit'
-      and not auto_sos_enabled
+      and name = 'Premier groupe dirige'
+      and auto_sos_enabled
   ) then
-    raise exception 'Rejected free auto-SOS left partial group settings';
+    raise exception 'Rejected auto-SOS change left partial group settings';
   end if;
 end;
 $$;
-set local role postgres;
 select set_config('request.jwt.claim.sub', '', true);
-update public.music_groups
-set auto_sos_enabled = true, auto_sos_min_level = null
-where id = '10000000-0000-4000-8000-000000000001';
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
@@ -621,60 +677,50 @@ begin
 end;
 $$;
 
--- v41 inclut maintenant le rappel dans la meme transaction que le noyau et
--- l'adresse. Le trigger Premium doit donc rollbacker TOUT le payload gratuit.
+-- v41 inclut le rappel dans la meme transaction que le noyau et l'adresse.
+-- 2.5 : les rappels configurables sont gratuits ; un leader en formule Groupe
+-- persiste donc les trois dimensions ensemble.
+select public.save_group_events_with_locations(
+  '10000000-0000-4000-8000-000000000001',
+  jsonb_build_array(jsonb_build_object(
+    'id', '30000000-0000-4000-8000-000000000001',
+    'kind', 'Répétition',
+    'title', 'Edition Groupe atomique',
+    'public_location_label', 'Carouge Groupe',
+    'date', (
+      select to_jsonb(e.date) from public.group_events e
+      where e.id = '30000000-0000-4000-8000-000000000001'
+    ),
+    'reminder_lead_days', 7,
+    'exact_address', 'Route Groupe 7',
+    'clear_exact_address', false,
+    'clear_reminder', false
+  )),
+  'update'
+);
 do $$
 begin
-  begin
-    perform public.save_group_events_with_locations(
-      '10000000-0000-4000-8000-000000000001',
-      jsonb_build_array(jsonb_build_object(
-        'id', '30000000-0000-4000-8000-000000000001',
-        'kind', 'Répétition',
-        'title', 'Edition gratuite a rollback',
-        'public_location_label', 'Adresse publique a rollback',
-        'date', (
-          select to_jsonb(e.date) from public.group_events e
-          where e.id = '30000000-0000-4000-8000-000000000001'
-        ),
-        'reminder_lead_days', 7,
-        'exact_address', 'Adresse exacte a rollback',
-        'clear_exact_address', false,
-        'clear_reminder', false
-      )),
-      'update'
-    );
-    raise exception 'Non-Premium atomic reminder update unexpectedly succeeded';
-  exception
-    when sqlstate '42501' then
-      if sqlerrm <> 'premium_required_for_configurable_reminders' then raise; end if;
-  end;
-
   if not exists (
     select 1 from public.group_events e
+    cross join lateral public.get_group_event_location(e.id) l
     where e.id = '30000000-0000-4000-8000-000000000001'
-      and e.title = 'Evenement adresse test'
-      and e.public_location_label = 'Carouge preserve'
-      and e.reminder_lead_days is null
+      and e.title = 'Edition Groupe atomique'
+      and e.public_location_label = 'Carouge Groupe'
+      and e.reminder_lead_days = 7
+      and l.exact_address = 'Route Groupe 7'
   ) then
-    raise exception 'Rejected free reminder left a partial public update';
-  end if;
-  if not exists (
-    select 1 from public.get_group_event_location(
-      '30000000-0000-4000-8000-000000000001'
-    ) where exact_address = 'Route ultra secrete 7'
-  ) then
-    raise exception 'Rejected free reminder changed the private address';
+    raise exception 'Non-Premium event reminder was not saved atomically';
   end if;
 end;
 $$;
 
 -- Le meme payload reussit pour un Premium canonique et persiste les trois
--- dimensions ensemble. Le droit est ensuite revoque pour la suite du test.
+-- dimensions ensemble. Le droit est ensuite revoque (retour free) pour la
+-- suite du test : les donnees existantes restent modifiables apres expiration.
 set local role service_role;
-select public.apply_revenuecat_premium_state(
-  '00000000-0000-4000-8000-0000000000a1', true,
-  '2099-01-01T00:00:00Z'::timestamptz
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000a1', 'premium',
+  '2099-01-01T00:00:00Z'::timestamptz, '2026-09-01T00:01:00Z'::timestamptz
 );
 set local role authenticated;
 select set_config(
@@ -714,9 +760,8 @@ begin
 end;
 $$;
 set local role service_role;
-select public.apply_revenuecat_premium_state(
-  '00000000-0000-4000-8000-0000000000a1', false,
-  '2099-01-01T00:00:01Z'::timestamptz
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000a1', 'free', null, '2026-09-01T00:01:01Z'::timestamptz
 );
 set local role authenticated;
 select set_config(
@@ -775,40 +820,43 @@ select public.set_group_event_location(
   null, null, false
 );
 
--- Une occurrence unique est passee ci-dessus ; une serie non-Premium est
--- refusee cote serveur, meme si un client contourne le paywall Swift.
+-- 2.5 : rappel personnalise et serie recurrente sont gratuits pour toutes les
+-- formules. A est redevenu free ci-dessus et reste leader : les deux
+-- insertions passent cote serveur (seul le leader peut les configurer).
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date,
+  reminder_lead_days
+) values (
+  '30000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000001',
+  'Répétition', 'Rappel gratuit', 'Carouge', 'Carouge',
+  now() + interval '4 days', 7
+);
+insert into public.group_events(
+  id, group_id, kind, title, venue, public_location_label, date, series_id
+) values (
+  '30000000-0000-4000-8000-000000000002',
+  '10000000-0000-4000-8000-000000000001',
+  'Répétition', 'Serie gratuite', 'Carouge', 'Carouge',
+  now() + interval '3 days',
+  '31000000-0000-4000-8000-000000000001'
+);
 do $$
 begin
-  begin
-    insert into public.group_events(
-      id, group_id, kind, title, venue, public_location_label, date,
-      reminder_lead_days
-    ) values (
-      '30000000-0000-4000-8000-000000000003',
-      '10000000-0000-4000-8000-000000000001',
-      'Répétition', 'Rappel interdit', 'Carouge', 'Carouge',
-      now() + interval '4 days', 7
-    );
-    raise exception 'Non-Premium configurable reminder unexpectedly accepted';
-  exception
-    when sqlstate '42501' then
-      if sqlerrm <> 'premium_required_for_configurable_reminders' then raise; end if;
-  end;
-  begin
-    insert into public.group_events(
-      id, group_id, kind, title, venue, public_location_label, date, series_id
-    ) values (
-      '30000000-0000-4000-8000-000000000002',
-      '10000000-0000-4000-8000-000000000001',
-      'Répétition', 'Serie interdite', 'Carouge', 'Carouge',
-      now() + interval '3 days',
-      '31000000-0000-4000-8000-000000000001'
-    );
-    raise exception 'Non-Premium recurring event unexpectedly accepted';
-  exception
-    when sqlstate '42501' then
-      if sqlerrm <> 'premium_required_for_recurring_events' then raise; end if;
-  end;
+  if not exists (
+    select 1 from public.group_events
+    where id = '30000000-0000-4000-8000-000000000003'
+      and reminder_lead_days = 7
+  ) then
+    raise exception 'Free tier configurable reminder was not persisted';
+  end if;
+  if not exists (
+    select 1 from public.group_events
+    where id = '30000000-0000-4000-8000-000000000002'
+      and series_id = '31000000-0000-4000-8000-000000000001'
+  ) then
+    raise exception 'Free tier recurring event was not persisted';
+  end if;
 end;
 $$;
 
@@ -975,12 +1023,10 @@ begin
 end;
 $$;
 
--- Auto-SOS durable : une indisponibilite enregistree AVANT l'activation est
--- reconciliee sans appel du client, puis les retries restent idempotents.
+-- Auto-SOS durable (gratuit pour toutes les formules depuis 2.5) : une
+-- indisponibilite enregistree AVANT l'activation est reconciliee sans appel du
+-- client, puis les retries restent idempotents.
 set local role postgres;
-update public.profiles
-set is_premium = true
-where id = '00000000-0000-4000-8000-0000000000a1';
 update public.event_attendance
 set status = 'unavailable'
 where event_id = '30000000-0000-4000-8000-000000000001'
@@ -1113,7 +1159,7 @@ begin
       and public_location_label = 'Eaux-Vives'
       and description not like '%Rue Offline 10%'
       and description not like '%Test B%'
-      and description not like '%Premier groupe gratuit%'
+      and description not like '%Premier groupe dirige%'
   ) then
     raise exception 'Offline auto-SOS ignored role, leader or public privacy';
   end if;
@@ -1417,14 +1463,10 @@ $$;
 set local role postgres;
 drop trigger test_force_auto_sos_write_failure on public.gig_requests;
 
--- Le droit Premium est revalide a chaque transition. Une indisponibilite
--- pendant l'expiration ne publie rien ; l'octroi canonique RevenueCat lance
--- ensuite la reconciliation sans rappel du webhook ni boucle sur profiles.
-set local role service_role;
-select public.apply_revenuecat_premium_state(
-  '00000000-0000-4000-8000-0000000000a1', false,
-  '2099-01-02T00:00:00Z'::timestamptz
-);
+-- 2.5 : l'automatisation ne depend plus du Premium. A est free depuis la
+-- revocation ci-dessus : une indisponibilite publie quand meme le SOS
+-- automatique, et un octroi Premium ulterieur (reconciliation sur transition
+-- de profiles.is_premium) ne le duplique pas.
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true
@@ -1447,31 +1489,34 @@ values (
 );
 do $$
 begin
-  if exists (
-    select 1 from public.gig_requests
-    where event_id = '30000000-0000-4000-8000-000000000013'
-      and auto_sos_absent_profile_id =
-        '00000000-0000-4000-8000-0000000000b2'
-  ) then
-    raise exception 'Expired Premium unexpectedly created an auto-SOS';
-  end if;
-end;
-$$;
-set local role service_role;
-select public.apply_revenuecat_premium_state(
-  '00000000-0000-4000-8000-0000000000a1', true,
-  '2099-01-03T00:00:00Z'::timestamptz
-);
-set local role postgres;
-do $$
-begin
   if (
     select count(*) from public.gig_requests
     where event_id = '30000000-0000-4000-8000-000000000013'
       and auto_sos_absent_profile_id =
         '00000000-0000-4000-8000-0000000000b2'
   ) <> 1 then
-    raise exception 'Premium grant did not reconcile existing unavailability';
+    raise exception 'Free tier unavailability did not publish an auto-SOS';
+  end if;
+end;
+$$;
+set local role service_role;
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000a1', 'premium',
+  '2099-01-01T00:00:00Z'::timestamptz, '2026-09-01T00:02:00Z'::timestamptz
+);
+set local role postgres;
+do $$
+begin
+  if not private.has_active_premium('00000000-0000-4000-8000-0000000000a1') then
+    raise exception 'Canonical Premium grant was not applied';
+  end if;
+  if (
+    select count(*) from public.gig_requests
+    where event_id = '30000000-0000-4000-8000-000000000013'
+      and auto_sos_absent_profile_id =
+        '00000000-0000-4000-8000-0000000000b2'
+  ) <> 1 then
+    raise exception 'Premium grant duplicated an existing auto-SOS';
   end if;
 end;
 $$;
@@ -1543,14 +1588,22 @@ begin
 end;
 $$;
 
--- Meme devenu membre, C ne peut pas recevoir un deuxieme groupe sans Premium.
+-- 2.5 : la formule Groupe autorise un seul groupe dirige. C obtient cette
+-- formule, cree son groupe, puis ne peut pas en recevoir un deuxieme par
+-- transfert meme une fois membre permanent.
+set local role service_role;
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000c3', 'group',
+  '2099-01-01T00:00:00Z'::timestamptz, '2026-09-01T00:02:30Z'::timestamptz
+);
+set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000c3', true
 );
 insert into public.music_groups(id, name, leader_id)
 values (
   '10000000-0000-4000-8000-000000000003',
-  'Groupe gratuit de C',
+  'Groupe de C (formule Groupe)',
   '00000000-0000-4000-8000-0000000000c3'
 );
 select set_config(
@@ -1568,25 +1621,25 @@ begin
       '10000000-0000-4000-8000-000000000001',
       '00000000-0000-4000-8000-0000000000c3'
     );
-    raise exception 'Non-Premium target received an additional led group';
+    raise exception 'Groupe-tier target received an additional led group';
   exception
     when sqlstate '42501' then
-      if sqlerrm <> 'premium_required_for_additional_group' then raise; end if;
+      if sqlerrm <> 'subscription_required_for_group' then raise; end if;
   end;
 end;
 $$;
 
 -- Un transfert vers un leader deja Premium est une transition d'eligibilite
--- a part entiere. On prepare une indisponibilite pendant l'expiration de A :
--- elle doit etre reconciliee dans la transaction du transfert vers B.
+-- a part entiere. On prepare une indisponibilite pendant que A est free :
+-- le SOS automatique est publie des la transition (automatisation gratuite)
+-- et il doit suivre le nouvel hote lors du transfert vers B.
 set local role service_role;
-select public.apply_revenuecat_premium_state(
-  '00000000-0000-4000-8000-0000000000b2', true,
-  '2099-01-04T00:00:00Z'::timestamptz
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000b2', 'premium',
+  '2099-01-01T00:00:00Z'::timestamptz, '2026-09-01T00:03:00Z'::timestamptz
 );
-select public.apply_revenuecat_premium_state(
-  '00000000-0000-4000-8000-0000000000a1', false,
-  '2099-01-04T00:00:01Z'::timestamptz
+select public.apply_revenuecat_subscription_state(
+  '00000000-0000-4000-8000-0000000000a1', 'free', null, '2026-09-01T00:03:01Z'::timestamptz
 );
 set local role authenticated;
 select set_config(
@@ -1608,15 +1661,19 @@ values (
   '30000000-0000-4000-8000-000000000016',
   '00000000-0000-4000-8000-0000000000c3', 'unavailable'
 );
+-- 2.5 : l'automatisation etant gratuite, le SOS est publie tout de suite au
+-- nom de l'hote courant (A, free). Le transfert ci-dessous doit le re-heberger
+-- chez B sans le dupliquer.
 do $$
 begin
-  if exists (
-    select 1 from public.gig_requests
+  if (
+    select count(*) from public.gig_requests
     where event_id = '30000000-0000-4000-8000-000000000016'
       and auto_sos_absent_profile_id =
         '00000000-0000-4000-8000-0000000000c3'
-  ) then
-    raise exception 'Expired old leader unexpectedly created transfer SOS';
+      and host_id = '00000000-0000-4000-8000-0000000000a1'
+  ) <> 1 then
+    raise exception 'Free old leader did not publish the pre-transfer auto-SOS';
   end if;
 end;
 $$;
@@ -1670,7 +1727,7 @@ begin
       and host_id = '00000000-0000-4000-8000-0000000000b2'
       and wanted_instruments = array['Piano']::text[]
   ) then
-    raise exception 'Premium leadership transfer did not reconcile dropout';
+    raise exception 'Leadership transfer did not re-host the pending auto-SOS';
   end if;
   if not exists (
     select 1 from public.gig_requests
@@ -1684,23 +1741,24 @@ end;
 $$;
 
 -- Une revocation canonique ancienne ne peut plus gagner une course contre un
--- octroi recent. Une revocation plus recente reste bien applicable.
+-- octroi recent. Une revocation plus recente reste bien applicable. C etait
+-- en formule Groupe (checked_at 00:02:30) : l'octroi Premium doit etre plus
+-- recent pour s'appliquer.
 set local role service_role;
 do $$
 declare
   v_applied boolean;
 begin
-  select public.apply_revenuecat_premium_state(
-    '00000000-0000-4000-8000-0000000000c3', true,
-    '2026-08-27T15:00:00Z'::timestamptz
+  select public.apply_revenuecat_subscription_state(
+    '00000000-0000-4000-8000-0000000000c3', 'premium',
+    '2099-01-01T00:00:00Z'::timestamptz, '2026-09-01T00:05:00Z'::timestamptz
   ) into v_applied;
   if not v_applied then
     raise exception 'Initial canonical Premium grant was not applied';
   end if;
 
-  select public.apply_revenuecat_premium_state(
-    '00000000-0000-4000-8000-0000000000c3', false,
-    '2026-08-27T14:59:59Z'::timestamptz
+  select public.apply_revenuecat_subscription_state(
+    '00000000-0000-4000-8000-0000000000c3', 'free', null, '2026-09-01T00:04:59Z'::timestamptz
   ) into v_applied;
   if v_applied then
     raise exception 'Stale canonical revocation unexpectedly applied';
@@ -1711,7 +1769,8 @@ set local role postgres;
 do $$
 begin
   if not (select is_premium from public.profiles
-          where id = '00000000-0000-4000-8000-0000000000c3') then
+          where id = '00000000-0000-4000-8000-0000000000c3')
+     or not private.has_active_premium('00000000-0000-4000-8000-0000000000c3') then
     raise exception 'Stale revocation erased a newer Premium grant';
   end if;
 end;
@@ -1721,9 +1780,8 @@ do $$
 declare
   v_applied boolean;
 begin
-  select public.apply_revenuecat_premium_state(
-    '00000000-0000-4000-8000-0000000000c3', false,
-    '2026-08-27T15:00:01Z'::timestamptz
+  select public.apply_revenuecat_subscription_state(
+    '00000000-0000-4000-8000-0000000000c3', 'free', null, '2026-09-01T00:05:01Z'::timestamptz
   ) into v_applied;
   if not v_applied then
     raise exception 'Newer canonical revocation was not applied';
@@ -1734,7 +1792,8 @@ set local role postgres;
 do $$
 begin
   if (select is_premium from public.profiles
-      where id = '00000000-0000-4000-8000-0000000000c3') then
+      where id = '00000000-0000-4000-8000-0000000000c3')
+     or private.has_active_premium('00000000-0000-4000-8000-0000000000c3') then
     raise exception 'Newer canonical revocation did not close Premium';
   end if;
 end;
@@ -2323,15 +2382,45 @@ begin
     'authenticated', 'private.group_event_locations', 'select'
   ) or has_table_privilege(
     'authenticated', 'private.revenuecat_premium_state', 'select'
+  ) or has_table_privilege(
+    'authenticated', 'private.subscription_state', 'select'
   ) then
     raise exception 'authenticated unexpectedly has direct private-table access';
   end if;
+  -- 2.5 : seule apply_revenuecat_subscription_state (service_role) ecrit
+  -- l'etat canonique ; l'ancienne RPC booleenne est revoquee de tous les roles
+  -- API, y compris service_role.
   if has_function_privilege(
     'authenticated',
-    'public.apply_revenuecat_premium_state(uuid,boolean,timestamp with time zone)',
+    'public.apply_revenuecat_subscription_state(uuid,text,timestamp with time zone,timestamp with time zone)',
+    'execute'
+  ) or has_function_privilege(
+    'anon',
+    'public.apply_revenuecat_subscription_state(uuid,text,timestamp with time zone,timestamp with time zone)',
+    'execute'
+  ) or not has_function_privilege(
+    'service_role',
+    'public.apply_revenuecat_subscription_state(uuid,text,timestamp with time zone,timestamp with time zone)',
     'execute'
   ) then
-    raise exception 'authenticated can forge canonical Premium state';
+    raise exception 'apply_revenuecat_subscription_state privileges are unsafe';
+  end if;
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'apply_revenuecat_premium_state'
+  ) and (
+    has_function_privilege(
+      'authenticated',
+      'public.apply_revenuecat_premium_state(uuid,boolean,timestamp with time zone)',
+      'execute'
+    ) or has_function_privilege(
+      'service_role',
+      'public.apply_revenuecat_premium_state(uuid,boolean,timestamp with time zone)',
+      'execute'
+    )
+  ) then
+    raise exception 'Legacy apply_revenuecat_premium_state is still callable from the API';
   end if;
 end;
 $$;

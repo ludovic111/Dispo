@@ -36,6 +36,7 @@ import {
   type AvailabilityTrip,
   type AvailabilityTripDraft,
   type DemoVideo,
+  DEMO_VIDEO_MAX_DURATION_MS,
 } from './portfolio-model';
 import { portfolioKeys, usePortfolio } from './portfolio-queries';
 import {
@@ -69,7 +70,15 @@ import { NativeDatePartField } from '@/features/profiles/native-date-part-field'
 import { profileKeys } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, onAccent, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
+import {
+  minimumTouchTarget,
+  onAccent,
+  pressedStyle,
+  radii,
+  spacing,
+  surfaceStyle,
+  tint,
+} from '@/theme/tokens';
 
 interface VideoDetailsDraft {
   date: Date;
@@ -100,7 +109,7 @@ function errorMessage(error: unknown): string {
     if (error.code === 'demo_video_invalid_file') {
       return "Cette vidéo n'a pas pu être lue — choisis un autre fichier.";
     }
-    if (error.code === 'demo_video_too_long') return 'Vidéo trop longue — 3 minutes maximum.';
+    if (error.code === 'demo_video_too_long') return 'Vidéo trop longue — 1 min 30 maximum.';
     if (error.code === 'demo_video_too_large') {
       return 'Vidéo trop lourde — raccourcis-la et réessaie.';
     }
@@ -204,7 +213,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
       preferredAssetRepresentationMode:
         ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       quality: 1,
-      videoMaxDuration: 181,
+      videoMaxDuration: DEMO_VIDEO_MAX_DURATION_MS / 1000,
     };
     if (Platform.OS === 'ios') {
       options.videoExportPreset = ImagePicker.VideoExportPreset.H264_1280x720;
@@ -455,10 +464,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
             {portfolio.videos.map((video, index) => (
               <View
                 key={video.id}
-                style={[
-                  styles.videoRow,
-                  { backgroundColor: palette.cardMuted, borderColor: palette.border },
-                ]}
+                style={[styles.videoRow, surfaceStyle(palette, 'muted').container]}
               >
                 <Pressable
                   accessibilityHint={t('Ouvre le lecteur vidéo')}
@@ -658,7 +664,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
                   }
                   style={({ pressed }) => [
                     styles.toggleRow,
-                    { backgroundColor: palette.card, borderColor: palette.border },
+                    surfaceStyle(palette, 'muted').container,
                     pressed && pressedStyle,
                   ]}
                 >
@@ -856,7 +862,6 @@ const styles = StyleSheet.create({
   toggleRow: {
     alignItems: 'center',
     borderRadius: radii.button,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
     minHeight: 48,
@@ -875,7 +880,6 @@ const styles = StyleSheet.create({
   videoRow: {
     alignItems: 'center',
     borderRadius: radii.control,
-    borderWidth: 1,
     flexDirection: 'row',
     overflow: 'hidden',
     paddingRight: spacing.xxs,

@@ -12,23 +12,37 @@ import { SectionHeader } from '@/components/ui/section';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigCard } from '@/features/gigs/gig-card';
-import { openGigInstruments, triageHostedGigs, type GigSummary } from '@/features/gigs/gig-model';
-import { countUnopenedCompatibleGigs, readOpenedGigIds } from '@/features/gigs/gig-opened-store';
-import { useGigs, useHostedGigs } from '@/features/gigs/gig-queries';
-import { useProfile } from '@/features/profiles/profile-queries';
+import {
+  openGigInstruments,
+  sortGigsByMatch,
+  triageHostedGigs,
+  type GigMatchInfo,
+  type GigSummary,
+} from '@/features/gigs/gig-model';
+import { countUnopenedMatchedGigs, readOpenedGigIds } from '@/features/gigs/gig-opened-store';
+import { useGigs, useHostedGigs, useMyGigMatches } from '@/features/gigs/gig-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { pressedStyle, spacing } from '@/theme/tokens';
 
 type Segment = 'feed' | 'hosting';
 
-function GigList({ gigs, opened }: { gigs: GigSummary[]; opened: ReadonlySet<string> }) {
+function GigList({
+  gigs,
+  matches,
+  opened,
+}: {
+  gigs: GigSummary[];
+  matches?: ReadonlyMap<string, GigMatchInfo> | undefined;
+  opened: ReadonlySet<string>;
+}) {
   return (
     <View style={styles.list}>
       {gigs.map((gig) => (
         <GigCard
           gig={{ ...gig, isFresh: !opened.has(gig.id) }}
           key={gig.id}
+          match={matches?.get(gig.id)}
           onPress={() => router.push(`/gigs/${gig.id}`)}
         />
       ))}
@@ -43,16 +57,17 @@ export default function GigsScreen() {
   const { t } = useTranslation();
   const query = useGigs();
   const hostedQuery = useHostedGigs();
+  const matchesQuery = useMyGigMatches();
   const { refetch: refetchFeed } = query;
   const { refetch: refetchHosted } = hostedQuery;
-  const profile = useProfile(userId, userId);
+  const { refetch: refetchMatches } = matchesQuery;
   const [segment, setSegment] = useState<Segment>('feed');
   const [opened, setOpened] = useState<Set<string>>(new Set());
   useFocusEffect(
     useCallback(() => {
       let active = true;
       if (userId) {
-        void Promise.all([refetchFeed(), refetchHosted()]);
+        void Promise.all([refetchFeed(), refetchHosted(), refetchMatches()]);
         void readOpenedGigIds(userId).then((ids) => {
           if (active) setOpened(ids);
         });
@@ -60,7 +75,7 @@ export default function GigsScreen() {
       return () => {
         active = false;
       };
-    }, [refetchFeed, refetchHosted, userId]),
+    }, [refetchFeed, refetchHosted, refetchMatches, userId]),
   );
 
   const gigs = useMemo(
@@ -80,9 +95,26 @@ export default function GigsScreen() {
       ),
     [gigs, userId],
   );
-  const visible = publicFeed;
-  const freshCount = profile.data
-    ? countUnopenedCompatibleGigs(publicFeed, profile.data, opened)
+  // Le serveur score chaque annonce pour le viewer : compatibles d'abord, puis par date.
+  const matches = useMemo(
+    () =>
+      new Map(
+        (matchesQuery.data ?? [])
+          .filter((item) => item.match.instruments.length > 0)
+          .map((item) => [item.gigId, item.match] as const),
+      ),
+    [matchesQuery.data],
+  );
+  const visible = useMemo(
+    () =>
+      sortGigsByMatch(
+        publicFeed,
+        new Map([...matches].map(([gigId, match]) => [gigId, match.score])),
+      ),
+    [matches, publicFeed],
+  );
+  const freshCount = matchesQuery.data
+    ? countUnopenedMatchedGigs(matchesQuery.data, userId, opened)
     : 0;
 
   const add = (
@@ -97,7 +129,7 @@ export default function GigsScreen() {
     </DispoButton>
   );
 
-  if (query.isLoading || hostedQuery.isLoading || profile.isLoading) {
+  if (query.isLoading || hostedQuery.isLoading) {
     return (
       <Screen nativeTabRoot>
         <ScreenHeader action={add} icon="flash" title={t('SOS dépannage')} />
@@ -105,19 +137,16 @@ export default function GigsScreen() {
       </Screen>
     );
   }
-  if (query.isExhaustiveError || hostedQuery.isExhaustiveError || profile.isError) {
+  if (query.isExhaustiveError || hostedQuery.isExhaustiveError) {
     const message =
-      query.error?.message ??
-      hostedQuery.error?.message ??
-      profile.error?.message ??
-      t('Chargement impossible.');
+      query.error?.message ?? hostedQuery.error?.message ?? t('Chargement impossible.');
     return (
       <Screen nativeTabRoot>
         <ScreenHeader action={add} icon="flash" title={t('SOS dépannage')} />
         <ErrorState
           message={message}
           onRetry={() =>
-            void Promise.all([query.refetch(), hostedQuery.refetch(), profile.refetch()])
+            void Promise.all([query.refetch(), hostedQuery.refetch(), matchesQuery.refetch()])
           }
         />
       </Screen>
@@ -132,7 +161,7 @@ export default function GigsScreen() {
           <RefreshControl
             colors={[palette.electric]}
             onRefresh={() =>
-              void Promise.all([query.refetch(), hostedQuery.refetch(), profile.refetch()])
+              void Promise.all([query.refetch(), hostedQuery.refetch(), matchesQuery.refetch()])
             }
             refreshing={
               (query.isRefetching && !query.isFetchingNextPage) ||
@@ -148,7 +177,9 @@ export default function GigsScreen() {
           inset={false}
           subtitle={
             segment === 'feed'
-              ? formatSwiftPlaceholders(t('%lld concerts cherchent un musicien'), visible.length)
+              ? visible.length === 1
+                ? t('1 concert cherche un musicien')
+                : formatSwiftPlaceholders(t('%lld concerts cherchent un musicien'), visible.length)
               : t('Accepte ou écarte tes candidats')
           }
           title={t('SOS dépannage')}
@@ -180,10 +211,12 @@ export default function GigsScreen() {
                       variant="footnote"
                       weight="semibold"
                     >
-                      {formatSwiftPlaceholders(
-                        t('Tes %lld annonce·s sont dans « Mes SOS »'),
-                        mine.length,
-                      )}
+                      {mine.length === 1
+                        ? t('Ton annonce est dans « Mes SOS »')
+                        : formatSwiftPlaceholders(
+                            t('Tes %lld annonces sont dans « Mes SOS »'),
+                            mine.length,
+                          )}
                     </AppText>
                     <Ionicons color={palette.bronze} name="chevron-forward" size={13} />
                   </View>
@@ -192,7 +225,7 @@ export default function GigsScreen() {
             ) : null}
 
             {visible.length > 0 ? (
-              <GigList gigs={visible} opened={opened} />
+              <GigList gigs={visible} matches={matches} opened={opened} />
             ) : (
               <EmptyState
                 icon="flash-outline"

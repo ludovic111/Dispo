@@ -4,8 +4,9 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from './app-text';
 
+import { readableOn } from '@/theme/color';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing, tint } from '@/theme/tokens';
+import { onAccent, radii, spacing, tint } from '@/theme/tokens';
 
 interface TagProps {
   color?: string;
@@ -19,12 +20,17 @@ interface TagProps {
 export function Tag({ color, icon, label, tone = 'tinted' }: TagProps) {
   const { palette } = useDispoTheme();
   const resolved = color ?? palette.electric;
-  const foreground = tone === 'solid' ? palette.textInverse : resolved;
+  const foreground =
+    tone === 'solid' ? readableOn(resolved, [palette.ink, palette.paper, onAccent]) : resolved;
   return (
     <View
       style={[
         styles.tag,
-        tone === 'tinted' && { backgroundColor: tint(resolved, 0.14) },
+        tone === 'tinted' && {
+          backgroundColor: tint(resolved, 0.14),
+          borderColor: tint(resolved, 0.28),
+          borderWidth: StyleSheet.hairlineWidth,
+        },
         tone === 'solid' && { backgroundColor: resolved },
         tone === 'outline' && { borderColor: tint(resolved, 0.5), borderWidth: 1 },
       ]}

@@ -66,17 +66,18 @@ describe('niveaux compacts de l’accueil', () => {
   it('abrège les quatre niveaux sans changer les valeurs conservées ni les autres écrans', () => {
     const levels = ['Débutant', 'Intermédiaire', 'Avancé', 'Professionnel'];
     expect(levels.map((level) => shortProfileLevel(level, true))).toEqual([
-      'déb',
-      'int',
-      'av',
-      'pro',
-    ]);
-    expect(levels.map((level) => shortProfileLevel(level))).toEqual([
-      'Débutant',
-      'Intermédiaire',
-      'Avancé',
+      'Déb.',
+      'Inter.',
+      'Av.',
       'Pro',
     ]);
+    expect(levels.map((level) => shortProfileLevel(level))).toEqual([
+      'Déb.',
+      'Inter.',
+      'Av.',
+      'Pro',
+    ]);
+    expect(shortProfileLevel('Niveau historique')).toBe('Niveau historique');
     expect(shortProfileLevel('Niveau historique', true)).toBe('Niveau historique');
   });
 });

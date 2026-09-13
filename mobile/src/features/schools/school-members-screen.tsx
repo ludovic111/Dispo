@@ -9,7 +9,7 @@ import { useMySchoolAffiliations, useSchool, useSchoolMembers } from './school-q
 import { AppText } from '@/components/ui/app-text';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { radii, spacing, tint } from '@/theme/tokens';
 
 export function SchoolMembersScreen({ schoolId }: { schoolId: string }) {
   const { palette } = useDispoTheme();
@@ -82,7 +82,7 @@ export function SchoolMembersScreen({ schoolId }: { schoolId: string }) {
           />
         }
         ListHeaderComponent={
-          <View style={[styles.notice, { backgroundColor: `${palette.bronze}14` }]}>
+          <View style={[styles.notice, { backgroundColor: tint(palette.bronze, 0.08) }]}>
             <Ionicons color={palette.bronze} name="information-circle" size={17} />
             <AppText color={palette.muted} style={styles.noticeCopy} variant="caption">
               {t('Les rôles marqués « déclaré » n’ont pas encore été validés par l’école.')}
@@ -126,5 +126,5 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   noticeCopy: { flex: 1 },
-  separator: { height: spacing.control },
+  separator: { height: spacing.sm },
 });

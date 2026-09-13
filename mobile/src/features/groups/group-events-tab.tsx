@@ -20,6 +20,7 @@ import { DateTicket } from '@/components/ui/date-ticket';
 import { EmptyState } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
+import { VuMeter } from '@/components/ui/vu-meter';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { pressedStyle, spacing } from '@/theme/tokens';
@@ -47,6 +48,11 @@ function EventCard({
   }).format(new Date(event.date));
   const lineColor =
     lineup === 'complete' ? palette.jam : lineup === 'late' ? palette.signal : palette.bronze;
+  const memberCount = Math.max(group.members.length, 1);
+  const attendanceLabel = t('{{count}} présent·es sur {{total}}', {
+    count: summary.available,
+    total: group.members.length,
+  });
   return (
     <Pressable
       accessibilityLabel={`${t('Ouvrir')} ${t(event.kind)}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
@@ -54,7 +60,7 @@ function EventCard({
       onPress={() => router.push(`/groups/${group.id}/events/${event.id}` as never)}
       style={({ pressed }) => pressed && pressedStyle}
     >
-      <Card padding={spacing.sm} style={changed && unseenStyle}>
+      <Card padding={spacing.sm} style={changed && unseenStyle} tone="elevated">
         <View style={styles.eventRow}>
           <DateTicket
             color={groupEventColor(event.kind, palette) ?? palette.rehearsal}
@@ -106,31 +112,40 @@ function EventCard({
                 }
               />
             </View>
-            <View style={styles.lineup}>
-              <Ionicons
-                color={lineColor}
-                name={
-                  lineup === 'complete'
-                    ? 'checkmark-circle'
-                    : lineup === 'late'
-                      ? 'alert-circle'
-                      : 'people-circle'
-                }
-                size={14}
-              />
-              <AppText color={lineColor} numberOfLines={1} variant="caption2">
-                {lineup === 'complete'
-                  ? t('Line-up complet')
-                  : lineup === 'late'
-                    ? t('Réponses urgentes')
-                    : t('{{available}} présent·es · {{pending}} en attente', {
-                        available: summary.available,
-                        pending: summary.pending,
-                      })}
-              </AppText>
-            </View>
           </View>
           <Ionicons color={palette.muted} name="chevron-forward" size={16} />
+        </View>
+        <View style={styles.lineup}>
+          <VuMeter
+            accessibilityLabel={attendanceLabel}
+            segments={Math.min(12, Math.max(4, memberCount))}
+            size="compact"
+            tone={lineup === 'complete' ? 'accent' : 'level'}
+            value={summary.available / memberCount}
+          />
+          <View style={styles.lineupCopy}>
+            <Ionicons
+              color={lineColor}
+              name={
+                lineup === 'complete'
+                  ? 'checkmark-circle'
+                  : lineup === 'late'
+                    ? 'alert-circle'
+                    : 'people-circle'
+              }
+              size={14}
+            />
+            <AppText color={lineColor} numberOfLines={1} variant="caption2">
+              {lineup === 'complete'
+                ? t('Line-up complet')
+                : lineup === 'late'
+                  ? t('Réponses urgentes')
+                  : t('{{available}} présent·es · {{pending}} en attente', {
+                      available: summary.available,
+                      pending: summary.pending,
+                    })}
+            </AppText>
+          </View>
         </View>
       </Card>
     </Pressable>
@@ -193,7 +208,8 @@ const styles = StyleSheet.create({
   eventCopy: { flex: 1, gap: spacing.xxs },
   eventRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   eventTitle: { flexShrink: 1 },
-  lineup: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
+  lineup: { gap: spacing.xxs, marginTop: spacing.xs },
+  lineupCopy: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
   pastSection: { gap: spacing.sm, marginTop: spacing.md },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs },
   titleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },

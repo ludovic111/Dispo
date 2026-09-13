@@ -8,18 +8,19 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
+import { GigApplicantCard } from './gig-applicant-card';
 import {
   GIG_PAYMENT_METHODS,
+  eligibleApplyInstruments,
+  gigErrorMessage,
   gigViewerAction,
   openGigInstruments,
   unslottedGigApplicants,
-  type GigApplication,
   type GigDetail,
 } from './gig-model';
 import {
   useApplyToGig,
   useDeleteGig,
-  useGigApplicationDecision,
   useRespondToDirectGig,
   useWithdrawGigApplication,
 } from './gig-queries';
@@ -29,18 +30,24 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
+import { DateTicket } from '@/components/ui/date-ticket';
 import { FormField } from '@/components/ui/form-field';
 import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { Barcode, TicketCard } from '@/components/ui/ticket-card';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { shortProfileLevel } from '@/domain/profile';
+import { AddToCalendarButton } from '@/features/calendar/add-to-calendar-button';
+import { gigCalendarSourceId } from '@/features/calendar/calendar-sync';
+import { useProfile } from '@/features/profiles/profile-queries';
+import { readableOn } from '@/theme/color';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, lightPalette, spacing, tint } from '@/theme/tokens';
+import { blend, onAccent, spacing } from '@/theme/tokens';
 
-/** Le billet SOS est une surface claire fixe dans les deux thèmes : encre `billetInk`, accents clairs. */
-const billet = lightPalette;
+/** Largeur de la souche du billet : le billet de date (52 pt) et sa marge, alignée sur la perforation. */
+const stubWidth = 52 + spacing.sm * 2;
 
 function paymentLabel(value: string | null, t: TFunction): string | null {
   if (!value) return null;
@@ -173,98 +180,6 @@ function PrivateLocationCard({ gig }: { gig: GigDetail }) {
   );
 }
 
-function ApplicantRow({ applicant, gigId }: { applicant: GigApplication; gigId: string }) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const decision = useGigApplicationDecision();
-  const run = (value: 'accept' | 'decline' | 'reopen') =>
-    decision.mutate({ applicationId: applicant.id, decision: value, gigId });
-  const status =
-    applicant.status === 'accepted'
-      ? { color: palette.jam, label: t('Pris·e') }
-      : applicant.status === 'declined'
-        ? { color: palette.signal, label: t('Écarté·e') }
-        : { color: palette.bronze, label: t('En attente') };
-
-  return (
-    <View style={[styles.applicant, { borderColor: palette.border }]}>
-      <View style={styles.applicantTop}>
-        <Avatar
-          name={applicant.musicianName || t('Musicien·ne')}
-          size={42}
-          uri={applicant.musicianPhotoUrl}
-        />
-        <View style={styles.applicantText}>
-          <AppText numberOfLines={2} variant="title3">
-            {applicant.musicianName || t('Musicien·ne')}
-          </AppText>
-          <AppText color={palette.muted} variant="caption">
-            {applicant.instrument ? t(applicant.instrument) : t('Instrument à préciser')}
-          </AppText>
-        </View>
-        <Tag color={status.color} label={status.label} />
-      </View>
-      {applicant.message ? (
-        <AppText color={palette.muted} variant="caption">
-          « {applicant.message} »
-        </AppText>
-      ) : null}
-      {applicant.status === 'pending' ? (
-        <View style={styles.inlineActions}>
-          <DispoButton
-            loading={decision.isPending}
-            onPress={() => run('decline')}
-            size="compact"
-            variant="ghost"
-          >
-            {t('Refuser')}
-          </DispoButton>
-          <DispoButton loading={decision.isPending} onPress={() => run('accept')} size="compact">
-            {t('Accepter')}
-          </DispoButton>
-        </View>
-      ) : null}
-      {applicant.status === 'accepted' ? (
-        <View style={styles.inlineActions}>
-          <DispoButton
-            loading={decision.isPending}
-            onPress={() => run('reopen')}
-            size="compact"
-            variant="ghost"
-          >
-            {t('Remettre en attente')}
-          </DispoButton>
-          <DispoButton
-            loading={decision.isPending}
-            onPress={() => run('decline')}
-            size="compact"
-            variant="danger"
-          >
-            {t('Libérer')}
-          </DispoButton>
-        </View>
-      ) : null}
-      {applicant.status === 'declined' ? (
-        <View style={styles.inlineActions}>
-          <DispoButton
-            loading={decision.isPending}
-            onPress={() => run('reopen')}
-            size="compact"
-            variant="secondary"
-          >
-            {t('Replacer en attente')}
-          </DispoButton>
-        </View>
-      ) : null}
-      {decision.error ? (
-        <AppText color={palette.error} variant="caption">
-          {t('La décision n’a pas pu être enregistrée.')}
-        </AppText>
-      ) : null}
-    </View>
-  );
-}
-
 function OrganizerPanel({
   gig,
   onDeleted,
@@ -334,9 +249,11 @@ function OrganizerPanel({
               if (applicants.length === 0) return null;
               return (
                 <View key={instrument} style={styles.applicantGroup}>
-                  <AppText variant="title">{t(instrument)}</AppText>
+                  <AppText color={palette.bronze} variant="label">
+                    {t(instrument)}
+                  </AppText>
                   {applicants.map((applicant) => (
-                    <ApplicantRow applicant={applicant} gigId={gig.id} key={applicant.id} />
+                    <GigApplicantCard applicant={applicant} gig={gig} key={applicant.id} />
                   ))}
                 </View>
               );
@@ -344,9 +261,11 @@ function OrganizerPanel({
           )}
           {unslotted.length > 0 ? (
             <View style={styles.applicantGroup}>
-              <AppText variant="title">{t('Autre')}</AppText>
+              <AppText color={palette.bronze} variant="label">
+                {t('Autre')}
+              </AppText>
               {unslotted.map((applicant) => (
-                <ApplicantRow applicant={applicant} gigId={gig.id} key={applicant.id} />
+                <GigApplicantCard applicant={applicant} gig={gig} key={applicant.id} />
               ))}
             </View>
           ) : null}
@@ -382,9 +301,17 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const action = gigViewerAction(gig, userId);
-  const open = openGigInstruments(gig);
-  const [instrument, setInstrument] = useState(open[0] ?? '');
+  const viewer = useProfile(userId, userId);
+  const eligible = viewer.data
+    ? eligibleApplyInstruments(gig, {
+        instrumentLevels: viewer.data.instrumentLevels,
+        instruments: viewer.data.instruments,
+        level: viewer.data.level,
+      })
+    : [];
+  const [instrument, setInstrument] = useState('');
   const [message, setMessage] = useState('');
+  const selected = eligible.includes(instrument) ? instrument : (eligible[0] ?? '');
   const apply = useApplyToGig();
   const withdraw = useWithdrawGigApplication();
   const respond = useRespondToDirectGig();
@@ -473,6 +400,15 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
       <Card style={styles.section}>
         <Tag color={status.color} label={status.label} />
         <AppText color={palette.muted}>{status.message}</AppText>
+        {action === 'application-accepted' || action === 'direct-accepted' ? (
+          <AddToCalendarButton
+            location={gig.place || gig.neighborhood || undefined}
+            sourceId={gigCalendarSourceId(gig.id)}
+            startsAt={gig.date}
+            title={gig.title}
+            url={`dispo://gigs/${gig.id}`}
+          />
+        ) : null}
         {action === 'application-declined' ? (
           <DispoButton
             loading={withdraw.isPending}
@@ -514,16 +450,29 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
     );
   }
 
+  if (viewer.isSuccess && eligible.length === 0) {
+    return (
+      <Card style={styles.section}>
+        <Tag color={palette.bronze} label={t('Pas pour toi')} />
+        <AppText color={palette.muted}>
+          {gig.wantedLevels.length > 0
+            ? t('Les postes ouverts demandent un autre instrument ou un autre niveau que le tien.')
+            : t('Les postes ouverts ne sont pas dans tes instruments.')}
+        </AppText>
+      </Card>
+    );
+  }
+
   return (
     <Card style={styles.section}>
       <SectionHeader title={t('Je peux dépanner')} />
       <View style={styles.chips}>
-        {open.map((value) => (
+        {eligible.map((value) => (
           <ChoiceChip
             key={value}
             label={t(value)}
             onPress={() => setInstrument(value)}
-            selected={instrument === value}
+            selected={selected === value}
           />
         ))}
       </View>
@@ -537,14 +486,18 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
         value={message}
       />
       <DispoButton
-        disabled={!instrument}
+        disabled={!selected}
         loading={apply.isPending}
-        onPress={() => apply.mutate({ gigId: gig.id, instrument, message, musicianId: userId })}
+        onPress={() =>
+          apply.mutate({ gigId: gig.id, instrument: selected, message, musicianId: userId })
+        }
       >
         {t('Je peux dépanner !')}
       </DispoButton>
       {apply.error ? (
-        <AppText color={palette.error}>{t('La candidature n’a pas pu être envoyée.')}</AppText>
+        <AppText color={palette.error}>
+          {t(gigErrorMessage(apply.error, 'La candidature n’a pas pu être envoyée.'))}
+        </AppText>
       ) : null}
     </Card>
   );
@@ -568,32 +521,47 @@ export function GigDetailContent({
     dateStyle: 'full',
     timeStyle: 'short',
   }).format(new Date(gig.date));
+  const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(
+    new Date(gig.date),
+  );
+  // Papier clair du thème (fixe en clair comme en sombre) ; encre choisie par contraste.
+  const paper = palette.paper;
+  const ink = readableOn(paper, [palette.ink, palette.paper, onAccent]);
+  const inkMuted = blend(ink, paper, 0.42);
   const open = openGigInstruments(gig);
   const payment = paymentLabel(gig.paymentMethod, t);
   const hostName = gig.hostName || t(gig.isLocked ? 'Membre Premium requis' : 'Organisateur');
 
   return (
     <View style={styles.content}>
-      <TicketCard>
+      <TicketCard backgroundColor={paper} notchFromTrailing={stubWidth}>
         <View style={styles.ticket}>
           <View style={styles.ticketMain}>
             <View style={styles.chips}>
-              <Tag color={billet.signal} label={gig.targetId ? t('Demande directe') : t('SOS')} />
-              <Tag color={billet.bronze} label={t(gig.genre)} />
+              <Tag color={palette.signal} label={gig.targetId ? t('Demande directe') : t('SOS')} />
+              <Tag color={inkMuted} label={t(gig.genre)} />
             </View>
-            <AppText color={billetInk} variant="display">
+            <AppText color={ink} variant="display">
               {gig.title}
             </AppText>
             <View style={styles.ticketMeta}>
-              <Ionicons color={billet.muted} name="calendar-outline" size={16} />
-              <AppText color={billet.muted}>{date}</AppText>
+              <Ionicons color={inkMuted} name="calendar-outline" size={16} />
+              <AppText color={inkMuted} style={styles.flex}>
+                {date}
+              </AppText>
             </View>
             <View style={styles.ticketMeta}>
-              <Ionicons color={billet.muted} name="location-outline" size={16} />
-              <AppText color={billet.muted}>{gig.place}</AppText>
+              <Ionicons color={inkMuted} name="location-outline" size={16} />
+              <AppText color={inkMuted} style={styles.flex}>
+                {gig.place}
+              </AppText>
             </View>
           </View>
-          <View style={[styles.ticketStub, { borderColor: tint(billetInk, 0.28) }]}>
+          <View style={styles.ticketStub}>
+            <DateTicket color={palette.signal} date={gig.date} />
+            <AppText color={inkMuted} engraved={false} variant="label">
+              {time}
+            </AppText>
             <Barcode seed={gig.id} />
           </View>
         </View>
@@ -603,7 +571,10 @@ export function GigDetailContent({
         <SectionHeader title={t('Organisateur')} />
         <View style={styles.organizer}>
           <Avatar name={hostName} size={44} uri={gig.hostPhotoUrl} />
-          <AppText variant="title">{hostName}</AppText>
+          <AppText numberOfLines={2} style={styles.flex} variant="title">
+            {hostName}
+          </AppText>
+          {gig.hostIsPremium ? <VerifiedBadge /> : null}
         </View>
         <View style={styles.sectionTitleRow}>
           <Ionicons color={palette.electric} name="location-outline" size={18} />
@@ -680,20 +651,11 @@ export function GigDetailContent({
 const styles = StyleSheet.create({
   actionButton: { flex: 1 },
   actionsRow: { alignItems: 'stretch', flexDirection: 'row', gap: spacing.xs },
-  applicant: { borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.sm, paddingTop: spacing.sm },
   applicantGroup: { gap: spacing.sm },
-  applicantText: { flex: 1, gap: spacing.xxs },
-  applicantTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   content: { gap: spacing.md },
   feeRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  inlineActions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    justifyContent: 'flex-end',
-  },
+  flex: { flexShrink: 1 },
   organizer: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   privateLocationHeader: { gap: spacing.xs, padding: spacing.md },
   privateMap: { height: 150, width: '100%' },
@@ -707,10 +669,10 @@ const styles = StyleSheet.create({
   ticketMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   ticketStub: {
     alignItems: 'center',
-    borderLeftWidth: 1.5,
-    borderStyle: 'dashed',
+    gap: spacing.xxs,
     justifyContent: 'center',
-    marginVertical: spacing.xxs,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    width: stubWidth,
   },
 });

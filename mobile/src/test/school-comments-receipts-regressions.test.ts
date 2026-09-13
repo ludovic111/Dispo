@@ -17,27 +17,36 @@ describe('lot écoles, commentaires et coches', () => {
 
   it('protège le compositeur multiligne du clavier et le révèle à chaque focus', () => {
     const song = source('src/features/groups/group-song-screen.tsx');
+    const panel = source('src/features/groups/song-comments-panel.tsx');
     expect(song).toContain('automaticallyAdjustKeyboardInsets');
     expect(song).toContain('keyboardDismissMode');
     expect(song).toContain("behavior={Platform.OS === 'android' ? 'padding' : undefined}");
     expect(song).toContain('scrollResponderScrollNativeHandleToKeyboard');
-    expect(song).toContain('ref={commentInputRef}');
+    expect(song).toContain('inputRef={commentInputRef}');
     expect(song).toContain('keyboardInset');
     expect(song).toContain('event.endCoordinates.height');
     expect(song).toContain('Keyboard.metrics()');
     expect(song).toContain("Dimensions.get('window').height * 0.48");
-    expect(song).toContain('multiline');
-    expect(song).toContain('onFocus={revealCommentComposer}');
-    expect(song).toContain('onPressIn={revealCommentComposer}');
+    expect(song).toContain('onComposerFocus={revealCommentComposer}');
+    // Le compositeur vit dans le panneau : multiligne, révélé au focus et à l'appui.
+    expect(panel).toContain('ref={inputRef}');
+    expect(panel).toContain('multiline');
+    expect(panel).toContain('onFocus={onComposerFocus}');
+    expect(panel).toContain('onPressIn={onComposerFocus}');
   });
 
-  it('confirme la suppression et n’affiche qu’une coche persistée sur ses commentaires', () => {
-    const song = source('src/features/groups/group-song-screen.tsx');
-    expect(song).toContain("Alert.alert(t('Supprimer ce commentaire ?')");
-    expect(source('src/features/groups/song-comment-meta.tsx')).toContain(
-      'isAuthor ? <ReceiptChecks receipt="sent" /> : null',
-    );
-    expect(song).toContain('item.authorId === userId');
+  it('confirme la suppression, réserve les fils au leader et n’affiche aucune coche', () => {
+    const panel = source('src/features/groups/song-comments-panel.tsx');
+    expect(panel).toContain("Alert.alert(t('Supprimer ce commentaire ?')");
+    // Seul le leader ouvre un fil ; tout le monde répond dans un fil existant.
+    expect(panel).toContain('const composerVisible = isLeader || contextActive;');
+    expect(panel).toContain('parentId: replyTo?.rootId ?? null');
+    // Modifier = auteur ; supprimer = auteur ou leader (miroir de la RLS).
+    expect(panel).toContain('const canEditTarget = actionTarget?.authorId === userId;');
+    expect(panel).toContain('const canDeleteTarget = isLeader || canEditTarget;');
+    // Les accusés de lecture restent propres aux messages privés.
+    expect(panel).not.toContain('ReceiptChecks');
+    expect(source('src/features/groups/group-song-screen.tsx')).not.toContain('ReceiptChecks');
   });
 
   it('retire immédiatement un commentaire du cache ciblé sans toucher aux autres groupes', () => {

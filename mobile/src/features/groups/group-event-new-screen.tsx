@@ -18,7 +18,6 @@ import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
-import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -64,8 +63,6 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
   const [recurrence, setRecurrence] = useState<GroupRecurrence>('Ponctuel');
   const [occurrenceCount, setOccurrenceCount] = useState(1);
   const [reminderLeadDays, setReminderLeadDays] = useState(2);
-  const canRepeat = usePremiumCapability('recurringEvents');
-  const canConfigureReminder = usePremiumCapability('configurableReminders');
   if (group.isLoading)
     return (
       <Screen nativeHeader>
@@ -113,7 +110,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           occurrenceCount: count,
           postalCode,
           recurrence,
-          reminderLeadDays: canConfigureReminder ? reminderLeadDays : 2,
+          reminderLeadDays,
           title: kind,
           venue,
         },
@@ -206,7 +203,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
               />
             ))}
           </View>
-          {canRepeat && recurrence !== 'Ponctuel' ? (
+          {recurrence !== 'Ponctuel' ? (
             <View style={styles.counter}>
               <IconButton
                 accessibilityLabel={t('Retirer une date')}
@@ -243,27 +240,16 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
         </Card>
         <Card style={styles.card}>
           <SectionHeader title={t('Rappel')} />
-          {canConfigureReminder ? (
-            <View style={styles.wrap}>
-              {reminderOptions.map((days) => (
-                <ChoiceChip
-                  key={days}
-                  label={reminderLabel(days, t)}
-                  onPress={() => setReminderLeadDays(days)}
-                  selected={reminderLeadDays === days}
-                />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.note}>
-              <Ionicons color={palette.bronze} name="notifications" size={16} />
-              <AppText color={palette.muted} style={styles.flex} variant="caption">
-                {t(
-                  'Le rappel gratuit part 2 jours avant. Premium permet de choisir le moment exact.',
-                )}
-              </AppText>
-            </View>
-          )}
+          <View style={styles.wrap}>
+            {reminderOptions.map((days) => (
+              <ChoiceChip
+                key={days}
+                label={reminderLabel(days, t)}
+                onPress={() => setReminderLeadDays(days)}
+                selected={reminderLeadDays === days}
+              />
+            ))}
+          </View>
         </Card>
         {create.error ? (
           <AppText color={palette.error} style={styles.center} variant="caption">

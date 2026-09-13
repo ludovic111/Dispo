@@ -1,5 +1,6 @@
 -- Seed de développement local : 20 musiciens genevois (mot de passe « jamconnect-demo »),
--- annonces SOS et appréciations. Ne jamais exécuter en production.
+-- annonces SOS, collaborations et notes. Ne jamais exécuter en production.
+-- Compatible avec le schéma courant (2.5) : aucune table ni colonne retirée n'est référencée.
 
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new)
 values ('00000000-0000-0000-0000-000000000000', '5b07c949-eb23-5cac-b866-1d10dc67abd5', 'authenticated', 'authenticated', 'marco@demo.dispo.ch', crypt('jamconnect-demo', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"name":"Marco Fernández"}', now(), now(), '', '', '', '');
@@ -144,27 +145,66 @@ update public.profiles set
   bio = 'Claviers Rhodes & orgue Hammond. Soul, funk, neo-soul. Home studio équipé.', available_dates = '{}'::date[], repertoire = array['What''s Going On','Lovely Day','Compositions neo-soul']::text[], photo_url = 'pfp_antoine'
 where id = 'cb58436c-e5d2-5422-80cc-9d458d151d7d';
 
--- Appréciations (avis positifs du seed)
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3', '5b07c949-eb23-5cac-b866-1d10dc67abd5', 'golden', 'Groove incroyable, très accueillant.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('1912d9b6-90aa-51be-a69c-d5094c9e681f', '5b07c949-eb23-5cac-b866-1d10dc67abd5', 'golden', 'La clave dans le sang. Il a sauvé notre soirée salsa.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('5b07c949-eb23-5cac-b866-1d10dc67abd5', '0c99c694-fafc-5ad8-a19c-f9717d5f55d3', 'golden', 'Une voix qui transforme n''importe quel concert.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14', '1912d9b6-90aa-51be-a69c-d5094c9e681f', 'note', 'Solide walking bass, très bon niveau.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('10dd36a7-9a8c-51e3-bc08-631398d13eec', '1912d9b6-90aa-51be-a69c-d5094c9e681f', 'golden', 'Le pilier de n''importe quel groupe. Fiable à 200 %.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('a368379a-dc49-5194-ac47-3374d0d28557', '0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14', 'golden', 'Rigoureuse et pédagogue.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('1912d9b6-90aa-51be-a69c-d5094c9e681f', '10dd36a7-9a8c-51e3-bc08-631398d13eec', 'golden', 'Swing impeccable, studio top.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('5b07c949-eb23-5cac-b866-1d10dc67abd5', '10dd36a7-9a8c-51e3-bc08-631398d13eec', 'note', 'Très bon feel latin.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('965f3dcc-0086-576d-9c29-ffc46ab4de19', '23fcbc32-a18d-5fde-b26d-c5507e458323', 'note', 'Très bon son, super énergie.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('23fcbc32-a18d-5fde-b26d-c5507e458323', '965f3dcc-0086-576d-9c29-ffc46ab4de19', 'golden', 'Le groove est là. Fiable et ponctuelle.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('5b07c949-eb23-5cac-b866-1d10dc67abd5', '6d023718-28d9-5b0f-b505-c090b5c7c311', 'golden', 'Un son de cuivre exceptionnel.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3', '6d023718-28d9-5b0f-b505-c090b5c7c311', 'golden', 'Le feu. La section cuivre rêvée.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14', 'a18d834d-022b-50b9-aac6-c5e7a6ba3b24', 'golden', 'Très belle sonorité, engagée.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3', '17bbcb90-e3e0-588a-96c3-fc31929ba1b5', 'golden', 'Harmonies magnifiques.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('10dd36a7-9a8c-51e3-bc08-631398d13eec', '20e621a1-6bb3-5ed7-94da-c34de9609f7c', 'note', 'Beau phrasé, belle écoute.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3', '56bf0fa3-2241-54d7-a663-ad456f4a10b0', 'golden', 'La bossa comme à Rio.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('23fcbc32-a18d-5fde-b26d-c5507e458323', '9da874e4-b654-5d65-a462-0d9ccb9de678', 'note', 'Frappe solide, bon local.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('17bbcb90-e3e0-588a-96c3-fc31929ba1b5', 'cfdfe275-2e7a-5aa8-913a-fa0754ba383f', 'golden', 'Un toucher exceptionnel.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('6d023718-28d9-5b0f-b505-c090b5c7c311', 'a9a0cf01-e56b-5e2b-b0fe-743851992bd3', 'golden', 'Tumbao d''enfer.');
-insert into public.appreciations (giver_id, receiver_id, kind, comment) values ('965f3dcc-0086-576d-9c29-ffc46ab4de19', 'cb58436c-e5d2-5422-80cc-9d458d151d7d', 'golden', 'Le son Rhodes parfait.');
+-- Collaborations « on a joué ensemble » et notes 5 étoiles anonymes.
+-- (Remplacent les anciennes « appréciations » : la table public.appreciations a
+-- été supprimée le 03.08.2026. Une note n'est possible qu'après collaboration
+-- et seuls les profils « Professionnel » sont notés, comme la RLS de prod.)
+with seed_feedback(giver_id, receiver_id, kind) as (
+  values
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, 'golden'),
+    ('1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, '5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, 'golden'),
+    ('5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, '0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, 'golden'),
+    ('0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14'::uuid, '1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, 'note'),
+    ('10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, '1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, 'golden'),
+    ('a368379a-dc49-5194-ac47-3374d0d28557'::uuid, '0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14'::uuid, 'golden'),
+    ('1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, '10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, 'golden'),
+    ('5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, '10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, 'note'),
+    ('965f3dcc-0086-576d-9c29-ffc46ab4de19'::uuid, '23fcbc32-a18d-5fde-b26d-c5507e458323'::uuid, 'note'),
+    ('23fcbc32-a18d-5fde-b26d-c5507e458323'::uuid, '965f3dcc-0086-576d-9c29-ffc46ab4de19'::uuid, 'golden'),
+    ('5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, '6d023718-28d9-5b0f-b505-c090b5c7c311'::uuid, 'golden'),
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '6d023718-28d9-5b0f-b505-c090b5c7c311'::uuid, 'golden'),
+    ('0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14'::uuid, 'a18d834d-022b-50b9-aac6-c5e7a6ba3b24'::uuid, 'golden'),
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '17bbcb90-e3e0-588a-96c3-fc31929ba1b5'::uuid, 'golden'),
+    ('10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, '20e621a1-6bb3-5ed7-94da-c34de9609f7c'::uuid, 'note'),
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '56bf0fa3-2241-54d7-a663-ad456f4a10b0'::uuid, 'golden'),
+    ('23fcbc32-a18d-5fde-b26d-c5507e458323'::uuid, '9da874e4-b654-5d65-a462-0d9ccb9de678'::uuid, 'note'),
+    ('17bbcb90-e3e0-588a-96c3-fc31929ba1b5'::uuid, 'cfdfe275-2e7a-5aa8-913a-fa0754ba383f'::uuid, 'golden'),
+    ('6d023718-28d9-5b0f-b505-c090b5c7c311'::uuid, 'a9a0cf01-e56b-5e2b-b0fe-743851992bd3'::uuid, 'golden'),
+    ('965f3dcc-0086-576d-9c29-ffc46ab4de19'::uuid, 'cb58436c-e5d2-5422-80cc-9d458d151d7d'::uuid, 'golden')
+)
+insert into public.collaborations (a_id, b_id)
+select distinct least(giver_id, receiver_id), greatest(giver_id, receiver_id)
+from seed_feedback
+on conflict do nothing;
+
+with seed_feedback(giver_id, receiver_id, kind) as (
+  values
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, 'golden'),
+    ('1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, '5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, 'golden'),
+    ('5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, '0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, 'golden'),
+    ('0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14'::uuid, '1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, 'note'),
+    ('10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, '1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, 'golden'),
+    ('a368379a-dc49-5194-ac47-3374d0d28557'::uuid, '0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14'::uuid, 'golden'),
+    ('1912d9b6-90aa-51be-a69c-d5094c9e681f'::uuid, '10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, 'golden'),
+    ('5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, '10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, 'note'),
+    ('965f3dcc-0086-576d-9c29-ffc46ab4de19'::uuid, '23fcbc32-a18d-5fde-b26d-c5507e458323'::uuid, 'note'),
+    ('23fcbc32-a18d-5fde-b26d-c5507e458323'::uuid, '965f3dcc-0086-576d-9c29-ffc46ab4de19'::uuid, 'golden'),
+    ('5b07c949-eb23-5cac-b866-1d10dc67abd5'::uuid, '6d023718-28d9-5b0f-b505-c090b5c7c311'::uuid, 'golden'),
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '6d023718-28d9-5b0f-b505-c090b5c7c311'::uuid, 'golden'),
+    ('0b92f4a4-3a8f-5b7e-b41b-577f5d65cc14'::uuid, 'a18d834d-022b-50b9-aac6-c5e7a6ba3b24'::uuid, 'golden'),
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '17bbcb90-e3e0-588a-96c3-fc31929ba1b5'::uuid, 'golden'),
+    ('10dd36a7-9a8c-51e3-bc08-631398d13eec'::uuid, '20e621a1-6bb3-5ed7-94da-c34de9609f7c'::uuid, 'note'),
+    ('0c99c694-fafc-5ad8-a19c-f9717d5f55d3'::uuid, '56bf0fa3-2241-54d7-a663-ad456f4a10b0'::uuid, 'golden'),
+    ('23fcbc32-a18d-5fde-b26d-c5507e458323'::uuid, '9da874e4-b654-5d65-a462-0d9ccb9de678'::uuid, 'note'),
+    ('17bbcb90-e3e0-588a-96c3-fc31929ba1b5'::uuid, 'cfdfe275-2e7a-5aa8-913a-fa0754ba383f'::uuid, 'golden'),
+    ('6d023718-28d9-5b0f-b505-c090b5c7c311'::uuid, 'a9a0cf01-e56b-5e2b-b0fe-743851992bd3'::uuid, 'golden'),
+    ('965f3dcc-0086-576d-9c29-ffc46ab4de19'::uuid, 'cb58436c-e5d2-5422-80cc-9d458d151d7d'::uuid, 'golden')
+)
+insert into public.ratings (rater_id, rated_id, stars)
+select f.giver_id, f.receiver_id, case f.kind when 'golden' then 5 else 4 end
+from seed_feedback f
+join public.profiles p on p.id = f.receiver_id and p.level = 'Professionnel'
+on conflict (rater_id, rated_id) do nothing;
 
 -- Annonces SOS (dates projetées sur les prochains jours)
 insert into public.gig_requests (id, host_id, title, date, place, neighborhood, genre, wanted_instruments, fee, description, posted_at)

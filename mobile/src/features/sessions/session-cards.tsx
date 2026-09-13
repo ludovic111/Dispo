@@ -15,14 +15,17 @@ import { Card } from '@/components/ui/card';
 import { DateTicket } from '@/components/ui/date-ticket';
 import { DispoButton } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
+import { VuMeter } from '@/components/ui/vu-meter';
 import { useAuth } from '@/features/auth/auth-context';
+import { AddToCalendarButton } from '@/features/calendar/add-to-calendar-button';
+import { sessionCalendarSourceId, sessionDeepLink } from '@/features/calendar/calendar-sync';
 import {
   unseenEventStyleFor,
   useEventHasUnseenChange,
 } from '@/features/groups/group-event-changes';
 import { groupEventColor } from '@/features/groups/group-event-presentation';
 import { useDispoTheme } from '@/theme/theme-context';
-import { pressedStyle, radii, spacing, type DispoPalette } from '@/theme/tokens';
+import { pressedStyle, spacing, type DispoPalette } from '@/theme/tokens';
 
 function useSessionChange(item: SessionItem) {
   const { session } = useAuth();
@@ -209,7 +212,11 @@ export function SessionRow({
   const changed = useSessionChange(item);
   const date = dateParts(item.date, i18n.resolvedLanguage ?? i18n.language ?? 'fr');
   const content = (
-    <Card padding={0} style={[isPast && styles.pastCard, changed && unseenEventStyleFor(palette)]}>
+    <Card
+      padding={0}
+      style={changed && unseenEventStyleFor(palette)}
+      tone={isPast ? 'muted' : 'default'}
+    >
       <View style={styles.row}>
         <View style={styles.rowTicketWrap}>
           <DateTicket color={ticketColor(item, palette, true)} date={item.date} />
@@ -243,49 +250,65 @@ export function SessionRow({
   );
 }
 
+/**
+ * État du line-up de la prochaine date : VU-mètre accent (une LED par
+ * membre tant que le groupe tient en douze) et une ligne de statut.
+ */
 function LineupLine({ item }: { item: SessionItem }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   if (item.source !== 'group') return null;
-  if (item.lineupState === 'complete') {
-    return (
-      <View style={styles.lineupLine}>
-        <Ionicons color={palette.jam} name="checkmark-circle" size={15} />
-        <AppText color={palette.jam} style={styles.flex} variant="caption" weight="semibold">
-          {t('Line-up complet — tout le monde est là')}
+  const total = Math.max(item.rosterCount, item.availableCount, 0);
+  const presence = t('Présence : {{available}}/{{total}}', {
+    available: item.availableCount,
+    total,
+  });
+  const status =
+    item.lineupState === 'complete'
+      ? {
+          color: palette.jam,
+          icon: 'checkmark-circle' as const,
+          text: t('Line-up complet — tout le monde est là'),
+        }
+      : item.lineupState === 'late'
+        ? {
+            color: palette.signal,
+            icon: 'warning' as const,
+            text:
+              item.missingRoles.length > 0
+                ? t('Il manque : {{roles}}', {
+                    roles: item.missingRoles.map((role) => t(role)).join(', '),
+                  })
+                : t('Il manque encore des réponses'),
+          }
+        : { color: palette.muted, icon: 'people' as const, text: presence };
+  return (
+    <View style={styles.lineup}>
+      <View style={styles.lineupMeter}>
+        <VuMeter
+          accessibilityLabel={presence}
+          label={t('Line-up')}
+          segments={Math.min(12, Math.max(1, total))}
+          size="compact"
+          tone="accent"
+          value={total > 0 ? item.availableCount / total : 0}
+        />
+        <AppText color={palette.muted} importantForAccessibility="no" variant="mono">
+          {item.availableCount}/{total}
         </AppText>
       </View>
-    );
-  }
-  if (item.lineupState === 'late') {
-    return (
       <View style={styles.lineupLine}>
-        <Ionicons color={palette.signal} name="warning" size={15} />
+        <Ionicons color={status.color} name={status.icon} size={15} />
         <AppText
-          color={palette.signal}
+          color={status.color}
           numberOfLines={2}
           style={styles.flex}
           variant="caption"
           weight="semibold"
         >
-          {item.missingRoles.length > 0
-            ? t('Il manque : {{roles}}', {
-                roles: item.missingRoles.map((role) => t(role)).join(', '),
-              })
-            : t('Il manque encore des réponses')}
+          {status.text}
         </AppText>
       </View>
-    );
-  }
-  return (
-    <View style={styles.lineupLine}>
-      <Ionicons color={palette.muted} name="people" size={14} />
-      <AppText color={palette.muted} style={styles.flex} variant="caption" weight="semibold">
-        {t('Présence : {{available}}/{{total}}', {
-          available: item.availableCount,
-          total: item.rosterCount,
-        })}
-      </AppText>
     </View>
   );
 }
@@ -303,8 +326,10 @@ export function NextSessionCard({
   const date = dateParts(item.date, locale);
   const changed = useSessionChange(item);
   const left = countdownLabel(item.date, new Date(), locale);
+  const calendarSourceId = sessionCalendarSourceId(item);
+  const deepLink = sessionDeepLink(item);
   const content = (
-    <Card style={changed && unseenEventStyleFor(palette)}>
+    <Card style={changed && unseenEventStyleFor(palette)} tone="elevated">
       <View style={styles.nextTop}>
         <DateTicket color={ticketColor(item, palette, false)} date={item.date} size="large" />
         <View style={styles.nextContent}>
@@ -326,6 +351,18 @@ export function NextSessionCard({
         {onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={18} /> : null}
       </View>
       <LineupLine item={item} />
+      {calendarSourceId ? (
+        <View style={styles.calendarAction}>
+          <AddToCalendarButton
+            location={item.place ? sessionPlaceLabel(item.place, t) : undefined}
+            notes={[item.groupName, deepLink].filter(Boolean).join('\n')}
+            sourceId={calendarSourceId}
+            startsAt={item.date}
+            title={item.title}
+            url={deepLink ?? undefined}
+          />
+        </View>
+      ) : null}
     </Card>
   );
   if (!onPress) return content;
@@ -495,12 +532,12 @@ export function PastSummaryCard({ sessions }: { sessions: SessionItem[] }) {
       </View>
       <View style={styles.metrics}>
         {metrics.map((metric) => (
-          <View key={metric.label} style={[styles.metric, { backgroundColor: palette.inset }]}>
+          <Card key={metric.label} padding={spacing.xs} style={styles.metric} tone="inset">
             <AppText variant="title2">{metric.value}</AppText>
-            <AppText color={palette.muted} variant="caption2" weight="semibold">
+            <AppText color={palette.bronze} variant="label">
               {metric.label}
             </AppText>
-          </View>
+          </Card>
         ))}
       </View>
       <View style={styles.tags}>
@@ -520,6 +557,7 @@ const styles = StyleSheet.create({
   answerButton: { flex: 1 },
   answerButtons: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   answerInfo: { gap: spacing.xxs, marginTop: spacing.sm },
+  calendarAction: { alignSelf: 'flex-start', marginTop: spacing.sm },
   answerTopline: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -532,18 +570,14 @@ const styles = StyleSheet.create({
   directTitleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   flex: { flex: 1 },
   groupName: { flexShrink: 1 },
-  lineupLine: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.tight,
-    marginTop: spacing.sm,
-  },
+  lineup: { gap: spacing.xs, marginTop: spacing.sm },
+  lineupLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
+  lineupMeter: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   metaLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
-  metric: { alignItems: 'center', borderRadius: radii.sm, flex: 1, paddingVertical: spacing.xs },
+  metric: { alignItems: 'center', flex: 1 },
   metrics: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
   nextContent: { flex: 1, gap: spacing.xxs },
   nextTop: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
-  pastCard: { opacity: 0.75 },
   row: { alignItems: 'center', flexDirection: 'row', minHeight: 94 },
   rowContent: { flex: 1, gap: spacing.xxs, paddingVertical: spacing.sm },
   rowTicketWrap: { paddingLeft: spacing.sm, paddingRight: spacing.sm },

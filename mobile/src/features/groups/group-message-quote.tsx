@@ -4,8 +4,9 @@ import { StyleSheet, View } from 'react-native';
 import type { GroupMessage } from './group-model';
 
 import { AppText } from '@/components/ui/app-text';
+import { isModeratedMessage, moderatedPreview } from '@/features/messages/moderated-message';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { insetStyle, radii, spacing } from '@/theme/tokens';
 
 export function GroupMessageQuote({
   message,
@@ -22,11 +23,13 @@ export function GroupMessageQuote({
   const { t } = useTranslation();
   const preview = message?.deletedAt
     ? t('Message supprimé')
-    : message?.text ||
-      message?.attachmentName ||
-      (loading ? t('Chargement du message…') : t('Message indisponible'));
+    : message && isModeratedMessage(message)
+      ? moderatedPreview(t)
+      : message?.text ||
+        message?.attachmentName ||
+        (loading ? t('Chargement du message…') : t('Message indisponible'));
   return (
-    <View style={[styles.quote, { backgroundColor: palette.inset, borderColor: palette.electric }]}>
+    <View style={[styles.quote, insetStyle(palette), { borderLeftColor: palette.electric }]}>
       {message && showSender ? (
         <AppText color={palette.electric} numberOfLines={1} variant="caption">
           {message.senderName}

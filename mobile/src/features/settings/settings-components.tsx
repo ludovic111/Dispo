@@ -6,9 +6,8 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ListRow } from '@/components/ui/list-row';
 import { Screen } from '@/components/ui/screen';
-import { SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing, tint } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing, surfaceStyle, tint } from '@/theme/tokens';
 
 /** Largeur du puits d'icône de `ListRow`, pour aligner les séparateurs sur le texte. */
 const iconWellWidth = 44;
@@ -26,7 +25,25 @@ export function SettingsShell({
   );
 }
 
-/** Section de réglages : en-tête standard, carte groupée, note de bas de section. */
+/** Titre de groupe de réglages : étiquette gravée dans le papier, jamais un titre éditorial. */
+export function SettingsGroupTitle({ title }: { title: string }) {
+  const { palette } = useDispoTheme();
+  return (
+    <AppText
+      accessibilityRole="header"
+      color={palette.bronze}
+      style={styles.groupTitle}
+      variant="label"
+    >
+      {title}
+    </AppText>
+  );
+}
+
+/**
+ * Section de réglages façon liste groupée iOS : étiquette gravée, groupe en
+ * creux dans la surface, note de bas de section.
+ */
 export function SettingsSection({
   children,
   footer,
@@ -35,8 +52,8 @@ export function SettingsSection({
   const { palette } = useDispoTheme();
   return (
     <View style={styles.section}>
-      {title ? <SectionHeader title={title} /> : null}
-      <Card padding={0} style={styles.sectionCard} tone="elevated">
+      {title ? <SettingsGroupTitle title={title} /> : null}
+      <Card padding={0} style={styles.sectionCard} tone="inset">
         {children}
       </Card>
       {footer ? (
@@ -104,7 +121,14 @@ export function SettingsSwitchRow({
     <SettingsRow
       color={color}
       icon={icon}
-      right={<Switch onValueChange={onValueChange} trackColor={{ true: color }} value={value} />}
+      right={
+        <Switch
+          accessibilityLabel={title}
+          onValueChange={onValueChange}
+          trackColor={{ true: color }}
+          value={value}
+        />
+      }
       title={title}
       {...(detail === undefined ? {} : { detail })}
     />
@@ -143,41 +167,98 @@ export function SelectionDot({ active, color }: { active: boolean; color: string
   );
 }
 
-/** Bandeau d'erreur des écrans de réglages : une seule forme. */
-export function SettingsErrorBanner({ text }: { text: string | null }) {
+/**
+ * Puits d'icône relevé : une petite surface « Backstage » (dégradé, liseré,
+ * arête, ombre de carte) qui porte une icône. Sert aux en-têtes d'écran, aux
+ * étapes d'onboarding et aux listes d'avantages.
+ */
+export function RaisedIconWell({
+  color,
+  icon,
+  shape = 'round',
+  size = 'regular',
+}: {
+  color?: string | undefined;
+  icon: ComponentProps<typeof Ionicons>['name'];
+  /** `round` : pastille · `square` : coins de contrôle. */
+  shape?: 'round' | 'square' | undefined;
+  /** `regular` : 44 pt · `large` : 64 pt (têtes d'étape). */
+  size?: 'regular' | 'large' | undefined;
+}) {
   const { palette } = useDispoTheme();
-  if (!text) return null;
+  const surface = surfaceStyle(palette, 'elevated');
+  const side = size === 'large' ? 64 : minimumTouchTarget;
   return (
     <View
-      accessibilityRole="alert"
       style={[
-        styles.errorBanner,
-        { backgroundColor: tint(palette.signal, 0.1), borderColor: tint(palette.signal, 0.33) },
+        styles.iconWell,
+        surface.container,
+        {
+          borderRadius: shape === 'round' ? radii.round : radii.sm,
+          height: side,
+          width: side,
+        },
       ]}
     >
-      <Ionicons color={palette.signal} name="warning" size={17} />
-      <AppText color={palette.signal} style={styles.errorCopy} variant="footnote">
-        {text}
-      </AppText>
+      {surface.highlight && shape === 'square' ? (
+        <View
+          pointerEvents="none"
+          style={[surface.highlight, { left: radii.sm, right: radii.sm }]}
+        />
+      ) : null}
+      <Ionicons color={color ?? palette.electric} name={icon} size={size === 'large' ? 26 : 20} />
     </View>
   );
 }
 
+/**
+ * Bandeau d'état des écrans de réglages et de compte : une seule forme.
+ * `error` (défaut) pour ce qui a échoué, `warning` pour ce qui demande une
+ * lecture ou une action, `info` pour une confirmation.
+ */
+export function SettingsErrorBanner({
+  text,
+  tone = 'error',
+}: {
+  text: string | null;
+  tone?: 'error' | 'info' | 'warning' | undefined;
+}) {
+  const { palette } = useDispoTheme();
+  if (!text) return null;
+  const color =
+    tone === 'warning' ? palette.warning : tone === 'info' ? palette.electric : palette.error;
+  return (
+    <Card
+      accessibilityRole="alert"
+      padding={spacing.sm}
+      style={[styles.banner, { backgroundColor: tint(color, 0.1), borderColor: tint(color, 0.33) }]}
+      tone="muted"
+    >
+      <View style={styles.bannerRow}>
+        <Ionicons
+          color={color}
+          name={tone === 'info' ? 'information-circle' : 'warning'}
+          size={17}
+        />
+        <AppText color={color} style={styles.bannerCopy} variant="footnote">
+          {text}
+        </AppText>
+      </View>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  banner: { alignSelf: 'stretch' },
+  bannerCopy: { flex: 1 },
+  bannerRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.sm * 2 + iconWellWidth },
-  errorBanner: {
-    alignItems: 'center',
-    borderRadius: radii.card,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  errorCopy: { flex: 1 },
+  groupTitle: { paddingHorizontal: spacing.xs },
+  iconWell: { alignItems: 'center', justifyContent: 'center' },
   rowInset: { paddingHorizontal: spacing.sm },
   section: { gap: spacing.xs },
   sectionCard: { overflow: 'hidden' },
-  sectionFooter: { paddingHorizontal: spacing.sm },
+  sectionFooter: { paddingHorizontal: spacing.xs },
   shell: {
     gap: spacing.lg,
     paddingBottom: spacing.xxl,

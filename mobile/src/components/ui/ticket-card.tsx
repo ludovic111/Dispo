@@ -4,12 +4,15 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { billetInk, lightPalette, radii, tint } from '@/theme/tokens';
+import { useDispoTheme } from '@/theme/theme-context';
+import { billetInk, elevation, lightPalette, radii, tint } from '@/theme/tokens';
 
 interface TicketCardProps extends PropsWithChildren {
   backgroundColor?: string;
   notchFromTrailing?: number;
   notchRadius?: number;
+  /** Ligne de perforation pointillée entre les deux encoches (défaut : oui). */
+  perforation?: boolean;
   radius?: number;
   style?: ViewStyle;
 }
@@ -45,14 +48,21 @@ function roundedTicketPath(
   return `${body} ${circle(0)} ${circle(height)}`;
 }
 
+/**
+ * Billet imprimé : papier clair fixe dans tous les thèmes, encoches de part
+ * et d'autre de la souche, perforation pointillée, liseré clair en haut et
+ * ombre marquée. Le contenu du billet écrit à l'encre `billetInk`.
+ */
 export function TicketCard({
   backgroundColor = lightPalette.background,
   children,
   notchFromTrailing = 74,
   notchRadius = 7,
+  perforation = true,
   radius = 18,
   style,
 }: TicketCardProps) {
+  const { palette } = useDispoTheme();
   const [size, setSize] = useState<{ height: number; width: number } | null>(null);
   const path = useMemo(
     () =>
@@ -61,6 +71,8 @@ export function TicketCard({
         : '',
     [notchFromTrailing, notchRadius, radius, size],
   );
+  const notchX = size ? Math.max(radius + notchRadius, size.width - notchFromTrailing) : 0;
+  const dots = size ? Math.max(0, Math.floor((size.height - notchRadius * 2 - 8) / 8)) : 0;
 
   const measure = (event: LayoutChangeEvent) => {
     const { height, width } = event.nativeEvent.layout;
@@ -69,8 +81,29 @@ export function TicketCard({
     }
   };
 
+  const decorations = size ? (
+    <>
+      <View
+        pointerEvents="none"
+        style={[styles.highlight, { left: radius, right: radius, backgroundColor: paperHighlight }]}
+      />
+      {perforation ? (
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+          style={[styles.perforation, { left: notchX - 1, top: notchRadius + 4 }]}
+        >
+          {Array.from({ length: dots }, (_, index) => (
+            <View key={index} style={styles.dot} />
+          ))}
+        </View>
+      ) : null}
+    </>
+  ) : null;
+
   return (
-    <View onLayout={measure} style={styles.shadow}>
+    <View onLayout={measure} style={[styles.shadow, elevation(3, palette)]}>
       {size ? (
         <MaskedView
           maskElement={
@@ -84,7 +117,10 @@ export function TicketCard({
           }
           style={[styles.mask, { height: size.height, width: size.width }, style]}
         >
-          <View style={[styles.surface, { backgroundColor }]}>{children}</View>
+          <View style={[styles.surface, { backgroundColor }]}>
+            {decorations}
+            {children}
+          </View>
         </MaskedView>
       ) : (
         <View style={[styles.surface, { backgroundColor }, style]}>{children}</View>
@@ -114,17 +150,15 @@ export function Barcode({ seed }: { seed: string }) {
   );
 }
 
+const paperHighlight = tint(lightPalette.card, 0.7);
+
 const styles = StyleSheet.create({
   bar: { backgroundColor: tint(billetInk, 0.42), height: 9 },
   barcode: { alignItems: 'center', flexDirection: 'row', gap: 2 },
+  dot: { backgroundColor: tint(billetInk, 0.2), borderRadius: 1, height: 2, width: 2 },
+  highlight: { height: 1, position: 'absolute', top: 0 },
   mask: { minHeight: 1 },
-  shadow: {
-    borderRadius: radii.ticket,
-    elevation: 9,
-    shadowColor: billetInk,
-    shadowOffset: { height: 7, width: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-  },
+  perforation: { bottom: 0, gap: 6, position: 'absolute', width: 2 },
+  shadow: { borderRadius: radii.ticket },
   surface: { width: '100%' },
 });

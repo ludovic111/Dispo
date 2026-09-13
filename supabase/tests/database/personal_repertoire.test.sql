@@ -15,7 +15,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000003',true);
 select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire where profile_id::text like '54000000-%'),'Private repertoire leaked');
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000002',true);
-select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire),'Owner cannot read own songs');
+select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire where profile_id=auth.uid()),'Owner cannot read own songs');
 update public.personal_repertoire set mastery=3,style='Jazz latin',hidden=true where profile_id=(select auth.uid());
 insert into public.personal_repertoire_settings(profile_id,is_public) values ((select auth.uid()),true);
 do $$ begin
@@ -30,13 +30,14 @@ update public.music_groups set repertoire = repertoire where id='54000000-0000-4
 select pg_temp.assert_true((select hidden and mastery=3 and style='Jazz latin' from public.personal_repertoire where profile_id='54000000-0000-4000-8000-000000000002'),'Automatic refresh revived exclusion or overwrote mastery');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000003',true);
-select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire),'Public hidden song leaked');
+select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire where profile_id::text like '54000000-%'),'Public hidden song leaked');
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000002',true);
 select public.add_personal_song('{"title":"  Blue   Bossa  ","artist":"Kenny Dorham","solos":["private"],"chords":"private"}');
-select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire),'Manual restoration duplicated song');
-select pg_temp.assert_true((select not hidden and origin='manual' and mastery=3 from public.personal_repertoire),'Manual restoration lost mastery');
+-- La base locale peut contenir d'autres repertoires : toutes les assertions sont bornees aux profils de la fixture.
+select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire where profile_id::text like '54000000-%'),'Manual restoration duplicated song');
+select pg_temp.assert_true((select not hidden and origin='manual' and mastery=3 from public.personal_repertoire where profile_id='54000000-0000-4000-8000-000000000002'),'Manual restoration lost mastery');
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000003',true);
-select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire),'Public repertoire cannot be read');
+select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire where profile_id::text like '54000000-%'),'Public repertoire cannot be read');
 do $$ declare affected integer; begin
   update public.personal_repertoire set mastery=0 where profile_id='54000000-0000-4000-8000-000000000002'; get diagnostics affected=row_count;
   if affected<>0 then raise exception 'Visitor can edit public song'; end if;
@@ -44,7 +45,7 @@ end $$;
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000002',true);
 insert into public.blocks(blocker_id,blocked_id) values ((select auth.uid()),'54000000-0000-4000-8000-000000000003');
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000003',true);
-select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire),'Block in reverse direction ignored');
+select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire where profile_id::text like '54000000-%'),'Block in reverse direction ignored');
 reset role;
 insert into public.group_events(id,group_id,kind,title,venue,date,setlist) values ('54000000-0000-4000-8000-000000000040','54000000-0000-4000-8000-000000000010','Répétition','Library session','Studio',now()+interval '1 day','[{"id":"54000000-0000-4000-8000-000000000032","title":"All of Me","artist":"Gerald Marks","is_approved":true}]');
 select pg_temp.assert_true((select count(*)=2 from public.personal_repertoire where profile_id='54000000-0000-4000-8000-000000000002'),'Event song not synced');
@@ -70,10 +71,10 @@ select pg_temp.assert_true((select hidden from public.personal_repertoire where 
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000002',true);
 set local role authenticated;
 select public.add_personal_song('{"title":"All of Me","artist":"Gerald Marks"}');
-select public.update_personal_arrangement((select id from public.personal_repertoire where song->>'title'='All of Me'),'{"key":"Eb","tempo_bpm":132,"form":"AABA"}');
-select public.update_personal_arrangement((select id from public.personal_repertoire where song->>'title'='All of Me'),'{"key":null}');
-select pg_temp.assert_true((select arrangement='{"key":null,"tempo_bpm":132,"form":"AABA"}'::jsonb from public.personal_repertoire where song->>'title'='All of Me'),'Partial update erased unrelated personal work');
-do $$ declare v_id uuid := (select id from public.personal_repertoire where song->>'title'='All of Me'); begin
+select public.update_personal_arrangement((select id from public.personal_repertoire where profile_id=(select auth.uid()) and song->>'title'='All of Me'),'{"key":"Eb","tempo_bpm":132,"form":"AABA"}');
+select public.update_personal_arrangement((select id from public.personal_repertoire where profile_id=(select auth.uid()) and song->>'title'='All of Me'),'{"key":null}');
+select pg_temp.assert_true((select arrangement='{"key":null,"tempo_bpm":132,"form":"AABA"}'::jsonb from public.personal_repertoire where profile_id=(select auth.uid()) and song->>'title'='All of Me'),'Partial update erased unrelated personal work');
+do $$ declare v_id uuid := (select id from public.personal_repertoire where profile_id=(select auth.uid()) and song->>'title'='All of Me'); begin
   begin perform public.update_personal_arrangement(v_id,'{"tempo_bpm":-1}'); raise exception 'Invalid BPM accepted'; exception when invalid_parameter_value then null; end;
   begin perform public.update_personal_arrangement(v_id,'{"title":""}'); raise exception 'Empty title accepted'; exception when invalid_parameter_value then null; end;
   begin perform public.update_personal_arrangement(v_id,'{"solos":["other-user"]}'); raise exception 'Group-only metadata accepted'; exception when invalid_parameter_value then null; end;

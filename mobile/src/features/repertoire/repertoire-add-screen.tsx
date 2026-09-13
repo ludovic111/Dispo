@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
-import { repertoireStyles } from './repertoire-model';
+import { repertoireStyles, withoutSongArtwork } from './repertoire-model';
 import { addPersonalSong } from './repertoire-repository';
 
 import { Card } from '@/components/ui/card';
@@ -29,6 +29,7 @@ import { SongCatalogPicker } from '@/features/groups/song-catalog-picker';
 import { SongInfoPanel } from '@/features/groups/song-info-panel';
 import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
 import { useSubscription } from '@/features/premium/subscription-queries';
+import { hideAlbumCoversKey, useBooleanPreference } from '@/features/settings/settings-storage';
 import { spacing } from '@/theme/tokens';
 
 export function RepertoireAddScreen() {
@@ -40,6 +41,7 @@ export function RepertoireAddScreen() {
     emptyGroupSong(randomUUID(), session?.user.id ?? '', true),
   );
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [hideArtwork] = useBooleanPreference(hideAlbumCoversKey);
   const request = useRef(0);
   useEffect(
     () => () => {
@@ -124,7 +126,7 @@ export function RepertoireAddScreen() {
           loadingMetadata={loadingMetadata}
         />
         <SongInfoPanel
-          draft={draft}
+          draft={hideArtwork ? withoutSongArtwork(draft) : draft}
           canEdit={!add.isPending}
           patch={patch}
           subtitle={t('Mon répertoire')}

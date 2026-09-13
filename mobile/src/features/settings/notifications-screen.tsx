@@ -1,11 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, StyleSheet, View } from 'react-native';
 
 import {
+  RaisedIconWell,
   SettingsDivider,
   SettingsErrorBanner,
+  SettingsGroupTitle,
   SettingsShell,
   SettingsSwitchRow,
 } from './settings-components';
@@ -43,7 +44,7 @@ import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import i18n from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 export function NotificationsScreen() {
   const { session } = useAuth();
@@ -199,11 +200,9 @@ export function NotificationsScreen() {
 
   return (
     <SettingsShell nativeHeader>
-      <Card>
+      <Card tone="elevated">
         <View style={styles.introRow}>
-          <View style={[styles.introIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
-            <Ionicons color={palette.electric} name="notifications" size={24} />
-          </View>
+          <RaisedIconWell icon="notifications" shape="square" />
           <View style={styles.introCopy}>
             <AppText variant="headline">{t('Ne rate plus une occasion de jouer')}</AppText>
             <AppText color={palette.muted} variant="footnote">
@@ -215,7 +214,7 @@ export function NotificationsScreen() {
         </View>
       </Card>
 
-      <Card padding={0}>
+      <Card padding={0} tone="inset">
         <SettingsSwitchRow
           color={palette.electric}
           detail={t(notificationStatusLabel(permission, enabled))}
@@ -241,9 +240,9 @@ export function NotificationsScreen() {
       {loading || busy ? <LoadingState /> : null}
 
       {enabled ? (
-        <Card padding={0}>
+        <Card padding={0} tone="inset">
           <View style={styles.cardHeading}>
-            <SectionHeader title={t("M'alerter pour")} />
+            <SettingsGroupTitle title={t("M'alerter pour")} />
           </View>
           <SettingsSwitchRow
             color={palette.signal}
@@ -307,13 +306,6 @@ const styles = StyleSheet.create({
   cardHeading: { paddingHorizontal: spacing.sm, paddingTop: spacing.sm },
   cardInset: { padding: spacing.sm },
   introCopy: { flex: 1, gap: spacing.xxs },
-  introIcon: {
-    alignItems: 'center',
-    borderRadius: radii.sm,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
   introRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   testCard: { gap: spacing.sm },
 });

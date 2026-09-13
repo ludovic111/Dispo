@@ -5,7 +5,8 @@ export const DEMO_VIDEO_BUCKET = 'demo-videos' as const;
 const DEMO_VIDEO_FREE_LIMIT = 1;
 const DEMO_VIDEO_PREMIUM_LIMIT = 6;
 export const DEMO_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
-const DEMO_VIDEO_MAX_DURATION_MS = 181_000;
+/** 1 min 30 for every tier since 2.5 (the picker mirrors it in seconds). */
+export const DEMO_VIDEO_MAX_DURATION_MS = 90_000;
 export const DEMO_THUMBNAIL_MAX_BYTES = 1024 * 1024;
 
 export interface DemoVideo {

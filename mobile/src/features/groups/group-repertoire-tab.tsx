@@ -14,6 +14,7 @@ import {
 import { openGroupDocument } from './group-repository';
 import { GroupSongRow } from './group-song-row';
 import { SongReorderList } from './song-reorder-list';
+import { SongSuggesterLine } from './song-suggester';
 
 import { AppText } from '@/components/ui/app-text';
 import { FormField } from '@/components/ui/form-field';
@@ -226,13 +227,18 @@ export function GroupRepertoireTab({ group, userId }: { group: MusicGroup; userI
           <SectionHeader
             title={isLeader ? t('Suggestions à valider') : t('En attente du leader')}
           />
-          {pending.map((song) =>
-            isLeader ? (
-              <PendingSongCard group={group} key={song.id} song={song} />
-            ) : (
-              <SongCard group={group} key={song.id} song={song} />
-            ),
-          )}
+          {pending.map((song) => (
+            <View key={song.id} style={styles.suggestion}>
+              {isLeader ? (
+                <PendingSongCard group={group} song={song} />
+              ) : (
+                <SongCard group={group} song={song} />
+              )}
+              <View style={styles.suggester}>
+                <SongSuggesterLine members={group.members} suggestedBy={song.suggestedBy} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : null}
       {approvedSongs.length > 8 ? (
@@ -296,4 +302,6 @@ const styles = StyleSheet.create({
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   decision: { gap: spacing.xs, paddingTop: spacing.xs },
   stack: { gap: spacing.xs },
+  suggester: { paddingHorizontal: spacing.xs },
+  suggestion: { gap: spacing.xxs },
 });

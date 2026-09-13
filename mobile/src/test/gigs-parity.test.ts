@@ -6,7 +6,7 @@ import {
   combineGigDate,
   createGigWritePlan,
   directResponseParams,
-  gigsForScope,
+  EMPTY_GIG_MATCH,
   gigViewerAction,
   matchProfilesToGig,
   resolveGigLocation,
@@ -16,14 +16,9 @@ import {
   type GigDetail,
   type GigMatchProfile,
   type GigSummary,
+  type GigViewerMatch,
 } from '@/features/gigs/gig-model';
-import {
-  countUnopenedCompatibleGigs,
-  openedGigsStorageKey,
-  shouldFetchNextSosBadgePage,
-  SOS_BADGE_MAX_PAGES,
-  SOS_BADGE_PAGE_SIZE,
-} from '@/features/gigs/gig-opened-store';
+import { countUnopenedMatchedGigs, openedGigsStorageKey } from '@/features/gigs/gig-opened-store';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -207,40 +202,10 @@ describe('formulaire SOS structuré et confidentialité', () => {
   });
 });
 
-describe('filtre SOS école de musique', () => {
-  const matching = gig({ hostSchoolIds: ['school-amr'], id: 'matching' });
-  const schoolOnly = gig({ hostSchoolIds: ['school-ema'], id: 'school' });
-  const outside = gig({ hostSchoolIds: ['school-other'], id: 'outside' });
-  const gigs = [matching, schoolOnly, outside];
-
-  it('garde les trois portées indépendantes et respecte les affiliations visibles', () => {
-    expect(
-      gigsForScope(gigs, [matching], 'matching', ['school-ema']).map((item) => item.id),
-    ).toEqual(['matching']);
-    expect(gigsForScope(gigs, [matching], 'school', ['school-ema']).map((item) => item.id)).toEqual(
-      ['school'],
-    );
-    expect(gigsForScope(gigs, [matching], 'all', ['school-ema']).map((item) => item.id)).toEqual([
-      'matching',
-      'school',
-      'outside',
-    ]);
-  });
-
-  it("renvoie une liste vide tant que l'utilisateur n'a pas d'école", () => {
-    expect(gigsForScope(gigs, [matching], 'school', [])).toEqual([]);
-  });
-
-  it('combine plusieurs écoles par OU exact sans inclure les autres', () => {
-    expect(
-      gigsForScope(gigs, [matching], 'school', ['school-amr', 'school-ema']).map((item) => item.id),
-    ).toEqual(['matching', 'school']);
-  });
-});
-
 describe('états de candidature et décisions serveur', () => {
   const application = {
     createdAt: '2026-09-01T12:00:00Z',
+    hostContactedAt: null,
     id: 'application-1',
     instrument: 'Basse',
     message: '',
@@ -352,40 +317,33 @@ describe('matching après publication', () => {
 });
 
 describe('puce locale des nouveaux SOS', () => {
-  const viewer = {
-    id: 'viewer-1',
-    instrumentLevels: { Basse: 'Avancé' },
-    instruments: ['Basse'],
-    level: 'Intermédiaire',
-  };
+  const viewerMatch = (overrides: Partial<GigViewerMatch> = {}): GigViewerMatch => ({
+    date: '2026-09-12T18:30:00+02:00',
+    gigId: 'eligible',
+    hostId: 'host-1',
+    match: { ...EMPTY_GIG_MATCH, instruments: ['Basse'], score: 65 },
+    targetId: null,
+    title: 'Cherche bassiste',
+    ...overrides,
+  });
 
   it('isole les ouvertures par compte', () => {
     expect(openedGigsStorageKey('viewer-1')).not.toBe(openedGigsStorageKey('viewer-2'));
     expect(openedGigsStorageKey('viewer-1')).toContain('viewer-1');
   });
 
-  it('borne explicitement le scan serveur à 500 annonces actives', () => {
-    expect(SOS_BADGE_PAGE_SIZE * SOS_BADGE_MAX_PAGES).toBe(500);
-    expect(shouldFetchNextSosBadgePage(4, 5)).toBe(true);
-    expect(shouldFetchNextSosBadgePage(5, 6)).toBe(false);
-    expect(shouldFetchNextSosBadgePage(1, null)).toBe(false);
-  });
-
-  it('compte seulement les SOS externes futurs compatibles, ouverts et non ciblés', () => {
-    const eligible = gig({ id: 'eligible', wantedLevels: ['Avancé'] });
-    const duplicate = { ...eligible };
+  it('compte seulement les annonces compatibles serveur, futures, ouvertes et non ciblées', () => {
+    const eligible = viewerMatch();
     const values = [
       eligible,
-      duplicate,
-      gig({ hostId: 'viewer-1', id: 'mine' }),
-      gig({ date: '2026-08-31T20:00:00+02:00', id: 'past' }),
-      gig({ id: 'direct', targetId: 'viewer-1', targetStatus: 'pending' }),
-      gig({ id: 'wrong-instrument', wantedInstruments: ['Piano'] }),
-      gig({ id: 'wrong-level', wantedLevels: ['Débutant'] }),
-      gig({ id: 'opened' }),
-      gig({ filledInstruments: ['Basse'], id: 'filled' }),
+      { ...eligible },
+      viewerMatch({ gigId: 'mine', hostId: 'viewer-1' }),
+      viewerMatch({ date: '2026-08-31T20:00:00+02:00', gigId: 'past' }),
+      viewerMatch({ gigId: 'direct', targetId: 'viewer-1' }),
+      viewerMatch({ gigId: 'no-instrument', match: { ...EMPTY_GIG_MATCH, score: 0 } }),
+      viewerMatch({ gigId: 'opened' }),
     ];
-    expect(countUnopenedCompatibleGigs(values, viewer, new Set(['opened']), now)).toBe(1);
+    expect(countUnopenedMatchedGigs(values, 'viewer-1', new Set(['opened']), now)).toBe(1);
   });
 });
 

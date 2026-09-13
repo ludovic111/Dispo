@@ -41,6 +41,8 @@ export interface MessageReactionRowLike {
 export interface DirectMessage extends ChatMessage {
   attachment: MessageAttachment | null;
   deliveredAt: string | null;
+  /** Texte remplacé par le serveur après modération. */
+  moderated?: boolean;
   reactions: MessageReactionSummary[];
 }
 

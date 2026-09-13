@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -9,11 +8,15 @@ import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
 import {
-  billetInk,
+  blend,
   disabledStyle,
-  gradients,
+  elevation,
+  keyHighlight,
+  keyStyle,
   minimumTouchTarget,
   onAccent,
+  pressedKeyStyle,
+  pressedKeyStyleReducedMotion,
   pressedStyle,
   pressedStyleReducedMotion,
   radii,
@@ -35,9 +38,11 @@ interface DispoButtonProps extends PropsWithChildren {
 }
 
 /**
- * Bouton unique de Dispo.
- * - `primary` : dégradé bleu jazz, encre sombre — une seule action principale par écran.
- * - `secondary` : surface en creux, texte courant.
+ * Bouton unique de Dispo, façon « touche » : remplissage plein, liseré clair
+ * en haut, arête basse de 2 pt plus sombre ; à l'appui la touche descend
+ * d'un point et l'arête disparaît.
+ * - `primary` : accent du thème, encre lisible — une seule action principale par écran.
+ * - `secondary` : surface relevée, texte courant.
  * - `ghost` : sans fond, texte accent (actions tertiaires, liens).
  * - `danger` : contour erreur.
  * - `signal` : fond orange, réservé au SOS.
@@ -57,7 +62,7 @@ export function DispoButton({
   const inactive = disabled || loading;
   const foreground =
     variant === 'primary'
-      ? billetInk
+      ? palette.accentInk
       : variant === 'signal'
         ? onAccent
         : variant === 'ghost'
@@ -65,6 +70,15 @@ export function DispoButton({
           : variant === 'danger'
             ? palette.error
             : palette.text;
+  const raised = variant === 'primary' || variant === 'secondary' || variant === 'signal';
+  const key =
+    variant === 'primary'
+      ? keyStyle(palette.accent, palette.accentDeep)
+      : variant === 'signal'
+        ? keyStyle(palette.signal, blend(palette.signal, palette.ink, 0.3))
+        : variant === 'secondary'
+          ? keyStyle(palette.cardElevated, palette.edge)
+          : null;
   const content = (
     <View style={styles.content}>
       {loading ? (
@@ -83,7 +97,6 @@ export function DispoButton({
       </AppText>
     </View>
   );
-  const surface = [styles.surface, size === 'compact' && styles.compactSurface];
 
   return (
     <Pressable
@@ -97,38 +110,28 @@ export function DispoButton({
         onPress();
       }}
       style={({ pressed }) => [
-        styles.pressable,
-        pressed && !inactive && (reduceMotion ? pressedStyleReducedMotion : pressedStyle),
+        styles.surface,
+        size === 'compact' && styles.compactSurface,
+        key,
+        variant === 'secondary' && [styles.outline, { borderColor: palette.edge }],
+        variant === 'danger' && [styles.outline, { borderColor: tint(palette.error, 0.6) }],
+        raised && !inactive && elevation(1, palette),
+        pressed &&
+          !inactive &&
+          (raised
+            ? reduceMotion
+              ? pressedKeyStyleReducedMotion
+              : pressedKeyStyle
+            : reduceMotion
+              ? pressedStyleReducedMotion
+              : pressedStyle),
         inactive && disabledStyle,
       ]}
     >
-      {variant === 'primary' ? (
-        <LinearGradient
-          colors={gradients.hero}
-          end={{ x: 1, y: 0.78 }}
-          start={{ x: 0, y: 0.22 }}
-          style={surface}
-        >
-          {content}
-        </LinearGradient>
-      ) : variant === 'signal' ? (
-        <View style={[surface, { backgroundColor: palette.signal }]}>{content}</View>
-      ) : variant === 'ghost' ? (
-        <View style={surface}>{content}</View>
-      ) : (
-        <View
-          style={[
-            surface,
-            styles.outline,
-            {
-              backgroundColor: variant === 'danger' ? 'transparent' : palette.cardMuted,
-              borderColor: variant === 'danger' ? tint(palette.error, 0.6) : palette.border,
-            },
-          ]}
-        >
-          {content}
-        </View>
-      )}
+      {raised ? (
+        <View pointerEvents="none" style={[styles.highlight, { backgroundColor: keyHighlight }]} />
+      ) : null}
+      {content}
     </Pressable>
   );
 }
@@ -143,7 +146,7 @@ interface IconButtonProps {
   onPress: () => void;
   /** Pour les poignées de glisser-déposer. */
   onPressIn?: (() => void) | undefined;
-  /** `filled` : pastille sur surface en creux · `plain` : icône seule · `accent` : pastille pleine bleu jazz. */
+  /** `filled` : pastille relevée sur surface · `plain` : icône seule · `accent` : pastille pleine accent. */
   variant?: 'filled' | 'plain' | 'accent' | undefined;
 }
 
@@ -161,7 +164,7 @@ export function IconButton({
 }: IconButtonProps) {
   const { palette } = useDispoTheme();
   const inactive = disabled || loading;
-  const foreground = variant === 'accent' ? palette.textInverse : (iconColor ?? palette.electric);
+  const foreground = variant === 'accent' ? palette.accentInk : (iconColor ?? palette.electric);
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
@@ -173,9 +176,15 @@ export function IconButton({
       onPressIn={onPressIn}
       style={({ pressed }) => [
         styles.iconButton,
-        variant === 'filled' && { backgroundColor: palette.cardMuted, borderColor: palette.border },
-        variant === 'filled' && styles.outline,
-        variant === 'accent' && { backgroundColor: palette.electric },
+        variant === 'filled' && [
+          styles.outline,
+          { backgroundColor: palette.cardElevated, borderColor: palette.edge },
+          elevation(1, palette),
+        ],
+        variant === 'accent' && [
+          styles.outline,
+          { backgroundColor: palette.accent, borderColor: palette.accentDeep },
+        ],
         pressed && pressedStyle,
         inactive && disabledStyle,
       ]}
@@ -222,6 +231,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     justifyContent: 'center',
   },
+  highlight: {
+    height: 1,
+    left: radii.button,
+    position: 'absolute',
+    right: radii.button,
+    top: 0,
+  },
   iconButton: {
     alignItems: 'center',
     borderRadius: radii.round,
@@ -231,7 +247,6 @@ const styles = StyleSheet.create({
   },
   label: { flexShrink: 1, textAlign: 'center' },
   outline: { borderWidth: StyleSheet.hairlineWidth },
-  pressable: { borderRadius: radii.button },
   surface: {
     borderRadius: radii.button,
     justifyContent: 'center',

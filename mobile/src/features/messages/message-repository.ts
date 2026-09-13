@@ -39,6 +39,7 @@ type MessageProjection = Pick<
   | 'delivered_at'
   | 'edited_at'
   | 'id'
+  | 'moderated'
   | 'read_at'
   | 'sender_id'
   | 'text'
@@ -53,6 +54,7 @@ type ConversationProjection = Pick<
 export interface ConversationSummary {
   contactId: string;
   contactInstrument: string;
+  contactIsPremium: boolean;
   contactName: string;
   contactPhotoUrl: string | null;
   id: string;
@@ -64,6 +66,7 @@ export interface ConversationSummary {
 export interface ConversationContact {
   id: string;
   instrument: string;
+  isPremium: boolean;
   name: string;
   photoUrl: string | null;
 }
@@ -75,9 +78,10 @@ export interface SendMessageInput {
 
 const messageFilesBucket = 'message-files';
 const messageColumns =
-  'id,conversation_id,sender_id,text,created_at,delivered_at,read_at,edited_at,deleted_at,attachment_path,attachment_name,attachment_type,attachment_size' as const;
+  'id,conversation_id,sender_id,text,created_at,delivered_at,read_at,edited_at,deleted_at,moderated,attachment_path,attachment_name,attachment_type,attachment_size' as const;
 const conversationColumns =
-  'id,participant_a,participant_b,created_at,messages(id,conversation_id,sender_id,text,created_at,delivered_at,read_at,edited_at,deleted_at,attachment_path,attachment_name,attachment_type,attachment_size)' as const;
+  'id,participant_a,participant_b,created_at,messages(id,conversation_id,sender_id,text,created_at,delivered_at,read_at,edited_at,deleted_at,moderated,attachment_path,attachment_name,attachment_type,attachment_size)' as const;
+const contactColumns = 'id,name,photo_url,instruments,is_premium' as const;
 const reactionColumns = 'message_id,profile_id,emoji,removed_at' as const;
 
 function mapAttachment(row: MessageProjection): MessageAttachment | null {
@@ -108,6 +112,7 @@ function mapMessage(
     deliveredAt: row.delivered_at,
     editedAt: row.edited_at,
     id: row.id,
+    moderated: row.moderated === true,
     reactions,
     readAt: row.read_at,
     senderId: row.sender_id,
@@ -158,10 +163,7 @@ export async function fetchConversationsPage(
       ),
     ),
   ];
-  const profileQuery = supabase
-    .from('profiles')
-    .select('id,name,photo_url,instruments')
-    .in('id', contactIds);
+  const profileQuery = supabase.from('profiles').select(contactColumns).in('id', contactIds);
   const profileResult = await (signal ? profileQuery.abortSignal(signal) : profileQuery);
   if (profileResult.error) throw profileResult.error;
   const profiles = new Map(profileResult.data.map((profile) => [profile.id, profile]));
@@ -195,6 +197,7 @@ export async function fetchConversationsPage(
       contactId,
       contactInstrument: contact?.instruments[0] ?? '',
       contactName: contact?.name ?? '',
+      contactIsPremium: contact?.is_premium === true,
       contactPhotoUrl: contact?.photo_url ?? null,
       id: conversation.id,
       lastMessage: conversation.messages[0] ? mapMessage(conversation.messages[0]) : null,
@@ -246,15 +249,13 @@ export async function fetchConversationContact(
     conversationResult.data.participant_a === userId
       ? conversationResult.data.participant_b
       : conversationResult.data.participant_a;
-  const profileQuery = supabase
-    .from('profiles')
-    .select('id,name,photo_url,instruments')
-    .eq('id', contactId);
+  const profileQuery = supabase.from('profiles').select(contactColumns).eq('id', contactId);
   const profileResult = await (signal ? profileQuery.abortSignal(signal) : profileQuery).single();
   if (profileResult.error) throw profileResult.error;
   return {
     id: profileResult.data.id,
     instrument: profileResult.data.instruments[0] ?? '',
+    isPremium: profileResult.data.is_premium === true,
     name: profileResult.data.name || '',
     photoUrl: profileResult.data.photo_url,
   };

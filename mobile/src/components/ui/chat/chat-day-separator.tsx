@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '../app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { insetStyle, radii, spacing } from '@/theme/tokens';
 
 /** Séparateur de journée d'un fil de conversation : ligne, pastille de date, ligne. */
 export function ChatDaySeparator({ label }: { label: string }) {
@@ -11,7 +11,7 @@ export function ChatDaySeparator({ label }: { label: string }) {
   return (
     <View accessibilityRole="header" style={styles.row}>
       <View style={[styles.line, { backgroundColor: palette.border }]} />
-      <View style={[styles.pill, { backgroundColor: palette.cardMuted }]}>
+      <View style={[styles.pill, insetStyle(palette)]}>
         <AppText color={palette.muted} variant="caption2" weight="semibold">
           {label}
         </AppText>

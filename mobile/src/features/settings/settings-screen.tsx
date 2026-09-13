@@ -13,6 +13,7 @@ import {
   SettingsRow,
   SettingsSection,
   SettingsShell,
+  SettingsSwitchRow,
   SettingsValueAccessory,
 } from './settings-components';
 import {
@@ -32,16 +33,22 @@ import {
   updateLocationPrecision,
   type SettingsProfile,
 } from './settings-service';
-import { loadNotificationsEnabled } from './settings-storage';
+import {
+  calendarSyncKey,
+  hideAlbumCoversKey,
+  loadNotificationsEnabled,
+  useBooleanPreference,
+} from './settings-storage';
 
 import { AppText } from '@/components/ui/app-text';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import { linkAppleIdentity } from '@/features/auth/auth-service';
+import { requestCalendarAccess } from '@/features/calendar/calendar-service';
 import { countryOptions, languageOptions } from '@/features/onboarding/onboarding-model';
 import i18n from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { keyStyle, radii, spacing } from '@/theme/tokens';
 
 const validLocationPrecisions = new Set<LocationPrecision>([
   'city',
@@ -52,7 +59,7 @@ const validLocationPrecisions = new Set<LocationPrecision>([
 
 export function SettingsScreen() {
   const { session } = useAuth();
-  const { palette, preference: appearance, setPreference } = useDispoTheme();
+  const { palette, preference: appearance, setPreference, themeId, themes } = useDispoTheme();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<SettingsProfile | null>(null);
   const [locationSaving, setLocationSaving] = useState<LocationPrecision | null>(null);
@@ -60,6 +67,8 @@ export function SettingsScreen() {
   const [appleLinkCompleted, setAppleLinkCompleted] = useState(false);
   const [notificationLabel, setNotificationLabel] = useState(t('À configurer'));
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [calendarSync, setCalendarSync] = useBooleanPreference(calendarSyncKey);
+  const [hideAlbumCovers, setHideAlbumCovers] = useBooleanPreference(hideAlbumCoversKey);
   const version = normalizeMarketingVersion(Constants.expoConfig?.version ?? '2.4');
   const appleLinked =
     appleLinkCompleted ||
@@ -115,6 +124,23 @@ export function SettingsScreen() {
     }
   };
 
+  const toggleCalendarSync = async (enabled: boolean) => {
+    setErrorText(null);
+    if (!enabled) {
+      await setCalendarSync(false);
+      return;
+    }
+    if (!(await requestCalendarAccess())) {
+      setErrorText(
+        t(
+          'Autorise Dispo à écrire dans ton calendrier depuis les réglages du téléphone pour synchroniser tes sessions.',
+        ),
+      );
+      return;
+    }
+    await setCalendarSync(true);
+  };
+
   const linkApple = async () => {
     if (linkingApple) return;
     setLinkingApple(true);
@@ -145,6 +171,18 @@ export function SettingsScreen() {
           title={session ? t('Mon compte') : t('Se connecter')}
           {...(session?.user.email ? { detail: session.user.email } : {})}
         />
+        {session ? (
+          <>
+            <SettingsDivider />
+            <SettingsRow
+              color={palette.jam}
+              detail={t('E-mail et numéro de téléphone')}
+              icon="shield-checkmark"
+              onPress={() => router.push('/verify' as Href)}
+              title={t('Vérification du compte')}
+            />
+          </>
+        ) : null}
         {Platform.OS === 'ios' ? (
           <>
             <SettingsDivider />
@@ -182,7 +220,7 @@ export function SettingsScreen() {
         />
       </SettingsSection>
 
-      <SettingsSection title={t('Préférences')}>
+      <SettingsSection title={t('Apparence')}>
         <SettingsRow
           color={palette.electric}
           icon={
@@ -190,7 +228,7 @@ export function SettingsScreen() {
             'contrast-outline'
           }
           right={<View />}
-          title={t('Apparence')}
+          title={t('Clair ou sombre')}
         />
         <View style={styles.appearanceControl}>
           <SegmentedControl<AppearancePreference>
@@ -204,11 +242,39 @@ export function SettingsScreen() {
         </View>
         <SettingsDivider />
         <SettingsRow
+          color={palette.electric}
+          detail={t(themes.find((theme) => theme.id === themeId)?.name ?? 'Jazz')}
+          icon="color-palette-outline"
+          onPress={() => router.push('/settings/theme' as Href)}
+          right={<ThemeSwatchAccessory />}
+          title={t('Thème de couleurs')}
+        />
+      </SettingsSection>
+
+      <SettingsSection title={t('Préférences')}>
+        <SettingsRow
           color={palette.bronze}
           detail={`${languageOptions.find((language) => language.locale === i18n.resolvedLanguage)?.flag ?? '🌍'} ${countryOptions.find((country) => country.code === profile?.country)?.flag ?? ''} ${profile?.city ?? ''}`.trim()}
           icon="globe-outline"
           onPress={() => router.push('/settings/language-region' as Href)}
           title={t('Langue & région')}
+        />
+        <SettingsDivider />
+        <SettingsSwitchRow
+          color={palette.electric}
+          detail={t('Tes dates de groupe et tes dépannages dans un calendrier « Dispo ».')}
+          icon="calendar"
+          onValueChange={(enabled) => void toggleCalendarSync(enabled)}
+          title={t('Synchroniser mes sessions avec le calendrier')}
+          value={calendarSync}
+        />
+        <SettingsDivider />
+        <SettingsSwitchRow
+          color={palette.bronze}
+          icon="image-outline"
+          onValueChange={(enabled) => void setHideAlbumCovers(enabled)}
+          title={t('Masquer les pochettes d’album')}
+          value={hideAlbumCovers}
         />
       </SettingsSection>
 
@@ -251,7 +317,9 @@ export function SettingsScreen() {
       <SettingsSection title={t('Abonnements')}>
         <SettingsRow
           color={palette.electric}
-          detail={t('Un groupe avec Dispo Groupe, tous les outils avec Premium.')}
+          detail={t(
+            'Un groupe avec Dispo Groupe, jusqu’à 6 groupes et le répertoire personnel avec Premium.',
+          )}
           icon="pricetags"
           onPress={() => router.push('/premium' as Href)}
           title={t('Dispo Groupe & Premium')}
@@ -315,8 +383,21 @@ export function SettingsScreen() {
   );
 }
 
+/** Petite touche accent du thème courant, devant le chevron de la ligne « Thème ». */
+function ThemeSwatchAccessory() {
+  const { palette } = useDispoTheme();
+  return (
+    <View style={styles.swatchAccessory}>
+      <View style={[styles.swatch, keyStyle(palette.accent, palette.accentDeep)]} />
+      <Ionicons color={palette.muted} name="chevron-forward" size={18} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   appearanceControl: { paddingBottom: spacing.sm, paddingHorizontal: spacing.sm },
   footerText: { paddingBottom: spacing.sm, textAlign: 'center' },
   linkedStatus: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
+  swatch: { borderRadius: radii.xs, height: 22, width: 34 },
+  swatchAccessory: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
 });

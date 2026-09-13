@@ -2,22 +2,26 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { render } from '@testing-library/react-native';
 
 import { GigCard } from '@/features/gigs/gig-card';
-import type { GigSummary } from '@/features/gigs/gig-model';
-import { useGigMatches } from '@/features/gigs/gig-queries';
+import { EMPTY_GIG_MATCH, type GigSummary } from '@/features/gigs/gig-model';
+import { useGigCandidateCount } from '@/features/gigs/gig-queries';
 
 jest.mock('expo-router', () => ({ useIsFocused: () => true }));
 jest.mock('@/features/auth/auth-context', () => ({
   useAuth: () => ({ session: { user: { id: 'host' } } }),
 }));
-jest.mock('@/features/gigs/gig-queries', () => ({ useGigMatches: jest.fn() }));
+jest.mock('@/features/gigs/gig-queries', () => ({ useGigCandidateCount: jest.fn() }));
 jest.mock('@/components/ui/ticket-card', () => ({
   TicketCard: ({ children }: { children: import('react').ReactNode }) => children,
   Barcode: () => null,
 }));
 jest.mock('@/theme/theme-context', () => ({
-  useDispoTheme: () => ({ palette: { text: '#050814' } }),
+  useDispoTheme: () => ({
+    palette: jest
+      .requireActual<typeof import('@/theme/tokens')>('@/theme/tokens')
+      .paletteFor('dark'),
+  }),
 }));
-const matches = jest.mocked(useGigMatches);
+const candidates = jest.mocked(useGigCandidateCount);
 const gig: GigSummary = {
   id: 'gig',
   hostId: 'host',
@@ -30,26 +34,49 @@ const gig: GigSummary = {
   targetId: null,
 } as GigSummary;
 describe('repère de musicien compatible sur le ticket SOS', () => {
-  it('signale un match au créateur seulement pour un poste ouvert', async () => {
-    matches.mockReturnValue({
-      data: { pages: [{ items: [{ matchingInstruments: ['Piano'] }] }] },
-      isError: false,
-    } as never);
+  it('signale un match au créateur seulement quand le serveur compte un candidat', async () => {
+    candidates.mockReturnValue({ data: 2, isError: false } as never);
     const view = await render(<GigCard gig={gig} onPress={() => undefined} />);
     expect(view.getByRole('button').props.accessibilityHint).toContain('Musicien compatible');
-    matches.mockReturnValue({
-      data: { pages: [{ items: [{ matchingInstruments: ['Basse'] }] }] },
-      isError: false,
-    } as never);
+    expect(candidates).toHaveBeenLastCalledWith('gig', true);
+    candidates.mockReturnValue({ data: 0, isError: false } as never);
     await view.rerender(<GigCard gig={gig} onPress={() => undefined} />);
     expect(view.getByRole('button').props.accessibilityHint).toBeUndefined();
+    await view.rerender(
+      <GigCard gig={{ ...gig, filledInstruments: ['Piano', 'Basse'] }} onPress={() => undefined} />,
+    );
+    expect(candidates).toHaveBeenLastCalledWith('gig', false);
+    await view.unmount();
+  });
+  it('affiche le score et les raisons au viewer quand une annonce lui correspond', async () => {
+    candidates.mockReturnValue({ data: 0, isError: false } as never);
+    const view = await render(
+      <GigCard
+        gig={{ ...gig, hostId: 'someone' }}
+        match={{
+          ...EMPTY_GIG_MATCH,
+          availableOnDate: true,
+          instruments: ['Piano'],
+          reasons: ['instrument:Piano', 'level', 'available', 'friend'],
+          relation: 'mutual',
+          score: 82,
+        }}
+        onPress={() => undefined}
+      />,
+    );
+    expect(view.getByRole('button').props.accessibilityLabel).toContain('Match {{score}} %');
+    // Le score est un VU-mètre (rôle progressbar), plus une pastille texte.
+    expect(view.getByRole('progressbar').props.accessibilityValue).toEqual({
+      max: 100,
+      min: 0,
+      now: 82,
+    });
+    expect(view.getByText('82 %')).toBeTruthy();
+    expect(view.getByText('Dispo ce jour-là · Ami·e')).toBeTruthy();
     await view.unmount();
   });
   it('ne signale pas les demandes déjà envoyées ni les SOS d’un autre créateur', async () => {
-    matches.mockReturnValue({
-      data: { pages: [{ items: [{ matchingInstruments: ['Piano'] }] }] },
-      isError: false,
-    } as never);
+    candidates.mockReturnValue({ data: 3, isError: false } as never);
     const view = await render(
       <GigCard gig={{ ...gig, hostId: 'someone' }} onPress={() => undefined} />,
     );

@@ -1,6 +1,6 @@
 import { communityContentMessage } from '@/domain/community-content';
 
-export type GroupCreationErrorKind = 'auth' | 'limit' | 'network' | 'unknown';
+export type GroupCreationErrorKind = 'auth' | 'limit' | 'network' | 'unknown' | 'workshop';
 
 interface GroupCreationLock {
   current: boolean;
@@ -18,6 +18,11 @@ export function groupCreationErrorKind(error: unknown): GroupCreationErrorKind {
   const combined = [code, message, errorField(error, 'details'), errorField(error, 'hint')]
     .join(' ')
     .toLocaleLowerCase('en');
+  if (
+    combined.includes('school_workshop_not_available') ||
+    combined.includes('group_school_immutable')
+  )
+    return 'workshop';
   if (
     combined.includes('premium_required_for_additional_group') ||
     combined.includes('subscription_required_for_group')
@@ -53,6 +58,8 @@ export function groupCreationErrorMessage(error: unknown): string {
       return 'Ta session a expiré. Reconnecte-toi pour créer un groupe.';
     case 'limit':
       return 'Tu as atteint la limite de groupes que tu peux diriger.';
+    case 'workshop':
+      return "Ton école ne propose pas de groupe d'atelier gratuit pour le moment.";
     case 'network':
       return 'Connexion impossible — vérifie le réseau.';
     default:

@@ -2,14 +2,14 @@
   "expo": {
     "name": "Dispo",
     "slug": "dispo",
-    "version": "2.4.2",
+    "version": "2.5.0",
     "orientation": "portrait",
     "icon": "./assets/images/dispo/app-icon.png",
     "scheme": "dispo",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "63",
+      "buildNumber": "64",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -17,7 +17,9 @@
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Dispo utilise ta position uniquement à ta demande pour les distances et la recherche à proximité. Tu choisis la précision partagée dans les réglages.",
-        "NSPhotoLibraryUsageDescription": "Dispo accède aux photos et vidéos que tu choisis pour ton profil et tes messages."
+        "NSPhotoLibraryUsageDescription": "Dispo accède aux photos et vidéos que tu choisis pour ton profil et tes messages.",
+        "NSCalendarsFullAccessUsageDescription": "Dispo ajoute tes sessions (répétitions, concerts, dépannages) dans un calendrier « Dispo » pour que tu les retrouves à côté de tes autres rendez-vous. Rien n’est lu en dehors de ce calendrier.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Dispo écrit tes sessions dans un calendrier « Dispo ». Aucun autre événement n’est lu."
       },
       "appleTeamId": "2YBQQ56HH8",
       "privacyManifests": {
@@ -164,13 +166,18 @@
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 63,
+      "versionCode": 64,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"
       },
       "predictiveBackGestureEnabled": true,
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
+      ]
     },
     "web": {
       "output": "static",
@@ -222,7 +229,14 @@
           "isAndroidMotionActivityEnabled": false
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Dispo ajoute tes sessions (répétitions, concerts, dépannages) dans un calendrier « Dispo » pour que tu les retrouves à côté de tes autres rendez-vous. Rien n’est lu en dehors de ce calendrier.",
+          "remindersPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

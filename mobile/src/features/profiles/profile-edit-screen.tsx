@@ -7,7 +7,11 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { toggleProfileValue, type EditableProfile } from './profile-edit-model';
+import {
+  toggleProfileValue,
+  withCurrentInstruments,
+  type EditableProfile,
+} from './profile-edit-model';
 import {
   fetchEditableProfile,
   saveEditableProfile,
@@ -50,7 +54,11 @@ export function ProfileEditScreen() {
     queryKey: ['profile', 'edit', userId],
   });
   const [draft, setDraft] = useState<EditableProfile | null>(null);
-  const value = draft ?? query.data ?? null;
+  const loaded = useMemo(
+    () => (query.data ? withCurrentInstruments(query.data) : null),
+    [query.data],
+  );
+  const value = draft ?? loaded;
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);

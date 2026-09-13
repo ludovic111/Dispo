@@ -1,31 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { openGigInstruments, type GigSummary } from './gig-model';
+import type { GigViewerMatch } from './gig-model';
 
 import { legacyOpenedGigIdsKey } from '@/services/storage/legacy-native-preferences';
 
 const storagePrefix = '@dispo/gigs/opened/v1';
 const openedListeners = new Set<(userId: string, gigId: string) => void>();
-
-// The badge renders 99+ and must never scan an unbounded active feed. Five
-// server pages cover up to 500 upcoming SOS while keeping the tab lightweight.
-export const SOS_BADGE_PAGE_SIZE = 100;
-export const SOS_BADGE_MAX_PAGES = 5;
-
-export function shouldFetchNextSosBadgePage(
-  completedPages: number,
-  nextPage: number | null,
-): nextPage is number {
-  return nextPage !== null && completedPages < SOS_BADGE_MAX_PAGES;
-}
-
-export interface GigBadgeViewer {
-  schools?: { id: string }[];
-  id: string;
-  instrumentLevels: Record<string, string> | null;
-  instruments: string[];
-  level: string;
-}
 
 export function openedGigsStorageKey(userId: string): string {
   if (!userId.trim()) throw new Error('gig_opened_user_missing');
@@ -80,43 +60,25 @@ export function subscribeToOpenedGigs(
   return () => openedListeners.delete(listener);
 }
 
-function gigMatchesBadgeViewer(gig: GigSummary, viewer: GigBadgeViewer): boolean {
-  if (
-    gig.wantedSchoolIds?.length &&
-    !viewer.schools?.some((school) => gig.wantedSchoolIds?.includes(school.id))
-  )
-    return false;
-  const open = openGigInstruments(gig);
-  if (open.length === 0) return false;
-  if (viewer.instruments.length === 0) return true;
-  const own = new Set(viewer.instruments);
-  const playable = open.filter((instrument) => own.has(instrument));
-  if (playable.length === 0) return false;
-  if (gig.wantedLevels.length === 0) return true;
-  return playable.some((instrument) => {
-    const level = viewer.instrumentLevels?.[instrument] ?? viewer.level;
-    return gig.wantedLevels.includes(level);
-  });
-}
-
-export function countUnopenedCompatibleGigs(
-  gigs: GigSummary[],
-  viewer: GigBadgeViewer,
+/** Annonces compatibles (serveur) jamais ouvertes : puce de l'onglet SOS et du segment. */
+export function countUnopenedMatchedGigs(
+  matches: readonly GigViewerMatch[],
+  viewerId: string,
   openedIds: ReadonlySet<string>,
   now = new Date(),
 ): number {
   const seen = new Set<string>();
-  return gigs.reduce((count, gig) => {
-    if (seen.has(gig.id)) return count;
-    seen.add(gig.id);
-    const date = new Date(gig.date);
+  return matches.reduce((count, item) => {
+    if (seen.has(item.gigId)) return count;
+    seen.add(item.gigId);
+    const date = new Date(item.date);
     if (
-      gig.hostId === viewer.id ||
-      gig.targetId !== null ||
-      openedIds.has(gig.id) ||
+      item.hostId === viewerId ||
+      item.targetId !== null ||
+      openedIds.has(item.gigId) ||
+      item.match.instruments.length === 0 ||
       Number.isNaN(date.getTime()) ||
-      date.getTime() <= now.getTime() ||
-      !gigMatchesBadgeViewer(gig, viewer)
+      date.getTime() <= now.getTime()
     ) {
       return count;
     }
