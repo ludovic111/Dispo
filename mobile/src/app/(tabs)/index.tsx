@@ -15,7 +15,6 @@ import {
 import { DiscoveryHomeWelcome } from '@/features/discovery/discovery-home-welcome';
 import {
   activeFilterCount,
-  dateForAvailabilityScope,
   matchesDiscoveryFilters,
   profileAvailability,
   profilesForScope,
@@ -65,7 +64,6 @@ export default function DiscoveryScreen() {
         : myAvailability?.kind === 'weekend'
           ? palette.rehearsal
           : palette.bronze;
-  const selectedScopeDate = dateForAvailabilityScope(scope, filters.neededDate, now);
   const greeting = t(now.getHours() >= 17 || now.getHours() < 5 ? 'Bonsoir' : 'Salut');
   const firstName = meQuery.data?.name.split(/\s+/)[0] || t('musicien');
   const groups = useMemo(
@@ -183,7 +181,6 @@ export default function DiscoveryScreen() {
             primarySchool={item.schools[0] ?? null}
             profile={item}
             referenceProfile={meQuery.data ?? null}
-            scopeDate={selectedScopeDate}
           />
         )}
       />

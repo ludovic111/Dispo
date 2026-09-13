@@ -58,5 +58,5 @@ export default function GigDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, paddingBottom: spacing.xxl },
+  content: { padding: spacing.gutter, paddingBottom: spacing.xxl },
 });

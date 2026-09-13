@@ -21,7 +21,7 @@ function configuredScheme(): string {
   return configured ?? 'dispo';
 }
 
-export function authCallbackUrl(): string {
+function authCallbackUrl(): string {
   return `${configuredScheme()}://login-callback`;
 }
 

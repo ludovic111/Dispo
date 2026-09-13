@@ -190,6 +190,7 @@
   "Ajouter un morceau": "Song hinzufügen",
   "Ajouter un solo": "Solo hinzufügen",
   "Ajouter une date": "Datum hinzufügen",
+  "Retirer une date": "Datum entfernen",
   "Ajouter une école et rejoindre sa communauté": "Schule hinzufügen und ihrer Community beitreten",
   "Ajouter une partition": "Noten hinzufügen",
   "Ajouter une photo": "Foto hinzufügen",
@@ -2439,5 +2440,12 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Du verlässt diese Schule und wählst danach eine neue im Verzeichnis. Deine anderen Zugehörigkeiten bleiben erhalten.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Diese Zugehörigkeit wird aus deinem Profil entfernt und du verlierst den Zugang zur Community. Deine anderen Schulen und dein Konto bleiben erhalten.",
   "Quitter et choisir": "Verlassen und wählen",
-  "Changer d’école": "Schule wechseln"
+  "Changer d’école": "Schule wechseln",
+  "Une interface plus claire, partout": "Eine klarere Oberfläche, überall",
+  "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.": "Eine einzige Skala für Texte, Buttons und Karten auf iOS und Android.",
+  "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.": "Abschnittstitel, Tabs und Ungelesen-Zähler haben jetzt eine einheitliche Form.",
+  "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.": "Listen zeigen jeweils eine sichtbare Aktion; der Rest liegt in einem Menü.",
+  "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.": "Private, Gruppen- und Schul-Chats teilen dieselben Sprechblasen und denselben Editor.",
+  "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.": "Buttons und Symbole haben eine bequeme Touch-Fläche und werden von VoiceOver und TalkBack angesagt.",
+  "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.": "Weniger Dekoration: der Jazzblau-Akzent bleibt den Aktionen vorbehalten."
 }

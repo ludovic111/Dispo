@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Linking,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,7 +12,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import type { GroupMember, GroupSong } from './group-model';
@@ -23,6 +21,10 @@ import { TradingFoursIcon } from './trading-fours-icon';
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
+import { IconButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
+import { BottomSheet } from '@/components/ui/sheet';
 import { Tag } from '@/components/ui/tag';
 import {
   directStreamingDestinations,
@@ -31,7 +33,15 @@ import {
 } from '@/domain/song';
 import { appleArtworkPromotion, type ArtworkSong } from '@/domain/song-artwork';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing, typography } from '@/theme/tokens';
+import {
+  billetInk,
+  onAccent,
+  pressedStyle,
+  pressedStyleReducedMotion,
+  radii,
+  spacing,
+  tint,
+} from '@/theme/tokens';
 
 const platformLabels: Record<StreamingPlatformId, string> = {
   amazonMusic: 'Amazon Music',
@@ -42,6 +52,7 @@ const platformLabels: Record<StreamingPlatformId, string> = {
   youtubeMusic: 'YouTube Music',
 };
 
+/** Logos des services d'écoute : les couleurs de marque ne vivent qu'ici. */
 function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId; size?: number }) {
   const { dark } = useDispoTheme();
   if (platform === 'deezer') {
@@ -72,13 +83,13 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
         accessible={false}
         style={[
           styles.logoSurface,
-          { backgroundColor: dark ? '#FFFFFF' : '#050814', height: size, width: size },
+          { backgroundColor: dark ? onAccent : billetInk, height: size, width: size },
         ]}
       >
         <Svg height={size * 0.62} viewBox="0 0 24 15" width={size * 0.62}>
           <Path
             d="M4 0 8 4 4 8 0 4 4 0Zm8 0 4 4-4 4-4-4 4-4Zm8 0 4 4-4 4-4-4 4-4Zm-8 8 4 4-4 4-4-4 4-4Z"
-            fill={dark ? '#050814' : '#FFFFFF'}
+            fill={dark ? billetInk : onAccent}
           />
         </Svg>
       </View>
@@ -90,7 +101,7 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
         accessible={false}
         style={[styles.logoSurface, { backgroundColor: '#172235', height: size, width: size }]}
       >
-        <Ionicons color="#FFFFFF" name="logo-amazon" size={size * 0.58} />
+        <Ionicons color={onAccent} name="logo-amazon" size={size * 0.58} />
         <Svg height={size * 0.22} style={styles.amazonSmile} viewBox="0 0 24 6" width={size * 0.68}>
           <Path d="M2 1.5c5.8 3.7 12.3 3.8 19.6.1" fill="none" stroke="#25D1DA" strokeWidth="2" />
           <Path d="m18.7.5 3.2 1-1.1 3" fill="none" stroke="#25D1DA" strokeWidth="1.6" />
@@ -140,7 +151,12 @@ export function SongArtwork({
     <View
       style={[
         styles.artworkFallback,
-        { backgroundColor: `${palette.bronze}24`, borderRadius: radius, height: size, width: size },
+        {
+          backgroundColor: tint(palette.bronze, 0.14),
+          borderRadius: radius,
+          height: size,
+          width: size,
+        },
       ]}
     >
       <Ionicons color={palette.bronze} name="musical-note" size={size * 0.42} />
@@ -148,6 +164,7 @@ export function SongArtwork({
   );
 }
 
+/** Badge officiel iTunes Store, obligatoire à côté d'une pochette Apple. */
 export function SongStoreBadge({
   song,
   compact = false,
@@ -169,12 +186,7 @@ export function SongStoreBadge({
           Alert.alert(t('Erreur'), t('Ce lien ne peut pas être ouvert.')),
         );
       }}
-      style={{
-        alignSelf: 'flex-start',
-        justifyContent: 'center',
-        minHeight: 44,
-        padding: compact ? 3 : 4,
-      }}
+      style={styles.storeBadge}
     >
       <Image
         accessibilityIgnoresInvertColors
@@ -190,12 +202,60 @@ export function SongStoreBadge({
   );
 }
 
+function SoloOrderList({ members, song }: { members: readonly GroupMember[]; song: GroupSong }) {
+  const { palette } = useDispoTheme();
+  const { t } = useTranslation();
+  const orderedMembers = useMemo(() => soloOrderMembers(song, members), [members, song]);
+  const order = songSoloOrder(song);
+  return (
+    <View style={styles.soloSection}>
+      <SectionHeader title={t('Ordre des solos')} />
+      {orderedMembers.map((member, index) => {
+        const soloId = order[index];
+        const isTradingFours = soloId === TRADING_FOURS_SOLO_ID;
+        const name = isTradingFours ? TRADING_FOURS_SOLO_ID : (member?.name ?? t('Membre retiré'));
+        const instruments = member?.instruments.length
+          ? member.instruments.map((instrument) => t(instrument)).join(' · ')
+          : undefined;
+        return (
+          <ListRow
+            key={`${soloId}-${index}`}
+            leading={
+              <View style={styles.soloLeading}>
+                <AppText color={palette.muted} style={styles.soloIndex} variant="mono">
+                  {index + 1}
+                </AppText>
+                {isTradingFours ? (
+                  <TradingFoursIcon />
+                ) : (
+                  <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
+                )}
+              </View>
+            }
+            title={name}
+            tone="plain"
+            {...(instruments ? { subtitle: instruments } : {})}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Feuille d'un morceau : liens d'écoute exacts, recherches de secours et,
+ * si demandé, l'ordre des solos. Une seule feuille par ligne de morceau.
+ */
 export function SongListenSheet({
+  members = [],
   onClose,
+  showSoloOrder = false,
   song,
   visible,
 }: {
+  members?: readonly GroupMember[];
   onClose: () => void;
+  showSoloOrder?: boolean;
   song: GroupSong;
   visible: boolean;
 }) {
@@ -217,258 +277,92 @@ export function SongListenSheet({
     }
   };
   return (
-    <Modal
-      animationType="fade"
-      onRequestClose={close}
-      presentationStyle="overFullScreen"
-      statusBarTranslucent
-      transparent
-      visible={visible}
-    >
-      <View style={styles.sheetOverlay}>
-        <Pressable
-          accessibilityLabel={t('Fermer')}
-          accessibilityRole="button"
-          onPress={close}
-          style={styles.sheetBackdrop}
-        />
-        <SafeAreaView
-          edges={['bottom']}
-          style={[
-            styles.sheet,
-            { backgroundColor: palette.background, borderColor: palette.border },
-          ]}
-        >
-          <View style={[styles.sheetHandle, { backgroundColor: palette.border }]} />
-          <View style={[styles.sheetNavigation, { borderBottomColor: palette.border }]}>
-            <View style={styles.navigationSpacer} />
-            <AppText numberOfLines={1} style={styles.sheetTitle} variant="headline">
-              {t('Écouter sur…')}
+    <BottomSheet onClose={close} title={t('Écouter sur…')} visible={visible}>
+      <ScrollView contentContainerStyle={styles.sheetContent}>
+        <View style={styles.sheetSong}>
+          <SongArtwork song={song} radius={radii.sm} size={54} />
+          <View style={styles.flex}>
+            <AppText numberOfLines={2} variant="headline">
+              {song.title}
             </AppText>
-            <Pressable
-              accessibilityLabel={t('Fermer')}
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={close}
-              style={[styles.closeButton, { backgroundColor: palette.inset }]}
-            >
-              <Ionicons color={palette.text} name="close" size={18} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={styles.sheetContent}>
-            <View style={styles.sheetSong}>
-              <SongArtwork song={song} radius={12} size={54} />
-              <View style={styles.flex}>
-                <AppText numberOfLines={2} style={styles.sheetSongTitle} variant="headline">
-                  {song.title}
-                </AppText>
-                {song.artist ? (
-                  <AppText color={palette.muted} numberOfLines={1} variant="subheadline">
-                    {song.artist}
-                  </AppText>
-                ) : null}
-                <SongStoreBadge song={song} />
-              </View>
-            </View>
-            <View style={styles.destinationStack}>
-              {directDestinations.map((destination) => (
-                <Pressable
-                  accessibilityLabel={`${t('Ouvrir')} ${platformLabels[destination.platform]}`}
-                  accessibilityRole="link"
-                  key={`direct-${destination.platform}`}
-                  onPress={() => void open(destination.url)}
-                  style={({ pressed }) => [
-                    styles.destination,
-                    { backgroundColor: palette.card, borderColor: palette.border },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <StreamingLogo platform={destination.platform} />
-                  <AppText numberOfLines={1} style={styles.destinationLabel} variant="subheadline">
-                    {platformLabels[destination.platform]}
-                  </AppText>
-                  <Tag color={palette.jam} label={t('Lien direct')} />
-                  <Ionicons color={palette.muted} name="arrow-up-outline" size={15} />
-                </Pressable>
-              ))}
-              {!directDestinations.length ? (
-                <AppText
-                  color={palette.muted}
-                  style={styles.emptyDestinations}
-                  variant="subheadline"
-                >
-                  {t("Aucun lien exact n'est encore disponible pour ce morceau.")}
-                </AppText>
-              ) : null}
-              {searchFallbacks.length ? (
-                <>
-                  <Pressable
-                    accessibilityLabel={t('Rechercher sur un autre service')}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: searchesVisible }}
-                    onPress={() => setSearchesVisible((current) => !current)}
-                    style={({ pressed }) => [
-                      styles.searchToggle,
-                      { backgroundColor: palette.inset },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Ionicons color={palette.muted} name="search" size={18} />
-                    <AppText style={styles.searchToggleLabel} variant="subheadline">
-                      {t('Rechercher sur un autre service')}
-                    </AppText>
-                    <Ionicons
-                      color={palette.muted}
-                      name={searchesVisible ? 'chevron-up' : 'chevron-down'}
-                      size={16}
-                    />
-                  </Pressable>
-                  {searchesVisible ? (
-                    <View style={styles.searchStack}>
-                      {searchFallbacks.map((destination) => {
-                        const label = t('Rechercher sur {{service}}', {
-                          service: platformLabels[destination.platform],
-                        });
-                        return (
-                          <Pressable
-                            accessibilityLabel={label}
-                            accessibilityRole="link"
-                            key={`search-${destination.platform}`}
-                            onPress={() => void open(destination.url)}
-                            style={({ pressed }) => [
-                              styles.destination,
-                              styles.searchDestination,
-                              { backgroundColor: palette.inset, borderColor: 'transparent' },
-                              pressed && styles.pressed,
-                            ]}
-                          >
-                            <StreamingLogo platform={destination.platform} size={30} />
-                            <AppText
-                              numberOfLines={1}
-                              style={styles.destinationLabel}
-                              variant="subheadline"
-                            >
-                              {label}
-                            </AppText>
-                            <Ionicons color={palette.muted} name="search" size={16} />
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                </>
-              ) : null}
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </View>
-    </Modal>
-  );
-}
-
-export function SongSoloOrderSheet({
-  members,
-  onClose,
-  song,
-  visible,
-}: {
-  members: readonly GroupMember[];
-  onClose: () => void;
-  song: GroupSong;
-  visible: boolean;
-}) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const orderedMembers = useMemo(() => soloOrderMembers(song, members), [members, song]);
-  return (
-    <Modal
-      animationType="fade"
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
-      statusBarTranslucent
-      transparent
-      visible={visible}
-    >
-      <View style={styles.sheetOverlay}>
-        <Pressable
-          accessibilityLabel={t('Fermer')}
-          accessibilityRole="button"
-          onPress={onClose}
-          style={styles.sheetBackdrop}
-        />
-        <SafeAreaView
-          edges={['bottom']}
-          style={[
-            styles.sheet,
-            { backgroundColor: palette.background, borderColor: palette.border },
-          ]}
-        >
-          <View style={[styles.sheetHandle, { backgroundColor: palette.border }]} />
-          <View style={[styles.sheetNavigation, { borderBottomColor: palette.border }]}>
-            <View style={styles.navigationSpacer} />
-            <AppText numberOfLines={1} style={styles.sheetTitle} variant="headline">
-              {t('Ordre des solos')}
-            </AppText>
-            <Pressable
-              accessibilityLabel={t('Fermer')}
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={onClose}
-              style={[styles.closeButton, { backgroundColor: palette.inset }]}
-            >
-              <Ionicons color={palette.text} name="close" size={18} />
-            </Pressable>
-          </View>
-          <View style={styles.soloSongIdentity}>
-            <AppText variant="title3">{song.title}</AppText>
             {song.artist ? (
-              <AppText color={palette.muted} variant="subheadline">
+              <AppText color={palette.muted} numberOfLines={1} variant="subheadline">
                 {song.artist}
               </AppText>
             ) : null}
+            <SongStoreBadge song={song} />
           </View>
-          <ScrollView contentContainerStyle={styles.soloSheetContent}>
-            <AppText color={palette.muted} variant="caption">
-              {t("Les noms apparaissent dans l'ordre de passage.")}
-            </AppText>
-            {orderedMembers.map((member, index) => {
-              const soloId = songSoloOrder(song)[index];
-              const isTradingFours = soloId === TRADING_FOURS_SOLO_ID;
-              const name = isTradingFours
-                ? TRADING_FOURS_SOLO_ID
-                : (member?.name ?? t('Membre retiré'));
-              return (
-                <View
-                  key={`${soloId}-${index}`}
-                  style={[styles.soloSheetRow, { borderColor: palette.border }]}
-                >
-                  <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
-                    <AppText style={styles.soloIndexText} variant="caption">
-                      {index + 1}
-                    </AppText>
-                  </View>
-                  {isTradingFours ? (
-                    <TradingFoursIcon />
-                  ) : (
-                    <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
-                  )}
-                  <View style={styles.flex}>
-                    <AppText numberOfLines={1} style={styles.soloMemberName}>
-                      {name}
-                    </AppText>
-                    {member?.instruments.length ? (
-                      <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                        {member.instruments.map((instrument) => t(instrument)).join(' · ')}
-                      </AppText>
-                    ) : null}
-                  </View>
+        </View>
+        <View>
+          {directDestinations.map((destination) => (
+            <ListRow
+              accessibilityLabel={`${t('Ouvrir')} ${platformLabels[destination.platform]}`}
+              accessory={
+                <View style={styles.destinationAccessory}>
+                  <Tag color={palette.jam} label={t('Lien direct')} />
+                  <Ionicons color={palette.muted} name="arrow-up-outline" size={15} />
                 </View>
-              );
-            })}
-          </ScrollView>
-        </SafeAreaView>
-      </View>
-    </Modal>
+              }
+              key={`direct-${destination.platform}`}
+              leading={<StreamingLogo platform={destination.platform} />}
+              onPress={() => void open(destination.url)}
+              title={platformLabels[destination.platform]}
+              tone="plain"
+            />
+          ))}
+          {!directDestinations.length ? (
+            <AppText color={palette.muted} style={styles.emptyDestinations} variant="subheadline">
+              {t("Aucun lien exact n'est encore disponible pour ce morceau.")}
+            </AppText>
+          ) : null}
+          {searchFallbacks.length ? (
+            <>
+              <Pressable
+                accessibilityLabel={t('Rechercher sur un autre service')}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: searchesVisible }}
+                onPress={() => setSearchesVisible((current) => !current)}
+                style={({ pressed }) => [styles.searchToggle, pressed && pressedStyle]}
+              >
+                <Ionicons color={palette.electric} name="search" size={18} />
+                <AppText
+                  color={palette.electric}
+                  style={styles.flex}
+                  variant="subheadline"
+                  weight="semibold"
+                >
+                  {t('Rechercher sur un autre service')}
+                </AppText>
+                <Ionicons
+                  color={palette.muted}
+                  name={searchesVisible ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                />
+              </Pressable>
+              {searchesVisible
+                ? searchFallbacks.map((destination) => {
+                    const label = t('Rechercher sur {{service}}', {
+                      service: platformLabels[destination.platform],
+                    });
+                    return (
+                      <ListRow
+                        accessibilityLabel={label}
+                        accessory={<Ionicons color={palette.muted} name="search" size={16} />}
+                        key={`search-${destination.platform}`}
+                        leading={<StreamingLogo platform={destination.platform} size={30} />}
+                        onPress={() => void open(destination.url)}
+                        title={label}
+                        tone="plain"
+                      />
+                    );
+                  })
+                : null}
+            </>
+          ) : null}
+        </View>
+        {showSoloOrder ? <SoloOrderList members={members} song={song} /> : null}
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
@@ -483,12 +377,17 @@ function SongRowSurface({
 }) {
   if (embedded) return <View style={[styles.embeddedSurface, cardStyle]}>{children}</View>;
   return (
-    <Card padding={10} style={[styles.cardSurface, cardStyle]}>
+    <Card padding={spacing.sm} style={cardStyle}>
       {children}
     </Card>
   );
 }
 
+/**
+ * Ligne de morceau (répertoire, setlist, répertoire personnel).
+ * Une seule action visible à droite : l'écoute, qui ouvre la feuille du morceau.
+ * `trailing` accueille un accessoire (statut, décision) fourni par l'écran appelant.
+ */
 export function GroupSongRow({
   cardStyle,
   embedded = false,
@@ -513,14 +412,19 @@ export function GroupSongRow({
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
-  const [listenVisible, setListenVisible] = useState(false);
-  const [solosVisible, setSolosVisible] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
   const promotion = appleArtworkPromotion(song);
+  const showSoloOrder = showSoloAction && songSoloOrder(song).length > 0;
   const metadata = [
     song.key?.trim(),
     song.tempoBpm ? `${song.tempoBpm} BPM` : null,
     song.form?.trim(),
   ].filter((value): value is string => Boolean(value));
+  const metadataLine = metadata.length ? (
+    <AppText color={palette.muted} numberOfLines={1} style={styles.flex} variant="mono">
+      {metadata.join(' · ')}
+    </AppText>
+  ) : null;
   return (
     <>
       <SongRowSurface {...(cardStyle ? { cardStyle } : {})} embedded={embedded}>
@@ -533,98 +437,52 @@ export function GroupSongRow({
             onPress={onPress}
             style={({ pressed }) => [
               styles.identity,
-              pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
+              pressed && (reduceMotion ? pressedStyleReducedMotion : pressedStyle),
             ]}
           >
-            <SongArtwork song={song} radius={11} size={52} />
+            <SongArtwork song={song} radius={radii.xs} size={46} />
             <View style={styles.songCopy}>
-              <AppText numberOfLines={2} style={styles.songTitle} variant="subheadline">
+              <AppText numberOfLines={2} variant="headline">
                 {song.title}
               </AppText>
               {song.artist ? (
-                <AppText
-                  adjustsFontSizeToFit
-                  color={palette.muted}
-                  minimumFontScale={0.8}
-                  numberOfLines={1}
-                  style={styles.artist}
-                  variant="caption"
-                >
+                <AppText color={palette.muted} numberOfLines={1} variant="subheadline">
                   {song.artist}
                 </AppText>
               ) : null}
-              {!promotion && metadata.length ? (
-                <AppText
-                  color={palette.bronze}
-                  numberOfLines={1}
-                  style={styles.metadata}
-                  variant="caption2"
-                >
-                  {metadata.join(' · ')}
-                </AppText>
-              ) : null}
+              {!promotion ? metadataLine : null}
             </View>
             {onPress && showDisclosure ? (
               <Ionicons color={palette.muted} name="chevron-forward" size={16} />
             ) : null}
           </Pressable>
-          {showListenAction ? (
-            <Pressable
-              accessibilityLabel={t('Écouter ce morceau')}
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => setListenVisible(true)}
-              style={({ pressed }) => [
-                styles.listenButton,
-                { backgroundColor: palette.inset },
-                pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
-              ]}
-            >
-              <Ionicons color={palette.muted} name="headset" size={14} />
-            </Pressable>
-          ) : null}
-          {showSoloAction && songSoloOrder(song).length > 0 ? (
-            <Pressable
-              accessibilityLabel={t('Ordre des solos')}
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => setSolosVisible(true)}
-              style={({ pressed }) => [
-                styles.listenButton,
-                { backgroundColor: palette.inset },
-                pressed && (reduceMotion ? styles.pressedReduced : styles.pressed),
-              ]}
-            >
-              <Ionicons color={palette.bronze} name="list" size={15} />
-            </Pressable>
-          ) : null}
           {trailing}
+          {showListenAction ? (
+            <IconButton
+              accessibilityLabel={t('Écouter ce morceau')}
+              icon="headset"
+              iconColor={palette.muted}
+              onPress={() => setSheetVisible(true)}
+              variant="plain"
+            />
+          ) : null}
         </View>
         {promotion ? (
           <View style={styles.songFooter}>
-            <AppText
-              color={palette.bronze}
-              numberOfLines={1}
-              style={[styles.metadata, styles.footerMetadata]}
-              variant="caption2"
-            >
-              {metadata.join(' · ')}
-            </AppText>
+            {metadataLine ?? <View style={styles.flex} />}
             <SongStoreBadge song={song} compact />
           </View>
         ) : null}
       </SongRowSurface>
-      <SongListenSheet
-        onClose={() => setListenVisible(false)}
-        song={song}
-        visible={listenVisible}
-      />
-      <SongSoloOrderSheet
-        members={members}
-        onClose={() => setSolosVisible(false)}
-        song={song}
-        visible={solosVisible}
-      />
+      {showListenAction ? (
+        <SongListenSheet
+          members={members}
+          onClose={() => setSheetVisible(false)}
+          showSoloOrder={showSoloOrder}
+          song={song}
+          visible={sheetVisible}
+        />
+      ) : null}
     </>
   );
 }
@@ -632,128 +490,48 @@ export function GroupSongRow({
 const styles = StyleSheet.create({
   amazonSmile: { bottom: 4, position: 'absolute' },
   artworkFallback: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  artist: { fontWeight: '600' },
-  cardSurface: { minHeight: 76 },
-  closeButton: {
-    alignItems: 'center',
-    borderRadius: 16,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
   deezerBars: { alignItems: 'flex-end', flexDirection: 'row', gap: 1 },
-  destination: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 60,
-    padding: spacing.sm,
-  },
-  destinationLabel: { flex: 1, fontWeight: '700' },
-  destinationStack: { gap: spacing.xs },
+  destinationAccessory: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  embeddedSurface: { justifyContent: 'center', paddingHorizontal: spacing.xs },
   emptyDestinations: { paddingVertical: spacing.sm, textAlign: 'center' },
-  embeddedSurface: { justifyContent: 'center', minHeight: 76, paddingHorizontal: 10 },
   flex: { flex: 1 },
   identity: {
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
-    gap: spacing.section,
+    gap: spacing.sm,
     minWidth: 0,
-  },
-  listenButton: {
-    alignItems: 'center',
-    borderRadius: 15,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
   },
   logoSurface: {
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: radii.xs,
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  metadata: { fontFamily: typography.monoSemibold, fontSize: 10.5, lineHeight: 14 },
-  navigationSpacer: { width: 32 },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
-  pressedReduced: { opacity: 0.96 },
-  searchStack: { gap: spacing.xs },
-  searchDestination: { minHeight: 52, opacity: 0.82 },
   searchToggle: {
     alignItems: 'center',
-    borderRadius: radii.button,
     flexDirection: 'row',
     gap: spacing.sm,
-    minHeight: 48,
-    paddingHorizontal: spacing.sm,
+    minHeight: 44,
+    paddingVertical: spacing.xs,
   },
-  searchToggleLabel: { flex: 1, fontWeight: '700' },
-  soloIndex: {
+  sheetContent: { gap: spacing.md, paddingBottom: spacing.md },
+  sheetSong: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  soloIndex: { minWidth: 18, textAlign: 'right' },
+  soloLeading: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  soloSection: { gap: spacing.xxs },
+  songCopy: { flex: 1, gap: 2, minWidth: 0 },
+  songFooter: {
     alignItems: 'center',
-    borderRadius: 999,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  soloIndexText: { fontWeight: '700' },
-  soloMemberName: { fontWeight: '700' },
-  soloSongIdentity: { gap: spacing.xxs, paddingHorizontal: spacing.gutter, paddingTop: spacing.md },
-  soloSheetContent: { gap: spacing.xs, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  soloSheetRow: {
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 52,
-    padding: spacing.xs,
-  },
-  sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    maxHeight: '82%',
-    overflow: 'hidden',
-  },
-  sheetBackdrop: {
-    backgroundColor: 'rgba(5, 8, 20, 0.58)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  sheetContent: { gap: spacing.cluster, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  sheetNavigation: {
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    minHeight: 52,
-    paddingHorizontal: spacing.gutter,
   },
-  sheetHandle: {
-    alignSelf: 'center',
-    borderRadius: 2,
-    height: 5,
-    marginTop: spacing.xs,
-    width: 38,
+  songRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  storeBadge: {
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    minHeight: 44,
+    padding: spacing.xxs,
   },
-  sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
-  sheetSong: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  sheetSongTitle: { fontWeight: '800' },
-  sheetTitle: { flex: 1, fontWeight: '800', textAlign: 'center' },
-  songFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  footerMetadata: { flex: 1 },
-  songCopy: { flex: 1, gap: 2, minWidth: 0 },
-  songRow: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.xs },
-  songTitle: { fontWeight: '700' },
 });

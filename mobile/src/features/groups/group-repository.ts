@@ -4,7 +4,6 @@ import type {
 } from '@supabase/supabase-js';
 import { randomUUID } from 'expo-crypto';
 import { File } from 'expo-file-system';
-import * as WebBrowser from 'expo-web-browser';
 
 import { openDocumentPreview } from '../../../modules/dispo-document-preview';
 
@@ -1084,7 +1083,7 @@ export async function cancelGroupInvitation(invitationId: string): Promise<void>
   return declineGroupInvitation(invitationId);
 }
 
-export function mapManualMember(row: ManualMemberRow): GroupMember {
+function mapManualMember(row: ManualMemberRow): GroupMember {
   return {
     id: row.id,
     name: row.name,
@@ -1316,15 +1315,6 @@ export async function setGroupMessageReaction(
   } as unknown as Database['public']['Functions']['set_group_message_reaction']['Args'];
   const result = await getSupabaseClient().rpc('set_group_message_reaction', params);
   if (result.error) throw result.error;
-}
-
-export async function openGroupMessageAttachment(message: GroupMessage): Promise<void> {
-  if (!message.attachmentPath) throw new Error('group_attachment_missing');
-  const signed = await getSupabaseClient()
-    .storage.from(messageFilesBucket)
-    .createSignedUrl(message.attachmentPath, 60);
-  if (signed.error) throw signed.error;
-  await WebBrowser.openBrowserAsync(signed.data.signedUrl);
 }
 
 export async function setGroupEventAttendance(
@@ -1563,15 +1553,6 @@ export async function copyGroupSongToDestinations(
     }
   }
   return results;
-}
-
-export async function setGroupSongSolos(groupId: string, songId: string, profileIds: string[]) {
-  const result = await getSupabaseClient().rpc('set_group_song_solos', {
-    p_group_id: groupId,
-    p_profile_ids: profileIds,
-    p_song_id: songId,
-  });
-  if (result.error) throw result.error;
 }
 
 export async function addSongComment(

@@ -1,5 +1,5 @@
-export const postalCodeMinLength = 3;
-export const postalCodeMaxLength = 10;
+const postalCodeMinLength = 3;
+const postalCodeMaxLength = 10;
 
 export interface PostalPlaceDraft {
   city: string;
@@ -49,7 +49,7 @@ export function normalizeCountryCode(value: string): string {
   return value.trim().toUpperCase();
 }
 
-export function normalizeCity(value: string): string {
+function normalizeCity(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
 

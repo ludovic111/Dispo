@@ -5,7 +5,7 @@ import type { GroupMessage } from './group-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { radii, spacing } from '@/theme/tokens';
 
 export function GroupMessageQuote({
   message,
@@ -42,9 +42,8 @@ export function GroupMessageQuote({
 const styles = StyleSheet.create({
   quote: {
     borderLeftWidth: 3,
-    borderRadius: 6,
+    borderRadius: radii.xs,
     gap: spacing.xxs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
+    padding: spacing.xs,
   },
 });

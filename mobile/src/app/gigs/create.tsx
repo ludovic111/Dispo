@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
+import { IconButton } from '@/components/ui/pressable';
 import { LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
 import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm, type GigFormInitial } from '@/features/gigs/gig-form';
@@ -35,7 +35,9 @@ export default function CreateGigScreen() {
   const defaults = useGigFormDefaults();
   const create = useCreateGig();
   const { t } = useTranslation();
-  const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
+  const close = (
+    <IconButton accessibilityLabel={t('Fermer')} icon="close" onPress={() => router.back()} />
+  );
   const initial: GigFormInitial = {
     ...(date ? { date } : {}),
     ...(place ? { publicPlace: place } : {}),
@@ -57,7 +59,6 @@ export default function CreateGigScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenHeader
           action={close}
-          icon="flash"
           subtitle={t('L’adresse exacte reste privée jusqu’à l’acceptation.')}
           title={t('Publier un SOS')}
         />
@@ -96,5 +97,5 @@ export default function CreateGigScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl },
+  content: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
 });

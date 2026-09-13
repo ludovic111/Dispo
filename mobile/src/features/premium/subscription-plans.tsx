@@ -17,11 +17,13 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { ChoiceChip } from '@/components/ui/choice-chip';
 import { LegalLinks } from '@/components/ui/legal-links';
 import { DispoButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
+import { spacing } from '@/theme/tokens';
 
 export function SubscriptionPlans() {
   const { t } = useTranslation();
@@ -84,10 +86,10 @@ export function SubscriptionPlans() {
     (Platform.OS === 'ios' && !products.isPending && products.data?.length !== 4);
   return (
     <View style={styles.section}>
-      <AppText variant="title2">{t('Choisis ta formule')}</AppText>
-      <AppText color={palette.muted} variant="subheadline">
-        {t('Rejoindre des groupes, échanger et répondre aux SOS reste gratuit.')}
-      </AppText>
+      <SectionHeader
+        subtitle={t('Rejoindre des groupes, échanger et répondre aux SOS reste gratuit.')}
+        title={t('Choisis ta formule')}
+      />
       {subscription.data?.tier !== 'free' && subscription.data ? (
         <Card>
           <AppText variant="headline">
@@ -95,18 +97,16 @@ export function SubscriptionPlans() {
           </AppText>
         </Card>
       ) : null}
-      <View style={styles.row}>
-        {(['monthly', 'annual'] as const).map((value) => (
-          <ChoiceChip
-            key={value}
-            label={t(value === 'monthly' ? 'Mensuel' : 'Annuel')}
-            selected={period === value}
-            onPress={() => {
-              if (!busy) setPeriod(value);
-            }}
-          />
-        ))}
-      </View>
+      <SegmentedControl<BillingPeriod>
+        onChange={(value) => {
+          if (!busy) setPeriod(value);
+        }}
+        options={[
+          { label: t('Mensuel'), value: 'monthly' },
+          { label: t('Annuel'), value: 'annual' },
+        ]}
+        value={period}
+      />
       {(['group', 'premium'] as const).map((tier) => {
         const product = storeProductFor(products.data ?? [], tier, period);
         const current = subscription.data?.tier === tier;
@@ -123,14 +123,14 @@ export function SubscriptionPlans() {
             </View>
             <View style={styles.priceRow}>
               <AppText variant="title2">{product?.priceString ?? '—'}</AppText>
-              <AppText color={palette.muted} variant="caption">
+              <AppText color={palette.muted} variant="footnote">
                 {t(period === 'monthly' ? 'par mois' : 'par an')}
               </AppText>
             </View>
             <AppText variant="subheadline">
               {t(tier === 'group' ? 'Création d’un seul groupe' : 'Création de groupes illimités')}
             </AppText>
-            <AppText color={palette.muted} variant="caption">
+            <AppText color={palette.muted} variant="footnote">
               {t(
                 tier === 'group'
                   ? 'La création d’un groupe, sans les avantages Premium ni le répertoire personnel.'
@@ -149,7 +149,7 @@ export function SubscriptionPlans() {
       })}
       {error ? (
         <Card style={styles.section}>
-          <AppText variant="caption" color={palette.muted}>
+          <AppText color={palette.muted} variant="footnote">
             {t(
               'Les tarifs Apple ne sont pas disponibles pour le moment. Aucun achat n’a été lancé.',
             )}
@@ -187,12 +187,12 @@ export function SubscriptionPlans() {
             {t('Gérer mon abonnement')}
           </DispoButton>
           <Card style={styles.section}>
-            <AppText variant="headline">{t('Écoles partenaires')}</AppText>
-            <AppText color={palette.muted} variant="caption">
-              {t(
+            <SectionHeader
+              subtitle={t(
                 'Utilise le code fourni par ton école partenaire. Apple affiche le tarif réduit, sa durée et le prix de renouvellement avant confirmation.',
               )}
-            </AppText>
+              title={t('Écoles partenaires')}
+            />
             <DispoButton
               variant="secondary"
               disabled={busy}
@@ -217,9 +217,8 @@ export function SubscriptionPlans() {
   );
 }
 const styles = StyleSheet.create({
-  section: { gap: 14 },
-  row: { flexDirection: 'row', gap: 8 },
-  heading: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  plan: { gap: 12 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 },
+  heading: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  plan: { gap: spacing.sm },
+  priceRow: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  section: { gap: spacing.md },
 });

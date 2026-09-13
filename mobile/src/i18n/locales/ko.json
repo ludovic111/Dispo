@@ -190,6 +190,7 @@
   "Ajouter un morceau": "노래 추가",
   "Ajouter un solo": "솔로 추가",
   "Ajouter une date": "추가 날짜",
+  "Retirer une date": "날짜 제거",
   "Ajouter une école et rejoindre sa communauté": "학교를 추가하고 커뮤니티에 가입",
   "Ajouter une partition": "파티션 추가",
   "Ajouter une photo": "사진 추가",
@@ -2439,5 +2440,12 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "이 학교에서 탈퇴한 후 목록에서 새 학교를 선택합니다. 다른 소속은 유지됩니다.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "프로필에서 이 소속이 제거되고 커뮤니티에 접근할 수 없게 됩니다. 다른 학교와 계정은 유지됩니다.",
   "Quitter et choisir": "탈퇴 후 선택",
-  "Changer d’école": "학교 변경"
+  "Changer d’école": "학교 변경",
+  "Une interface plus claire, partout": "어디서나 더 명확한 화면",
+  "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.": "iOS와 Android에서 텍스트, 버튼, 카드의 크기 체계를 하나로 통일했습니다.",
+  "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.": "섹션 제목, 탭, 읽지 않은 항목 카운터가 이제 하나의 형태를 가집니다.",
+  "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.": "목록에는 한 번에 하나의 동작만 표시되고, 나머지는 메뉴에 있습니다.",
+  "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.": "개인, 그룹, 학교 채팅이 같은 말풍선과 같은 입력창을 사용합니다.",
+  "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.": "버튼과 아이콘은 터치 영역이 넉넉해졌고 VoiceOver와 TalkBack으로 읽힙니다.",
+  "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.": "장식 요소를 줄였습니다. 재즈 블루 강조색은 동작에만 사용됩니다."
 }

@@ -9,7 +9,6 @@ export function DiscoveryProfileRow({
   referenceProfile,
 }: {
   primarySchool?: SchoolAffiliation | null;
-  scopeDate?: string | null;
   profile: ProfileSummary;
   referenceProfile?: ProfileSummary | null;
 }) {

@@ -190,6 +190,7 @@
   "Ajouter un morceau": "Añadir tema",
   "Ajouter un solo": "Añadir un solo",
   "Ajouter une date": "Añadir fecha",
+  "Retirer une date": "Quitar una fecha",
   "Ajouter une école et rejoindre sa communauté": "Añade una escuela y únete a su comunidad",
   "Ajouter une partition": "Añadir partitura",
   "Ajouter une photo": "Añadir una foto",
@@ -2439,5 +2440,12 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Saldrás de esta escuela y después elegirás otra en el directorio. Tus otras afiliaciones se conservarán.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Esta afiliación se quitará de tu perfil y perderás el acceso a su comunidad. Tus otras escuelas y tu cuenta se conservarán.",
   "Quitter et choisir": "Salir y elegir",
-  "Changer d’école": "Cambiar de escuela"
+  "Changer d’école": "Cambiar de escuela",
+  "Une interface plus claire, partout": "Una interfaz más clara, en todas partes",
+  "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.": "Una sola escala de textos, botones y tarjetas en iOS y Android.",
+  "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.": "Los títulos de sección, las pestañas y los contadores de no leídos tienen ahora una forma única.",
+  "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.": "Las listas muestran una acción visible a la vez; el resto está en un menú.",
+  "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.": "Los chats privados, de grupo y de escuela comparten las mismas burbujas y el mismo compositor.",
+  "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.": "Los botones y los iconos tienen una zona táctil cómoda y son anunciados por VoiceOver y TalkBack.",
+  "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.": "Menos elementos decorativos: el acento azul jazz queda reservado a las acciones."
 }

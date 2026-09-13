@@ -40,7 +40,7 @@ interface ParsedMusicalKey {
   pitchClass: number;
 }
 
-export function parseMusicalKey(value: string | null | undefined): ParsedMusicalKey | null {
+function parseMusicalKey(value: string | null | undefined): ParsedMusicalKey | null {
   const match = value?.trim().match(/^([A-Ga-g])([#♯b♭]?)(m)?$/u);
   if (!match) return null;
   const note = match[1]?.toLocaleUpperCase('en');

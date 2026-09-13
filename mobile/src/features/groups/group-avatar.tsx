@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { useDispoTheme } from '@/theme/theme-context';
+import { radii, tint } from '@/theme/tokens';
 
 export function GroupAvatar({
   emoji,
@@ -18,13 +20,16 @@ export function GroupAvatar({
 }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  if (photoUrl) {
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  if (photoUrl && failedUri !== photoUrl) {
     return (
       <Image
         accessibilityLabel={t('Photo de {{name}}', { name })}
         contentFit="cover"
+        onError={() => setFailedUri(photoUrl)}
+        recyclingKey={photoUrl}
         source={{ uri: photoUrl }}
-        style={{ borderRadius: size / 2, height: size, width: size }}
+        style={{ borderRadius: radii.round, height: size, width: size }}
         transition={180}
       />
     );
@@ -34,19 +39,19 @@ export function GroupAvatar({
       accessibilityLabel={t('Groupe {{name}}', { name })}
       style={[
         styles.fallback,
-        {
-          backgroundColor: `${palette.bronze}26`,
-          borderRadius: size / 2,
-          height: size,
-          width: size,
-        },
+        { backgroundColor: tint(palette.bronze, 0.15), height: size, width: size },
       ]}
     >
-      <AppText maxFontSizeMultiplier={1} style={{ fontSize: size * 0.42, lineHeight: size * 0.6 }}>
+      <AppText
+        maxFontSizeMultiplier={1}
+        variant={size >= 60 ? 'display' : size >= 46 ? 'title2' : 'body'}
+      >
         {emoji || '🎶'}
       </AppText>
     </View>
   );
 }
 
-const styles = StyleSheet.create({ fallback: { alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({
+  fallback: { alignItems: 'center', borderRadius: radii.round, justifyContent: 'center' },
+});

@@ -1,17 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { AvailabilityScope } from './discovery-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
+import { DispoButton } from '@/components/ui/pressable';
+import { EmptyState, LoadingState } from '@/components/ui/screen';
 import { PillButton, SectionHeader } from '@/components/ui/section';
+import { GroupAvatar } from '@/features/groups/group-avatar';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 export interface HomeGroup {
   date: string | null;
@@ -20,32 +21,6 @@ export interface HomeGroup {
   memberCount: number;
   name: string;
   photoUrl: string | null;
-}
-
-function HomeGroupIcon({ group }: { group: HomeGroup }) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const [failedUri, setFailedUri] = useState<string | null>(null);
-  if (group.photoUrl && group.photoUrl !== failedUri) {
-    return (
-      <Image
-        accessibilityLabel={t('Photo de {{name}}', { name: group.name })}
-        contentFit="cover"
-        onError={() => setFailedUri(group.photoUrl)}
-        recyclingKey={group.photoUrl}
-        source={{ uri: group.photoUrl }}
-        style={styles.groupIcon}
-        transition={180}
-      />
-    );
-  }
-  return (
-    <View style={[styles.groupIcon, { backgroundColor: palette.jazzGlow }]}>
-      <AppText maxFontSizeMultiplier={1.3} style={styles.groupEmoji}>
-        {group.emoji}
-      </AppText>
-    </View>
-  );
 }
 
 export function HomeGroupsSection({
@@ -66,104 +41,70 @@ export function HomeGroupsSection({
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const empty = !isLoading && !isError && groups.length === 0;
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
 
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHeading}>
-        <View style={styles.flex}>
-          <SectionHeader title={t('Mes groupes')} />
-        </View>
-        {!empty ? (
-          <Pressable
-            accessibilityLabel={t('Nouveau groupe')}
-            accessibilityRole="button"
-            onPress={onCreate}
-            style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}
-          >
-            <Ionicons color={palette.electric} name="add" size={18} />
-            <AppText color={palette.electric} style={styles.actionText} variant="subheadline">
-              {t('Créer')}
-            </AppText>
-          </Pressable>
-        ) : null}
-      </View>
+      <SectionHeader
+        title={t('Mes groupes')}
+        {...(empty ? {} : { action: { label: t('Créer'), onPress: onCreate } })}
+      />
 
       {isLoading && groups.length === 0 ? (
-        <View accessibilityRole="progressbar" style={styles.statusRow}>
-          <ActivityIndicator color={palette.electric} />
-          <AppText color={palette.muted} style={styles.flex} variant="subheadline">
-            {t('Chargement des groupes…')}
-          </AppText>
-        </View>
+        <LoadingState label={t('Chargement des groupes…')} />
       ) : null}
       {isError ? (
         <Card padding={spacing.sm}>
           <AppText color={palette.muted} variant="subheadline">
             {t('Tes groupes n’ont pas pu être chargés.')}
           </AppText>
-          <Pressable
-            accessibilityLabel={t('Réessayer')}
-            accessibilityRole="button"
-            onPress={onRetry}
-            style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}
-          >
-            <Ionicons color={palette.electric} name="refresh" size={16} />
-            <AppText color={palette.electric} variant="subheadline">
+          <View style={styles.inlineAction}>
+            <DispoButton
+              accessibilityLabel={t('Réessayer')}
+              icon="refresh"
+              onPress={onRetry}
+              size="compact"
+              variant="ghost"
+            >
               {t('Réessayer')}
-            </AppText>
-          </Pressable>
+            </DispoButton>
+          </View>
         </Card>
       ) : null}
       {empty ? (
-        <Pressable
-          accessibilityLabel={t('Crée ton premier groupe')}
-          accessibilityRole="button"
+        <ListRow
+          leadingIcon="people-outline"
           onPress={onCreate}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          <Card tone="inset">
-            <View style={styles.row}>
-              <Ionicons color={palette.electric} name="people-outline" size={23} />
-              <AppText style={[styles.flex, styles.actionText]} variant="subheadline">
-                {t('Crée ton premier groupe')}
-              </AppText>
-              <Ionicons color={palette.electric} name="add-circle-outline" size={24} />
-            </View>
-          </Card>
-        </Pressable>
+          title={t('Crée ton premier groupe')}
+        />
       ) : null}
       {groups.map((group) => (
-        <Pressable
-          accessibilityRole="button"
+        <ListRow
           key={group.id}
+          leading={
+            <GroupAvatar
+              emoji={group.emoji}
+              name={group.name}
+              photoUrl={group.photoUrl}
+              size={44}
+            />
+          }
           onPress={() => onOpen(group.id)}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          <Card tone="inset">
-            <View style={styles.row}>
-              <HomeGroupIcon group={group} />
-              <View style={[styles.flex, styles.groupCopy]}>
-                <AppText style={styles.actionText} variant="subheadline">
-                  {group.name}
-                </AppText>
-                <AppText color={palette.muted} variant="caption">
-                  {group.date
-                    ? new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
-                        day: 'numeric',
-                        month: 'short',
-                        weekday: 'short',
-                      }).format(new Date(group.date))
-                    : t('Aucune session')}
-                  {' · '}
-                  {group.memberCount === 1
-                    ? t('1 membre')
-                    : formatSwiftPlaceholders(t('%lld membres'), group.memberCount)}
-                </AppText>
-              </View>
-              <Ionicons color={palette.electric} name="chevron-forward" size={17} />
-            </View>
-          </Card>
-        </Pressable>
+          subtitle={`${
+            group.date
+              ? new Intl.DateTimeFormat(locale, {
+                  day: 'numeric',
+                  month: 'short',
+                  weekday: 'short',
+                }).format(new Date(group.date))
+              : t('Aucune session')
+          } · ${
+            group.memberCount === 1
+              ? t('1 membre')
+              : formatSwiftPlaceholders(t('%lld membres'), group.memberCount)
+          }`}
+          title={group.name}
+        />
       ))}
     </View>
   );
@@ -192,22 +133,17 @@ export function HomeAvailabilitySection({
           : 'Près de chez toi';
   return (
     <View style={[styles.availability, { borderTopColor: palette.border }]}>
-      <SectionHeader subtitle={t('Les musiciens disponibles')} title={t('Dispo')} />
-      <View style={styles.availabilityActions}>
-        <AppText color={palette.muted} style={styles.flex} variant="label">
-          {t(label)} · {count}
-        </AppText>
-        <PillButton
-          active={filterCount > 0}
-          icon="options"
-          onPress={onFilters}
-          title={
-            filterCount > 0
-              ? formatSwiftPlaceholders(t('Filtres · %lld'), filterCount)
-              : t('Filtres')
-          }
-        />
+      <View style={styles.flex}>
+        <SectionHeader subtitle={`${t(label)} · ${count}`} title={t('Dispo')} />
       </View>
+      <PillButton
+        active={filterCount > 0}
+        icon="options"
+        onPress={onFilters}
+        title={
+          filterCount > 0 ? formatSwiftPlaceholders(t('Filtres · %lld'), filterCount) : t('Filtres')
+        }
+      />
     </View>
   );
 }
@@ -219,115 +155,47 @@ export function HomeEmptyState({
   onExplore: () => void;
   scope: AvailabilityScope;
 }) {
-  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   return (
-    <Card style={styles.empty}>
-      <Ionicons
-        color={palette.muted}
-        name={
-          scope === 'today'
-            ? 'moon-outline'
-            : scope === 'weekend'
-              ? 'calendar-outline'
-              : 'people-outline'
-        }
-        size={28}
-      />
-      <AppText style={styles.centered} variant="headline">
-        {t(
-          scope === 'today'
-            ? "Personne aujourd'hui"
-            : scope === 'weekend'
-              ? 'Personne ce week-end'
-              : scope === 'thisWeek'
-                ? 'Personne cette semaine'
-                : 'Aucun musicien trouvé',
-        )}
-      </AppText>
-      <AppText color={palette.muted} style={styles.centered} variant="subheadline">
-        {scope === 'nearby'
+    <EmptyState
+      action={{
+        label: scope === 'nearby' ? t('Filtres') : t('Voir les musiciens à proximité'),
+        onPress: onExplore,
+      }}
+      icon={
+        scope === 'today'
+          ? 'moon-outline'
+          : scope === 'weekend'
+            ? 'calendar-outline'
+            : 'people-outline'
+      }
+      message={
+        scope === 'nearby'
           ? t('Élargis le rayon ou retire un filtre pour voir plus de profils.')
-          : t('Essaie une autre date ou explore les musiciens à proximité.')}
-      </AppText>
-      <Pressable
-        accessibilityLabel={scope === 'nearby' ? t('Filtres') : t('Voir les musiciens à proximité')}
-        accessibilityRole="button"
-        onPress={onExplore}
-        style={({ pressed }) => [styles.textAction, pressed && styles.pressed]}
-      >
-        <AppText
-          color={palette.electric}
-          style={[styles.scopeLabel, styles.centered]}
-          variant="subheadline"
-        >
-          {scope === 'nearby' ? t('Filtres') : t('Voir les musiciens à proximité')}
-        </AppText>
-        <Ionicons color={palette.electric} name="arrow-forward" size={16} />
-      </Pressable>
-    </Card>
+          : t('Essaie une autre date ou explore les musiciens à proximité.')
+      }
+      title={t(
+        scope === 'today'
+          ? "Personne aujourd'hui"
+          : scope === 'weekend'
+            ? 'Personne ce week-end'
+            : scope === 'thisWeek'
+              ? 'Personne cette semaine'
+              : 'Aucun musicien trouvé',
+      )}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  actionText: { fontWeight: '700' },
-  availability: { borderTopWidth: 1, gap: spacing.md, paddingTop: spacing.xl },
-  availabilityActions: {
+  availability: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    flexWrap: 'wrap',
-  },
-  centered: { textAlign: 'center' },
-  empty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xl },
-  flex: { flex: 1, minWidth: 0 },
-  groupCopy: { gap: spacing.xxs },
-  groupEmoji: { fontSize: 22, lineHeight: 28 },
-  groupIcon: {
-    alignItems: 'center',
-    borderRadius: radii.input,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  nearbyAction: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexGrow: 1,
-    flexBasis: 150,
-    gap: spacing.tight,
-    minHeight: minimumTouchTarget,
-  },
-  pressed: { opacity: 0.7 },
-  row: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  scope: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.tight,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  scopeLabel: { flexShrink: 1 },
-  scopes: { flexDirection: 'row', gap: spacing.xs },
-  section: { gap: spacing.sm },
-  sectionHeading: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  statusRow: {
-    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.xl,
   },
-  textAction: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.xxs,
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.xxs,
-  },
+  flex: { flex: 1, minWidth: 0 },
+  inlineAction: { alignSelf: 'flex-start', marginTop: spacing.xs },
+  section: { gap: spacing.sm },
 });

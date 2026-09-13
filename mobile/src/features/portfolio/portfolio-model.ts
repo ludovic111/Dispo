@@ -2,10 +2,10 @@ import { isPlayableProfileVideoUrl } from '@/features/media/profile-video-url';
 import type { Json } from '@/services/supabase/database.types';
 
 export const DEMO_VIDEO_BUCKET = 'demo-videos' as const;
-export const DEMO_VIDEO_FREE_LIMIT = 1;
-export const DEMO_VIDEO_PREMIUM_LIMIT = 6;
+const DEMO_VIDEO_FREE_LIMIT = 1;
+const DEMO_VIDEO_PREMIUM_LIMIT = 6;
 export const DEMO_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
-export const DEMO_VIDEO_MAX_DURATION_MS = 181_000;
+const DEMO_VIDEO_MAX_DURATION_MS = 181_000;
 export const DEMO_THUMBNAIL_MAX_BYTES = 1024 * 1024;
 
 export interface DemoVideo {
@@ -108,11 +108,11 @@ function optionalString(value: Json | undefined): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-export function isUuid(value: string): boolean {
+function isUuid(value: string): boolean {
   return uuidPattern.test(value);
 }
 
-export function isDayKey(value: string): boolean {
+function isDayKey(value: string): boolean {
   const match = dayPattern.exec(value);
   if (!match) return false;
   const year = Number(match[1]);

@@ -190,6 +190,7 @@
   "Ajouter un morceau": "添加歌曲",
   "Ajouter un solo": "添加独奏",
   "Ajouter une date": "添加日期",
+  "Retirer une date": "移除日期",
   "Ajouter une école et rejoindre sa communauté": "添加学校并加入其社群",
   "Ajouter une partition": "添加乐谱",
   "Ajouter une photo": "添加照片",
@@ -2439,5 +2440,12 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "你将退出这所学校，然后在目录中选择新学校。其他学校关系将保留。",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "此学校关系将从个人资料中移除，你将无法访问其社区。其他学校和账号将保留。",
   "Quitter et choisir": "退出并选择",
-  "Changer d’école": "更换学校"
+  "Changer d’école": "更换学校",
+  "Une interface plus claire, partout": "处处更清晰的界面",
+  "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.": "iOS 与 Android 上的文字、按钮和卡片采用同一套尺度。",
+  "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.": "分区标题、标签页和未读计数现在只有一种样式。",
+  "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.": "列表一次只显示一个可见操作，其余放在菜单中。",
+  "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.": "私聊、群聊和学校聊天共用同样的气泡和输入栏。",
+  "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.": "按钮和图标拥有舒适的触控区域，并可由 VoiceOver 和 TalkBack 朗读。",
+  "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.": "减少装饰元素：爵士蓝强调色只用于操作。"
 }

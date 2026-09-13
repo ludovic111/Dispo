@@ -1,9 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 
-import { SettingsDivider, SettingsShell, SettingsSwitchRow } from './settings-components';
+import {
+  SettingsDivider,
+  SettingsErrorBanner,
+  SettingsShell,
+  SettingsSwitchRow,
+} from './settings-components';
 import {
   notificationStatusLabel,
   permissionAllowsDelivery,
@@ -33,10 +38,12 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
+import { LoadingState } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import i18n from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
 
 export function NotificationsScreen() {
   const { session } = useAuth();
@@ -192,17 +199,14 @@ export function NotificationsScreen() {
 
   return (
     <SettingsShell nativeHeader>
-      <Card padding={spacing.md}>
+      <Card>
         <View style={styles.introRow}>
-          <Ionicons
-            color={palette.electric}
-            name="notifications"
-            size={27}
-            style={styles.introIcon}
-          />
+          <View style={[styles.introIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
+            <Ionicons color={palette.electric} name="notifications" size={24} />
+          </View>
           <View style={styles.introCopy}>
-            <AppText style={styles.introTitle}>{t('Ne rate plus une occasion de jouer')}</AppText>
-            <AppText color={palette.muted} style={styles.introText}>
+            <AppText variant="headline">{t('Ne rate plus une occasion de jouer')}</AppText>
+            <AppText color={palette.muted} variant="footnote">
               {t(
                 "Choisis seulement les alertes utiles. Elles arrivent sur ton téléphone, dans la cloche de l'app et dans la puce de l'icône.",
               )}
@@ -223,7 +227,7 @@ export function NotificationsScreen() {
         {permission === 'denied' ? (
           <>
             <SettingsDivider />
-            <View style={styles.settingsButtonWrap}>
+            <View style={styles.cardInset}>
               <DispoButton icon="settings" onPress={() => void Linking.openSettings()}>
                 {t(
                   Platform.OS === 'ios' ? 'Ouvrir les réglages iOS' : 'Ouvrir les réglages Android',
@@ -234,16 +238,12 @@ export function NotificationsScreen() {
         ) : null}
       </Card>
 
-      {loading || busy ? (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator color={palette.electric} />
-        </View>
-      ) : null}
+      {loading || busy ? <LoadingState /> : null}
 
       {enabled ? (
         <Card padding={0}>
           <View style={styles.cardHeading}>
-            <AppText style={styles.cardTitle}>{t("M'alerter pour")}</AppText>
+            <SectionHeader title={t("M'alerter pour")} />
           </View>
           <SettingsSwitchRow
             color={palette.signal}
@@ -280,55 +280,40 @@ export function NotificationsScreen() {
       ) : null}
 
       {enabled ? (
-        <Card padding={spacing.md} style={styles.testCard}>
-          <AppText style={styles.cardTitle}>{t('Vérifier sur cet appareil')}</AppText>
-          <AppText color={palette.muted} variant="caption">
-            {t(
+        <Card style={styles.testCard}>
+          <SectionHeader
+            subtitle={t(
               'Le test ci-dessous est local. Les alertes distantes utilisent aussi ton compte Dispo et ce téléphone.',
             )}
-          </AppText>
+            title={t('Vérifier sur cet appareil')}
+          />
           <DispoButton icon="paper-plane" onPress={() => void sendTest()} variant="secondary">
             {t('Envoyer une notification de test')}
           </DispoButton>
         </Card>
       ) : null}
 
-      {errorText ? (
-        <View
-          style={[
-            styles.error,
-            { backgroundColor: `${palette.signal}18`, borderColor: `${palette.signal}55` },
-          ]}
-        >
-          <Ionicons color={palette.signal} name="warning" size={17} />
-          <AppText color={palette.signal} style={styles.errorCopy} variant="caption">
-            {errorText}
-          </AppText>
-        </View>
-      ) : null}
+      <SettingsErrorBanner text={errorText} />
     </SettingsShell>
   );
 }
 
 const styles = StyleSheet.create({
-  cardFootnote: { paddingBottom: 14, paddingHorizontal: 14, paddingTop: spacing.xs },
-  cardHeading: { paddingHorizontal: 14, paddingTop: 14 },
-  cardTitle: { fontSize: 17, fontWeight: '800' },
-  error: {
-    alignItems: 'center',
-    borderRadius: radii.ticket,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.sm,
+  cardFootnote: {
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
   },
-  errorCopy: { flex: 1 },
-  introCopy: { flex: 1, gap: 5 },
-  introIcon: { width: 36 },
-  introRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 13 },
-  introText: { fontSize: 14, lineHeight: 20 },
-  introTitle: { fontSize: 17, fontWeight: '800' },
-  loadingRow: { alignItems: 'center', minHeight: 24 },
-  settingsButtonWrap: { padding: 14 },
+  cardHeading: { paddingHorizontal: spacing.sm, paddingTop: spacing.sm },
+  cardInset: { padding: spacing.sm },
+  introCopy: { flex: 1, gap: spacing.xxs },
+  introIcon: {
+    alignItems: 'center',
+    borderRadius: radii.sm,
+    height: minimumTouchTarget,
+    justifyContent: 'center',
+    width: minimumTouchTarget,
+  },
+  introRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   testCard: { gap: spacing.sm },
 });

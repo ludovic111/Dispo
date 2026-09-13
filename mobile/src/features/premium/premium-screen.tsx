@@ -1,21 +1,18 @@
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { SubscriptionPlans } from './subscription-plans';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { DispoBackground } from '@/components/ui/dispo-background';
+import { IconButton } from '@/components/ui/pressable';
+import { Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
-import { gradients, spacing, typography } from '@/theme/tokens';
-
-const billetPaper = '#F0F4FF';
+import { gradients, minimumTouchTarget, onAccent, radii, spacing, tint } from '@/theme/tokens';
 
 const perks = [
   {
@@ -48,7 +45,7 @@ const perks = [
 export function PremiumScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { dark, palette } = useDispoTheme();
+  const { palette } = useDispoTheme();
 
   function close() {
     if (router.canGoBack()) {
@@ -59,77 +56,65 @@ export function PremiumScreen() {
   }
 
   return (
-    <DispoBackground>
-      <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <PremiumHero />
+    <Screen>
+      <ScreenHeader
+        action={
+          <IconButton accessibilityLabel={t('Fermer Premium')} icon="close" onPress={close} />
+        }
+        title={t('Abonnements')}
+      />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <PremiumHero />
 
-          <SubscriptionPlans />
+        <SubscriptionPlans />
 
-          <View style={styles.section}>
-            <SectionHeader
-              subtitle={t('Des outils pour tes projets musicaux')}
-              title={t('Premium te rend du temps')}
-            />
+        <View style={styles.section}>
+          <SectionHeader
+            subtitle={t('Des outils pour tes projets musicaux')}
+            title={t('Premium te rend du temps')}
+          />
 
-            <Card padding={0}>
-              {perks.map((perk, index) => (
-                <View key={perk.icon}>
-                  <View accessible style={styles.perkRow}>
-                    <View style={[styles.perkIcon, { backgroundColor: `${palette.electric}1F` }]}>
-                      <Ionicons color={palette.electric} name={perk.icon} size={18} />
-                    </View>
-                    <View style={styles.perkCopy}>
-                      <AppText style={styles.perkTitle} variant="subheadline">
-                        {t(perk.title)}
-                      </AppText>
-                      <AppText color={palette.muted} variant="caption">
-                        {t(perk.text)}
-                      </AppText>
-                    </View>
+          <Card padding={0}>
+            {perks.map((perk, index) => (
+              <View key={perk.icon}>
+                <View accessible style={styles.perkRow}>
+                  <View
+                    style={[styles.perkIcon, { backgroundColor: tint(palette.electric, 0.12) }]}
+                  >
+                    <Ionicons color={palette.electric} name={perk.icon} size={18} />
                   </View>
-                  {index < perks.length - 1 ? (
-                    <View style={[styles.divider, { backgroundColor: palette.border }]} />
-                  ) : null}
+                  <View style={styles.perkCopy}>
+                    <AppText variant="subheadline" weight="semibold">
+                      {t(perk.title)}
+                    </AppText>
+                    <AppText color={palette.muted} variant="footnote">
+                      {t(perk.text)}
+                    </AppText>
+                  </View>
                 </View>
-              ))}
-            </Card>
-          </View>
-
-          <Card>
-            <View accessible style={styles.freeFoundations}>
-              <View style={styles.freeHeading}>
-                <Ionicons color={palette.electric} name="lock-open" size={15} />
-                <AppText color={palette.electric} style={styles.freeTitle} variant="subheadline">
-                  {t('Toujours gratuit')}
-                </AppText>
+                {index < perks.length - 1 ? (
+                  <View style={[styles.divider, { backgroundColor: palette.border }]} />
+                ) : null}
               </View>
-
-              <AppText color={palette.muted} variant="caption">
-                {t("Premium n'achète ni l'accès au réseau ni ta sécurité.")}
-              </AppText>
-
-              <FreeLine icon="business" text={t("Affiliation et communautés d'école")} />
-              <FreeLine
-                icon="shield-checkmark"
-                text={t('Accès aux SOS, adresse protégée, blocage et signalement')}
-              />
-            </View>
+            ))}
           </Card>
-        </ScrollView>
+        </View>
 
-        <Pressable
-          accessibilityLabel={t('Fermer Premium')}
-          accessibilityRole="button"
-          onPress={close}
-          style={({ pressed }) => [styles.closeButton, pressed && styles.closePressed]}
-        >
-          <BlurView intensity={72} style={StyleSheet.absoluteFill} tint={dark ? 'dark' : 'light'} />
-          <View style={[styles.closeBorder, { borderColor: palette.border }]} />
-          <Ionicons color={palette.text} name="close" size={20} />
-        </Pressable>
-      </SafeAreaView>
-    </DispoBackground>
+        <Card>
+          <View accessible style={styles.freeFoundations}>
+            <SectionHeader
+              subtitle={t("Premium n'achète ni l'accès au réseau ni ta sécurité.")}
+              title={t('Toujours gratuit')}
+            />
+            <FreeLine icon="business" text={t("Affiliation et communautés d'école")} />
+            <FreeLine
+              icon="shield-checkmark"
+              text={t('Accès aux SOS, adresse protégée, blocage et signalement')}
+            />
+          </View>
+        </Card>
+      </ScrollView>
+    </Screen>
   );
 }
 
@@ -142,31 +127,22 @@ function PremiumHero() {
       colors={gradients.premium}
       end={{ x: 1, y: 1 }}
       start={{ x: 0, y: 0 }}
-      style={styles.hero}
+      style={[styles.hero, { borderColor: tint(onAccent, 0.14) }]}
     >
-      <Ionicons
-        color="rgba(240,244,255,0.08)"
-        name="musical-note"
-        size={118}
-        style={styles.heroWatermark}
-      />
-
-      <View style={styles.heroContent}>
-        <View style={styles.heroLabel}>
-          <FontAwesome6 color="rgba(240,244,255,0.82)" name="crown" size={12} />
-          <AppText color="rgba(240,244,255,0.82)" style={styles.heroEyebrow}>
-            {t('DISPO PREMIUM')}
-          </AppText>
-        </View>
-
-        <AppText color={billetPaper} style={styles.heroTitle} variant="display">
-          {t("Plus de musique.\nMoins d'organisation.")}
-        </AppText>
-
-        <AppText color="rgba(240,244,255,0.78)" style={styles.heroSubtitle}>
-          {t('Des outils pour faire avancer tes projets sans alourdir les échanges.')}
+      <View style={styles.heroLabel}>
+        <FontAwesome6 color={tint(onAccent, 0.82)} name="crown" size={12} />
+        <AppText color={tint(onAccent, 0.82)} variant="label">
+          {t('DISPO PREMIUM')}
         </AppText>
       </View>
+
+      <AppText color={onAccent} variant="display">
+        {t("Plus de musique.\nMoins d'organisation.")}
+      </AppText>
+
+      <AppText color={tint(onAccent, 0.78)} style={styles.heroSubtitle} variant="subheadline">
+        {t('Des outils pour faire avancer tes projets sans alourdir les échanges.')}
+      </AppText>
     </LinearGradient>
   );
 }
@@ -176,7 +152,7 @@ function FreeLine({ icon, text }: { icon: 'business' | 'shield-checkmark'; text:
   return (
     <View style={styles.freeLine}>
       <Ionicons color={palette.electric} name={icon} size={13} style={styles.freeLineIcon} />
-      <AppText style={styles.freeLineText} variant="caption">
+      <AppText style={styles.freeLineText} variant="footnote">
         {text}
       </AppText>
     </View>
@@ -184,96 +160,40 @@ function FreeLine({ icon, text }: { icon: 'business' | 'shield-checkmark'; text:
 }
 
 const styles = StyleSheet.create({
-  betaCard: { padding: spacing.md },
-  betaCopy: { flex: 1, gap: spacing.compact },
-  betaIcon: {
-    alignItems: 'center',
-    borderRadius: 13,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  betaRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 13 },
-  closeBorder: {
-    bottom: 0,
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  closeButton: {
-    alignItems: 'center',
-    borderRadius: 22,
-    height: 44,
-    justifyContent: 'center',
-    overflow: 'hidden',
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    width: 44,
-    zIndex: 2,
-  },
-  closePressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   content: {
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.xs,
   },
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: 70 },
-  freeFoundations: { alignItems: 'stretch', gap: spacing.section },
-  freeHeading: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  freeLine: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.chip },
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.sm * 2 + minimumTouchTarget },
+  freeFoundations: { alignItems: 'stretch', gap: spacing.sm },
+  freeLine: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   freeLineIcon: { textAlign: 'center', width: 18 },
-  freeLineText: { flex: 1, fontWeight: '600' },
-  freeTitle: { fontWeight: '800' },
+  freeLineText: { flex: 1 },
   hero: {
-    borderColor: 'rgba(240,244,255,0.14)',
-    borderRadius: 28,
-    borderWidth: 1,
-    marginTop: spacing.xs,
-    overflow: 'hidden',
-  },
-  heroContent: {
     alignItems: 'flex-start',
+    borderRadius: radii.feature,
+    borderWidth: 1,
     gap: spacing.sm,
-    paddingBottom: 26,
-    paddingHorizontal: 22,
-    paddingTop: 30,
+    overflow: 'hidden',
+    padding: spacing.xl,
   },
-  heroEyebrow: {
-    fontFamily: typography.monoSemibold,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    lineHeight: 15,
-  },
-  heroLabel: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  heroSubtitle: { fontSize: 15, fontWeight: '500', lineHeight: 20, maxWidth: 300 },
-  heroTitle: { fontSize: 30, lineHeight: 34 },
-  heroWatermark: {
-    bottom: -20,
-    position: 'absolute',
-    right: -18,
-    transform: [{ rotate: '-9deg' }],
-  },
-  perkCopy: { flex: 1, gap: spacing.xxxs },
+  heroLabel: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
+  heroSubtitle: { maxWidth: 300 },
+  perkCopy: { flex: 1, gap: spacing.xxs },
   perkIcon: {
     alignItems: 'center',
-    borderRadius: spacing.sm,
-    height: 42,
+    borderRadius: radii.sm,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 42,
+    width: minimumTouchTarget,
   },
   perkRow: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: spacing.cluster,
-    paddingHorizontal: spacing.cluster,
-    paddingVertical: 13,
+    gap: spacing.sm,
+    padding: spacing.sm,
   },
-  perkTitle: { fontWeight: '700' },
-  safeArea: { flex: 1 },
-  section: { gap: spacing.control },
+  section: { gap: spacing.sm },
 });

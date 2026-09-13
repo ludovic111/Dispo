@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,17 +7,15 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AppState,
-  ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GroupMessageQuote } from './group-message-quote';
 import {
@@ -43,7 +40,11 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
-import { LinkifiedText } from '@/components/ui/linkified-text';
+import { ChatBubble, ChatInlineAction } from '@/components/ui/chat/chat-bubble';
+import { ChatComposer, ChatComposerNotice } from '@/components/ui/chat/chat-composer';
+import { DispoButton } from '@/components/ui/pressable';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ui/screen';
+import { BottomSheet } from '@/components/ui/sheet';
 import {
   MessageAttachmentCard,
   PendingAttachmentChip,
@@ -56,7 +57,7 @@ import {
 } from '@/features/messages/message-model';
 import { openMessageAttachment } from '@/features/messages/message-repository';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 function pickedByteCount(uri: string, advertised?: number | null): number {
   if (advertised && advertised > 0) return advertised;
@@ -84,7 +85,7 @@ function attachmentErrorMessage(error: unknown, t: TFunction): string {
   return t('Le message n’a pas pu être envoyé.');
 }
 
-function MessageBubble({
+function GroupMessageBubble({
   message,
   onEdit,
   onError,
@@ -108,8 +109,9 @@ function MessageBubble({
   userId: string;
 }) {
   const { palette } = useDispoTheme();
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const own = message.senderId === userId;
+  const deleted = Boolean(message.deletedAt);
   const attachment = groupMessageAttachment(message);
   const reaction = useGroupMessageReaction();
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
@@ -144,187 +146,112 @@ function MessageBubble({
     );
   };
   return (
-    <View style={[styles.messageRow, own && styles.messageRowOwn]}>
-      {!own ? <Avatar name={message.senderName} size={30} uri={message.senderPhotoUrl} /> : null}
-      <View style={[styles.bubbleColumn, own && styles.bubbleColumnOwn]}>
-        {!own ? (
-          <AppText color={palette.bronze} style={styles.sender} variant="caption2">
-            {message.senderName}
-          </AppText>
-        ) : null}
-        <Pressable
-          accessible={false}
-          onLongPress={message.deletedAt ? undefined : () => onReply(message)}
-          style={[
-            styles.bubble,
-            {
-              backgroundColor: own ? `${palette.electric}2E` : palette.card,
-              borderColor: own ? `${palette.electric}55` : palette.border,
-            },
-          ]}
-        >
-          {message.deletedAt ? (
-            <View style={styles.deletedRow}>
-              <Ionicons color={palette.muted} name="ban-outline" size={15} />
-              <AppText color={palette.muted} style={styles.deleted} variant="caption">
-                {t('Message supprimé')}
-              </AppText>
-            </View>
-          ) : (
-            <>
-              {message.replyToId ? (
-                <Pressable
-                  accessibilityLabel={t('Afficher le message d’origine')}
-                  accessibilityRole="button"
-                  onPress={() => onOpenOriginal(message.replyToId!)}
-                >
-                  <GroupMessageQuote loading={originalLoading} message={original} />
-                </Pressable>
-              ) : null}
-              {attachment ? (
-                <MessageAttachmentCard
-                  attachment={attachment}
-                  isLoading={openingAttachmentPath === attachment.remotePath}
-                  onOpen={() => onOpenAttachment(message)}
-                />
-              ) : null}
-              {message.text ? (
-                <LinkifiedText
-                  onPress={() => onReply(message)}
-                  onLongPress={() => onReply(message)}
-                  variant="subheadline"
-                >
-                  {message.text}
-                </LinkifiedText>
-              ) : null}
-            </>
-          )}
-        </Pressable>
-        {!message.deletedAt ? (
-          <View style={[styles.controls, own && styles.controlsOwn]}>
-            <Pressable
+    <>
+      <ChatBubble
+        actions={
+          <>
+            <ChatInlineAction
               accessibilityLabel={t('Répondre')}
-              accessibilityRole="button"
-              hitSlop={10}
+              icon="arrow-undo-outline"
               onPress={() => onReply(message)}
+            />
+            <ChatInlineAction
+              accessibilityLabel={t('Réagir')}
+              disabled={reaction.isPending}
+              icon="happy-outline"
+              onPress={() => setReactionPickerVisible(true)}
+            />
+            {own && message.text ? (
+              <ChatInlineAction
+                accessibilityLabel={t('Modifier')}
+                icon="pencil-outline"
+                onPress={() => onEdit(message)}
+              />
+            ) : null}
+            {own ? (
+              <ChatInlineAction
+                accessibilityLabel={t('Supprimer')}
+                color={palette.error}
+                icon="trash-outline"
+                onPress={confirmDelete}
+              />
+            ) : null}
+          </>
+        }
+        attachment={
+          attachment ? (
+            <MessageAttachmentCard
+              attachment={attachment}
+              isLoading={openingAttachmentPath === attachment.remotePath}
+              onOpen={() => onOpenAttachment(message)}
+            />
+          ) : null
+        }
+        avatar={<Avatar name={message.senderName} size={30} uri={message.senderPhotoUrl} />}
+        deleted={deleted}
+        edited={Boolean(message.editedAt)}
+        mine={own}
+        onLongPress={deleted ? undefined : () => onReply(message)}
+        onPress={deleted ? undefined : () => onReply(message)}
+        onReactionPress={(emoji) => react(emoji as (typeof GROUP_REACTION_EMOJIS)[number])}
+        quote={
+          message.replyToId ? (
+            <Pressable
+              accessibilityLabel={t('Afficher le message d’origine')}
+              accessibilityRole="button"
+              onPress={() => onOpenOriginal(message.replyToId!)}
+              style={({ pressed }) => pressed && pressedStyle}
             >
-              <Ionicons color={palette.muted} name="arrow-undo-outline" size={17} />
+              <GroupMessageQuote loading={originalLoading} message={original} />
             </Pressable>
-            {message.reactions.map((item) => (
+          ) : null
+        }
+        reactions={message.reactions.map((item) => ({
+          count: item.count,
+          emoji: item.emoji,
+          mine: item.reactedByMe,
+        }))}
+        reactionsDisabled={reaction.isPending}
+        senderName={message.senderName}
+        text={message.text}
+        timestamp={message.createdAt}
+      />
+      {reactionPickerVisible && !deleted ? (
+        <BottomSheet onClose={() => setReactionPickerVisible(false)} title={t('Réagir')} visible>
+          <View style={styles.reactionChoices}>
+            {GROUP_REACTION_EMOJIS.map((emoji) => (
               <Pressable
-                accessibilityLabel={`${item.emoji}, ${item.count}`}
+                accessibilityLabel={`${t('Réagir')} ${emoji}`}
                 accessibilityRole="button"
-                disabled={reaction.isPending}
-                key={item.emoji}
-                onPress={() => react(item.emoji)}
-                style={[
-                  styles.reaction,
-                  {
-                    backgroundColor: item.reactedByMe ? `${palette.electric}26` : palette.card,
-                    borderColor: item.reactedByMe ? palette.electric : palette.border,
-                  },
+                accessibilityState={{
+                  selected: message.reactions.some(
+                    (item) => item.emoji === emoji && item.reactedByMe,
+                  ),
+                }}
+                key={emoji}
+                onPress={() => {
+                  setReactionPickerVisible(false);
+                  react(emoji);
+                }}
+                style={({ pressed }) => [
+                  styles.reactionChoice,
+                  { backgroundColor: palette.cardMuted },
+                  pressed && pressedStyle,
                 ]}
               >
-                <AppText variant="caption2">
-                  {item.emoji} {item.count}
+                <AppText style={styles.reactionEmoji} variant="title2">
+                  {emoji}
                 </AppText>
               </Pressable>
             ))}
-            <Pressable
-              accessibilityLabel={t('Réagir')}
-              accessibilityRole="button"
-              disabled={reaction.isPending}
-              hitSlop={10}
-              onPress={() => setReactionPickerVisible(true)}
-            >
-              <Ionicons color={palette.muted} name="happy-outline" size={17} />
-            </Pressable>
-            {own ? (
-              <>
-                {message.text ? (
-                  <Pressable
-                    accessibilityLabel={t('Modifier')}
-                    accessibilityRole="button"
-                    onPress={() => onEdit(message)}
-                  >
-                    <Ionicons color={palette.muted} name="pencil-outline" size={16} />
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  accessibilityLabel={t('Supprimer')}
-                  accessibilityRole="button"
-                  onPress={confirmDelete}
-                >
-                  <Ionicons color={palette.signal} name="trash-outline" size={16} />
-                </Pressable>
-              </>
-            ) : null}
           </View>
-        ) : null}
-        {reactionPickerVisible && !message.deletedAt ? (
-          <Modal
-            animationType="fade"
-            onRequestClose={() => setReactionPickerVisible(false)}
-            transparent
-            visible
-          >
-            <View style={styles.reactionOverlay}>
-              <Pressable
-                accessibilityLabel={t('Fermer')}
-                accessibilityRole="button"
-                onPress={() => setReactionPickerVisible(false)}
-                style={styles.reactionBackdrop}
-              />
-              <SafeAreaView
-                edges={['bottom']}
-                style={[styles.reactionSheet, { backgroundColor: palette.card }]}
-              >
-                <AppText variant="title">{t('Réagir')}</AppText>
-                <View style={styles.reactionChoices}>
-                  {GROUP_REACTION_EMOJIS.map((emoji) => (
-                    <Pressable
-                      accessibilityLabel={`${t('Réagir')} ${emoji}`}
-                      accessibilityRole="button"
-                      accessibilityState={{
-                        selected: message.reactions.some(
-                          (item) => item.emoji === emoji && item.reactedByMe,
-                        ),
-                      }}
-                      key={emoji}
-                      onPress={() => {
-                        setReactionPickerVisible(false);
-                        react(emoji);
-                      }}
-                      style={[styles.reactionChoice, { backgroundColor: palette.inset }]}
-                    >
-                      <AppText style={styles.reactionEmoji}>{emoji}</AppText>
-                    </Pressable>
-                  ))}
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
-        ) : null}
-        <View style={styles.messageMeta}>
-          {message.editedAt && !message.deletedAt ? (
-            <AppText color={palette.muted} variant="caption2">
-              {t('Modifié')}
-            </AppText>
-          ) : null}
-          <AppText color={palette.muted} variant="caption2">
-            {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
-              hour: '2-digit',
-              minute: '2-digit',
-            }).format(new Date(message.createdAt))}
-          </AppText>
-        </View>
-      </View>
-    </View>
+        </BottomSheet>
+      ) : null}
+    </>
   );
 }
 
 export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId: string }) {
-  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const isFocused = useIsFocused();
   const [appIsActive, setAppIsActive] = useState(AppState.currentState === 'active');
@@ -507,21 +434,13 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
     }
   };
 
-  if (query.isLoading)
-    return (
-      <View style={styles.centerState}>
-        <ActivityIndicator color={palette.electric} />
-        <AppText color={palette.muted}>{t('Chargement des messages…')}</AppText>
-      </View>
-    );
+  if (query.isLoading) return <LoadingState label={t('Chargement des messages…')} />;
   if (query.isError)
     return (
-      <View style={styles.centerState}>
-        <AppText color={palette.error}>{t('Les messages n’ont pas pu être chargés.')}</AppText>
-        <Pressable accessibilityRole="button" onPress={() => void query.refetch()}>
-          <AppText color={palette.electric}>{t('Réessayer')}</AppText>
-        </Pressable>
-      </View>
+      <ErrorState
+        message={t('Les messages n’ont pas pu être chargés.')}
+        onRetry={() => void query.refetch()}
+      />
     );
 
   const busy = send.isPending || edit.isPending;
@@ -540,7 +459,7 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
           if (item.kind === 'day') return <MessageDayDivider date={item.date} />;
           if (item.kind === 'typing') return <TypingBubble />;
           return (
-            <MessageBubble
+            <GroupMessageBubble
               message={item.message}
               onEdit={(message) => {
                 if (busy) return;
@@ -564,324 +483,113 @@ export function GroupMessagesTab({ group, userId }: { group: MusicGroup; userId:
         }}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons color={palette.bronze} name="chatbubbles-outline" size={36} />
-            <AppText variant="title">{t('Lance la discussion')}</AppText>
-            <AppText color={palette.muted} style={styles.emptyText}>
-              {t('Premier message au groupe — répé, setlist, horaires…')}
-            </AppText>
+          <View style={styles.invertedEmpty}>
+            <EmptyState
+              icon="chatbubbles-outline"
+              message={t('Premier message au groupe — répé, setlist, horaires…')}
+              title={t('Lance la discussion')}
+            />
           </View>
         }
         ListFooterComponent={
           query.hasNextPage ? (
-            <Pressable
-              accessibilityLabel={t('Charger les messages précédents')}
-              accessibilityRole="button"
-              disabled={query.isFetchingNextPage}
-              onPress={() => void query.fetchNextPage()}
-              style={[
-                styles.pageButton,
-                { backgroundColor: palette.card, borderColor: palette.border },
-              ]}
-            >
-              {query.isFetchingNextPage ? (
-                <ActivityIndicator color={palette.electric} size="small" />
-              ) : (
-                <Ionicons color={palette.electric} name="time-outline" size={16} />
-              )}
-              <AppText color={palette.electric} variant="caption">
+            <View style={styles.pageAction}>
+              <DispoButton
+                icon="time-outline"
+                loading={query.isFetchingNextPage}
+                onPress={() => void query.fetchNextPage()}
+                size="compact"
+                variant="ghost"
+              >
                 {t('Charger les messages précédents')}
-              </AppText>
-            </Pressable>
+              </DispoButton>
+            </View>
           ) : null
         }
       />
-      {localError ? (
-        <AppText color={palette.error} style={styles.error} variant="caption">
-          {localError}
-        </AppText>
-      ) : null}
-      {editing ? (
-        <View style={[styles.editBanner, { backgroundColor: palette.inset }]}>
-          <Ionicons color={palette.electric} name="pencil" size={14} />
-          <AppText style={styles.editCopy} variant="caption">
-            {t('Modification du message')}
-          </AppText>
-          <Pressable
-            accessibilityLabel={t('Annuler')}
-            accessibilityRole="button"
-            onPress={() => {
+      <ChatComposer
+        accessibilityLabel={t('Message au groupe')}
+        attachDisabled={preparingAttachment || busy}
+        editable={!busy}
+        error={localError}
+        inputRef={inputRef}
+        maxLength={GROUP_MESSAGE_MAX_LENGTH}
+        onAttachFile={
+          editing
+            ? undefined
+            : { label: t('Joindre un fichier'), onPress: () => void pickDocument() }
+        }
+        onAttachMedia={
+          editing
+            ? undefined
+            : { label: t('Joindre une photo ou une vidéo'), onPress: () => void pickMedia() }
+        }
+        onChangeText={(value) => {
+          setText(value);
+          if (value) query.pingTyping();
+        }}
+        onSend={submit}
+        placeholder={t('Message au groupe…')}
+        preparingAttachment={preparingAttachment}
+        sendDisabled={busy || !isValidGroupMessage(text, attachment !== null)}
+        sendIcon={editing ? 'checkmark' : 'arrow-up'}
+        sendLabel={editing ? t('Enregistrer') : t('Envoyer')}
+        sending={busy}
+        value={text}
+      >
+        {editing ? (
+          <ChatComposerNotice
+            dismissLabel={t('Annuler')}
+            icon="pencil"
+            onDismiss={() => {
               setEditing(null);
               setText('');
             }}
-          >
-            <Ionicons color={palette.muted} name="close-circle" size={20} />
-          </Pressable>
-        </View>
-      ) : null}
-      {selectedReply ? (
-        <View style={[styles.replyBanner, { backgroundColor: palette.inset }]}>
-          <View style={styles.replyDraft}>
-            <AppText color={palette.electric} numberOfLines={1} variant="caption">
-              {t('Réponse à {{name}}', { name: selectedReply.senderName })}
-            </AppText>
-            <GroupMessageQuote message={selectedReply} showSender={false} />
-          </View>
-          <Pressable
-            accessibilityLabel={t('Annuler la réponse')}
-            accessibilityRole="button"
-            hitSlop={10}
-            onPress={() => setReplying(null)}
-          >
-            <Ionicons color={palette.muted} name="close-circle" size={22} />
-          </Pressable>
-        </View>
-      ) : null}
-      {attachment ? (
-        <View style={styles.attachmentDraft}>
-          <PendingAttachmentChip attachment={attachment} onRemove={() => setAttachment(null)} />
-        </View>
-      ) : null}
-      <View
-        style={[
-          styles.composer,
-          { backgroundColor: palette.background, borderColor: palette.border },
-        ]}
-      >
-        {!editing ? (
-          <>
-            <Pressable
-              accessibilityLabel={t('Joindre une photo ou une vidéo')}
-              accessibilityRole="button"
-              disabled={preparingAttachment || busy}
-              onPress={() => void pickMedia()}
-              style={styles.composerButton}
-            >
-              {preparingAttachment ? (
-                <ActivityIndicator color={palette.electric} size="small" />
-              ) : (
-                <Ionicons color={palette.electric} name="images" size={19} />
-              )}
-            </Pressable>
-            <Pressable
-              accessibilityLabel={t('Joindre un fichier')}
-              accessibilityRole="button"
-              disabled={preparingAttachment || busy}
-              onPress={() => void pickDocument()}
-              style={styles.composerButton}
-            >
-              <Ionicons color={palette.electric} name="attach" size={20} />
-            </Pressable>
-          </>
+            title={t('Modification du message')}
+          />
         ) : null}
-        <TextInput
-          accessibilityLabel={t('Message au groupe')}
-          editable={!busy}
-          ref={inputRef}
-          maxLength={GROUP_MESSAGE_MAX_LENGTH}
-          multiline
-          onChangeText={(value) => {
-            setText(value);
-            if (value) query.pingTyping();
-          }}
-          placeholder={t('Message au groupe…')}
-          placeholderTextColor={palette.muted}
-          selectionColor={palette.electric}
-          style={[
-            styles.input,
-            { backgroundColor: palette.card, borderColor: palette.border, color: palette.text },
-          ]}
-          value={text}
-        />
-        <Pressable
-          accessibilityLabel={editing ? t('Enregistrer') : t('Envoyer')}
-          accessibilityRole="button"
-          disabled={busy || !isValidGroupMessage(text, attachment !== null)}
-          onPress={submit}
-          style={[
-            styles.send,
-            (busy || !isValidGroupMessage(text, attachment !== null)) && styles.disabled,
-          ]}
-        >
-          {busy ? (
-            <ActivityIndicator color={palette.electric} size="small" />
-          ) : (
-            <Ionicons
-              color={
-                isValidGroupMessage(text, attachment !== null) ? palette.electric : palette.muted
-              }
-              name={editing ? 'checkmark-circle' : 'arrow-up-circle'}
-              size={34}
-            />
-          )}
-        </Pressable>
-      </View>
+        {selectedReply ? (
+          <ChatComposerNotice
+            dismissLabel={t('Annuler la réponse')}
+            onDismiss={() => setReplying(null)}
+            title={t('Réponse à {{name}}', { name: selectedReply.senderName })}
+          >
+            <GroupMessageQuote message={selectedReply} showSender={false} />
+          </ChatComposerNotice>
+        ) : null}
+        {attachment ? (
+          <PendingAttachmentChip attachment={attachment} onRemove={() => setAttachment(null)} />
+        ) : null}
+      </ChatComposer>
       {originalId ? (
-        <Modal animationType="slide" onRequestClose={() => setOriginalId(null)} transparent visible>
-          <View style={styles.reactionOverlay}>
-            <Pressable
-              accessibilityLabel={t('Fermer')}
-              accessibilityRole="button"
-              onPress={() => setOriginalId(null)}
-              style={styles.reactionBackdrop}
+        <BottomSheet onClose={() => setOriginalId(null)} title={t('Message d’origine')} visible>
+          <ScrollView>
+            <GroupMessageQuote
+              expanded
+              loading={replies.isLoading}
+              message={originals.get(originalId) ?? null}
             />
-            <SafeAreaView
-              edges={['bottom']}
-              style={[
-                styles.reactionSheet,
-                styles.originalSheet,
-                { backgroundColor: palette.card },
-              ]}
-            >
-              <View style={styles.originalHeader}>
-                <AppText style={styles.replyDraft} variant="title">
-                  {t('Message d’origine')}
-                </AppText>
-                <Pressable
-                  accessibilityLabel={t('Fermer')}
-                  accessibilityRole="button"
-                  hitSlop={10}
-                  onPress={() => setOriginalId(null)}
-                >
-                  <Ionicons color={palette.muted} name="close-circle" size={24} />
-                </Pressable>
-              </View>
-              <ScrollView>
-                <GroupMessageQuote
-                  expanded
-                  loading={replies.isLoading}
-                  message={originals.get(originalId) ?? null}
-                />
-              </ScrollView>
-            </SafeAreaView>
-          </View>
-        </Modal>
+          </ScrollView>
+        </BottomSheet>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  originalSheet: { maxHeight: '70%' },
-  originalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  replyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.control,
-  },
-  replyDraft: { flex: 1, minWidth: 0 },
-  reactionOverlay: { flex: 1, justifyContent: 'flex-end' },
-  reactionBackdrop: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  reactionSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    gap: spacing.sm,
-    padding: spacing.gutter,
-  },
-  reactionChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  reactionChoice: {
-    minWidth: 44,
-    minHeight: 48,
-    flexGrow: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reactionEmoji: { fontSize: 26, lineHeight: 34 },
-  attachmentDraft: { paddingHorizontal: spacing.control, paddingTop: spacing.control },
-  bubble: {
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: spacing.xs,
-    maxWidth: 292,
-    overflow: 'hidden',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  bubbleColumn: { alignItems: 'flex-start', flexShrink: 1, gap: spacing.xxs },
-  bubbleColumnOwn: { alignItems: 'flex-end' },
-  centerState: { alignItems: 'center', flex: 1, gap: spacing.sm, justifyContent: 'center' },
-  composer: {
-    alignItems: 'flex-end',
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.control,
-  },
-  composerButton: {
-    alignItems: 'center',
-    height: 44,
-    justifyContent: 'center',
-    width: 36,
-  },
-  controls: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.xxs,
-  },
-  controlsOwn: { justifyContent: 'flex-end' },
-  deleted: { fontStyle: 'italic' },
-  deletedRow: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  disabled: { opacity: 0.4 },
-  editBanner: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  editCopy: { flex: 1, fontWeight: '700' },
-  empty: { alignItems: 'center', gap: spacing.xs, padding: spacing.xxl },
-  emptyText: { textAlign: 'center' },
-  error: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.xs, textAlign: 'center' },
+  // Compense le retournement d'une liste `inverted` (les deux axes sur Android).
+  invertedEmpty: { transform: Platform.OS === 'android' ? [{ scale: -1 }] : [{ scaleY: -1 }] },
   fill: { flex: 1 },
-  input: {
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flex: 1,
-    fontSize: 16,
-    maxHeight: 110,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.control,
-  },
-  messageMeta: {
+  pageAction: { alignSelf: 'center', marginVertical: spacing.sm },
+  reactionChoice: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    justifyContent: 'flex-end',
-  },
-  messageRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs, width: '100%' },
-  messageRowOwn: { justifyContent: 'flex-end', paddingLeft: 56 },
-  pageButton: {
-    alignItems: 'center',
-    alignSelf: 'center',
     borderRadius: radii.round,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    height: minimumTouchTarget,
+    justifyContent: 'center',
+    width: minimumTouchTarget,
   },
-  reaction: {
-    borderRadius: radii.round,
-    borderWidth: 1,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 3,
-  },
-  send: { alignItems: 'center', height: 44, justifyContent: 'center', width: 40 },
-  sender: { fontWeight: '800', paddingLeft: spacing.xs },
-  separator: { height: spacing.control },
+  reactionChoices: { flexDirection: 'row', gap: spacing.xxs, justifyContent: 'space-between' },
+  reactionEmoji: { textAlign: 'center' },
+  separator: { height: spacing.sm },
   timeline: { flexGrow: 1, padding: spacing.gutter },
 });

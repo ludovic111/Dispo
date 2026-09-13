@@ -386,7 +386,7 @@ export function groupSongToJson(song: GroupSong): Record<string, unknown> {
   };
 }
 
-export function isGroupReactionEmoji(value: string): value is GroupReactionEmoji {
+function isGroupReactionEmoji(value: string): value is GroupReactionEmoji {
   return (GROUP_REACTION_EMOJIS as readonly string[]).includes(value);
 }
 

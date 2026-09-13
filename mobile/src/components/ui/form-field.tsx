@@ -8,11 +8,14 @@ import { radii, spacing, typography } from '@/theme/tokens';
 
 interface FormFieldProps extends ComponentProps<typeof TextInput> {
   error?: string | undefined;
+  /** Texte d'aide sous le champ, remplacé par l'erreur le cas échéant. */
+  hint?: string;
   label: string;
 }
 
+/** Champ de formulaire : étiquette mono, champ en creux, erreur en dessous. */
 export const FormField = forwardRef<TextInput, FormFieldProps>(function FormField(
-  { error, label, style, ...props },
+  { error, hint, label, style, ...props },
   ref,
 ) {
   const { palette } = useDispoTheme();
@@ -23,12 +26,14 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
       </AppText>
       <TextInput
         ref={ref}
+        accessibilityLabel={props.accessibilityLabel ?? label}
         numberOfLines={props.multiline ? undefined : 1}
         {...props}
         placeholderTextColor={palette.muted}
         selectionColor={palette.electric}
         style={[
           styles.input,
+          props.multiline && styles.multiline,
           {
             backgroundColor: palette.inset,
             borderColor: error ? palette.error : palette.border,
@@ -41,6 +46,10 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
         <AppText color={palette.error} variant="caption">
           {error}
         </AppText>
+      ) : hint ? (
+        <AppText color={palette.muted} variant="caption">
+          {hint}
+        </AppText>
       ) : null}
     </View>
   );
@@ -48,7 +57,7 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
 
 const styles = StyleSheet.create({
   input: {
-    borderRadius: radii.button,
+    borderRadius: radii.input,
     borderWidth: 1,
     fontFamily: typography.body,
     fontSize: 16,
@@ -56,5 +65,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  wrapper: { gap: 7 },
+  multiline: { minHeight: 96, textAlignVertical: 'top' },
+  wrapper: { gap: spacing.tight },
 });

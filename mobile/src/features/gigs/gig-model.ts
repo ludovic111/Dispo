@@ -290,7 +290,7 @@ function uniqueClean(values: string[]): string[] {
   return [...new Set(values.map(clean).filter(Boolean))];
 }
 
-export function publicAreaLabel(postalCode: string, city: string, countryCode: string): string {
+function publicAreaLabel(postalCode: string, city: string, countryCode: string): string {
   const area = [clean(postalCode), clean(city)].filter(Boolean).join(' ');
   const country = clean(countryCode).toUpperCase();
   return country ? `${area} · ${country}` : area;

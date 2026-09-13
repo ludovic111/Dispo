@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
 
 import type { GroupSong } from './group-model';
 import { isKnownMusicalKey, musicalKeyOptions, musicalKeysEqual } from './group-song-key-model';
@@ -11,12 +10,12 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
-import { DispoButton } from '@/components/ui/pressable';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { irealDestination } from '@/domain/song';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, spacing } from '@/theme/tokens';
+import { radii, spacing } from '@/theme/tokens';
 
 function durationLabel(milliseconds: number | null): string | null {
   if (!milliseconds || milliseconds < 0) return null;
@@ -78,40 +77,33 @@ export function SongInfoPanel({
       <Card style={styles.card}>
         <SectionHeader subtitle={subtitle} title={t('Identité')} />
         <View style={styles.songHero}>
-          <SongArtwork song={draft} radius={10} size={54} />
+          <SongArtwork song={draft} radius={radii.sm} size={54} />
           <View style={styles.heroCopy}>
-            <AppText numberOfLines={2} style={styles.heroTitle} variant="title3">
+            <AppText numberOfLines={2} variant="title3">
               {draft.title || t('Titre')}
             </AppText>
             {arrangement.length ? (
-              <View style={[styles.arrangementChip, { backgroundColor: `${palette.bronze}1F` }]}>
-                <Ionicons color={palette.bronze} name="speedometer-outline" size={10} />
-                <AppText color={palette.bronze} style={styles.arrangementText} variant="caption2">
-                  {arrangement.join(' · ')}
-                </AppText>
-              </View>
+              <AppText color={palette.muted} numberOfLines={1} variant="mono">
+                {arrangement.join(' · ')}
+              </AppText>
             ) : null}
             {draft.artist ? (
-              <AppText color={palette.muted} numberOfLines={1} variant="caption">
+              <AppText color={palette.muted} numberOfLines={1} variant="subheadline">
                 {draft.artist}
               </AppText>
             ) : null}
             {recording.length ? (
-              <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+              <AppText color={palette.muted} numberOfLines={1} variant="caption">
                 {recording.join(' · ')}
               </AppText>
             ) : null}
             <SongStoreBadge song={draft} />
           </View>
-          <Pressable
+          <IconButton
             accessibilityLabel={t('Écouter ce morceau')}
-            accessibilityRole="button"
-            hitSlop={4}
+            icon="headset"
             onPress={() => setListenVisible(true)}
-            style={[styles.heroAction, { backgroundColor: palette.inset }]}
-          >
-            <Ionicons color={palette.bronze} name="headset" size={18} />
-          </Pressable>
+          />
         </View>
         {!draft.isApproved ? (
           <Tag color={palette.signal} label={t('Suggestion à valider')} />
@@ -188,28 +180,9 @@ export function SongInfoPanel({
 }
 
 const styles = StyleSheet.create({
-  arrangementChip: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: spacing.compact,
-    maxWidth: '100%',
-    paddingHorizontal: 7,
-    paddingVertical: spacing.xxs,
-  },
-  arrangementText: { flexShrink: 1, fontWeight: '800' },
   card: { gap: spacing.sm },
   editorFields: { gap: spacing.sm },
-  heroAction: {
-    alignItems: 'center',
-    borderRadius: 18,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
-  heroCopy: { flex: 1, gap: spacing.xxxs, minWidth: 0 },
-  heroTitle: { fontSize: 19, lineHeight: 23 },
+  heroCopy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
   songHero: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

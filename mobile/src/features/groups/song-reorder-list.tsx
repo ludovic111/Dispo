@@ -10,8 +10,17 @@ import { GroupSongRow } from './group-song-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import {
+  disabledStyle,
+  minimumTouchTarget,
+  pressedStyle,
+  radii,
+  spacing,
+  tint,
+} from '@/theme/tokens';
 
 /** A single scroll viewport keeps drag activation and edge scrolling identical in both lists. */
 export function SongReorderList({
@@ -89,29 +98,22 @@ export function SongReorderList({
   return (
     <View style={styles.flex}>
       <View style={[styles.toolbar, { borderBottomColor: palette.border }]}>
-        <AppText style={styles.title} variant="title">
+        <AppText numberOfLines={2} style={styles.flex} variant="title3">
           {title}
         </AppText>
         {saving ? (
           <ActivityIndicator accessibilityLabel={t('Enregistrement…')} color={palette.electric} />
         ) : null}
-        <Pressable
+        <DispoButton
           accessibilityLabel={t('Terminé')}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: busy }}
           disabled={busy}
+          icon="checkmark"
           onPress={onDone}
-          style={[
-            styles.done,
-            { backgroundColor: `${palette.electric}18` },
-            busy && styles.disabled,
-          ]}
+          size="compact"
+          variant="ghost"
         >
-          <Ionicons color={palette.electric} name="checkmark" size={20} />
-          <AppText color={palette.electric} style={styles.bold}>
-            {t('Terminé')}
-          </AppText>
-        </Pressable>
+          {t('Terminé')}
+        </DispoButton>
       </View>
       <DraggableFlatList
         activationDistance={6}
@@ -142,7 +144,7 @@ export function SongReorderList({
           <View
             style={[
               styles.placeholder,
-              { backgroundColor: `${palette.electric}18`, borderColor: palette.electric },
+              { backgroundColor: tint(palette.electric, 0.1), borderColor: palette.electric },
             ]}
           />
         )}
@@ -154,35 +156,33 @@ export function SongReorderList({
                 {onToggleSet ? (
                   <View style={styles.setControl}>
                     {index === 0 || item.startsSet ? (
-                      <AppText color={palette.bronze} variant="label">
-                        {t('Set {{number}}', {
+                      <SectionHeader
+                        title={t('Set {{number}}', {
                           number:
                             1 + data.slice(1, index + 1).filter((song) => song.startsSet).length,
                         })}
-                      </AppText>
+                      />
                     ) : null}
                     {index > 0 ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`${t(item.startsSet ? 'Supprimer la séparation' : 'Nouveau set ici')} · ${item.title}`}
-                        disabled={busy}
-                        accessibilityState={{ disabled: busy }}
-                        onPress={() => void toggleSet(item)}
-                        style={[styles.setButton, busy && styles.disabled]}
-                      >
-                        <Ionicons
-                          color={palette.electric}
-                          name={item.startsSet ? 'remove-circle-outline' : 'add-circle-outline'}
-                          size={18}
-                        />
-                        <AppText color={palette.electric} variant="caption">
+                      <View style={styles.setAction}>
+                        <DispoButton
+                          accessibilityLabel={`${t(item.startsSet ? 'Supprimer la séparation' : 'Nouveau set ici')} · ${item.title}`}
+                          disabled={busy}
+                          icon={item.startsSet ? 'remove-circle-outline' : 'add-circle-outline'}
+                          onPress={() => void toggleSet(item)}
+                          size="compact"
+                          variant="ghost"
+                        >
                           {t(item.startsSet ? 'Supprimer la séparation' : 'Nouveau set ici')}
-                        </AppText>
-                      </Pressable>
+                        </DispoButton>
+                      </View>
                     ) : null}
                   </View>
                 ) : null}
-                <Card padding={10} style={isActive ? { borderColor: palette.electric } : undefined}>
+                <Card
+                  padding={spacing.sm}
+                  style={isActive ? { borderColor: palette.electric } : undefined}
+                >
                   <GroupSongRow
                     embedded
                     song={item}
@@ -191,28 +191,21 @@ export function SongReorderList({
                     showSoloAction={false}
                   />
                   <View style={styles.controls}>
-                    <AppText style={styles.position} color={palette.muted} variant="caption">
+                    <AppText style={styles.flex} color={palette.muted} variant="mono">
                       {index + 1} / {data.length}
                     </AppText>
                     {([-1, 1] as const).map((offset) => {
                       const disabled =
                         busy || (offset === -1 ? index === 0 : index === data.length - 1);
                       return (
-                        <Pressable
+                        <IconButton
                           accessibilityLabel={`${t(offset === -1 ? 'Monter' : 'Descendre')} · ${item.title}`}
-                          accessibilityRole="button"
-                          accessibilityState={{ disabled }}
                           disabled={disabled}
+                          icon={offset === -1 ? 'chevron-up' : 'chevron-down'}
                           key={offset}
                           onPress={() => move(item.id, offset)}
-                          style={[styles.control, disabled && styles.disabled]}
-                        >
-                          <Ionicons
-                            color={palette.electric}
-                            name={offset === -1 ? 'chevron-up' : 'chevron-down'}
-                            size={23}
-                          />
-                        </Pressable>
+                          variant="plain"
+                        />
                       );
                     })}
                     <Pressable
@@ -226,10 +219,11 @@ export function SongReorderList({
                       onPressIn={() => {
                         if (!savingRef.current && !dragging) drag();
                       }}
-                      style={[
+                      style={({ pressed }) => [
                         styles.handle,
-                        { backgroundColor: `${palette.electric}18` },
-                        saving && styles.disabled,
+                        { backgroundColor: tint(palette.electric, 0.1) },
+                        pressed && pressedStyle,
+                        saving && disabledStyle,
                       ]}
                     >
                       <Ionicons color={palette.electric} name="reorder-three" size={28} />
@@ -246,44 +240,31 @@ export function SongReorderList({
 }
 
 const styles = StyleSheet.create({
+  content: { padding: spacing.gutter, paddingBottom: spacing.xxl },
+  controls: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
   flex: { flex: 1 },
-  toolbar: {
-    flexDirection: 'row',
+  handle: {
     alignItems: 'center',
+    borderRadius: radii.button,
+    height: minimumTouchTarget,
+    justifyContent: 'center',
+    width: 56,
+  },
+  placeholder: {
+    borderRadius: radii.card,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    flex: 1,
+    marginBottom: spacing.sm,
+  },
+  row: { paddingBottom: spacing.sm },
+  setAction: { alignSelf: 'flex-start' },
+  setControl: { gap: spacing.xs, paddingBottom: spacing.xs },
+  toolbar: {
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
     gap: spacing.xs,
     padding: spacing.gutter,
-    borderBottomWidth: 1,
-  },
-  title: { flex: 1 },
-  bold: { fontWeight: '800' },
-  done: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 48,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.button,
-  },
-  content: { padding: spacing.gutter, paddingBottom: spacing.xxl },
-  row: { paddingBottom: spacing.sm },
-  setControl: { gap: spacing.xs, paddingBottom: spacing.xs },
-  setButton: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, minHeight: 44 },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  position: { flex: 1 },
-  control: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  handle: {
-    width: 56,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.button,
-  },
-  disabled: { opacity: 0.3 },
-  placeholder: {
-    flex: 1,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderRadius: radii.card,
-    marginBottom: spacing.sm,
   },
 });

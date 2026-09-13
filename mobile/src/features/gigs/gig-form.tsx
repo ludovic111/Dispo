@@ -1,8 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import type { TFunction } from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   combineGigDate,
@@ -20,16 +19,18 @@ import { GigSchoolField } from './gig-school-field';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import {
   mergeNativeDateTimePart,
   NativeDateTimeField,
 } from '@/components/ui/native-date-time-field';
 import { DispoButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
 import { shortProfileLevel } from '@/domain/profile';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 export interface GigFormInitial {
   exactAddress?: string;
@@ -93,37 +94,6 @@ function errorLabel(code: string, t: TFunction): string {
     gig_title_missing: 'Ajoute un titre.',
   };
   return t(labels[code] ?? 'Vérifie les informations du SOS.');
-}
-
-function ChoiceChip({
-  label,
-  onPress,
-  selected,
-}: {
-  label: string;
-  onPress: () => void;
-  selected: boolean;
-}) {
-  const { palette } = useDispoTheme();
-  return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: selected ? `${palette.electric}24` : palette.inset,
-          borderColor: selected ? palette.electric : palette.border,
-        },
-      ]}
-    >
-      {selected ? <Ionicons color={palette.electric} name="checkmark" size={14} /> : null}
-      <AppText color={selected ? palette.electric : palette.text} style={styles.chipText}>
-        {label}
-      </AppText>
-    </Pressable>
-  );
 }
 
 function ChoiceSection({
@@ -296,11 +266,13 @@ export function GigForm({
   return (
     <View style={styles.form}>
       <Card style={styles.section}>
-        <AppText color={palette.bronze} variant="label">
-          {mode === 'direct'
-            ? t('Demande à {{name}}', { name: targetName ?? t('ce musicien') })
-            : t('Le concert')}
-        </AppText>
+        <SectionHeader
+          title={
+            mode === 'direct'
+              ? t('Demande à {{name}}', { name: targetName ?? t('ce musicien') })
+              : t('Le concert')
+          }
+        />
         <FormField
           label={t('Titre')}
           onChangeText={setTitle}
@@ -351,9 +323,7 @@ export function GigForm({
 
       {mode === 'public' ? (
         <Card style={styles.section}>
-          <AppText color={palette.bronze} variant="label">
-            {t('Genre')}
-          </AppText>
+          <SectionHeader title={t('Genre')} />
           {GIG_GENRE_GROUPS.map((group) => (
             <ChoiceSection
               key={group.label}
@@ -372,9 +342,10 @@ export function GigForm({
       {!lockEventLocation ? (
         <>
           <Card style={styles.section}>
-            <AppText color={palette.bronze} variant="label">
-              {t('Zone visible avant la réponse')}
-            </AppText>
+            <SectionHeader
+              subtitle={t('Tout le monde voit uniquement cette zone générale.')}
+              title={t('Zone visible avant la réponse')}
+            />
             <FormField
               label={t('Quartier, salle ou repère public (facultatif)')}
               onChangeText={setPublicPlace}
@@ -404,18 +375,17 @@ export function GigForm({
               onResolved={setResolvedPlace}
               value={{ city, countryCode, postalCode }}
             />
-            <AppText color={palette.muted} variant="caption">
-              {t('Tout le monde voit uniquement cette zone générale.')}
-            </AppText>
           </Card>
 
           <Card style={styles.section}>
-            <View style={styles.privateTitle}>
-              <Ionicons color={palette.jam} name="lock-closed" size={17} />
-              <AppText color={palette.bronze} variant="label">
-                {t('Rendez-vous privé')}
-              </AppText>
-            </View>
+            <SectionHeader
+              subtitle={
+                mode === 'direct'
+                  ? t('Révélée seulement si la demande est acceptée.')
+                  : t('Visible uniquement par toi et les musicien·nes accepté·es.')
+              }
+              title={t('Rendez-vous privé')}
+            />
             <FormField
               label={t('Rue, numéro, entrée, étage… (facultatif)')}
               multiline
@@ -425,18 +395,13 @@ export function GigForm({
               style={styles.textareaSmall}
               value={exactAddress}
             />
-            <AppText color={palette.jam} variant="caption">
-              {mode === 'direct'
-                ? t('Révélée seulement si la demande est acceptée.')
-                : t('Visible uniquement par toi et les musicien·nes accepté·es.')}
-            </AppText>
           </Card>
         </>
       ) : null}
       <Card style={styles.section}>
-        <AppText color={palette.bronze} variant="label">
-          {mode === 'direct' ? t('Instrument recherché') : t('Musicien·nes recherché·es')}
-        </AppText>
+        <SectionHeader
+          title={mode === 'direct' ? t('Instrument recherché') : t('Musicien·nes recherché·es')}
+        />
         {mode === 'direct' ? (
           <ChoiceSection
             label={t('Choisis un instrument joué par la personne')}
@@ -459,12 +424,10 @@ export function GigForm({
 
       {mode === 'public' ? (
         <Card style={styles.section}>
-          <AppText color={palette.bronze} variant="label">
-            {t('Niveau demandé')}
-          </AppText>
-          <AppText color={palette.muted} variant="caption">
-            {t('Aucun choix signifie « ouvert à tous ».')}
-          </AppText>
+          <SectionHeader
+            subtitle={t('Aucun choix signifie « ouvert à tous ».')}
+            title={t('Niveau demandé')}
+          />
           <View style={styles.chips}>
             {GIG_LEVELS.map((level) => (
               <ChoiceChip
@@ -480,9 +443,7 @@ export function GigForm({
 
       {defaults.isProfessional ? (
         <Card style={styles.section}>
-          <AppText color={palette.bronze} variant="label">
-            {t('Cachet (CHF)')}
-          </AppText>
+          <SectionHeader title={t('Cachet (CHF)')} />
           <View style={styles.chips}>
             {feeModes.map((option) => (
               <ChoiceChip
@@ -568,22 +529,10 @@ export function GigForm({
 }
 
 const styles = StyleSheet.create({
-  chip: {
-    alignItems: 'center',
-    borderRadius: radii.chip,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    minHeight: 36,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  chipText: { fontSize: 12, fontWeight: '700' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   choiceSection: { gap: spacing.xs },
   form: { gap: spacing.md },
-  horizontalChips: { flexDirection: 'row', gap: spacing.xs, paddingVertical: 2 },
-  privateTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  horizontalChips: { flexDirection: 'row', gap: spacing.xs },
   section: { gap: spacing.md },
   textarea: { minHeight: 112, textAlignVertical: 'top' },
   textareaSmall: { minHeight: 84, textAlignVertical: 'top' },

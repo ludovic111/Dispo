@@ -132,7 +132,7 @@ export function affiliationStatusLabel(
   return affiliation.verificationLevel === 'verified' ? role : `${role} · déclaré`;
 }
 
-export function normalizeSchoolSearch(value: string): string {
+function normalizeSchoolSearch(value: string): string {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

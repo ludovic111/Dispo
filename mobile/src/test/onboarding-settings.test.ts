@@ -98,8 +98,8 @@ describe('settings parity helpers', () => {
 
   it('marks the current Swift patch-note version', () => {
     expect(normalizeMarketingVersion('2.4.0')).toBe('2.4');
-    expect(patchNotes).toHaveLength(31);
-    expect(patchNotes[0]?.version).toBe('2.4');
+    expect(patchNotes).toHaveLength(32);
+    expect(patchNotes[0]?.version).toBe('2.4.2');
     expect(patchNotes.at(-1)?.version).toBe('0.1.0');
   });
 });

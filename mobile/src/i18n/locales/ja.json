@@ -190,6 +190,7 @@
   "Ajouter un morceau": "曲を追加",
   "Ajouter un solo": "ソロを追加",
   "Ajouter une date": "日付を追加",
+  "Retirer une date": "日付を削除",
   "Ajouter une école et rejoindre sa communauté": "学校を追加してコミュニティに参加",
   "Ajouter une partition": "楽譜を追加",
   "Ajouter une photo": "写真を追加",
@@ -2439,5 +2440,12 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "この学校を退会してから、一覧で新しい学校を選びます。他の所属は維持されます。",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "この所属はプロフィールから削除され、コミュニティにアクセスできなくなります。他の学校やアカウントは維持されます。",
   "Quitter et choisir": "退会して選ぶ",
-  "Changer d’école": "学校を変更"
+  "Changer d’école": "学校を変更",
+  "Une interface plus claire, partout": "どこでも、より分かりやすい画面に",
+  "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.": "iOS と Android で、テキスト・ボタン・カードの尺度を統一しました。",
+  "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.": "セクションの見出し、タブ、未読カウンターの形をひとつに揃えました。",
+  "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.": "リストに表示する操作は一度にひとつ。残りはメニューにまとめました。",
+  "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.": "個人・グループ・学校のチャットで、同じ吹き出しと同じ入力欄を使います。",
+  "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.": "ボタンとアイコンはタップしやすい大きさになり、VoiceOver と TalkBack で読み上げられます。",
+  "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.": "装飾を減らし、ジャズブルーのアクセントは操作にのみ使います。"
 }

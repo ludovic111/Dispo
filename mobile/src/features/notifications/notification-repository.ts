@@ -18,7 +18,7 @@ type NotificationProjection = Pick<
 
 export const NOTIFICATION_PAGE_SIZE = 50;
 
-export function mapNotification(row: NotificationProjection): AppNotification {
+function mapNotification(row: NotificationProjection): AppNotification {
   return {
     body: row.body,
     category: normalizeNotificationCategory(row.category),

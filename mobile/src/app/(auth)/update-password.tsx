@@ -56,7 +56,7 @@ export default function UpdatePasswordScreen() {
           <View style={styles.content}>
             <BrandLogo markSize={44} />
             <View style={styles.heading}>
-              <AppText style={styles.title} variant="display">
+              <AppText style={styles.center} variant="display">
                 {t('Nouveau mot de passe')}
               </AppText>
               <AppText color={palette.muted} style={styles.center} variant="subheadline">
@@ -99,7 +99,7 @@ export default function UpdatePasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.cluster, width: '100%' },
+  card: { gap: spacing.sm, width: '100%' },
   center: { textAlign: 'center' },
   content: { alignItems: 'center', gap: spacing.xl, maxWidth: 520, width: '100%' },
   flex: { flex: 1 },
@@ -110,5 +110,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.gutter,
   },
-  title: { fontSize: 27, lineHeight: 31, textAlign: 'center' },
 });

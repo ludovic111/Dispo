@@ -20,11 +20,12 @@ import {
 } from './notification-queries';
 
 import { AppText } from '@/components/ui/app-text';
+import { UnreadDot } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 function NotificationCard({ item, onPress }: { item: AppNotification; onPress: () => void }) {
   const { palette } = useDispoTheme();
@@ -43,27 +44,29 @@ function NotificationCard({ item, onPress }: { item: AppNotification; onPress: (
         : item.category === 'groups'
           ? 'people'
           : 'notifications';
+  const unread = !item.readAt;
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => pressed && pressedStyle}
     >
       <Card padding={spacing.sm}>
         <View style={styles.row}>
-          <View style={[styles.icon, { backgroundColor: `${color}1F` }]}>
-            <Ionicons color={color} name={icon} size={17} />
+          <View style={[styles.icon, { backgroundColor: tint(color, 0.12) }]}>
+            <Ionicons color={color} name={icon} size={20} />
           </View>
           <View style={styles.copy}>
             <View style={styles.titleRow}>
               <AppText
                 numberOfLines={2}
-                style={[styles.title, item.readAt ? undefined : styles.unreadTitle]}
+                style={styles.title}
                 variant="subheadline"
+                weight={unread ? 'bold' : 'semibold'}
               >
                 {localizedNotificationText(item.title, t)}
               </AppText>
-              {!item.readAt ? <View style={[styles.unread, { backgroundColor: color }]} /> : null}
+              {unread ? <UnreadDot color={color} /> : null}
             </View>
             <AppText color={palette.muted} numberOfLines={3} variant="caption">
               {localizedNotificationText(item.body, t)}
@@ -72,7 +75,7 @@ function NotificationCard({ item, onPress }: { item: AppNotification; onPress: (
               {relativeNotificationDate(item.createdAt, i18n.resolvedLanguage ?? i18n.language)}
             </AppText>
           </View>
-          <Ionicons color={palette.muted} name="chevron-forward" size={14} />
+          <Ionicons color={palette.muted} name="chevron-forward" size={18} />
         </View>
       </Card>
     </Pressable>
@@ -182,19 +185,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
   },
-  copy: { flex: 1, gap: spacing.xxxs },
+  copy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
   icon: {
     alignItems: 'center',
-    borderRadius: 17,
-    height: 34,
+    borderRadius: radii.sm,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 34,
+    width: minimumTouchTarget,
   },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
-  row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.section },
-  separator: { height: spacing.control },
-  title: { flex: 1 },
+  row: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
+  separator: { height: spacing.sm },
+  title: { flexShrink: 1 },
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  unread: { borderRadius: 4, height: 7, width: 7 },
-  unreadTitle: { fontWeight: '800' },
 });

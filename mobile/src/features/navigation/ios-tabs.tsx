@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDispoTheme } from '@/theme/theme-context';
+import { fontWeights, onAccent, radii, spacing } from '@/theme/tokens';
 
 const destinations = [
   { name: 'index', label: 'Accueil', icon: 'home-outline', selected: 'home' },
@@ -14,6 +15,10 @@ const destinations = [
   { name: 'messages', label: 'Messages', icon: 'chatbubbles-outline', selected: 'chatbubbles' },
   { name: 'profile', label: 'Profil', icon: 'person-circle-outline', selected: 'person-circle' },
 ] as const;
+
+const tabBarHeight = 64;
+/** Libellé de la barre d'onglets : taille minimale lisible (≥ `caption2`), graisse semibold. */
+const tabLabelFontSize = 11;
 
 /** Keep labels measurable on iOS 26, including before a tab's first selection. */
 export function IosTabs({
@@ -33,22 +38,22 @@ export function IosTabs({
         tabBarInactiveTintColor: palette.muted,
         tabBarActiveBackgroundColor: palette.inset,
         tabBarLabelPosition: 'below-icon',
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: tabLabelFontSize, fontWeight: fontWeights.semibold },
         tabBarItemStyle: {
-          marginHorizontal: 3,
-          marginVertical: 5,
-          borderRadius: 26,
+          marginHorizontal: spacing.xxs,
+          marginVertical: spacing.xxs,
+          borderRadius: radii.xl,
           overflow: 'hidden',
         },
-        tabBarBadgeStyle: { backgroundColor: palette.error, color: '#FFFFFF' },
+        tabBarBadgeStyle: { backgroundColor: palette.signal, color: onAccent },
         tabBarStyle: {
-          height: 64,
-          marginHorizontal: 16,
-          marginBottom: Math.max(12, insets.bottom - 8),
+          height: tabBarHeight,
+          marginHorizontal: spacing.md,
+          marginBottom: Math.max(spacing.sm, insets.bottom - spacing.xs),
           paddingBottom: 0,
           paddingTop: 0,
-          borderRadius: 32,
-          borderWidth: 1,
+          borderRadius: radii.round,
+          borderWidth: StyleSheet.hairlineWidth,
           borderColor: palette.border,
           backgroundColor: palette.card,
           overflow: 'hidden',

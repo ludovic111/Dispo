@@ -46,7 +46,7 @@ export function toggleAvailableDate(values: readonly string[], day: string): str
     : normalizeAvailableDates([...normalized, day]);
 }
 
-export function isLocalAvailabilityTime(value: string): boolean {
+function isLocalAvailabilityTime(value: string): boolean {
   return localTimePattern.test(value);
 }
 

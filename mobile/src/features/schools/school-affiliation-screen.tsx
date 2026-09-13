@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
 import { SchoolAvatar } from './school-components';
 import {
@@ -26,11 +26,12 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { ErrorState, LoadingState, ModalHeader, Screen } from '@/components/ui/screen';
 import { HeaderAction } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { radii, spacing, tint } from '@/theme/tokens';
 
 export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
   const { palette } = useDispoTheme();
@@ -137,28 +138,19 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
 
   return (
     <Screen>
-      <View style={styles.header}>
-        <Pressable accessibilityRole="button" onPress={close} style={styles.headerSide}>
-          <AppText color={palette.electric}>{t('Annuler')}</AppText>
-        </Pressable>
-        <AppText numberOfLines={1} style={styles.headerTitle}>
-          {affiliation ? t('Modifier mon école') : t('Ajouter mon école')}
-        </AppText>
-        <Pressable
-          accessibilityRole="button"
-          disabled={disabled}
-          onPress={() => void save()}
-          style={[styles.headerSide, styles.headerSave, disabled && styles.disabled]}
-        >
-          {saveMutation.isPending ? (
-            <ActivityIndicator color={palette.electric} size="small" />
-          ) : (
-            <AppText color={palette.electric} style={styles.saveLabel}>
-              {affiliation ? t('Enregistrer') : t('Ajouter')}
-            </AppText>
-          )}
-        </Pressable>
-      </View>
+      <ModalHeader
+        leading={<NativeHeaderButton label={t('Annuler')} onPress={close} />}
+        title={affiliation ? t('Modifier mon école') : t('Ajouter mon école')}
+        trailing={
+          <NativeHeaderButton
+            disabled={disabled}
+            label={
+              saveMutation.isPending ? t('Envoi…') : affiliation ? t('Enregistrer') : t('Ajouter')
+            }
+            onPress={() => void save()}
+          />
+        }
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -168,7 +160,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
           <View style={styles.schoolRow}>
             <SchoolAvatar school={school} size={52} />
             <View style={styles.schoolCopy}>
-              <AppText style={styles.schoolName} variant="headline">
+              <AppText numberOfLines={2} variant="headline">
                 {school.name}
               </AppText>
               <AppText color={palette.muted} variant="caption">
@@ -222,7 +214,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
               value={roleLabel}
             />
           ) : null}
-          <View style={[styles.notice, { backgroundColor: `${palette.bronze}14` }]}>
+          <View style={[styles.notice, { backgroundColor: tint(palette.bronze, 0.08) }]}>
             <Ionicons color={palette.bronze} name="information-circle" size={16} />
             <AppText color={palette.muted} style={styles.noticeCopy} variant="caption">
               {t(
@@ -261,13 +253,11 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
         </View>
 
         <Card style={styles.primaryCard}>
-          <View style={[styles.primaryIcon, { backgroundColor: `${palette.bronze}18` }]}>
+          <View style={[styles.primaryIcon, { backgroundColor: tint(palette.bronze, 0.09) }]}>
             <Ionicons color={palette.bronze} name="star-outline" size={19} />
           </View>
           <View style={styles.primaryCopy}>
-            <AppText style={styles.primaryTitle} variant="subheadline">
-              {t('École principale')}
-            </AppText>
+            <AppText variant="headline">{t('École principale')}</AppText>
             <AppText color={palette.muted} variant="caption">
               {affiliation?.isPrimary
                 ? t('Cette école est actuellement principale sur ton profil.')
@@ -280,7 +270,10 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
           <View
             style={[
               styles.error,
-              { backgroundColor: `${palette.signal}18`, borderColor: `${palette.signal}55` },
+              {
+                backgroundColor: tint(palette.signal, 0.09),
+                borderColor: tint(palette.signal, 0.33),
+              },
             ]}
           >
             <Ionicons color={palette.signal} name="warning" size={17} />
@@ -297,26 +290,15 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
 const styles = StyleSheet.create({
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   content: { gap: spacing.lg, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  disabled: { opacity: 0.45 },
   error: {
     alignItems: 'center',
-    borderRadius: radii.ticket,
+    borderRadius: radii.button,
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
     padding: spacing.sm,
   },
   errorCopy: { flex: 1 },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 48,
-    paddingHorizontal: spacing.gutter,
-  },
-  headerSave: { alignItems: 'flex-end' },
-  headerSide: { minWidth: 82, paddingVertical: spacing.xs },
-  headerTitle: { flex: 1, fontSize: 16, fontWeight: '800', textAlign: 'center' },
   notice: {
     alignItems: 'flex-start',
     borderRadius: radii.button,
@@ -326,7 +308,7 @@ const styles = StyleSheet.create({
   },
   noticeCopy: { flex: 1 },
   primaryCard: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
-  primaryCopy: { flex: 1, gap: 3 },
+  primaryCopy: { flex: 1, gap: spacing.xxs },
   primaryIcon: {
     alignItems: 'center',
     borderRadius: radii.button,
@@ -334,11 +316,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40,
   },
-  primaryTitle: { fontWeight: '800' },
-  saveLabel: { fontWeight: '800' },
-  schoolCopy: { flex: 1, gap: 3 },
-  schoolName: { fontWeight: '700' },
-  schoolRow: { alignItems: 'center', flexDirection: 'row', gap: 13 },
+  schoolCopy: { flex: 1, gap: spacing.xxs },
+  schoolRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   section: { gap: spacing.sm },
   stateHeader: { alignItems: 'flex-end', paddingHorizontal: spacing.gutter },
   visibilityChoices: { gap: spacing.xs },

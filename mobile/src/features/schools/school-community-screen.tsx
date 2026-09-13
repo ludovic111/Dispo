@@ -1,20 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { SchoolAvatar, VerifiedSchoolSeal } from './school-components';
 import {
@@ -39,15 +28,17 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
-import { LinkifiedText } from '@/components/ui/linkified-text';
+import { ChatBubble, ChatInlineAction } from '@/components/ui/chat/chat-bubble';
+import { ChatComposer, ChatComposerNotice } from '@/components/ui/chat/chat-composer';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { MessageDayDivider } from '@/features/messages/message-controls';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, gradients, radii, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 function SchoolMessageBubble({
   message,
@@ -58,86 +49,39 @@ function SchoolMessageBubble({
   onAction: (message: SchoolMessage) => void;
   userId: string;
 }) {
-  const { palette } = useDispoTheme();
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const own = message.senderId === userId;
+  const deleted = Boolean(message.deletedAt);
   const actionLabel = own
     ? `${t('Modifier')} / ${t('Supprimer')}`
     : `${t('Signaler')} / ${t('Bloquer')}`;
   const actionName = own ? 'edit' : 'activate';
+  const canAct = !(deleted && own);
   return (
-    <View style={[styles.messageRow, own && styles.messageRowOwn]}>
-      {!own ? <Avatar name={message.senderName} size={28} uri={message.senderPhotoUrl} /> : null}
-      <View style={[styles.bubbleColumn, own && styles.bubbleColumnOwn]}>
-        {!own ? (
-          <AppText color={palette.bronze} style={styles.senderName} variant="caption2">
-            {message.senderName || t('Membre')}
-          </AppText>
-        ) : null}
-        <Pressable
-          accessible={false}
-          accessibilityActions={[{ label: actionLabel, name: actionName }]}
-          accessibilityHint={actionLabel}
-          accessibilityLabel={message.deletedAt ? t('Message supprimé') : message.text}
-          accessibilityRole="button"
-          delayLongPress={260}
-          disabled={Boolean(message.deletedAt && own)}
-          onAccessibilityAction={() => onAction(message)}
-          onLongPress={() => onAction(message)}
-          style={({ pressed }) => pressed && !message.deletedAt && styles.messagePressed}
-        >
-          {own ? (
-            <LinearGradient colors={gradients.hero} style={styles.bubble}>
-              <LinkifiedText
-                onLongPress={() => onAction(message)}
-                linkColor={own ? billetInk : palette.electric}
-                color={message.deletedAt ? palette.muted : billetInk}
-                style={message.deletedAt && styles.deleted}
-                variant="subheadline"
-              >
-                {message.deletedAt ? t('Message supprimé') : message.text}
-              </LinkifiedText>
-            </LinearGradient>
-          ) : (
-            <View
-              style={[
-                styles.bubble,
-                { backgroundColor: palette.card, borderColor: palette.border },
-              ]}
-            >
-              <LinkifiedText
-                onLongPress={() => onAction(message)}
-                linkColor={own ? billetInk : palette.electric}
-                color={message.deletedAt ? palette.muted : palette.text}
-                style={message.deletedAt && styles.deleted}
-                variant="subheadline"
-              >
-                {message.deletedAt ? t('Message supprimé') : message.text}
-              </LinkifiedText>
-            </View>
-          )}
-        </Pressable>
-        <View style={[styles.messageMeta, own && styles.messageMetaOwn]}>
-          <AppText color={palette.muted} variant="caption2">
-            {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
-              hour: '2-digit',
-              minute: '2-digit',
-            }).format(new Date(message.createdAt))}
-            {message.editedAt && !message.deletedAt ? ` ${t('· modifié')}` : ''}
-          </AppText>
-          {!message.deletedAt ? (
-            <Pressable
-              accessibilityLabel={actionLabel}
-              accessibilityRole="button"
-              hitSlop={8}
-              onPress={() => onAction(message)}
-            >
-              <Ionicons color={palette.muted} name="ellipsis-horizontal" size={16} />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
-    </View>
+    <ChatBubble
+      accessibilityActions={[{ label: actionLabel, name: actionName }]}
+      accessibilityHint={actionLabel}
+      accessibilityLabel={deleted ? t('Message supprimé') : message.text}
+      accessibilityRole="button"
+      actions={
+        deleted ? null : (
+          <ChatInlineAction
+            accessibilityLabel={actionLabel}
+            icon="ellipsis-horizontal"
+            onPress={() => onAction(message)}
+          />
+        )
+      }
+      avatar={<Avatar name={message.senderName} size={28} uri={message.senderPhotoUrl} />}
+      deleted={deleted}
+      edited={Boolean(message.editedAt)}
+      mine={own}
+      onAccessibilityAction={() => onAction(message)}
+      onLongPress={canAct ? () => onAction(message) : undefined}
+      senderName={message.senderName || t('Membre')}
+      text={message.text}
+      timestamp={message.createdAt}
+    />
   );
 }
 
@@ -149,37 +93,30 @@ function CommunityHeader({ community }: { community: SchoolCommunity }) {
     ? affiliationRoleLabel(affiliation)
     : t(affiliationRoleLabel(affiliation));
   return (
-    <Pressable
-      accessibilityLabel={t('Voir les membres')}
-      accessibilityRole="button"
-      onPress={() => router.push(`/schools/${affiliation.school.id}/members` as never)}
-      style={({ pressed }) => [
-        styles.communityHeader,
-        { backgroundColor: palette.card, borderColor: palette.border },
-        pressed && styles.messagePressed,
-      ]}
-    >
-      <SchoolAvatar school={affiliation.school} size={42} />
-      <View style={styles.communityHeaderCopy}>
-        <View style={styles.communityTitleRow}>
-          <AppText numberOfLines={1} style={styles.communityTitle} variant="subheadline">
-            {affiliation.school.name}
-          </AppText>
-          {affiliation.school.isVerified ? <VerifiedSchoolSeal compact /> : null}
-        </View>
-        <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-          {formatSwiftPlaceholders(t('%lld membres'), affiliation.memberCount)} · {role}
-        </AppText>
-      </View>
-      <Ionicons color={palette.muted} name="chevron-forward" size={16} />
-    </Pressable>
+    <View style={[styles.communityHeader, { borderBottomColor: palette.border }]}>
+      <ListRow
+        accessibilityLabel={t('Voir les membres')}
+        accessory={
+          <View style={styles.communityAccessory}>
+            {affiliation.school.isVerified ? <VerifiedSchoolSeal compact /> : null}
+            <Ionicons color={palette.muted} name="chevron-forward" size={18} />
+          </View>
+        }
+        leading={<SchoolAvatar school={affiliation.school} size={42} />}
+        onPress={() => router.push(`/schools/${affiliation.school.id}/members` as never)}
+        subtitle={`${formatSwiftPlaceholders(t('%lld membres'), affiliation.memberCount)} · ${role}`}
+        title={affiliation.school.name}
+        tone="plain"
+      />
+    </View>
   );
 }
 
 export function SchoolCommunityScreen({ schoolId }: { schoolId: string }) {
+  const headerHeight = useHeaderHeight();
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const { dark, palette } = useDispoTheme();
+  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const communityQuery = useSchoolCommunity(schoolId);
   const community = communityQuery.data;
@@ -333,16 +270,17 @@ export function SchoolCommunityScreen({ schoolId }: { schoolId: string }) {
     return (
       <Screen nativeHeader>
         <View style={styles.gated}>
-          <Ionicons color={palette.bronze} name="lock-closed-outline" size={36} />
-          <AppText style={styles.gatedTitle} variant="title">
-            {t('Ajouter mon école de musique')}
-          </AppText>
-          <AppText color={palette.muted} style={styles.gatedCopy}>
-            {t('Retrouve les membres de ton école et échange dans sa conversation réservée')}
-          </AppText>
-          <DispoButton onPress={() => router.replace(`/schools/${schoolId}/join` as never)}>
-            {t('Ajouter mon école')}
-          </DispoButton>
+          <EmptyState
+            action={{
+              label: t('Ajouter mon école'),
+              onPress: () => router.replace(`/schools/${schoolId}/join` as never),
+            }}
+            icon="lock-closed-outline"
+            message={t(
+              'Retrouve les membres de ton école et échange dans sa conversation réservée',
+            )}
+            title={t('Ajouter mon école de musique')}
+          />
         </View>
       </Screen>
     );
@@ -372,7 +310,7 @@ export function SchoolCommunityScreen({ schoolId }: { schoolId: string }) {
     <Screen nativeHeader>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        keyboardVerticalOffset={headerHeight}
         style={styles.fill}
       >
         <CommunityHeader community={community} />
@@ -397,194 +335,79 @@ export function SchoolCommunityScreen({ schoolId }: { schoolId: string }) {
           }
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons color={palette.bronze} name="chatbubbles-outline" size={38} />
-              <AppText variant="title">{t('La conversation commence ici')}</AppText>
-              <AppText color={palette.muted} style={styles.emptyCopy}>
-                {t(
+            <View style={styles.invertedEmpty}>
+              <EmptyState
+                icon="chatbubbles-outline"
+                message={t(
                   'Présente-toi, retrouve une classe ou monte un ensemble avec les autres membres.',
                 )}
-              </AppText>
+                title={t('La conversation commence ici')}
+              />
             </View>
           }
           ListFooterComponent={
             query.hasNextPage ? (
-              <Pressable
-                accessibilityLabel={t('Charger les messages précédents')}
-                accessibilityRole="button"
-                disabled={query.isFetchingNextPage}
-                onPress={() => void query.fetchNextPage()}
-                style={[
-                  styles.pageButton,
-                  { backgroundColor: palette.card, borderColor: palette.border },
-                ]}
-              >
-                {query.isFetchingNextPage ? (
-                  <ActivityIndicator color={palette.electric} size="small" />
-                ) : (
-                  <Ionicons color={palette.electric} name="time-outline" size={16} />
-                )}
-                <AppText color={palette.electric} variant="caption">
+              <View style={styles.pageAction}>
+                <DispoButton
+                  icon="time-outline"
+                  loading={query.isFetchingNextPage}
+                  onPress={() => void query.fetchNextPage()}
+                  size="compact"
+                  variant="ghost"
+                >
                   {t('Charger les messages précédents')}
-                </AppText>
-              </Pressable>
+                </DispoButton>
+              </View>
             ) : null
           }
         />
-        {localError ? (
-          <AppText color={palette.error} style={styles.error} variant="caption">
-            {localError}
-          </AppText>
-        ) : null}
-        {editing ? (
-          <View style={[styles.editBanner, { backgroundColor: palette.inset }]}>
-            <Ionicons color={palette.electric} name="pencil" size={14} />
-            <AppText style={styles.editCopy} variant="caption">
-              {t('Modification du message')}
-            </AppText>
-            <Pressable
-              accessibilityLabel={t('Annuler')}
-              accessibilityRole="button"
-              onPress={() => {
+        <ChatComposer
+          accessibilityLabel={t('Message à la communauté')}
+          error={localError}
+          maxLength={SCHOOL_MESSAGE_MAX_LENGTH}
+          onChangeText={setText}
+          onSend={submit}
+          placeholder={t('Message à la communauté')}
+          sendDisabled={busy || !isValidSchoolMessage(text)}
+          sendIcon={editing ? 'checkmark' : 'arrow-up'}
+          sendLabel={editing ? t('Enregistrer') : t('Envoyer le message')}
+          sending={busy}
+          value={text}
+        >
+          {editing ? (
+            <ChatComposerNotice
+              dismissLabel={t('Annuler')}
+              icon="pencil"
+              onDismiss={() => {
                 setEditing(null);
                 setText('');
               }}
-            >
-              <Ionicons color={palette.muted} name="close-circle" size={20} />
-            </Pressable>
-          </View>
-        ) : null}
-        <View style={[styles.composerShell, { borderTopColor: palette.border }]}>
-          <BlurView intensity={72} style={StyleSheet.absoluteFill} tint={dark ? 'dark' : 'light'} />
-          <View style={styles.composer}>
-            <TextInput
-              accessibilityLabel={t('Message à la communauté')}
-              maxLength={SCHOOL_MESSAGE_MAX_LENGTH}
-              multiline
-              onChangeText={setText}
-              placeholder={t('Message à la communauté')}
-              placeholderTextColor={palette.muted}
-              selectionColor={palette.electric}
-              style={[
-                styles.input,
-                { backgroundColor: palette.card, borderColor: palette.border, color: palette.text },
-              ]}
-              value={text}
+              title={t('Modification du message')}
             />
-            {text.length > 3_600 ? (
-              <AppText color={palette.muted} style={styles.characterCount} variant="caption2">
-                {text.length}/{SCHOOL_MESSAGE_MAX_LENGTH}
-              </AppText>
-            ) : null}
-            <Pressable
-              accessibilityLabel={editing ? t('Enregistrer') : t('Envoyer le message')}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: busy || !isValidSchoolMessage(text) }}
-              disabled={busy || !isValidSchoolMessage(text)}
-              onPress={submit}
-              style={[styles.send, (busy || !isValidSchoolMessage(text)) && styles.disabled]}
-            >
-              {busy ? (
-                <ActivityIndicator color={palette.electric} size="small" />
-              ) : (
-                <Ionicons
-                  color={isValidSchoolMessage(text) ? palette.electric : palette.muted}
-                  name={editing ? 'checkmark-circle' : 'arrow-up-circle'}
-                  size={36}
-                />
-              )}
-            </Pressable>
-          </View>
-        </View>
+          ) : null}
+          {text.length > 3_600 ? (
+            <AppText color={palette.muted} style={styles.characterCount} variant="caption2">
+              {text.length}/{SCHOOL_MESSAGE_MAX_LENGTH}
+            </AppText>
+          ) : null}
+        </ChatComposer>
       </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  bubble: {
-    borderRadius: 15,
-    borderWidth: 1,
-    maxWidth: 292,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  bubbleColumn: { alignItems: 'flex-start', flexShrink: 1, gap: 3 },
-  bubbleColumnOwn: { alignItems: 'flex-end' },
-  characterCount: { marginBottom: 4 },
+  // Compense le retournement d'une liste `inverted` (les deux axes sur Android).
+  invertedEmpty: { transform: Platform.OS === 'android' ? [{ scale: -1 }] : [{ scaleY: -1 }] },
+  characterCount: { textAlign: 'right' },
+  communityAccessory: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   communityHeader: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: 11,
-    minHeight: 64,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.gutter,
-    paddingVertical: spacing.control,
   },
-  communityHeaderCopy: { flex: 1, gap: 2 },
-  communityTitle: { flexShrink: 1, fontWeight: '800' },
-  communityTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  composer: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  composerShell: {
-    borderTopWidth: 1,
-    overflow: 'hidden',
-    padding: spacing.control,
-  },
-  deleted: { fontStyle: 'italic' },
-  disabled: { opacity: 0.4 },
-  editBanner: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  editCopy: { flex: 1, fontWeight: '700' },
-  empty: { alignItems: 'center', gap: spacing.xs, padding: spacing.xxl },
-  emptyCopy: { maxWidth: 330, textAlign: 'center' },
-  error: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.xs, textAlign: 'center' },
   fill: { flex: 1 },
-  gated: {
-    alignItems: 'center',
-    flex: 1,
-    gap: spacing.sm,
-    justifyContent: 'center',
-    padding: spacing.xxl,
-  },
-  gatedCopy: { maxWidth: 340, textAlign: 'center' },
-  gatedTitle: { textAlign: 'center' },
-  input: {
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flex: 1,
-    fontSize: 16,
-    maxHeight: 110,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.control,
-  },
-  messageMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  messageMetaOwn: { justifyContent: 'flex-end' },
-  messagePressed: { opacity: 0.75 },
-  messageRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs, width: '100%' },
-  messageRowOwn: { justifyContent: 'flex-end', paddingLeft: 56 },
-  pageButton: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    borderRadius: radii.round,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  send: { alignItems: 'center', height: 44, justifyContent: 'center', width: 42 },
-  senderName: { fontWeight: '800', paddingLeft: spacing.xs },
-  separator: { height: spacing.control },
+  gated: { flex: 1, justifyContent: 'center', padding: spacing.gutter },
+  pageAction: { alignSelf: 'center', marginVertical: spacing.sm },
+  separator: { height: spacing.sm },
   timeline: { flexGrow: 1, padding: spacing.gutter },
 });

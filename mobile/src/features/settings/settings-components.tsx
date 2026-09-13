@@ -1,12 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { PropsWithChildren, ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
+import { ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
+import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
 import { Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
+import { radii, spacing, tint } from '@/theme/tokens';
+
+/** Largeur du puits d'icône de `ListRow`, pour aligner les séparateurs sur le texte. */
+const iconWellWidth = 44;
 
 export function SettingsShell({
   children,
@@ -21,26 +26,7 @@ export function SettingsShell({
   );
 }
 
-export function SheetHeader({ onClose, title }: { onClose: () => void; title: string }) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  return (
-    <View style={styles.header}>
-      <View style={styles.headerSpacer} />
-      <AppText style={styles.headerTitle}>{title}</AppText>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onClose}
-        style={({ pressed }) => [styles.doneButton, pressed && styles.pressed]}
-      >
-        <AppText color={palette.electric} style={styles.doneText}>
-          {t('OK')}
-        </AppText>
-      </Pressable>
-    </View>
-  );
-}
-
+/** Section de réglages : en-tête standard, carte groupée, note de bas de section. */
 export function SettingsSection({
   children,
   footer,
@@ -49,19 +35,10 @@ export function SettingsSection({
   const { palette } = useDispoTheme();
   return (
     <View style={styles.section}>
-      {title ? (
-        <AppText color={palette.muted} style={styles.sectionTitle} variant="label">
-          {title}
-        </AppText>
-      ) : null}
-      <View
-        style={[
-          styles.sectionCard,
-          { backgroundColor: palette.cardElevated, borderColor: palette.border },
-        ]}
-      >
+      {title ? <SectionHeader title={title} /> : null}
+      <Card padding={0} style={styles.sectionCard} tone="elevated">
         {children}
-      </View>
+      </Card>
       {footer ? (
         <AppText color={palette.muted} style={styles.sectionFooter} variant="caption">
           {footer}
@@ -76,30 +53,17 @@ export function SettingsDivider() {
   return <View style={[styles.divider, { backgroundColor: palette.border }]} />;
 }
 
-export function IconBadge({
-  color,
-  icon,
-}: {
-  color: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-}) {
-  return (
-    <View style={[styles.iconBadge, { backgroundColor: `${color}20` }]}>
-      <Ionicons color={color} name={icon} size={15} />
-    </View>
-  );
-}
-
 interface SettingsRowProps {
   accessibilityLabel?: string;
   color: string;
   detail?: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: ComponentProps<typeof Ionicons>['name'];
   onPress?: () => void;
   right?: ReactNode;
   title: string;
 }
 
+/** Ligne de réglage : `ListRow` groupée avec un puits d'icône coloré. */
 export function SettingsRow({
   accessibilityLabel,
   color,
@@ -109,32 +73,19 @@ export function SettingsRow({
   right,
   title,
 }: SettingsRowProps) {
-  const { palette } = useDispoTheme();
-  const content = (
-    <>
-      <IconBadge color={color} icon={icon} />
-      <View style={styles.rowCopy}>
-        <AppText style={styles.rowTitle}>{title}</AppText>
-        {detail ? (
-          <AppText color={palette.muted} style={styles.rowDetail} variant="caption">
-            {detail}
-          </AppText>
-        ) : null}
-      </View>
-      {right ??
-        (onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={16} /> : null)}
-    </>
-  );
-  if (!onPress) return <View style={styles.row}>{content}</View>;
   return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
-      {content}
-    </Pressable>
+    <View style={styles.rowInset}>
+      <ListRow
+        leadingIcon={icon}
+        leadingIconColor={color}
+        title={title}
+        tone="plain"
+        {...(accessibilityLabel === undefined ? {} : { accessibilityLabel })}
+        {...(detail === undefined ? {} : { subtitle: detail })}
+        {...(onPress === undefined ? {} : { onPress })}
+        {...(right === undefined ? {} : { accessory: right })}
+      />
+    </View>
   );
 }
 
@@ -160,6 +111,27 @@ export function SettingsSwitchRow({
   );
 }
 
+/** Accessoire « valeur + chevron » d'une ligne qui ouvre un écran. */
+export function SettingsValueAccessory({
+  icon = 'chevron-forward',
+  value,
+}: {
+  icon?: ComponentProps<typeof Ionicons>['name'];
+  value?: string;
+}) {
+  const { palette } = useDispoTheme();
+  return (
+    <View style={styles.valueAccessory}>
+      {value ? (
+        <AppText color={palette.muted} numberOfLines={1} variant="footnote">
+          {value}
+        </AppText>
+      ) : null}
+      <Ionicons color={palette.muted} name={icon} size={18} />
+    </View>
+  );
+}
+
 export function SelectionDot({ active, color }: { active: boolean; color: string }) {
   const { palette } = useDispoTheme();
   return (
@@ -171,55 +143,52 @@ export function SelectionDot({ active, color }: { active: boolean; color: string
   );
 }
 
+/** Bandeau d'erreur des écrans de réglages : une seule forme. */
+export function SettingsErrorBanner({ text }: { text: string | null }) {
+  const { palette } = useDispoTheme();
+  if (!text) return null;
+  return (
+    <View
+      accessibilityRole="alert"
+      style={[
+        styles.errorBanner,
+        { backgroundColor: tint(palette.signal, 0.1), borderColor: tint(palette.signal, 0.33) },
+      ]}
+    >
+      <Ionicons color={palette.signal} name="warning" size={17} />
+      <AppText color={palette.signal} style={styles.errorCopy} variant="footnote">
+        {text}
+      </AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: 58 },
-  doneButton: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minHeight: minimumTouchTarget,
-    minWidth: minimumTouchTarget,
-    paddingVertical: spacing.xs,
-  },
-  doneText: { fontSize: 16, fontWeight: '800' },
-  header: {
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.sm * 2 + iconWellWidth },
+  errorBanner: {
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.sm,
-  },
-  headerSpacer: { minWidth: 48 },
-  headerTitle: { fontSize: 17, fontWeight: '900' },
-  iconBadge: {
-    alignItems: 'center',
-    borderRadius: 8,
-    height: 30,
-    justifyContent: 'center',
-    width: 30,
-  },
-  pressed: { opacity: 0.72 },
-  row: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    minHeight: Math.max(54, minimumTouchTarget),
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  rowCopy: { flex: 1, gap: 2 },
-  rowDetail: { lineHeight: 16 },
-  rowTitle: { fontSize: 15, fontWeight: '600', lineHeight: 20 },
-  section: { gap: 7 },
-  sectionCard: {
-    borderRadius: radii.ticket,
+    borderRadius: radii.card,
     borderWidth: 1,
-    overflow: 'hidden',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.sm,
   },
-  sectionFooter: { lineHeight: 17, paddingHorizontal: 14 },
-  sectionTitle: { paddingHorizontal: 14 },
+  errorCopy: { flex: 1 },
+  rowInset: { paddingHorizontal: spacing.sm },
+  section: { gap: spacing.xs },
+  sectionCard: { overflow: 'hidden' },
+  sectionFooter: { paddingHorizontal: spacing.sm },
   shell: {
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
+  },
+  valueAccessory: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexShrink: 1,
+    gap: spacing.tight,
+    maxWidth: '55%',
   },
 });

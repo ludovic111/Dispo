@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
   type StyleProp,
   type ViewStyle,
@@ -22,7 +21,7 @@ import { postalPlaceDebounceMs, usePostalPlaceResolver } from './use-postal-plac
 import { AppText } from '@/components/ui/app-text';
 import { FormField } from '@/components/ui/form-field';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, spacing } from '@/theme/tokens';
 
 export interface PostalPlaceFieldProps {
   debounceMs?: number;
@@ -90,61 +89,52 @@ export function PostalPlaceField({
     resolution.status === 'not-found' ||
     resolution.status === 'unavailable';
   const shownCity = resolution.status === 'resolved' ? resolution.place.city : value.city.trim();
+  const resolving = resolution.status === 'waiting' || resolution.status === 'resolving';
 
   return (
     <View style={[styles.wrapper, style]} testID={testID}>
-      <AppText color={palette.bronze} variant="label">
-        {t('Code postal')}
-      </AppText>
       <View style={styles.postalRow}>
-        <TextInput
-          numberOfLines={1}
-          accessibilityLabel={t('Code postal')}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          editable={!disabled}
-          keyboardType="numbers-and-punctuation"
-          onChangeText={(postalCode) => {
-            setEditingCityKey(null);
-            onChange({
-              ...value,
-              postalCode: normalizePostalCode(postalCode),
-            });
-          }}
-          placeholder={postalCodePlaceholder ?? t('Code postal — ex. 1227')}
-          placeholderTextColor={palette.muted}
-          selectionColor={palette.electric}
-          style={[
-            styles.postalInput,
-            {
-              backgroundColor: palette.inset,
-              borderColor: palette.border,
-              color: palette.text,
-            },
-          ]}
-          testID={`${testID}-postal-code`}
-          value={value.postalCode}
-        />
+        <View style={styles.postalInput}>
+          <FormField
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!disabled}
+            keyboardType="numbers-and-punctuation"
+            label={t('Code postal')}
+            onChangeText={(postalCode) => {
+              setEditingCityKey(null);
+              onChange({
+                ...value,
+                postalCode: normalizePostalCode(postalCode),
+              });
+            }}
+            placeholder={postalCodePlaceholder ?? t('Code postal — ex. 1227')}
+            testID={`${testID}-postal-code`}
+            value={value.postalCode}
+          />
+        </View>
         <View accessibilityLiveRegion="polite" style={styles.status}>
-          {resolution.status === 'waiting' || resolution.status === 'resolving' ? (
-            <ActivityIndicator color={palette.electric} size="small" />
-          ) : null}
+          {resolving ? <ActivityIndicator color={palette.electric} size="small" /> : null}
           {shownCity && !showCityField ? (
             <Pressable
               accessibilityLabel={t('Corriger la ville')}
+              accessibilityRole="button"
+              accessibilityState={{ disabled }}
               disabled={disabled}
+              hitSlop={spacing.xs}
               onPress={() => {
                 setManualCityKey(currentKey);
                 setEditingCityKey(currentKey);
               }}
-              style={({ pressed }) => [styles.cityBadge, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.statusAction, pressed && pressedStyle]}
             >
               <Ionicons color={palette.jam} name="location" size={15} />
               <AppText
                 color={palette.jam}
                 numberOfLines={1}
-                style={styles.cityBadgeText}
+                style={styles.statusText}
                 variant="caption"
+                weight="bold"
               >
                 {shownCity}
               </AppText>
@@ -158,9 +148,11 @@ export function PostalPlaceField({
           {resolution.status === 'unavailable' ? (
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ disabled }}
               disabled={disabled}
+              hitSlop={spacing.xs}
               onPress={resolution.retry}
-              style={({ pressed }) => [styles.retry, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.statusAction, pressed && pressedStyle]}
             >
               <AppText color={palette.bronze} style={styles.statusText} variant="caption2">
                 {t('Service indisponible — écris la ville')}
@@ -191,35 +183,22 @@ export function PostalPlaceField({
 }
 
 const styles = StyleSheet.create({
-  cityBadge: {
+  postalInput: { flexBasis: 150, flexGrow: 0, flexShrink: 1 },
+  postalRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.sm },
+  status: {
+    alignItems: 'flex-end',
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: minimumTouchTarget,
+  },
+  statusAction: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.compact,
+    gap: spacing.xxs,
     justifyContent: 'flex-end',
     maxWidth: '100%',
-    minHeight: 32,
+    minHeight: minimumTouchTarget,
   },
-  cityBadgeText: { flexShrink: 1, fontWeight: '800' },
-  postalInput: {
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexBasis: 150,
-    flexGrow: 0,
-    flexShrink: 1,
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  postalRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.control },
-  pressed: { opacity: 0.7 },
-  retry: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.compact,
-    justifyContent: 'flex-end',
-  },
-  status: { alignItems: 'flex-end', flex: 1, justifyContent: 'center', minHeight: 32 },
-  statusText: { textAlign: 'right' },
+  statusText: { flexShrink: 1, textAlign: 'right' },
   wrapper: { gap: spacing.xs },
 });

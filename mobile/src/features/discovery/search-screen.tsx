@@ -9,6 +9,7 @@ import { DiscoveryProfileRow } from './discovery-profile-row';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
@@ -17,7 +18,7 @@ import { useGigs } from '@/features/gigs/gig-queries';
 import { useDiscoveryProfiles, useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing, typography } from '@/theme/tokens';
 
 const suggestions = ['pianiste Carouge', 'salsa ce soir', '@marco', 'batteur jazz'] as const;
 
@@ -65,13 +66,18 @@ export function SearchScreen() {
             placeholder={t('Musicien, @pseudo, instrument, lieu…')}
             placeholderTextColor={palette.muted}
             returnKeyType="search"
+            selectionColor={palette.electric}
             style={[styles.input, { color: palette.text }]}
             value={query}
           />
           {query ? (
-            <Pressable accessibilityLabel={t('Effacer')} hitSlop={8} onPress={() => setQuery('')}>
-              <Ionicons color={palette.muted} name="close-circle" size={18} />
-            </Pressable>
+            <IconButton
+              accessibilityLabel={t('Effacer')}
+              icon="close-circle"
+              iconColor={palette.muted}
+              onPress={() => setQuery('')}
+              variant="plain"
+            />
           ) : null}
         </View>
       </View>
@@ -84,23 +90,28 @@ export function SearchScreen() {
           <Card style={styles.hints}>
             <View style={styles.hintTitle}>
               <Ionicons color={palette.bronze} name="sparkles" size={17} />
-              <AppText style={styles.hintHeading} variant="subheadline">
+              <AppText style={styles.flex} variant="headline">
                 {t('Cherche tout, librement')}
               </AppText>
             </View>
-            <AppText color={palette.muted} variant="caption">
+            <AppText color={palette.muted} variant="footnote">
               {t('Combine ce que tu veux : instrument, quartier, genre, nom ou @pseudo.')}
             </AppText>
-            <View style={styles.suggestions}>
+            <View>
               {suggestions.map((suggestion) => (
                 <Pressable
                   accessibilityRole="button"
                   key={suggestion}
                   onPress={() => setQuery(suggestion)}
-                  style={({ pressed }) => [styles.suggestion, pressed && styles.pressed]}
+                  style={({ pressed }) => [styles.suggestion, pressed && pressedStyle]}
                 >
-                  <Ionicons color={palette.muted} name="return-up-back" size={12} />
-                  <AppText color={palette.electric} style={styles.suggestionText} variant="caption">
+                  <Ionicons color={palette.muted} name="return-up-back" size={14} />
+                  <AppText
+                    color={palette.electric}
+                    style={styles.flex}
+                    variant="subheadline"
+                    weight="semibold"
+                  >
                     « {t(suggestion)} »
                   </AppText>
                 </Pressable>
@@ -159,23 +170,26 @@ export function SearchScreen() {
 
 const styles = StyleSheet.create({
   content: { gap: spacing.gutter, paddingBottom: spacing.xl, paddingHorizontal: spacing.gutter },
-  hintHeading: { fontWeight: '800' },
-  hints: { gap: spacing.control },
+  flex: { flex: 1, minWidth: 0 },
   hintTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  input: { flex: 1, fontSize: 15, minHeight: 44 },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
+  hints: { gap: spacing.sm },
+  // TextInput n'a pas de variante AppText : même corps que le champ de formulaire (FormField).
+  input: { flex: 1, fontFamily: typography.body, fontSize: 16, minHeight: minimumTouchTarget },
   search: {
     alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: radii.control,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.chip,
-    minHeight: 46,
-    paddingHorizontal: spacing.cluster,
+    gap: spacing.xs,
+    minHeight: minimumTouchTarget + spacing.xxs,
+    paddingHorizontal: spacing.sm,
   },
-  searchWrap: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.control },
+  searchWrap: { paddingHorizontal: spacing.gutter, paddingVertical: spacing.sm },
   section: { gap: spacing.sm },
-  suggestion: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, minHeight: 28 },
-  suggestionText: { fontWeight: '700' },
-  suggestions: { gap: spacing.tight },
+  suggestion: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+    minHeight: minimumTouchTarget,
+  },
 });

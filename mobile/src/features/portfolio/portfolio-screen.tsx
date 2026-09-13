@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
@@ -50,16 +49,27 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
-import { DispoButton } from '@/components/ui/pressable';
-import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { ListRow } from '@/components/ui/list-row';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  ModalHeader,
+  Screen,
+  ScreenHeader,
+} from '@/components/ui/screen';
+import { HeaderAction } from '@/components/ui/section';
+import { BottomSheet, scrimColor } from '@/components/ui/sheet';
 import { useAuth } from '@/features/auth/auth-context';
 import { countryOptions, type CountryOption } from '@/features/onboarding/onboarding-model';
 import { useSubscription } from '@/features/premium/subscription-queries';
+import { NativeDatePartField } from '@/features/profiles/native-date-part-field';
 import { profileKeys } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, onAccent, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 interface VideoDetailsDraft {
   date: Date;
@@ -110,72 +120,7 @@ function errorMessage(error: unknown): string {
   return "La modification n'a pas pu être enregistrée — vérifie le réseau.";
 }
 
-function DateField({
-  label,
-  maximumDate,
-  minimumDate,
-  onChange,
-  value,
-}: {
-  label: string;
-  maximumDate?: Date;
-  minimumDate?: Date;
-  onChange: (value: Date) => void;
-  value: Date;
-}) {
-  const { dark, palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  return (
-    <View style={styles.dateField}>
-      <AppText color={palette.bronze} variant="label">
-        {label}
-      </AppText>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => setOpen(true)}
-        style={({ pressed }) => [
-          styles.dateButton,
-          { backgroundColor: palette.inset, borderColor: palette.border },
-          pressed && styles.pressed,
-        ]}
-      >
-        <Ionicons color={palette.bronze} name="calendar-outline" size={17} />
-        <AppText>
-          {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)}
-        </AppText>
-      </Pressable>
-      {open ? (
-        <DateTimePicker
-          accentColor={palette.electric}
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          mode="date"
-          onDismiss={() => {
-            if (Platform.OS !== 'ios') setOpen(false);
-          }}
-          onValueChange={(_, selected) => {
-            if (Platform.OS !== 'ios') setOpen(false);
-            onChange(selected);
-          }}
-          textColor={palette.text}
-          themeVariant={dark ? 'dark' : 'light'}
-          value={value}
-          {...(maximumDate ? { maximumDate } : {})}
-          {...(minimumDate ? { minimumDate } : {})}
-        />
-      ) : null}
-      {open && Platform.OS === 'ios' ? (
-        <Pressable onPress={() => setOpen(false)} style={styles.dateDone}>
-          <AppText color={palette.electric} variant="caption">
-            {t('OK')}
-          </AppText>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function ModalHeader({
+function EditorHeader({
   onCancel,
   onSave,
   saving,
@@ -186,30 +131,19 @@ function ModalHeader({
   saving: boolean;
   title: string;
 }) {
-  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   return (
-    <View style={[styles.modalHeader, { borderBottomColor: palette.border }]}>
-      <Pressable
-        accessibilityRole="button"
-        disabled={saving}
-        onPress={onCancel}
-        style={[styles.modalHeaderAction, styles.modalHeaderActionStart]}
-      >
-        <AppText color={palette.muted}>{t('Annuler')}</AppText>
-      </Pressable>
-      <AppText variant="title2">{title}</AppText>
-      <Pressable
-        accessibilityRole="button"
-        disabled={saving}
-        onPress={onSave}
-        style={[styles.modalHeaderAction, styles.modalHeaderActionEnd]}
-      >
-        <AppText color={palette.electric} style={styles.saveLabel}>
-          {saving ? t('Envoi…') : t('OK')}
-        </AppText>
-      </Pressable>
-    </View>
+    <ModalHeader
+      leading={<NativeHeaderButton disabled={saving} label={t('Annuler')} onPress={onCancel} />}
+      title={title}
+      trailing={
+        <NativeHeaderButton
+          disabled={saving}
+          label={saving ? t('Envoi…') : t('OK')}
+          onPress={onSave}
+        />
+      }
+    />
   );
 }
 
@@ -227,6 +161,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
   const { add } = useLocalSearchParams<{ add?: string }>();
   const autoAddStarted = useRef(false);
   const [videoDraft, setVideoDraft] = useState<VideoDetailsDraft | null>(null);
+  const [videoMenu, setVideoMenu] = useState<{ index: number; video: DemoVideo } | null>(null);
   const [tripDraft, setTripDraft] = useState<AvailabilityTripDraft | null>(null);
   const [countryModal, setCountryModal] = useState(false);
   const videoPreparationRef = useRef<AbortController | null>(null);
@@ -463,27 +398,15 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
     ]);
   };
 
-  if (query.isLoading) {
+  if (query.isLoading || query.isError || !query.data) {
     return (
       <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
-        <LoadingState />
-      </Screen>
-    );
-  }
-  if (query.isError) {
-    return (
-      <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
-        <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
-      </Screen>
-    );
-  }
-  if (!query.data) {
-    return (
-      <Screen>
-        <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
-        <LoadingState />
+        <ScreenHeader action={close} title={screenTitle} />
+        {query.isError ? (
+          <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
+        ) : (
+          <LoadingState />
+        )}
       </Screen>
     );
   }
@@ -493,253 +416,202 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
   const uploading = busy === 'upload';
   return (
     <Screen>
-      <ScreenHeader action={close} eyebrow={t('Profil')} title={screenTitle} />
+      <ScreenHeader
+        action={close}
+        {...(section === 'demos' ? { subtitle: `${portfolio.videos.length}/${limit}` } : {})}
+        title={screenTitle}
+      />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {errorText ? (
-          <View style={[styles.errorBanner, { backgroundColor: `${palette.signal}18` }]}>
+          <View style={[styles.errorBanner, { backgroundColor: tint(palette.signal, 0.09) }]}>
             <Ionicons color={palette.signal} name="alert-circle" size={19} />
             <AppText color={palette.signal} style={styles.flex} variant="caption">
               {errorText}
             </AppText>
-            <Pressable
+            <IconButton
               accessibilityLabel={t('Fermer')}
-              accessibilityRole="button"
-              hitSlop={12}
+              icon="close"
+              iconColor={palette.signal}
               onPress={() => setErrorText(null)}
-            >
-              <Ionicons color={palette.signal} name="close" size={18} />
-            </Pressable>
+              variant="plain"
+            />
           </View>
         ) : null}
 
         {section === 'demos' ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeadingWithAction}>
-              <View style={styles.sectionHeadingTitle}>
-                <SectionHeader title={t('Mes démos')} />
-              </View>
-              <View style={styles.sectionHeadingAction}>
-                <AppText
-                  color={palette.muted}
-                  variant="caption"
-                >{`${portfolio.videos.length}/${limit}`}</AppText>
-              </View>
-            </View>
-            <Card style={styles.card}>
-              <AppText color={palette.muted} variant="caption">
-                {t(
-                  "C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.",
-                )}
+          <Card style={styles.card}>
+            <AppText color={palette.muted} variant="caption">
+              {t(
+                "C'est ce que les organisateurs regardent avant de t'engager — 60 à 90 secondes suffisent.",
+              )}
+            </AppText>
+            <View style={[styles.notice, { backgroundColor: tint(palette.electric, 0.07) }]}>
+              <Ionicons color={palette.electric} name="globe-outline" size={16} />
+              <AppText color={palette.electric} style={styles.flex} variant="caption2">
+                {t('Tes vidéos sont visibles par les autres musiciens sur ton profil.')}
               </AppText>
-              <View style={[styles.publicNotice, { backgroundColor: `${palette.electric}12` }]}>
-                <Ionicons color={palette.electric} name="globe-outline" size={16} />
-                <AppText color={palette.electric} style={styles.flex} variant="caption2">
-                  {t('Tes vidéos sont visibles par les autres musiciens sur ton profil.')}
-                </AppText>
-              </View>
+            </View>
 
-              {portfolio.videos.map((video, index) => (
-                <View
-                  key={video.id}
-                  style={[
-                    styles.videoCard,
-                    { backgroundColor: palette.cardMuted, borderColor: palette.border },
-                  ]}
+            {portfolio.videos.map((video, index) => (
+              <View
+                key={video.id}
+                style={[
+                  styles.videoRow,
+                  { backgroundColor: palette.cardMuted, borderColor: palette.border },
+                ]}
+              >
+                <Pressable
+                  accessibilityHint={t('Ouvre le lecteur vidéo')}
+                  accessibilityLabel={`${t('Lire la vidéo')} · ${localizedDemoTitle(video, index)}`}
+                  accessibilityRole="button"
+                  onPress={() => openVideo(video, index)}
+                  style={({ pressed }) => [styles.videoMain, pressed && pressedStyle]}
                 >
-                  <Pressable
-                    accessibilityHint={t('Ouvre le lecteur vidéo')}
-                    accessibilityLabel={`${t('Lire')} · ${localizedDemoTitle(video, index)}`}
-                    accessibilityRole="button"
-                    onPress={() => openVideo(video, index)}
-                    style={({ pressed }) => [styles.videoMain, pressed && styles.pressed]}
-                  >
-                    <View style={styles.videoPreview}>
-                      {video.thumbUrl ? (
-                        <Image
-                          contentFit="cover"
-                          source={{ uri: video.thumbUrl }}
-                          style={styles.thumb}
-                        />
-                      ) : (
-                        <View
-                          style={[
-                            styles.thumb,
-                            styles.thumbFallback,
-                            { backgroundColor: palette.inset },
-                          ]}
-                        >
-                          <Ionicons color={palette.bronze} name="videocam" size={25} />
-                        </View>
-                      )}
-                      <View style={styles.playBadge}>
-                        <Ionicons color="#FFFFFF" name="play" size={12} />
+                  <View style={styles.videoPreview}>
+                    {video.thumbUrl ? (
+                      <Image
+                        contentFit="cover"
+                        source={{ uri: video.thumbUrl }}
+                        style={styles.thumb}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.thumb,
+                          styles.thumbFallback,
+                          { backgroundColor: palette.inset },
+                        ]}
+                      >
+                        <Ionicons color={palette.bronze} name="videocam" size={25} />
                       </View>
+                    )}
+                    <View style={styles.playBadge}>
+                      <Ionicons color={onAccent} name="play" size={12} />
                     </View>
-                    <View style={styles.videoCopy}>
-                      <AppText numberOfLines={2} variant="subheadline">
-                        {localizedDemoTitle(video, index)}
-                      </AppText>
-                      {video.date ? (
-                        <View style={styles.metaRow}>
-                          <Ionicons color={palette.muted} name="calendar-outline" size={12} />
-                          <AppText color={palette.muted} variant="caption2">
-                            {formatDay(video.date, locale)}
-                          </AppText>
-                        </View>
-                      ) : (
-                        <AppText color={palette.muted} variant="caption2">
-                          {t('Sans date')}
-                        </AppText>
-                      )}
-                    </View>
-                    <Ionicons color={palette.muted} name="chevron-forward" size={18} />
-                  </Pressable>
-                  <View style={[styles.videoActions, { borderTopColor: palette.border }]}>
-                    <Pressable
-                      accessibilityLabel={t('Lire la vidéo')}
-                      accessibilityRole="button"
-                      onPress={() => openVideo(video, index)}
-                      style={({ pressed }) => [styles.videoAction, pressed && styles.pressed]}
-                    >
-                      <Ionicons color={palette.electric} name="play-circle-outline" size={18} />
-                      <AppText color={palette.electric} variant="caption">
-                        {t('Lire')}
-                      </AppText>
-                    </Pressable>
-                    <View
-                      style={[styles.videoActionDivider, { backgroundColor: palette.border }]}
-                    />
-                    <Pressable
-                      accessibilityLabel={t('Modifier le titre et la date')}
-                      accessibilityRole="button"
-                      onPress={() => editVideo(video)}
-                      style={({ pressed }) => [styles.videoAction, pressed && styles.pressed]}
-                    >
-                      <Ionicons color={palette.bronze} name="pencil-outline" size={17} />
-                      <AppText color={palette.bronze} variant="caption">
-                        {t('Modifier')}
-                      </AppText>
-                    </Pressable>
-                    <View
-                      style={[styles.videoActionDivider, { backgroundColor: palette.border }]}
-                    />
-                    <Pressable
-                      accessibilityLabel={t('Supprimer')}
-                      accessibilityRole="button"
-                      disabled={Boolean(busy)}
-                      onPress={() => confirmRemoveVideo(video)}
-                      style={({ pressed }) => [styles.videoAction, pressed && styles.pressed]}
-                    >
-                      <Ionicons color={palette.signal} name="trash-outline" size={17} />
-                      <AppText color={palette.signal} variant="caption">
-                        {t('Supprimer')}
-                      </AppText>
-                    </Pressable>
                   </View>
-                </View>
-              ))}
+                  <View style={styles.videoCopy}>
+                    <AppText numberOfLines={2} variant="headline">
+                      {localizedDemoTitle(video, index)}
+                    </AppText>
+                    <AppText color={palette.muted} variant="caption">
+                      {video.date ? formatDay(video.date, locale) : t('Sans date')}
+                    </AppText>
+                  </View>
+                </Pressable>
+                <IconButton
+                  accessibilityLabel={t('Voir plus')}
+                  disabled={Boolean(busy)}
+                  icon="ellipsis-horizontal"
+                  iconColor={palette.muted}
+                  onPress={() => setVideoMenu({ index, video })}
+                  variant="plain"
+                />
+              </View>
+            ))}
 
-              {canAddDemoVideo(portfolio.videos.length, expandedPortfolio) ? (
-                <DispoButton
-                  icon="add-circle"
-                  loading={uploading}
-                  onPress={() => void pickVideo()}
-                  variant="secondary"
-                >
-                  {uploading ? t('Envoi en cours…') : t('Ajouter une vidéo')}
-                </DispoButton>
-              ) : !expandedPortfolio ? (
-                <View style={[styles.premiumLock, { backgroundColor: `${palette.electric}12` }]}>
-                  <Ionicons color={palette.electric} name="sparkles" size={16} />
-                  <AppText color={palette.electric} style={styles.flex} variant="caption">
-                    {t("Jusqu'à 6 vidéos avec Premium")}
-                  </AppText>
-                  <Ionicons color={palette.electric} name="lock-closed" size={14} />
-                </View>
-              ) : null}
-            </Card>
-          </View>
+            {canAddDemoVideo(portfolio.videos.length, expandedPortfolio) ? (
+              <DispoButton
+                icon="add-circle"
+                loading={uploading}
+                onPress={() => void pickVideo()}
+                variant="secondary"
+              >
+                {uploading ? t('Envoi en cours…') : t('Ajouter une vidéo')}
+              </DispoButton>
+            ) : !expandedPortfolio ? (
+              <View style={[styles.notice, { backgroundColor: tint(palette.electric, 0.07) }]}>
+                <Ionicons color={palette.electric} name="sparkles" size={16} />
+                <AppText color={palette.electric} style={styles.flex} variant="caption">
+                  {t("Jusqu'à 6 vidéos avec Premium")}
+                </AppText>
+                <Ionicons color={palette.electric} name="lock-closed" size={14} />
+              </View>
+            ) : null}
+          </Card>
         ) : null}
 
         {section === 'trips' ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeadingWithAction}>
-              <View style={styles.sectionHeadingTitle}>
-                <SectionHeader title={t('Mes voyages')} />
-              </View>
-              <Pressable accessibilityRole="button" onPress={newTrip} style={styles.inlineAction}>
-                <Ionicons color={palette.electric} name="add-circle" size={17} />
-                <AppText color={palette.electric} variant="caption">
-                  {t('Ajouter')}
-                </AppText>
-              </Pressable>
-            </View>
-            <Card style={styles.card}>
-              <AppText color={palette.muted} variant="caption">
-                {t(
-                  'Pendant cette période, les musiciens et les groupes de cette ville te trouvent dans leurs recherches — pas ceux de chez toi.',
-                )}
-              </AppText>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/profile/availability' as never)}
-                style={[styles.availabilityLink, { backgroundColor: `${palette.jam}12` }]}
-              >
-                <Ionicons color={palette.jam} name="calendar-outline" size={16} />
-                <AppText color={palette.jam} style={styles.flex} variant="caption">
-                  {t('Gérer mes disponibilités')}
-                </AppText>
-                <Ionicons color={palette.jam} name="chevron-forward" size={15} />
-              </Pressable>
-              {portfolio.trips.length === 0 ? (
-                <View style={styles.emptyTrip}>
-                  <Ionicons color={palette.bronze} name="airplane-outline" size={25} />
-                  <AppText color={palette.muted} style={styles.center} variant="caption">
-                    {formatSwiftPlaceholders(
-                      t("Rien pour l'instant — tu es cherché·e autour de %@."),
-                      [portfolio.postalCode, portfolio.city].filter(Boolean).join(' ') ||
-                        t('ta ville'),
-                    )}
-                  </AppText>
-                </View>
-              ) : (
-                portfolio.trips.map((trip) => (
-                  <Pressable
-                    key={trip.id}
-                    accessibilityRole="button"
-                    onPress={() => editTrip(trip)}
-                    style={({ pressed }) => [
-                      styles.tripRow,
-                      { borderTopColor: palette.border },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Ionicons color={palette.electric} name="location-outline" size={18} />
-                    <View style={styles.flex}>
-                      <AppText variant="caption">{availabilityTripLabel(trip)}</AppText>
-                      <AppText color={palette.muted} variant="caption2">
-                        {`${formatDay(trip.from, locale)} → ${formatDay(trip.to, locale)}`}
-                      </AppText>
-                    </View>
-                    <Pressable
-                      accessibilityLabel={t('Supprimer')}
-                      accessibilityRole="button"
-                      disabled={Boolean(busy)}
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        confirmRemoveTrip(trip);
-                      }}
-                      style={styles.roundAction}
-                    >
-                      <Ionicons color={palette.muted} name="close-circle" size={19} />
-                    </Pressable>
-                  </Pressable>
-                ))
+          <Card style={styles.card}>
+            <AppText color={palette.muted} variant="caption">
+              {t(
+                'Pendant cette période, les musiciens et les groupes de cette ville te trouvent dans leurs recherches — pas ceux de chez toi.',
               )}
-            </Card>
-          </View>
+            </AppText>
+            <ListRow
+              leadingIcon="calendar-outline"
+              leadingIconColor={palette.jam}
+              onPress={() => router.push('/profile/availability' as never)}
+              title={t('Gérer mes disponibilités')}
+              tone="plain"
+            />
+            {portfolio.trips.length === 0 ? (
+              <EmptyState
+                action={{ label: t('Ajouter'), onPress: newTrip }}
+                icon="airplane-outline"
+                message={formatSwiftPlaceholders(
+                  t("Rien pour l'instant — tu es cherché·e autour de %@."),
+                  [portfolio.postalCode, portfolio.city].filter(Boolean).join(' ') || t('ta ville'),
+                )}
+                title={t('Je suis ailleurs')}
+              />
+            ) : (
+              <>
+                {portfolio.trips.map((trip) => (
+                  <ListRow
+                    accessory={
+                      <IconButton
+                        accessibilityLabel={t('Supprimer')}
+                        disabled={Boolean(busy)}
+                        icon="close-circle"
+                        iconColor={palette.muted}
+                        onPress={() => confirmRemoveTrip(trip)}
+                        variant="plain"
+                      />
+                    }
+                    key={trip.id}
+                    leadingIcon="location-outline"
+                    onPress={() => editTrip(trip)}
+                    subtitle={`${formatDay(trip.from, locale)} → ${formatDay(trip.to, locale)}`}
+                    title={availabilityTripLabel(trip)}
+                    tone="plain"
+                  />
+                ))}
+                <DispoButton icon="add-circle" onPress={newTrip} variant="secondary">
+                  {t('Ajouter')}
+                </DispoButton>
+              </>
+            )}
+          </Card>
         ) : null}
       </ScrollView>
+
+      <BottomSheet
+        onClose={() => setVideoMenu(null)}
+        {...(videoMenu ? { title: localizedDemoTitle(videoMenu.video, videoMenu.index) } : {})}
+        visible={videoMenu !== null}
+      >
+        <ListRow
+          leadingIcon="pencil-outline"
+          onPress={() => {
+            const menu = videoMenu;
+            setVideoMenu(null);
+            if (menu) editVideo(menu.video);
+          }}
+          title={t('Modifier')}
+          tone="plain"
+        />
+        <ListRow
+          leadingIcon="trash-outline"
+          leadingIconColor={palette.error}
+          onPress={() => {
+            const menu = videoMenu;
+            setVideoMenu(null);
+            if (menu) confirmRemoveVideo(menu.video);
+          }}
+          title={t('Supprimer')}
+          tone="plain"
+        />
+      </BottomSheet>
 
       <Modal
         animationType="slide"
@@ -753,7 +625,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               style={styles.flex}
             >
-              <ModalHeader
+              <EditorHeader
                 onCancel={() => setVideoDraft(null)}
                 onSave={() => void saveVideo()}
                 saving={busy === 'save-video'}
@@ -764,7 +636,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
                 keyboardShouldPersistTaps="handled"
               >
                 {errorText ? (
-                  <AppText color={palette.signal} style={styles.modalError} variant="caption">
+                  <AppText color={palette.signal} style={styles.center} variant="caption">
                     {errorText}
                   </AppText>
                 ) : null}
@@ -784,9 +656,10 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
                       draft ? { ...draft, hasDate: !draft.hasDate } : draft,
                     )
                   }
-                  style={[
+                  style={({ pressed }) => [
                     styles.toggleRow,
                     { backgroundColor: palette.card, borderColor: palette.border },
+                    pressed && pressedStyle,
                   ]}
                 >
                   <Ionicons
@@ -797,12 +670,13 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
                   <AppText style={styles.flex}>{t('Dater la vidéo')}</AppText>
                 </Pressable>
                 {videoDraft.hasDate ? (
-                  <DateField
+                  <NativeDatePartField
                     label={t('Date de la vidéo')}
                     maximumDate={new Date()}
                     onChange={(date) =>
                       setVideoDraft((draft) => (draft ? { ...draft, date } : draft))
                     }
+                    part="date"
                     value={videoDraft.date}
                   />
                 ) : null}
@@ -827,7 +701,7 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
               style={styles.flex}
             >
-              <ModalHeader
+              <EditorHeader
                 onCancel={() => setTripDraft(null)}
                 onSave={() => void saveTrip()}
                 saving={busy === 'save-trip'}
@@ -838,47 +712,41 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
                 keyboardShouldPersistTaps="handled"
               >
                 {errorText ? (
-                  <AppText color={palette.signal} style={styles.modalError} variant="caption">
+                  <AppText color={palette.signal} style={styles.center} variant="caption">
                     {errorText}
                   </AppText>
                 ) : null}
-                <SectionHeader title={t('Quand')} />
-                <DateField
-                  label={t('Du')}
-                  onChange={(date) =>
-                    setTripDraft((draft) => {
-                      if (!draft) return draft;
-                      const from = dayKey(date);
-                      return { ...draft, from, to: draft.to < from ? from : draft.to };
-                    })
-                  }
-                  value={dateFromDayKey(tripDraft.from)}
-                />
-                <DateField
-                  label={t('Au')}
-                  minimumDate={dateFromDayKey(tripDraft.from)}
-                  onChange={(date) =>
-                    setTripDraft((draft) => (draft ? { ...draft, to: dayKey(date) } : draft))
-                  }
-                  value={dateFromDayKey(tripDraft.to)}
-                />
-                <SectionHeader title={t('Où')} />
-                <Pressable
+                <View style={styles.dateRow}>
+                  <NativeDatePartField
+                    label={t('Du')}
+                    onChange={(date) =>
+                      setTripDraft((draft) => {
+                        if (!draft) return draft;
+                        const from = dayKey(date);
+                        return { ...draft, from, to: draft.to < from ? from : draft.to };
+                      })
+                    }
+                    part="date"
+                    value={dateFromDayKey(tripDraft.from)}
+                  />
+                  <NativeDatePartField
+                    label={t('Au')}
+                    minimumDate={dateFromDayKey(tripDraft.from)}
+                    onChange={(date) =>
+                      setTripDraft((draft) => (draft ? { ...draft, to: dayKey(date) } : draft))
+                    }
+                    part="date"
+                    value={dateFromDayKey(tripDraft.to)}
+                  />
+                </View>
+                <ListRow
+                  accessibilityLabel={`${t('Pays')}: ${t(selectedCountry?.label ?? tripDraft.country)}`}
+                  accessory={<Ionicons color={palette.muted} name="chevron-down" size={17} />}
+                  leading={<AppText variant="title2">{selectedCountry?.flag ?? '🌍'}</AppText>}
                   onPress={() => setCountryModal(true)}
-                  style={[
-                    styles.countryButton,
-                    { backgroundColor: palette.card, borderColor: palette.border },
-                  ]}
-                >
-                  <AppText style={styles.countryFlag}>{selectedCountry?.flag ?? '🌍'}</AppText>
-                  <View style={styles.flex}>
-                    <AppText color={palette.muted} variant="caption2">
-                      {t('Pays')}
-                    </AppText>
-                    <AppText>{t(selectedCountry?.label ?? tripDraft.country)}</AppText>
-                  </View>
-                  <Ionicons color={palette.muted} name="chevron-down" size={17} />
-                </Pressable>
+                  subtitle={t(selectedCountry?.label ?? tripDraft.country)}
+                  title={t('Pays')}
+                />
                 <FormField
                   autoCapitalize="characters"
                   label={t('Code postal')}
@@ -915,39 +783,33 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
         visible={countryModal}
       >
         <Screen>
-          <View style={[styles.modalHeader, { borderBottomColor: palette.border }]}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setCountryModal(false)}
-              style={[styles.modalHeaderAction, styles.modalHeaderActionStart]}
-            >
-              <AppText color={palette.electric}>{t('Fermer')}</AppText>
-            </Pressable>
-            <AppText variant="title2">{t('Pays')}</AppText>
-            <View style={styles.headerSpacer} />
-          </View>
+          <ModalHeader
+            leading={
+              <NativeHeaderButton label={t('Fermer')} onPress={() => setCountryModal(false)} />
+            }
+            title={t('Pays')}
+          />
           <FlatList
             contentContainerStyle={styles.countryList}
             data={[...countryOptions] as CountryOption[]}
             keyExtractor={(item) => item.code}
             renderItem={({ item }) => (
-              <Pressable
+              <ListRow
+                accessory={
+                  tripDraft?.country === item.code ? (
+                    <Ionicons color={palette.electric} name="checkmark-circle" size={20} />
+                  ) : (
+                    <View />
+                  )
+                }
+                leading={<AppText variant="title2">{item.flag}</AppText>}
                 onPress={() => {
                   setTripDraft((draft) => (draft ? { ...draft, country: item.code } : draft));
                   setCountryModal(false);
                 }}
-                style={({ pressed }) => [
-                  styles.countryRow,
-                  { borderBottomColor: palette.border },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <AppText style={styles.countryFlag}>{item.flag}</AppText>
-                <AppText style={styles.flex}>{t(item.label)}</AppText>
-                {tripDraft?.country === item.code ? (
-                  <Ionicons color={palette.electric} name="checkmark-circle" size={20} />
-                ) : null}
-              </Pressable>
+                title={t(item.label)}
+                tone="plain"
+              />
             )}
           />
         </Screen>
@@ -957,128 +819,39 @@ export function PortfolioScreen({ section = 'demos' }: { section?: 'demos' | 'tr
 }
 
 const styles = StyleSheet.create({
-  availabilityLink: {
+  card: { gap: spacing.sm },
+  center: { textAlign: 'center' },
+  content: { gap: spacing.xl, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
+  countryList: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
+  dateRow: { flexDirection: 'row', gap: spacing.sm },
+  errorBanner: {
     alignItems: 'center',
     borderRadius: radii.button,
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.xxs,
+    paddingVertical: spacing.xxs,
   },
-  card: { gap: spacing.sm },
-  center: { textAlign: 'center' },
-  content: {
-    gap: spacing.xl,
-    paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.gutter,
-  },
-  countryButton: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 54,
-    paddingHorizontal: spacing.md,
-  },
-  countryFlag: { fontSize: 23 },
-  countryList: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.lg },
-  countryRow: {
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 54,
-    paddingHorizontal: spacing.xs,
-  },
-  dateButton: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-  },
-  dateDone: {
-    alignSelf: 'flex-end',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-  },
-  dateField: { gap: spacing.xs },
-  emptyTrip: { alignItems: 'center', gap: spacing.xs, padding: spacing.md },
-  errorBanner: {
+  flex: { flex: 1 },
+  modalContent: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
+  notice: {
     alignItems: 'center',
     borderRadius: radii.button,
     flexDirection: 'row',
     gap: spacing.xs,
     padding: spacing.sm,
   },
-  flex: { flex: 1 },
-  headerSpacer: { width: 64 },
-  inlineAction: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xxs,
-    minHeight: 44,
-    padding: spacing.xs,
-  },
-  metaRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
-  modalContent: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  modalError: { textAlign: 'center' },
-  modalHeader: {
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 58,
-    paddingHorizontal: spacing.gutter,
-  },
-  modalHeaderAction: { justifyContent: 'center', minHeight: 44, minWidth: 64 },
-  modalHeaderActionEnd: { alignItems: 'flex-end' },
-  modalHeaderActionStart: { alignItems: 'flex-start' },
   playBadge: {
     alignItems: 'center',
-    backgroundColor: 'rgba(5,8,20,0.72)',
+    backgroundColor: scrimColor,
     borderRadius: radii.round,
     height: 24,
     justifyContent: 'center',
     position: 'absolute',
     width: 24,
   },
-  premiumLock: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
-  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
-  publicNotice: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
-  roundAction: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  saveLabel: { fontWeight: '800' },
-  section: { gap: spacing.sm },
-  sectionHeadingAction: { flexShrink: 0, paddingHorizontal: spacing.xs },
-  sectionHeadingTitle: { flex: 1, minWidth: 0 },
-  sectionHeadingWithAction: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  thumb: { borderRadius: 12, height: 68, width: 68 },
+  thumb: { borderRadius: radii.sm, height: 68, width: 68 },
   thumbFallback: { alignItems: 'center', justifyContent: 'center' },
   toggleRow: {
     alignItems: 'center',
@@ -1086,44 +859,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
-    minHeight: 50,
+    minHeight: 48,
     paddingHorizontal: spacing.md,
   },
-  tripRow: {
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 56,
-    paddingVertical: spacing.xs,
-  },
-  videoCopy: { flex: 1, gap: spacing.xxs },
-  videoAction: {
+  videoCopy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
+  videoMain: {
     alignItems: 'center',
     flex: 1,
     flexDirection: 'row',
-    gap: spacing.xxs,
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingHorizontal: spacing.xxs,
-  },
-  videoActionDivider: { height: 24, width: StyleSheet.hairlineWidth },
-  videoActions: {
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-  },
-  videoCard: {
-    borderRadius: radii.button,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  videoMain: {
-    alignItems: 'center',
-    flexDirection: 'row',
     gap: spacing.sm,
-    minHeight: 92,
+    minHeight: minimumTouchTarget,
     padding: spacing.sm,
   },
   videoPreview: { alignItems: 'center', justifyContent: 'center' },
+  videoRow: {
+    alignItems: 'center',
+    borderRadius: radii.control,
+    borderWidth: 1,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    paddingRight: spacing.xxs,
+  },
 });

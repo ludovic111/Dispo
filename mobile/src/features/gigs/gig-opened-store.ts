@@ -80,7 +80,7 @@ export function subscribeToOpenedGigs(
   return () => openedListeners.delete(listener);
 }
 
-export function gigMatchesBadgeViewer(gig: GigSummary, viewer: GigBadgeViewer): boolean {
+function gigMatchesBadgeViewer(gig: GigSummary, viewer: GigBadgeViewer): boolean {
   if (
     gig.wantedSchoolIds?.length &&
     !viewer.schools?.some((school) => gig.wantedSchoolIds?.includes(school.id))

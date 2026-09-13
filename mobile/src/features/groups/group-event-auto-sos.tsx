@@ -2,13 +2,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch } from 'react-native';
 
 import { attendanceFor, type GroupEvent, type MusicGroup } from './group-model';
 import { useUpdateGroupSettings } from './group-queries';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
 import { getSupabaseClient } from '@/services/supabase/client';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -51,49 +52,52 @@ export function GroupEventAutoSos({ event, group }: { event: GroupEvent; group: 
   if (Date.parse(event.date) <= openedAt) return null;
   return (
     <Card style={styles.card}>
-      <View style={styles.row}>
-        <AppText style={styles.flex} variant="title">
-          {t('Auto-SOS')}
-        </AppText>
-        <Switch
-          accessibilityLabel={t('Auto-SOS pour ce groupe')}
-          disabled={update.isPending || create.isPending}
-          value={group.autoSosEnabled}
-          onValueChange={(enabled) =>
-            update.mutate(
-              {
-                groupId: group.id,
-                name: group.name,
-                isPublic: group.isPublic,
-                autoSosEnabled: enabled,
-                autoSosMinLevel: enabled ? 'same' : group.autoSosMinLevel,
-              },
-              {
-                onSuccess: () => {
-                  void client.invalidateQueries({ queryKey: ['gigs'] });
+      <ListRow
+        accessory={
+          <Switch
+            accessibilityLabel={t('Auto-SOS pour ce groupe')}
+            disabled={update.isPending || create.isPending}
+            onValueChange={(enabled) =>
+              update.mutate(
+                {
+                  groupId: group.id,
+                  name: group.name,
+                  isPublic: group.isPublic,
+                  autoSosEnabled: enabled,
+                  autoSosMinLevel: enabled ? 'same' : group.autoSosMinLevel,
                 },
-              },
-            )
-          }
-        />
-      </View>
-      <AppText color={palette.muted} variant="caption">
-        {group.autoSosEnabled && group.autoSosMinLevel === null
-          ? t('Cherche automatiquement un remplaçant quand un rôle manque.')
-          : t(
-              'Pour les dates du groupe, un SOS reprend l’instrument et le niveau du membre absent.',
-            )}
-      </AppText>
+                {
+                  onSuccess: () => {
+                    void client.invalidateQueries({ queryKey: ['gigs'] });
+                  },
+                },
+              )
+            }
+            trackColor={{ false: palette.inset, true: palette.electric }}
+            value={group.autoSosEnabled}
+          />
+        }
+        subtitle={
+          group.autoSosEnabled && group.autoSosMinLevel === null
+            ? t('Cherche automatiquement un remplaçant quand un rôle manque.')
+            : t(
+                'Pour les dates du groupe, un SOS reprend l’instrument et le niveau du membre absent.',
+              )
+        }
+        title={t('Auto-SOS')}
+        tone="plain"
+      />
       {group.autoSosEnabled
         ? absent.map((member) => (
             <DispoButton
-              key={member.id}
-              variant="secondary"
               disabled={
                 update.isPending || create.isPending || (!member.role && !member.instruments.length)
               }
+              key={member.id}
               loading={create.isPending && create.variables === member.id}
               onPress={() => create.mutate(member.id)}
+              size="compact"
+              variant="secondary"
             >
               {t('SOS pour {{name}}', { name: member.name })}
             </DispoButton>
@@ -107,8 +111,7 @@ export function GroupEventAutoSos({ event, group }: { event: GroupEvent; group: 
     </Card>
   );
 }
+
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  flex: { flex: 1 },
+  card: { gap: spacing.xs },
 });

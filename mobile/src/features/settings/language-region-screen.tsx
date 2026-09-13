@@ -1,25 +1,30 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { SelectionDot, SettingsSection, SettingsShell } from './settings-components';
+import {
+  SelectionDot,
+  SettingsDivider,
+  SettingsErrorBanner,
+  SettingsSection,
+  SettingsShell,
+} from './settings-components';
 import { fetchSettingsProfile, updateProfileRegion } from './settings-service';
 
 import { AppText } from '@/components/ui/app-text';
+import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { ListRow } from '@/components/ui/list-row';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
+import { LoadingState } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
-import {
-  countryOptions,
-  languageOptions,
-  type CountryOption,
-} from '@/features/onboarding/onboarding-model';
-import i18n, { setAppLanguage, type SupportedLocale } from '@/i18n';
+import { countryOptions, languageOptions } from '@/features/onboarding/onboarding-model';
+import i18n, { setAppLanguage } from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 export function LanguageRegionScreen() {
   const { session } = useAuth();
@@ -100,17 +105,21 @@ export function LanguageRegionScreen() {
       />
       <SettingsShell nativeHeader>
         <SettingsSection title={t('Langue')}>
-          {languageOptions.map((language, index) => (
-            <LanguageChoice
-              key={language.locale}
-              active={i18n.resolvedLanguage === language.locale}
-              bottomBorder={index < languageOptions.length - 1}
-              flag={language.flag}
-              label={language.nativeName}
-              locale={language.locale}
-              onPress={(locale) => void setAppLanguage(locale)}
-            />
-          ))}
+          {languageOptions.map((language, index) => {
+            const active = i18n.resolvedLanguage === language.locale;
+            return (
+              <View key={language.locale} style={styles.rowInset}>
+                {index > 0 ? <SettingsDivider /> : null}
+                <ListRow
+                  accessory={<SelectionDot active={active} color={palette.electric} />}
+                  leading={<AppText variant="body">{language.flag}</AppText>}
+                  onPress={() => void setAppLanguage(language.locale)}
+                  title={language.nativeName}
+                  tone="plain"
+                />
+              </View>
+            );
+          })}
         </SettingsSection>
 
         <SettingsSection
@@ -118,19 +127,17 @@ export function LanguageRegionScreen() {
           title={t('Ville / région')}
         >
           {loading ? (
-            <ActivityIndicator color={palette.electric} style={styles.loader} />
+            <LoadingState />
           ) : (
             <View style={styles.regionFields}>
-              <AppText color={palette.bronze} variant="label">
-                {t('Pays')}
-              </AppText>
+              <SectionHeader title={t('Pays')} />
               <View style={styles.countryGrid}>
                 {countryOptions.map((option) => (
-                  <CountryChoice
+                  <ChoiceChip
                     key={option.code}
-                    active={selectedCountry?.code === option.code}
-                    option={option}
+                    label={`${option.flag} ${t(option.label)}`}
                     onPress={() => setCountry(option.code)}
+                    selected={selectedCountry?.code === option.code}
                   />
                 ))}
               </View>
@@ -149,119 +156,17 @@ export function LanguageRegionScreen() {
             </View>
           )}
         </SettingsSection>
-        {errorText ? (
-          <View style={[styles.error, { backgroundColor: `${palette.signal}18` }]}>
-            <Ionicons color={palette.signal} name="warning" size={18} />
-            <AppText color={palette.signal} style={styles.errorText} variant="caption">
-              {errorText}
-            </AppText>
-          </View>
-        ) : null}
+        <SettingsErrorBanner text={errorText} />
       </SettingsShell>
     </>
   );
 }
 
-function LanguageChoice({
-  active,
-  bottomBorder,
-  flag,
-  label,
-  locale,
-  onPress,
-}: {
-  active: boolean;
-  bottomBorder: boolean;
-  flag: string;
-  label: string;
-  locale: SupportedLocale;
-  onPress: (locale: SupportedLocale) => void;
-}) {
-  const { palette } = useDispoTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      onPress={() => onPress(locale)}
-      style={({ pressed }) => [
-        styles.languageChoice,
-        bottomBorder && {
-          borderBottomColor: palette.border,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-        },
-        pressed && styles.pressed,
-      ]}
-    >
-      <AppText style={styles.flag}>{flag}</AppText>
-      <AppText style={styles.choiceLabel}>{label}</AppText>
-      <SelectionDot active={active} color={palette.electric} />
-    </Pressable>
-  );
-}
-
-function CountryChoice({
-  active,
-  onPress,
-  option,
-}: {
-  active: boolean;
-  onPress: () => void;
-  option: CountryOption;
-}) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  return (
-    <Pressable
-      accessibilityLabel={`${t(option.label)}, ${option.code}`}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.countryChoice,
-        {
-          backgroundColor: active ? `${palette.electric}20` : palette.inset,
-          borderColor: active ? palette.electric : palette.border,
-        },
-        pressed && styles.pressed,
-      ]}
-    >
-      <AppText style={styles.flag}>{option.flag}</AppText>
-      <AppText numberOfLines={1} style={styles.countryLabel} variant="caption">
-        {t(option.label)}
-      </AppText>
-      {active ? <Ionicons color={palette.electric} name="checkmark-circle" size={17} /> : null}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  choiceLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
   cityField: { flex: 1 },
-  countryChoice: {
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    flexBasis: '48%',
-    flexDirection: 'row',
-    gap: 7,
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: spacing.sm,
-  },
   countryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  countryLabel: { flex: 1, fontWeight: '700' },
-  error: { alignItems: 'center', borderRadius: 12, flexDirection: 'row', gap: 8, padding: 12 },
-  errorText: { flex: 1 },
-  flag: { fontSize: 20 },
-  languageChoice: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    minHeight: 52,
-    paddingHorizontal: 14,
-  },
-  loader: { marginVertical: spacing.lg },
   placeRow: { flexDirection: 'row', gap: spacing.sm },
   postalInput: { minWidth: 108 },
-  pressed: { opacity: 0.72 },
-  regionFields: { gap: spacing.sm, padding: 14 },
+  regionFields: { gap: spacing.sm, padding: spacing.sm },
+  rowInset: { paddingHorizontal: spacing.sm },
 });

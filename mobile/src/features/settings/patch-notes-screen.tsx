@@ -5,42 +5,28 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { patchNotes, type PatchNote } from './patch-notes-data';
-import { SheetHeader } from './settings-components';
 import { normalizeMarketingVersion } from './settings-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { Screen } from '@/components/ui/screen';
+import { NativeHeaderButton } from '@/components/ui/native-header-button';
+import { ModalHeader, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
+import { Tag } from '@/components/ui/tag';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
 
 function NoteCard({ current, note }: { current: boolean; note: PatchNote }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   return (
-    <Card padding={spacing.md} style={styles.noteCard}>
-      <View style={styles.noteHeading}>
-        <AppText color={current ? palette.electric : palette.muted} style={styles.version}>
-          v{note.version}
-        </AppText>
-        <AppText style={styles.noteTitle}>{t(note.title)}</AppText>
-        {current ? (
-          <View
-            style={[
-              styles.currentTag,
-              { backgroundColor: `${palette.electric}18`, borderColor: `${palette.electric}55` },
-            ]}
-          >
-            <AppText color={palette.electric} style={styles.currentTagText} variant="caption">
-              {t('Version actuelle')}
-            </AppText>
-          </View>
-        ) : null}
-      </View>
+    <Card style={styles.noteCard}>
+      <SectionHeader subtitle={`v${note.version}`} title={t(note.title)} />
+      {current ? <Tag icon="checkmark-circle" label={t('Version actuelle')} /> : null}
       {note.points.map((point) => (
         <View key={point} style={styles.pointRow}>
           <Ionicons color={palette.bronze} name="sparkles" size={12} style={styles.sparkle} />
-          <AppText color={palette.text} style={styles.pointText} variant="caption">
+          <AppText style={styles.pointText} variant="footnote">
             {t(point)}
           </AppText>
         </View>
@@ -55,28 +41,26 @@ export function PatchNotesScreen() {
   const currentVersion = normalizeMarketingVersion(Constants.expoConfig?.version ?? '2.4');
   return (
     <Screen>
-      <View style={styles.headerWrap}>
-        <SheetHeader onClose={() => router.back()} title={t('Nouveautés')} />
-      </View>
+      <ModalHeader
+        title={t('Nouveautés')}
+        trailing={<NativeHeaderButton label={t('OK')} onPress={() => router.back()} />}
+      />
       <FlatList
         contentContainerStyle={styles.list}
         data={patchNotes as PatchNote[]}
         keyExtractor={(note) => note.version}
         ListHeaderComponent={
-          <View
-            style={[
-              styles.feedback,
-              { backgroundColor: `${palette.electric}15`, borderColor: `${palette.electric}55` },
-            ]}
-          >
-            <Ionicons color={palette.electric} name="heart" size={22} />
+          <Card style={styles.feedback} tone="inset">
+            <View style={[styles.feedbackIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
+              <Ionicons color={palette.electric} name="heart" size={22} />
+            </View>
             <View style={styles.feedbackCopy}>
-              <AppText style={styles.feedbackTitle}>{t("Merci d'utiliser Dispo !")}</AppText>
-              <AppText color={palette.muted} variant="caption">
+              <AppText variant="headline">{t("Merci d'utiliser Dispo !")}</AppText>
+              <AppText color={palette.muted} variant="footnote">
                 {t("Un pépin, une idée ? Écris-nous via l'assistance dispoapp.net.")}
               </AppText>
             </View>
-          </View>
+          </Card>
         }
         renderItem={({ item }) => (
           <NoteCard current={item.version === currentVersion} note={item} />
@@ -88,31 +72,23 @@ export function PatchNotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  currentTag: {
-    borderRadius: radii.round,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  currentTagText: { fontSize: 9, fontWeight: '800' },
   feedback: {
     alignItems: 'center',
-    borderRadius: radii.ticket,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.md,
-    padding: 14,
   },
-  feedbackCopy: { flex: 1, gap: 2 },
-  feedbackTitle: { fontSize: 14, fontWeight: '900' },
-  headerWrap: { paddingHorizontal: spacing.md },
-  list: { gap: spacing.md, paddingBottom: spacing.xxl, paddingHorizontal: spacing.md },
-  noteCard: { gap: 10, marginBottom: spacing.md },
-  noteHeading: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  noteTitle: { flex: 1, fontSize: 14, fontWeight: '800', minWidth: 160 },
-  pointRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 8 },
-  pointText: { flex: 1, lineHeight: 17, opacity: 0.88 },
-  sparkle: { marginTop: 2 },
-  version: { fontSize: 14, fontWeight: '900' },
+  feedbackCopy: { flex: 1, gap: spacing.xxs },
+  feedbackIcon: {
+    alignItems: 'center',
+    borderRadius: radii.round,
+    height: minimumTouchTarget,
+    justifyContent: 'center',
+    width: minimumTouchTarget,
+  },
+  list: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
+  noteCard: { gap: spacing.xs, marginBottom: spacing.md },
+  pointRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
+  pointText: { flex: 1 },
+  sparkle: { marginTop: spacing.xxs },
 });

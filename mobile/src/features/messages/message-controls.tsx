@@ -1,15 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { Dimensions, Keyboard, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   MESSAGE_MAX_LENGTH,
@@ -17,30 +10,28 @@ import {
   messageDayLabel,
   type DirectMessage,
   type MessageReactionEmoji,
-  type MessageReactionSummary,
   type MessageReceipt,
 } from './message-model';
 
 import { AppText } from '@/components/ui/app-text';
+import { ChatDaySeparator } from '@/components/ui/chat/chat-day-separator';
+import { FormField } from '@/components/ui/form-field';
+import { ListRow } from '@/components/ui/list-row';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
+import { ModalHeader } from '@/components/ui/screen';
+import { BottomSheet } from '@/components/ui/sheet';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export function MessageDayDivider({ date }: { date: string }) {
-  const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   return (
-    <View accessibilityRole="header" style={styles.dayRow}>
-      <View style={[styles.dayLine, { backgroundColor: palette.border }]} />
-      <View style={[styles.dayPill, { backgroundColor: `${palette.card}E6` }]}>
-        <AppText color={palette.muted} style={styles.dayLabel} variant="caption2">
-          {messageDayLabel(date, new Date(), i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
-            today: t("Aujourd'hui"),
-            yesterday: t('Hier'),
-          })}
-        </AppText>
-      </View>
-      <View style={[styles.dayLine, { backgroundColor: palette.border }]} />
-    </View>
+    <ChatDaySeparator
+      label={messageDayLabel(date, new Date(), i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
+        today: t("Aujourd'hui"),
+        yesterday: t('Hier'),
+      })}
+    />
   );
 }
 
@@ -58,45 +49,6 @@ export function ReceiptChecks({ receipt }: { receipt: MessageReceipt }) {
       {receipt !== 'sent' ? (
         <Ionicons color={color} name="checkmark" size={11} style={styles.receiptSecond} />
       ) : null}
-    </View>
-  );
-}
-
-export function MessageReactionBar({
-  onPress,
-  reactions,
-}: {
-  onPress: (emoji: MessageReactionEmoji) => void;
-  reactions: readonly MessageReactionSummary[];
-}) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  if (reactions.length === 0) return null;
-  return (
-    <View style={styles.reactionBar}>
-      {reactions.map((reaction) => (
-        <Pressable
-          accessibilityLabel={`${t('Réagir')} ${reaction.emoji}, ${reaction.count}`}
-          accessibilityRole="button"
-          key={reaction.emoji}
-          onPress={() => onPress(reaction.emoji)}
-          style={({ pressed }) => [
-            styles.reaction,
-            {
-              backgroundColor: reaction.isMine ? `${palette.electric}2E` : palette.card,
-              borderColor: reaction.isMine ? `${palette.electric}A6` : palette.border,
-            },
-            pressed && styles.pressed,
-          ]}
-        >
-          <AppText style={styles.emoji}>{reaction.emoji}</AppText>
-          {reaction.count > 1 ? (
-            <AppText style={styles.reactionCount} variant="caption2">
-              {reaction.count}
-            </AppText>
-          ) : null}
-        </Pressable>
-      ))}
     </View>
   );
 }
@@ -154,76 +106,78 @@ export function MessageActionsModal({
   const { t } = useTranslation();
   const mine = message.senderId === userId;
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible>
-      <View style={styles.modalRoot}>
-        <Pressable accessibilityLabel={t('Fermer')} onPress={onClose} style={styles.backdrop} />
-        <View
-          style={[styles.sheet, { backgroundColor: palette.card, borderColor: palette.border }]}
-        >
-          <View style={[styles.grabber, { backgroundColor: palette.border }]} />
-          <View style={styles.sheetHeader}>
-            <AppText style={styles.sheetHeaderTitle} variant="title">
-              {t('Réagir')}
-            </AppText>
-            <Pressable
-              accessibilityLabel={t('Fermer')}
-              accessibilityRole="button"
-              onPress={onClose}
-              style={[styles.closeButton, { backgroundColor: palette.inset }]}
-            >
-              <Ionicons color={palette.text} name="close" size={19} />
-            </Pressable>
-          </View>
-          <View style={styles.reactionChoices}>
-            {MESSAGE_REACTION_CHOICES.map((emoji) => (
-              <Pressable
-                accessibilityLabel={`${t('Réagir')} ${emoji}`}
-                accessibilityRole="button"
-                key={emoji}
-                onPress={() => {
-                  onReact(message, emoji);
-                  onClose();
-                }}
-                style={({ pressed }) => [
-                  styles.reactionChoice,
-                  { backgroundColor: palette.inset },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <AppText style={styles.reactionChoiceEmoji}>{emoji}</AppText>
-              </Pressable>
-            ))}
-          </View>
-          {mine && message.text ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                onClose();
-                onEdit(message);
-              }}
-              style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
-            >
-              <Ionicons color={palette.text} name="pencil" size={19} />
-              <AppText>{t('Modifier')}</AppText>
-            </Pressable>
-          ) : null}
-          {mine ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                onClose();
-                onDelete(message);
-              }}
-              style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
-            >
-              <Ionicons color={palette.error} name="trash" size={19} />
-              <AppText color={palette.error}>{t('Supprimer pour tout le monde')}</AppText>
-            </Pressable>
-          ) : null}
-        </View>
+    <BottomSheet onClose={onClose} visible>
+      <View style={styles.sheetHeader}>
+        <AppText numberOfLines={1} style={styles.sheetTitle} variant="title3">
+          {t('Réagir')}
+        </AppText>
+        <IconButton accessibilityLabel={t('Fermer')} icon="close" onPress={onClose} />
       </View>
-    </Modal>
+      <View style={styles.reactionChoices}>
+        {MESSAGE_REACTION_CHOICES.map((emoji) => (
+          <Pressable
+            accessibilityLabel={`${t('Réagir')} ${emoji}`}
+            accessibilityRole="button"
+            accessibilityState={{
+              selected: message.reactions.some((item) => item.emoji === emoji && item.isMine),
+            }}
+            key={emoji}
+            onPress={() => {
+              onReact(message, emoji);
+              onClose();
+            }}
+            style={({ pressed }) => [
+              styles.reactionChoice,
+              { backgroundColor: palette.cardMuted },
+              pressed && pressedStyle,
+            ]}
+          >
+            <AppText style={styles.reactionChoiceEmoji} variant="title2">
+              {emoji}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+      {mine && message.text ? (
+        <ListRow
+          leadingIcon="pencil"
+          onPress={() => {
+            onClose();
+            onEdit(message);
+          }}
+          title={t('Modifier')}
+          tone="plain"
+        />
+      ) : null}
+      {mine ? (
+        <ListRow
+          leadingIcon="trash"
+          leadingIconColor={palette.error}
+          onPress={() => {
+            onClose();
+            onDelete(message);
+          }}
+          title={t('Supprimer pour tout le monde')}
+          tone="plain"
+        />
+      ) : null}
+    </BottomSheet>
   );
+}
+
+/** Hauteur du clavier iOS au-dessus de la zone sûre ; Android redimensionne la fenêtre lui-même. */
+function useKeyboardInset(): number {
+  const insets = useSafeAreaInsets();
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return undefined;
+    const subscription = Keyboard.addListener('keyboardWillChangeFrame', (event) => {
+      const covered = Dimensions.get('window').height - event.endCoordinates.screenY;
+      setInset(Math.max(0, covered - insets.bottom));
+    });
+    return () => subscription.remove();
+  }, [insets.bottom]);
+  return inset;
 }
 
 export function MessageEditModal({
@@ -235,167 +189,75 @@ export function MessageEditModal({
   onClose: () => void;
   onSave: (message: DirectMessage, text: string) => void;
 }) {
-  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const [text, setText] = useState(message.text);
+  const keyboardInset = useKeyboardInset();
   const clean = text.trim();
+  const canSave = Boolean(clean) && text.length <= MESSAGE_MAX_LENGTH;
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.modalRoot}
-      >
-        <Pressable accessibilityLabel={t('Fermer')} onPress={onClose} style={styles.backdrop} />
-        <View style={[styles.editSheet, { backgroundColor: palette.background }]}>
-          <View style={styles.editHeader}>
-            <Pressable accessibilityRole="button" onPress={onClose}>
-              <AppText color={palette.electric}>{t('Annuler')}</AppText>
-            </Pressable>
-            <AppText variant="title">{t('Modifier le message')}</AppText>
-            <Pressable
-              accessibilityRole="button"
-              disabled={!clean || text.length > MESSAGE_MAX_LENGTH}
+    <BottomSheet onClose={onClose} visible>
+      <View style={{ paddingBottom: keyboardInset }}>
+        <ModalHeader
+          leading={
+            <DispoButton onPress={onClose} size="compact" variant="ghost">
+              {t('Annuler')}
+            </DispoButton>
+          }
+          title={t('Modifier le message')}
+          trailing={
+            <DispoButton
+              disabled={!canSave}
               onPress={() => {
                 onSave(message, clean);
                 onClose();
               }}
-              style={!clean || text.length > MESSAGE_MAX_LENGTH ? styles.disabled : undefined}
+              size="compact"
+              variant="ghost"
             >
-              <AppText color={palette.electric} style={styles.saveText}>
-                {t('Enregistrer')}
-              </AppText>
-            </Pressable>
-          </View>
-          <AppText color={palette.muted} variant="subheadline">
-            {t('Corrige ton message')}
-          </AppText>
-          <TextInput
-            autoFocus
-            maxLength={MESSAGE_MAX_LENGTH}
-            multiline
-            onChangeText={setText}
-            placeholder={t('Ton message…')}
-            placeholderTextColor={palette.muted}
-            selectionColor={palette.electric}
-            style={[
-              styles.editInput,
-              { backgroundColor: palette.card, borderColor: palette.border, color: palette.text },
-            ]}
-            value={text}
-          />
-          <AppText color={palette.muted} style={styles.counter} variant="caption2">
-            {text.length}/{MESSAGE_MAX_LENGTH}
-          </AppText>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+              {t('Enregistrer')}
+            </DispoButton>
+          }
+        />
+        <FormField
+          autoFocus
+          hint={`${text.length}/${MESSAGE_MAX_LENGTH}`}
+          label={t('Ton message')}
+          maxLength={MESSAGE_MAX_LENGTH}
+          multiline
+          onChangeText={setText}
+          placeholder={t('Ton message…')}
+          value={text}
+        />
+      </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  actionRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 48,
-    paddingHorizontal: spacing.xs,
-  },
-  backdrop: {
-    backgroundColor: 'rgba(5,8,20,0.56)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  counter: { textAlign: 'right' },
-  closeButton: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  dayLabel: { fontWeight: '600' },
-  dayLine: { flex: 1, height: 1 },
-  dayPill: { borderRadius: radii.round, paddingHorizontal: 10, paddingVertical: 5 },
-  dayRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    paddingVertical: 4,
-    width: '100%',
-  },
-  disabled: { opacity: 0.4 },
-  editHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  editInput: {
-    borderRadius: 16,
-    borderWidth: 1,
-    fontSize: 16,
-    minHeight: 112,
-    padding: 14,
-    textAlignVertical: 'top',
-  },
-  editSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    gap: spacing.sm,
-    minHeight: '58%',
-    padding: spacing.md,
-  },
-  emoji: { fontSize: 14, lineHeight: 17 },
-  grabber: { alignSelf: 'center', borderRadius: 2, height: 4, width: 36 },
-  modalRoot: { flex: 1, justifyContent: 'flex-end' },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
-  reaction: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  reactionBar: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   reactionChoice: {
     alignItems: 'center',
     borderRadius: radii.round,
-    height: 42,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 40,
+    width: minimumTouchTarget,
   },
-  reactionChoiceEmoji: { fontSize: 22, lineHeight: 27 },
+  reactionChoiceEmoji: { textAlign: 'center' },
   reactionChoices: { flexDirection: 'row', gap: spacing.xxs, justifyContent: 'space-between' },
-  reactionCount: { fontWeight: '700', fontVariant: ['tabular-nums'] },
   receipt: { height: 12, position: 'relative', width: 11 },
   receiptDouble: { width: 16 },
   receiptFirst: { left: 0, position: 'absolute', top: 0 },
   receiptSecond: { left: 4.5, position: 'absolute', top: 0 },
-  saveText: { fontWeight: '700' },
-  sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    gap: spacing.sm,
-    paddingBottom: 28,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-  },
-  sheetHeader: { alignItems: 'center', flexDirection: 'row' },
-  sheetHeaderTitle: { flex: 1 },
+  sheetHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  sheetTitle: { flex: 1 },
   typingBubble: {
     alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: 5,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  typingDot: { borderRadius: 3.5, height: 7, width: 7 },
-  typingRow: { alignItems: 'flex-start', paddingRight: 56, width: '100%' },
+  typingDot: { borderRadius: radii.round, height: 7, width: 7 },
+  typingRow: { alignItems: 'flex-start', width: '100%' },
 });

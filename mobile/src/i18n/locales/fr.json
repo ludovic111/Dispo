@@ -190,6 +190,7 @@
   "Ajouter un morceau": "Ajouter un morceau",
   "Ajouter un solo": "Ajouter un solo",
   "Ajouter une date": "Ajouter une date",
+  "Retirer une date": "Retirer une date",
   "Ajouter une école et rejoindre sa communauté": "Ajouter une école et rejoindre sa communauté",
   "Ajouter une partition": "Ajouter une partition",
   "Ajouter une photo": "Ajouter une photo",
@@ -2439,5 +2440,12 @@
   "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.": "Tu vas quitter cette école, puis choisir la nouvelle dans l’annuaire. Tes autres affiliations seront conservées.",
   "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.": "Cette affiliation sera retirée de ton profil et tu n’auras plus accès à sa communauté. Tes autres écoles et ton compte seront conservés.",
   "Quitter et choisir": "Quitter et choisir",
-  "Changer d’école": "Changer d’école"
+  "Changer d’école": "Changer d’école",
+  "Une interface plus claire, partout": "Une interface plus claire, partout",
+  "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.": "Une seule échelle de textes, de boutons et de cartes sur iOS et Android.",
+  "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.": "Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.",
+  "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.": "Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.",
+  "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.": "Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.",
+  "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.": "Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.",
+  "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.": "Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions."
 }

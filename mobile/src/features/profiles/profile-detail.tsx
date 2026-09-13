@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { MyProfileDetail } from './my-profile-detail';
-import { SchoolBadge } from './profile-card';
+import { ProfileSocialLinks, ProfileStatsCard, type ProfileStat } from './profile-shared';
 import { canRateProfile } from './profile-social-model';
 import {
   useBlockProfile,
@@ -20,12 +20,16 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
-import { DispoButton } from '@/components/ui/pressable';
+import { ListRow } from '@/components/ui/list-row';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
+import { scrimColor } from '@/components/ui/sheet';
 import { Tag } from '@/components/ui/tag';
 import {
   profileHandle,
   profileSocialUrl,
   relationTags,
+  schoolAcronym,
   shortProfileLevel,
   type ProfileSocialNetwork,
   type ProfileSummary,
@@ -35,14 +39,15 @@ import { ensureDirectConversation } from '@/features/messages/message-repository
 import { PersonalRepertoireLink } from '@/features/repertoire/repertoire-screen';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing, typography } from '@/theme/tokens';
-
-const socialIcons: Record<ProfileSocialNetwork, React.ComponentProps<typeof Ionicons>['name']> = {
-  instagram: 'logo-instagram',
-  tiktok: 'logo-tiktok',
-  x: 'logo-twitter',
-  youtube: 'logo-youtube',
-};
+import {
+  disabledStyle,
+  minimumTouchTarget,
+  onAccent,
+  pressedStyle,
+  radii,
+  spacing,
+  tint,
+} from '@/theme/tokens';
 
 function todayKey(): string {
   const now = new Date();
@@ -50,57 +55,36 @@ function todayKey(): string {
   return local.toISOString().slice(0, 10);
 }
 
-function SectionTitle({
-  icon,
-  title,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string;
-}) {
-  const { palette } = useDispoTheme();
-  return (
-    <View style={styles.sectionTitle}>
-      <Ionicons color={palette.bronze} name={icon} size={16} />
-      <AppText color={palette.bronze} style={styles.sectionHeading} variant="subheadline">
-        {title}
-      </AppText>
-    </View>
-  );
+function formatDay(locale: string, date: string, weekday = true): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    ...(weekday ? { weekday: 'short' } : {}),
+  }).format(new Date(`${date.slice(0, 10)}T12:00:00`));
 }
 
-function ProfileManagementRow({
-  color,
-  icon,
-  onPress,
-  subtitle,
-  title,
+function TripRow({
+  locale,
+  place,
+  trip,
 }: {
-  color: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  onPress: () => void;
-  subtitle: string;
-  title: string;
+  locale: string;
+  place: string;
+  trip: { from: string; to: string };
 }) {
   const { palette } = useDispoTheme();
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.managementRow, pressed && styles.pressed]}
-    >
-      <View style={[styles.managementIcon, { backgroundColor: `${color}18` }]}>
-        <Ionicons color={color} name={icon} size={19} />
-      </View>
-      <View style={styles.managementCopy}>
-        <AppText style={styles.sectionHeading} variant="subheadline">
-          {title}
+    <View style={styles.tripRow}>
+      <Ionicons color={palette.bronze} name="location-outline" size={16} />
+      <View style={styles.tripCopy}>
+        <AppText variant="subheadline" weight="semibold">
+          {place}
         </AppText>
-        <AppText color={palette.muted} numberOfLines={2} variant="caption">
-          {subtitle}
+        <AppText color={palette.muted} variant="caption">
+          {`${formatDay(locale, trip.from, false)} → ${formatDay(locale, trip.to, false)}`}
         </AppText>
       </View>
-      <Ionicons color={palette.muted} name="chevron-forward" size={17} />
-    </Pressable>
+    </View>
   );
 }
 
@@ -115,11 +99,7 @@ export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSumma
     .filter((trip) => trip.to >= todayKey())
     .sort((a, b) => a.from.localeCompare(b.from));
   const tripCount = trips.length;
-  const nextDate = availableDates[0]
-    ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', weekday: 'short' }).format(
-        new Date(`${availableDates[0]}T12:00:00`),
-      )
-    : null;
+  const nextDate = availableDates[0] ? formatDay(locale, availableDates[0]) : null;
   const availabilitySubtitle = nextDate
     ? availableDates.length === 1
       ? t('1 date cochée · {{date}}', { date: nextDate })
@@ -130,18 +110,16 @@ export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSumma
     : t('Aucune date cochée — ajoute les jours où tu peux dépanner.');
   return (
     <View style={styles.root}>
-      <Card padding={0}>
-        <ProfileManagementRow
-          color={palette.jam}
-          icon="flash"
+      <View style={styles.section}>
+        <ListRow
+          leadingIcon="flash"
+          leadingIconColor={palette.jam}
           onPress={() => router.push('/profile/availability' as never)}
           subtitle={availabilitySubtitle}
           title={t('Mes disponibilités')}
         />
-        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
-        <ProfileManagementRow
-          color={palette.electric}
-          icon="airplane-outline"
+        <ListRow
+          leadingIcon="airplane-outline"
           onPress={() => router.push('/profile/travel' as never)}
           subtitle={
             tripCount
@@ -152,47 +130,27 @@ export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSumma
           }
           title={t('Mes voyages')}
         />
-        <View style={[styles.managementDivider, { backgroundColor: palette.border }]} />
-      </Card>
+      </View>
       {availableDates.length > 0 ? (
         <Card style={styles.section}>
-          <SectionTitle icon="calendar-outline" title={t('Mes disponibilités')} />
+          <SectionHeader title={t('Mes disponibilités')} />
           <View style={styles.tags}>
             {availableDates.map((date) => (
-              <Tag
-                key={date}
-                color={palette.jam}
-                label={new Intl.DateTimeFormat(locale, {
-                  day: 'numeric',
-                  month: 'short',
-                  weekday: 'short',
-                }).format(new Date(`${date.slice(0, 10)}T12:00:00`))}
-              />
+              <Tag color={palette.jam} key={date} label={formatDay(locale, date)} />
             ))}
           </View>
         </Card>
       ) : null}
       {trips.length > 0 ? (
         <Card style={styles.section}>
-          <SectionTitle icon="airplane-outline" title={t('Mes voyages')} />
+          <SectionHeader title={t('Mes voyages')} />
           {trips.map((trip) => (
-            <View key={trip.id} style={styles.tripRow}>
-              <Ionicons name="location-outline" size={16} color={palette.bronze} />
-              <View style={styles.tripCopy}>
-                <AppText variant="subheadline">
-                  {[trip.city, trip.country].filter(Boolean).join(' · ')}
-                </AppText>
-                <AppText variant="caption" color={palette.muted}>
-                  {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
-                    new Date(`${trip.from}T12:00:00`),
-                  )}{' '}
-                  →{' '}
-                  {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
-                    new Date(`${trip.to}T12:00:00`),
-                  )}
-                </AppText>
-              </View>
-            </View>
+            <TripRow
+              key={trip.id}
+              locale={locale}
+              place={[trip.city, trip.country].filter(Boolean).join(' · ')}
+              trip={trip}
+            />
           ))}
         </Card>
       ) : null}
@@ -244,6 +202,36 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
     rating.error ??
     report.error ??
     block.error;
+  const socialLinks = (
+    Object.entries(profile.socials ?? {}) as [ProfileSocialNetwork, string][]
+  ).flatMap(([network, handle]) => {
+    const url = profileSocialUrl(network, handle);
+    return url ? [{ network, onPress: () => void Linking.openURL(url) }] : [];
+  });
+  const stats: ProfileStat[] = [
+    {
+      label: t(profile.ratingAverage ? 'note' : 'niveau'),
+      value: profile.ratingAverage
+        ? `★ ${profile.ratingAverage.toFixed(1)}`
+        : t(shortProfileLevel(profile.level)),
+    },
+    {
+      label: t('abonnés'),
+      onPress: () =>
+        router.push(
+          `/profiles/${profile.id}/followers?name=${encodeURIComponent(firstName)}` as never,
+        ),
+      value: String(profile.followerCount),
+    },
+    {
+      label: t('collabs'),
+      onPress: () =>
+        router.push(
+          `/profiles/${profile.id}/played-with?name=${encodeURIComponent(firstName)}` as never,
+        ),
+      value: String(profile.collaborationCount),
+    },
+  ];
 
   const showSafetyMenu = () => {
     Alert.alert(
@@ -283,6 +271,23 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
     );
   };
 
+  const togglePlayedWith = () => {
+    if (hasPlayedWith) {
+      Alert.alert(
+        t('Retirer la collaboration ?'),
+        t('Ta note sera aussi retirée. Tu pourras la déclarer à nouveau plus tard.'),
+        [
+          { style: 'cancel', text: t('Annuler') },
+          {
+            onPress: () => collaboration.mutate(false),
+            style: 'destructive',
+            text: t('Retirer'),
+          },
+        ],
+      );
+    } else collaboration.mutate(true);
+  };
+
   return (
     <View style={styles.root}>
       <View style={styles.profileHeader}>
@@ -298,50 +303,13 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
           ) : null}
         </View>
         <View style={styles.headerStats}>
-          <View style={styles.stat}>
-            <AppText style={styles.statValue}>
-              {profile.ratingAverage
-                ? `★ ${profile.ratingAverage.toFixed(1)}`
-                : t(shortProfileLevel(profile.level))}
-            </AppText>
-            <AppText color={palette.muted} variant="caption2">
-              {t(profile.ratingAverage ? 'note' : 'niveau')}
-            </AppText>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              router.push(
-                `/profiles/${profile.id}/followers?name=${encodeURIComponent(firstName)}` as never,
-              )
-            }
-            style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
-          >
-            <AppText style={styles.statValue}>{profile.followerCount}</AppText>
-            <AppText color={palette.muted} variant="caption2">
-              {t('abonnés')}
-            </AppText>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              router.push(
-                `/profiles/${profile.id}/played-with?name=${encodeURIComponent(firstName)}` as never,
-              )
-            }
-            style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
-          >
-            <AppText style={styles.statValue}>{profile.collaborationCount}</AppText>
-            <AppText color={palette.muted} variant="caption2">
-              {t('collabs')}
-            </AppText>
-          </Pressable>
+          <ProfileStatsCard stats={stats} />
         </View>
       </View>
 
       <View style={styles.identity}>
         <View style={styles.nameRow}>
-          <AppText style={styles.name} variant="title2">
+          <AppText numberOfLines={2} style={styles.name} variant="title2">
             {profile.name}
           </AppText>
           {profile.isDemo ? <Tag color={palette.bronze} label={t('Démo')} /> : null}
@@ -349,9 +317,13 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
             <Ionicons color={palette.electric} name="sparkles" size={17} />
           ) : null}
           {!viewingOwnProfile ? (
-            <Pressable accessibilityLabel={t('Sécurité')} hitSlop={10} onPress={showSafetyMenu}>
-              <Ionicons color={palette.muted} name="ellipsis-horizontal-circle" size={21} />
-            </Pressable>
+            <IconButton
+              accessibilityLabel={t('Sécurité')}
+              icon="ellipsis-horizontal-circle"
+              iconColor={palette.muted}
+              onPress={showSafetyMenu}
+              variant="plain"
+            />
           ) : null}
         </View>
         {profile.playedWithFriend ? (
@@ -361,9 +333,11 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
           <AppText color={palette.bronze} variant="caption">
             {profileHandle(profile.name)}
           </AppText>
-          {relationTags(profile).map((tag) => (
-            <Tag key={tag} label={t(tag)} />
-          ))}
+          {relationTags(profile)
+            .filter((tag) => !profile.schools.some((school) => schoolAcronym(school) === tag))
+            .map((tag) => (
+              <Tag key={tag} label={t(tag)} />
+            ))}
           <Tag color={palette.bronze} label={t(shortProfileLevel(profile.level))} />
         </View>
         <AppText color={palette.muted} variant="caption">
@@ -384,7 +358,6 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
         <View style={styles.tags}>
           {profile.instruments.map((instrument) => (
             <Tag
-              color={palette.electric}
               key={instrument}
               label={`${t(instrument)} · ${t(
                 shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
@@ -396,39 +369,19 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
           <View style={styles.tags}>
             {profile.schools.map((school) => (
               <Pressable
+                accessibilityLabel={school.name}
+                accessibilityRole="button"
+                hitSlop={spacing.xs}
                 key={school.id}
                 onPress={() => router.push(`/schools/${school.id}` as never)}
-                style={({ pressed }) => pressed && styles.pressed}
+                style={({ pressed }) => pressed && pressedStyle}
               >
-                <SchoolBadge school={school} />
+                <Tag color={palette.bronze} icon="school-outline" label={schoolAcronym(school)} />
               </Pressable>
             ))}
           </View>
         ) : null}
-        {profile.socials && Object.keys(profile.socials).length > 0 ? (
-          <View style={styles.socials}>
-            {(Object.entries(profile.socials) as [ProfileSocialNetwork, string][]).map(
-              ([network, handle]) => {
-                const url = profileSocialUrl(network, handle);
-                if (!url) return null;
-                return (
-                  <Pressable
-                    accessibilityLabel={network}
-                    key={network}
-                    onPress={() => void Linking.openURL(url)}
-                    style={({ pressed }) => [
-                      styles.social,
-                      { backgroundColor: palette.inset, borderColor: palette.border },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Ionicons color={palette.text} name={socialIcons[network]} size={17} />
-                  </Pressable>
-                );
-              },
-            )}
-          </View>
-        ) : null}
+        {socialLinks.length > 0 ? <ProfileSocialLinks links={socialLinks} /> : null}
       </View>
 
       {viewingOwnProfile ? null : (
@@ -475,76 +428,57 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
         <View style={styles.tags}>
           <Ionicons color={palette.muted} name="calendar-outline" size={14} />
           {upcomingDates.map((date) => (
-            <Tag
-              color={palette.jam}
-              key={date}
-              label={new Intl.DateTimeFormat(locale, {
-                day: 'numeric',
-                month: 'short',
-                weekday: 'short',
-              }).format(new Date(`${date.slice(0, 10)}T12:00:00`))}
-            />
+            <Tag color={palette.jam} key={date} label={formatDay(locale, date)} />
           ))}
         </View>
       ) : null}
 
       {upcomingTrips.length > 0 ? (
         <Card style={styles.section}>
-          <SectionTitle icon="airplane-outline" title={t('Disponible ailleurs')} />
+          <SectionHeader title={t('Disponible ailleurs')} />
           {upcomingTrips.map((trip) => (
-            <View key={trip.id} style={styles.tripRow}>
-              <Ionicons color={palette.bronze} name="location-outline" size={16} />
-              <View style={styles.tripCopy}>
-                <AppText style={styles.sectionHeading} variant="subheadline">
-                  {[trip.postalCode, trip.city, trip.country].filter(Boolean).join(' · ')}
-                </AppText>
-                <AppText color={palette.muted} variant="caption">
-                  {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
-                    new Date(`${trip.from}T12:00:00`),
-                  )}
-                  {' → '}
-                  {new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(
-                    new Date(`${trip.to}T12:00:00`),
-                  )}
-                </AppText>
-              </View>
-            </View>
+            <TripRow
+              key={trip.id}
+              locale={locale}
+              place={[trip.postalCode, trip.city, trip.country].filter(Boolean).join(' · ')}
+              trip={trip}
+            />
           ))}
         </Card>
       ) : null}
 
       {social.data?.publicGroups.length ? (
         <Card style={styles.section}>
-          <SectionTitle icon="people" title={t('Groupes')} />
+          <SectionHeader title={t('Groupes')} />
           {social.data.publicGroups.map((group) => (
-            <View key={group.id} style={styles.groupRow}>
-              {group.photoUrl ? (
-                <Image source={{ uri: group.photoUrl }} style={styles.groupAvatar} />
-              ) : (
-                <View
-                  style={[
-                    styles.groupAvatar,
-                    styles.groupFallback,
-                    { backgroundColor: `${palette.bronze}24` },
-                  ]}
-                >
-                  <AppText>{group.emoji}</AppText>
-                </View>
-              )}
-              <View style={styles.groupText}>
-                <View style={styles.nameRow}>
-                  <AppText numberOfLines={1} style={styles.sectionHeading} variant="subheadline">
-                    {group.name}
-                  </AppText>
-                  {group.isLeader ? (
-                    <Ionicons color={palette.bronze} name="diamond" size={11} />
-                  ) : null}
-                </View>
-                <AppText color={palette.muted} variant="caption2">
-                  {formatSwiftPlaceholders(t('%lld membres'), group.memberCount)}
-                </AppText>
-              </View>
-            </View>
+            <ListRow
+              accessory={
+                group.isLeader ? (
+                  <Ionicons color={palette.bronze} name="diamond" size={12} />
+                ) : (
+                  <View />
+                )
+              }
+              key={group.id}
+              leading={
+                group.photoUrl ? (
+                  <Image source={{ uri: group.photoUrl }} style={styles.groupAvatar} />
+                ) : (
+                  <View
+                    style={[
+                      styles.groupAvatar,
+                      styles.groupFallback,
+                      { backgroundColor: tint(palette.bronze, 0.14) },
+                    ]}
+                  >
+                    <AppText>{group.emoji}</AppText>
+                  </View>
+                )
+              }
+              subtitle={formatSwiftPlaceholders(t('%lld membres'), group.memberCount)}
+              title={group.name}
+              tone="plain"
+            />
           ))}
         </Card>
       ) : null}
@@ -553,55 +487,23 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
 
       {!viewingOwnProfile ? (
         <Card style={styles.section}>
-          <View style={styles.rateHeader}>
-            <SectionTitle
-              icon={profile.level === 'Professionnel' ? 'star' : 'people'}
-              title={formatSwiftPlaceholders(t('Tu as joué avec %@ ?'), firstName)}
-            />
-            {profile.ratingAverage ? (
-              <Tag
-                color={palette.bronze}
-                label={`★ ${profile.ratingAverage.toFixed(1)} · ${profile.ratingCount}`}
-              />
-            ) : null}
-          </View>
-          <Pressable
-            disabled={collaboration.isPending}
-            onPress={() => {
-              if (hasPlayedWith) {
-                Alert.alert(
-                  t('Retirer la collaboration ?'),
-                  t('Ta note sera aussi retirée. Tu pourras la déclarer à nouveau plus tard.'),
-                  [
-                    { style: 'cancel', text: t('Annuler') },
-                    {
-                      onPress: () => collaboration.mutate(false),
-                      style: 'destructive',
-                      text: t('Retirer'),
-                    },
-                  ],
-                );
-              } else collaboration.mutate(true);
-            }}
-            style={({ pressed }) => [
-              styles.playedButton,
-              { backgroundColor: `${hasPlayedWith ? palette.jam : palette.bronze}20` },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons
-              color={hasPlayedWith ? palette.jam : palette.bronze}
-              name={hasPlayedWith ? 'checkmark-circle' : 'add-circle-outline'}
-              size={17}
-            />
-            <AppText
-              color={hasPlayedWith ? palette.jam : palette.bronze}
-              style={styles.playedLabel}
-              variant="caption"
+          <SectionHeader
+            {...(profile.ratingAverage
+              ? { subtitle: `★ ${profile.ratingAverage.toFixed(1)} · ${profile.ratingCount}` }
+              : {})}
+            title={formatSwiftPlaceholders(t('Tu as joué avec %@ ?'), firstName)}
+          />
+          <View style={styles.playedRow}>
+            <DispoButton
+              disabled={collaboration.isPending}
+              icon={hasPlayedWith ? 'checkmark-circle' : 'add-circle-outline'}
+              onPress={togglePlayedWith}
+              size="compact"
+              variant={hasPlayedWith ? 'secondary' : 'ghost'}
             >
               {hasPlayedWith ? t('On a joué ensemble') : t("Déclarer qu'on a joué ensemble")}
-            </AppText>
-          </Pressable>
+            </DispoButton>
+          </View>
           {profile.level === 'Professionnel' ? (
             <>
               <AppText color={palette.muted} variant="caption">
@@ -611,29 +513,39 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
                       "Déclare d'abord que vous avez joué ensemble : on ne note que quelqu'un qu'on a vu jouer.",
                     )}
               </AppText>
-              <View style={[styles.stars, !hasPlayedWith && styles.disabled]}>
-                {[1, 2, 3, 4, 5].map((stars) => (
-                  <Pressable
-                    accessibilityLabel={`${stars}/5`}
-                    disabled={!canRateProfile(profile.level, hasPlayedWith) || rating.isPending}
-                    key={stars}
-                    onPress={() => rating.mutate(stars)}
-                    style={({ pressed }) => pressed && styles.starPressed}
-                  >
-                    <Ionicons
-                      color={(myRating ?? 0) >= stars ? palette.bronze : palette.muted}
-                      name={(myRating ?? 0) >= stars ? 'star' : 'star-outline'}
-                      size={28}
-                    />
-                  </Pressable>
-                ))}
+              <View accessibilityRole="radiogroup" style={styles.stars}>
+                {[1, 2, 3, 4, 5].map((stars) => {
+                  const filled = (myRating ?? 0) >= stars;
+                  const enabled = canRateProfile(profile.level, hasPlayedWith) && !rating.isPending;
+                  return (
+                    <Pressable
+                      accessibilityLabel={`${stars}/5`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ disabled: !enabled, selected: myRating === stars }}
+                      disabled={!enabled}
+                      key={stars}
+                      onPress={() => rating.mutate(stars)}
+                      style={({ pressed }) => [
+                        styles.star,
+                        pressed && pressedStyle,
+                        !enabled && disabledStyle,
+                      ]}
+                    >
+                      <Ionicons
+                        color={filled ? palette.electric : palette.muted}
+                        name={filled ? 'star' : 'star-outline'}
+                        size={28}
+                      />
+                    </Pressable>
+                  );
+                })}
               </View>
               {myRating !== null ? (
-                <Pressable onPress={() => rating.mutate(null)}>
-                  <AppText color={palette.muted} variant="caption">
+                <View style={styles.playedRow}>
+                  <DispoButton onPress={() => rating.mutate(null)} size="compact" variant="ghost">
                     {t('Retirer ma note')}
-                  </AppText>
-                </Pressable>
+                  </DispoButton>
+                </View>
               ) : null}
             </>
           ) : null}
@@ -641,42 +553,42 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
       ) : null}
 
       <View style={styles.section}>
-        <SectionTitle icon="play-outline" title={t('Démos')} />
+        <SectionHeader title={t('Démos')} />
         {profile.demoVideos?.length ? (
           <View style={styles.videoGrid}>
-            {profile.demoVideos.map((video, index) => (
-              <Pressable
-                accessibilityRole="button"
-                key={video.id}
-                onPress={() =>
-                  router.push({
-                    params: {
-                      id: profile.id,
-                      title: video.title || formatSwiftPlaceholders(t('Vidéo %lld'), index + 1),
-                      url: video.url,
-                    },
-                    pathname: '/profiles/[id]/video',
-                  } as never)
-                }
-                style={({ pressed }) => [styles.videoTile, pressed && styles.pressed]}
-              >
-                {video.thumbUrl ? (
-                  <Image
-                    contentFit="cover"
-                    source={{ uri: video.thumbUrl }}
-                    style={StyleSheet.absoluteFill}
-                  />
-                ) : (
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: palette.bronze }]} />
-                )}
-                <Ionicons color="#FFFFFF" name="play-circle" size={32} style={styles.videoPlay} />
-                <View style={styles.videoCaption}>
-                  <AppText color="#FFFFFF" numberOfLines={1} variant="caption2">
-                    {video.title || formatSwiftPlaceholders(t('Vidéo %lld'), index + 1)}
-                  </AppText>
-                </View>
-              </Pressable>
-            ))}
+            {profile.demoVideos.map((video, index) => {
+              const title = video.title || formatSwiftPlaceholders(t('Vidéo %lld'), index + 1);
+              return (
+                <Pressable
+                  accessibilityLabel={`${t('Lire')} · ${title}`}
+                  accessibilityRole="button"
+                  key={video.id}
+                  onPress={() =>
+                    router.push({
+                      params: { id: profile.id, title, url: video.url },
+                      pathname: '/profiles/[id]/video',
+                    } as never)
+                  }
+                  style={({ pressed }) => [styles.videoTile, pressed && pressedStyle]}
+                >
+                  {video.thumbUrl ? (
+                    <Image
+                      contentFit="cover"
+                      source={{ uri: video.thumbUrl }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  ) : (
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: palette.bronze }]} />
+                  )}
+                  <Ionicons color={onAccent} name="play-circle" size={32} />
+                  <View style={styles.videoCaption}>
+                    <AppText color={onAccent} numberOfLines={1} variant="caption2">
+                      {title}
+                    </AppText>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         ) : profile.isDemo ? (
           <View style={styles.videoGrid}>
@@ -688,7 +600,7 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
                   { backgroundColor: index % 2 ? palette.electric : palette.bronze },
                 ]}
               >
-                <Ionicons color="#FFFFFF" name="play" size={18} />
+                <Ionicons color={onAccent} name="play" size={18} />
               </View>
             ))}
             <AppText color={palette.muted} style={styles.demoNote} variant="caption2">
@@ -710,8 +622,8 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: spacing.xs },
   actions: { gap: spacing.xs },
   availabilityDot: {
-    borderRadius: 8,
-    borderWidth: 2.5,
+    borderRadius: radii.round,
+    borderWidth: 2,
     bottom: 1,
     height: 16,
     position: 'absolute',
@@ -719,94 +631,42 @@ const styles = StyleSheet.create({
     width: 16,
   },
   demoNote: { width: '100%' },
-  disabled: { opacity: 0.45 },
-  groupAvatar: { borderRadius: 20, height: 40, width: 40 },
+  groupAvatar: { borderRadius: radii.round, height: 40, width: 40 },
   groupFallback: { alignItems: 'center', justifyContent: 'center' },
-  groupRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  groupText: { flex: 1, gap: 2 },
-  headerStats: { flex: 1, flexDirection: 'row' },
-  identity: { alignItems: 'flex-start', gap: 7 },
-  managementCopy: { flex: 1, gap: spacing.xxxs },
-  managementDivider: { height: StyleSheet.hairlineWidth, marginLeft: 62 },
-  managementIcon: {
-    alignItems: 'center',
-    borderRadius: 13,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  managementRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 66,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  manageLabel: { fontWeight: '800' },
+  headerStats: { flex: 1, minWidth: 0 },
+  identity: { alignItems: 'flex-start', gap: spacing.xs },
   name: { flexShrink: 1 },
-  nameRow: { alignItems: 'center', flexDirection: 'row', gap: 7 },
-  playedButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: radii.button,
-    flexDirection: 'row',
-    gap: 7,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  playedLabel: { fontWeight: '800' },
-  pressed: { opacity: 0.84, transform: [{ scale: 0.97 }] },
-  profileHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.gutter },
-  rateHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  repertoireRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  nameRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  playedRow: { alignSelf: 'flex-start' },
+  profileHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   root: { gap: spacing.md },
   section: { gap: spacing.sm },
-  sectionHeading: { flexShrink: 1, fontWeight: '800' },
-  sectionTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  selfControls: { gap: spacing.xs },
-  schoolManageCopy: { flex: 1, gap: spacing.xxxs },
-  schoolManageIcon: {
+  star: {
     alignItems: 'center',
-    borderRadius: 13,
-    height: 42,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 42,
+    width: minimumTouchTarget,
   },
-  schoolManageRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  social: {
-    alignItems: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  socials: { flexDirection: 'row', gap: spacing.xs },
-  starPressed: { transform: [{ scale: 0.85 }] },
   stars: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  stat: { alignItems: 'center', flex: 1, gap: 2, justifyContent: 'center' },
-  statValue: { fontFamily: typography.monoSemibold, fontSize: 17, textAlign: 'center' },
-  tags: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tripCopy: { flex: 1, gap: spacing.xxxs },
+  tags: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.tight },
+  tripCopy: { flex: 1, gap: spacing.xxs },
   tripRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   videoCaption: {
-    backgroundColor: 'rgba(0,0,0,0.48)',
+    backgroundColor: scrimColor,
     bottom: 0,
     left: 0,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
+    paddingHorizontal: spacing.tight,
+    paddingVertical: spacing.xxs,
     position: 'absolute',
     right: 0,
   },
-  videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
-  videoPlay: { alignSelf: 'center' },
+  videoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs },
   videoTile: {
     alignItems: 'center',
     aspectRatio: 1,
-    borderRadius: 5,
+    borderRadius: radii.xs,
     justifyContent: 'center',
     overflow: 'hidden',
-    width: '32.6%',
+    width: '32%',
   },
 });

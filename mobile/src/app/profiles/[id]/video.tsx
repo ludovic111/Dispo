@@ -1,12 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { IconButton } from '@/components/ui/pressable';
 import { EmptyState } from '@/components/ui/screen';
 import { ProfileVideoPlayer } from '@/features/media/profile-video';
 import { isPlayableProfileVideoUrl } from '@/features/media/profile-video-url';
+import { onAccent, spacing } from '@/theme/tokens';
+
+/** Fond du lecteur plein écran : noir vidéo, identique dans les deux thèmes. */
+const playerBackground = '#000000';
 
 export default function ProfileVideoScreen() {
   const { t } = useTranslation();
@@ -32,33 +36,21 @@ export default function ProfileVideoScreen() {
           />
         </View>
       )}
-      <Pressable
-        accessibilityLabel={t('Fermer')}
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={() => router.back()}
-        style={({ pressed }) => [
-          styles.close,
-          { top: Math.max(insets.top, 12) + 4 },
-          pressed && styles.closePressed,
-        ]}
-      >
-        <Ionicons color="#FFFFFF" name="close-circle" size={34} />
-      </Pressable>
+      <View style={[styles.close, { top: Math.max(insets.top, spacing.sm) + spacing.xxs }]}>
+        <IconButton
+          accessibilityLabel={t('Fermer')}
+          icon="close-circle"
+          iconColor={onAccent}
+          onPress={() => router.back()}
+          variant="plain"
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  close: {
-    position: 'absolute',
-    right: 16,
-    shadowColor: '#000000',
-    shadowOffset: { height: 1, width: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 4,
-  },
-  closePressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
-  empty: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  root: { backgroundColor: '#000000', flex: 1 },
+  close: { position: 'absolute', right: spacing.md },
+  empty: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+  root: { backgroundColor: playerBackground, flex: 1 },
 });

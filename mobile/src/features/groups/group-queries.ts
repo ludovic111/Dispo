@@ -175,7 +175,7 @@ export function patchGroupMessageCache(
   return { ...data, pages };
 }
 
-export function patchGroupListMessage(
+function patchGroupListMessage(
   groups: readonly MusicGroup[] | undefined,
   incoming: GroupMessage,
 ): MusicGroup[] | undefined {

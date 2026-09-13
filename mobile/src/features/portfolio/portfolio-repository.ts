@@ -92,10 +92,7 @@ function ownedStoragePaths(userId: string, paths: readonly (string | null)[]): s
   return [...new Set(paths.filter((path): path is string => Boolean(path?.startsWith(prefix))))];
 }
 
-export async function deleteDemoMediaFiles(
-  userId: string,
-  paths: readonly string[],
-): Promise<void> {
+async function deleteDemoMediaFiles(userId: string, paths: readonly string[]): Promise<void> {
   const ownedPaths = ownedStoragePaths(userId, paths);
   if (ownedPaths.length === 0) return;
   const { error } = await getSupabaseClient().storage.from(DEMO_VIDEO_BUCKET).remove(ownedPaths);
@@ -119,7 +116,7 @@ async function uploadThumbnail(
   return { path, url: data.publicUrl };
 }
 
-export async function uploadDemoVideo(
+async function uploadDemoVideo(
   userId: string,
   prepared: PreparedDemoVideo,
 ): Promise<UploadedDemoVideo> {

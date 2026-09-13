@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { disconnectWithBestEffortPushCleanup } from './account-session';
-import { SettingsShell } from './settings-components';
+import { SettingsErrorBanner, SettingsShell } from './settings-components';
 import { deleteCurrentAccount, unregisterPushDevice } from './settings-service';
 import { clearPushToken, loadPushToken } from './settings-storage';
 
@@ -15,7 +15,7 @@ import { DispoButton } from '@/components/ui/pressable';
 import { useAuth } from '@/features/auth/auth-context';
 import { signOut } from '@/features/auth/auth-service';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
 
 export function AccountScreen() {
   const { session } = useAuth();
@@ -95,34 +95,42 @@ export function AccountScreen() {
     );
   };
 
+  const statusColor = session ? palette.jam : palette.bronze;
+
   return (
     <SettingsShell nativeHeader>
-      <View style={styles.header}>
-        <View style={[styles.cloudIcon, { backgroundColor: `${palette.bronze}20` }]}>
-          <Ionicons
-            color={session ? palette.jam : palette.bronze}
-            name={session ? 'cloud-done' : 'cloud-outline'}
-            size={28}
-          />
+      <Card>
+        <View style={styles.introRow}>
+          <View style={[styles.introIcon, { backgroundColor: tint(statusColor, 0.12) }]}>
+            <Ionicons
+              color={statusColor}
+              name={session ? 'cloud-done' : 'cloud-outline'}
+              size={24}
+            />
+          </View>
+          <View style={styles.introCopy}>
+            <AppText variant="headline">
+              {session ? t('Connecté au réseau Dispo') : t('Rejoins le réseau Dispo')}
+            </AppText>
+            <AppText color={palette.muted} variant="footnote">
+              {session
+                ? t('Ton profil, les annonces SOS et tes messages sont synchronisés en temps réel.')
+                : t(
+                    'Ton profil devient visible des autres musiciens — annonces SOS et messages en temps réel.',
+                  )}
+            </AppText>
+          </View>
         </View>
-        <AppText style={styles.headerTitle}>
-          {session ? t('Connecté au réseau Dispo') : t('Rejoins le réseau Dispo')}
-        </AppText>
-        <AppText color={palette.muted} style={styles.headerCopy} variant="caption">
-          {session
-            ? t('Ton profil, les annonces SOS et tes messages sont synchronisés en temps réel.')
-            : t(
-                'Ton profil devient visible des autres musiciens — annonces SOS et messages en temps réel.',
-              )}
-        </AppText>
-      </View>
+      </Card>
 
       {session ? (
-        <Card padding={spacing.md} style={styles.card}>
+        <Card style={styles.card}>
           <View style={styles.sessionRow}>
             <View style={[styles.liveDot, { backgroundColor: palette.jam }]} />
-            <View style={styles.sessionCopy}>
-              <AppText style={styles.email}>{session.user.email ?? t('Connecté')}</AppText>
+            <View style={styles.introCopy}>
+              <AppText variant="subheadline" weight="semibold">
+                {session.user.email ?? t('Connecté')}
+              </AppText>
               <AppText color={palette.muted} variant="caption">
                 {t('Compte connecté')}
               </AppText>
@@ -153,52 +161,23 @@ export function AccountScreen() {
         </DispoButton>
       )}
 
-      {errorText ? (
-        <View
-          style={[
-            styles.error,
-            { backgroundColor: `${palette.signal}18`, borderColor: `${palette.signal}55` },
-          ]}
-        >
-          <Ionicons color={palette.signal} name="warning" size={17} />
-          <AppText color={palette.signal} style={styles.errorCopy} variant="caption">
-            {errorText}
-          </AppText>
-        </View>
-      ) : null}
+      <SettingsErrorBanner text={errorText} />
     </SettingsShell>
   );
 }
 
 const styles = StyleSheet.create({
   card: { gap: spacing.md },
-  cloudIcon: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    height: 64,
-    justifyContent: 'center',
-    width: 64,
-  },
   divider: { height: StyleSheet.hairlineWidth },
-  email: { fontSize: 14, fontWeight: '800' },
-  error: {
+  introCopy: { flex: 1, gap: spacing.xxs },
+  introIcon: {
     alignItems: 'center',
-    borderRadius: radii.ticket,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.sm,
+    borderRadius: radii.sm,
+    height: minimumTouchTarget,
+    justifyContent: 'center',
+    width: minimumTouchTarget,
   },
-  errorCopy: { flex: 1 },
-  header: {
-    alignItems: 'center',
-    gap: 9,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  headerCopy: { maxWidth: 330, textAlign: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '800', textAlign: 'center' },
+  introRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   liveDot: { borderRadius: radii.round, height: 10, width: 10 },
-  sessionCopy: { flex: 1, gap: 2 },
   sessionRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
 });

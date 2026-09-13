@@ -10,8 +10,9 @@ import {
 } from './message-model';
 
 import { AppText } from '@/components/ui/app-text';
+import { IconButton } from '@/components/ui/pressable';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { disabledStyle, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 function attachmentIcon(
   contentType: string,
@@ -39,10 +40,10 @@ export function PendingAttachmentChip({
     <View
       style={[
         styles.draft,
-        { backgroundColor: palette.card, borderColor: `${palette.electric}3D` },
+        { backgroundColor: palette.card, borderColor: tint(palette.electric, 0.24) },
       ]}
     >
-      <View style={[styles.draftIcon, { backgroundColor: `${palette.electric}1F` }]}>
+      <View style={[styles.draftIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
         <Ionicons
           color={palette.electric}
           name={attachmentIcon(attachment.contentType, attachment.fileName)}
@@ -50,22 +51,20 @@ export function PendingAttachmentChip({
         />
       </View>
       <View style={styles.copy}>
-        <AppText numberOfLines={1} style={styles.fileName} variant="caption">
+        <AppText numberOfLines={1} variant="caption" weight="semibold">
           {attachment.fileName}
         </AppText>
         <AppText color={palette.muted} variant="caption2">
           {formatAttachmentBytes(attachment.byteCount, locale)}
         </AppText>
       </View>
-      <Pressable
+      <IconButton
         accessibilityLabel={t('Retirer le fichier')}
-        accessibilityRole="button"
-        hitSlop={8}
+        icon="close"
+        iconColor={palette.muted}
         onPress={onRemove}
-        style={({ pressed }) => pressed && styles.pressed}
-      >
-        <Ionicons color={palette.muted} name="close-circle" size={21} />
-      </Pressable>
+        variant="plain"
+      />
     </View>
   );
 }
@@ -86,18 +85,17 @@ export function MessageAttachmentCard({
     <Pressable
       accessibilityLabel={`${t('Ouvrir le fichier')} ${attachment.fileName}`}
       accessibilityRole="button"
+      accessibilityState={{ busy: isLoading, disabled: isLoading }}
       disabled={isLoading}
       onPress={onOpen}
       style={({ pressed }) => [
         styles.card,
-        {
-          backgroundColor: palette.inset,
-          borderColor: `${palette.electric}38`,
-        },
-        pressed && styles.pressed,
+        { backgroundColor: palette.inset, borderColor: tint(palette.electric, 0.22) },
+        pressed && pressedStyle,
+        isLoading && disabledStyle,
       ]}
     >
-      <View style={[styles.cardIcon, { backgroundColor: `${palette.electric}24` }]}>
+      <View style={[styles.cardIcon, { backgroundColor: tint(palette.electric, 0.14) }]}>
         {isLoading ? (
           <ActivityIndicator color={palette.electric} size="small" />
         ) : (
@@ -109,7 +107,7 @@ export function MessageAttachmentCard({
         )}
       </View>
       <View style={styles.copy}>
-        <AppText color={palette.text} numberOfLines={2} style={styles.fileName} variant="caption">
+        <AppText color={palette.text} numberOfLines={2} variant="caption" weight="semibold">
           {attachment.fileName}
         </AppText>
         <AppText color={palette.muted} variant="caption2">
@@ -124,16 +122,16 @@ export function MessageAttachmentCard({
 const styles = StyleSheet.create({
   card: {
     alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.control,
+    gap: spacing.sm,
     minWidth: 210,
-    padding: spacing.control,
+    padding: spacing.sm,
   },
   cardIcon: {
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: radii.xs,
     height: 38,
     justifyContent: 'center',
     width: 38,
@@ -141,19 +139,17 @@ const styles = StyleSheet.create({
   copy: { flex: 1 },
   draft: {
     alignItems: 'center',
-    borderRadius: 13,
-    borderWidth: 1,
+    borderRadius: radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.control,
-    padding: spacing.chip,
+    gap: spacing.sm,
+    paddingLeft: spacing.xs,
   },
   draftIcon: {
     alignItems: 'center',
-    borderRadius: 9,
+    borderRadius: radii.xs,
     height: 30,
     justifyContent: 'center',
     width: 30,
   },
-  fileName: { fontWeight: '700' },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
 });

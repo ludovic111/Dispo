@@ -8,12 +8,12 @@ import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { repertoireStyles } from './repertoire-model';
 import { addPersonalSong } from './repertoire-repository';
 
-import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { type GroupSong } from '@/features/groups/group-model';
 import {
@@ -86,7 +86,7 @@ export function RepertoireAddScreen() {
   if (subscription.data?.tier !== 'premium')
     return (
       <Screen nativeHeader>
-        <View style={{ padding: 18 }}>
+        <View style={styles.access}>
           <SubscriptionAccessCard />
         </View>
       </Screen>
@@ -133,7 +133,7 @@ export function RepertoireAddScreen() {
           )}
         />
         <Card style={styles.section}>
-          <AppText variant="headline">{t('Style')}</AppText>
+          <SectionHeader title={t('Style')} />
           <View style={styles.chips}>
             {repertoireStyles.map((style) => (
               <ChoiceChip
@@ -155,6 +155,7 @@ export function RepertoireAddScreen() {
   );
 }
 const styles = StyleSheet.create({
+  access: { padding: spacing.gutter },
   content: { padding: spacing.gutter, paddingBottom: spacing.xxl, gap: spacing.sm },
   section: { gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

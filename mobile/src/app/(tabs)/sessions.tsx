@@ -6,14 +6,14 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
   AttendanceAnswerCard,
   DirectAnswerCard,
   NextSessionCard,
   PastSummaryCard,
   SessionRow,
-  SessionsSectionHeading,
-  SessionsSegmentedControl,
   sessionMonthLabel,
 } from '@/features/sessions/session-cards';
 import {
@@ -80,6 +80,7 @@ export default function SessionsScreen() {
         ? t('Réponses attendues', { count: waiting })
         : t('Dates à venir', { count: sessions.length });
   const mutationError = attendanceMutation.error ?? directMutation.error;
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
 
   return (
     <Screen nativeTabRoot>
@@ -101,11 +102,18 @@ export default function SessionsScreen() {
           title={t('Sessions')}
         />
 
-        <SessionsSegmentedControl onChange={setScope} value={scope} />
+        <SegmentedControl
+          onChange={setScope}
+          options={[
+            { label: t('À venir'), value: 'upcoming' },
+            { label: t('Passés'), value: 'past' },
+          ]}
+          value={scope}
+        />
 
         {scope === 'upcoming' && (data?.pendingResponses.length ?? 0) > 0 ? (
           <View style={styles.section}>
-            <SessionsSectionHeading
+            <SectionHeader
               subtitle={t(
                 'Un tap suffit — en face, on sait tout de suite s’il faut chercher quelqu’un d’autre',
               )}
@@ -113,7 +121,12 @@ export default function SessionsScreen() {
             />
             {mutationError ? (
               <Card>
-                <AppText color={palette.signal} style={styles.mutationError} variant="caption">
+                <AppText
+                  color={palette.error}
+                  style={styles.mutationError}
+                  variant="caption"
+                  weight="semibold"
+                >
                   {t('La réponse n’a pas pu être envoyée.')}
                 </AppText>
               </Card>
@@ -156,7 +169,7 @@ export default function SessionsScreen() {
 
         {scope === 'upcoming' && presentation.featured ? (
           <View style={styles.section}>
-            <SessionsSectionHeading title={t('Prochaine date')} />
+            <SectionHeader title={t('Prochaine date')} />
             <NextSessionCard
               item={presentation.featured}
               onPress={openSession(presentation.featured)}
@@ -181,10 +194,8 @@ export default function SessionsScreen() {
         ) : null}
 
         {months.map((month) => (
-          <View key={month.key} style={styles.month}>
-            <AppText color={palette.muted} style={styles.monthLabel} variant="label">
-              {sessionMonthLabel(month.key, i18n.resolvedLanguage ?? i18n.language ?? 'fr')}
-            </AppText>
+          <View key={month.key} style={styles.section}>
+            <SectionHeader title={sessionMonthLabel(month.key, locale)} />
             {month.sessions.map((item) => (
               <SessionRow
                 isPast={scope === 'past'}
@@ -204,10 +215,8 @@ const styles = StyleSheet.create({
   content: {
     gap: spacing.lg,
     paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.gutter,
   },
-  month: { gap: spacing.sm },
-  monthLabel: { letterSpacing: 1.3 },
-  mutationError: { fontWeight: '700', textAlign: 'center' },
+  mutationError: { textAlign: 'center' },
   section: { gap: spacing.sm },
 });

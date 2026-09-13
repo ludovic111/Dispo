@@ -4,15 +4,16 @@ import { router, useFocusEffect } from 'expo-router';
 import type { Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, View } from 'react-native';
 
 import {
-  IconBadge,
   SelectionDot,
   SettingsDivider,
+  SettingsErrorBanner,
   SettingsRow,
   SettingsSection,
   SettingsShell,
+  SettingsValueAccessory,
 } from './settings-components';
 import {
   appearanceOptions,
@@ -34,12 +35,13 @@ import {
 import { loadNotificationsEnabled } from './settings-storage';
 
 import { AppText } from '@/components/ui/app-text';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import { linkAppleIdentity } from '@/features/auth/auth-service';
 import { countryOptions, languageOptions } from '@/features/onboarding/onboarding-model';
 import i18n from '@/i18n';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 const validLocationPrecisions = new Set<LocationPrecision>([
   'city',
@@ -133,19 +135,7 @@ export function SettingsScreen() {
 
   return (
     <SettingsShell nativeHeader>
-      {errorText ? (
-        <View
-          style={[
-            styles.errorBanner,
-            { backgroundColor: `${palette.signal}18`, borderColor: `${palette.signal}55` },
-          ]}
-        >
-          <Ionicons color={palette.signal} name="warning" size={17} />
-          <AppText color={palette.signal} style={styles.errorCopy} variant="caption">
-            {errorText}
-          </AppText>
-        </View>
-      ) : null}
+      <SettingsErrorBanner text={errorText} />
 
       <SettingsSection title={t('Compte')}>
         <SettingsRow
@@ -168,17 +158,12 @@ export function SettingsScreen() {
                 ) : appleLinked ? (
                   <View style={styles.linkedStatus}>
                     <Ionicons color={palette.jam} name="checkmark-circle" size={17} />
-                    <AppText color={palette.jam} style={styles.linkedText} variant="caption">
+                    <AppText color={palette.jam} variant="footnote" weight="semibold">
                       {t('Lié')}
                     </AppText>
                   </View>
                 ) : (
-                  <View style={styles.linkedStatus}>
-                    <AppText color={palette.text} style={styles.linkedText} variant="caption">
-                      {t('Lier')}
-                    </AppText>
-                    <Ionicons color={palette.muted} name="chevron-forward" size={16} />
-                  </View>
+                  <SettingsValueAccessory value={t('Lier')} />
                 )
               }
               title={appleLinked ? t('Compte Apple') : t('Lier mon compte Apple')}
@@ -192,55 +177,30 @@ export function SettingsScreen() {
           color={palette.electric}
           icon="notifications"
           onPress={() => router.push('/notifications' as Href)}
-          right={
-            <View style={styles.rowRight}>
-              <AppText color={palette.muted} variant="caption">
-                {notificationLabel}
-              </AppText>
-              <Ionicons color={palette.muted} name="chevron-forward" size={16} />
-            </View>
-          }
+          right={<SettingsValueAccessory value={notificationLabel} />}
           title={t('Notifications')}
         />
       </SettingsSection>
 
       <SettingsSection title={t('Préférences')}>
-        <View style={styles.appearanceRow}>
-          <IconBadge
-            color={palette.electric}
-            icon={
-              appearanceOptions.find((option) => option.value === appearance)?.icon ??
-              'contrast-outline'
-            }
+        <SettingsRow
+          color={palette.electric}
+          icon={
+            appearanceOptions.find((option) => option.value === appearance)?.icon ??
+            'contrast-outline'
+          }
+          right={<View />}
+          title={t('Apparence')}
+        />
+        <View style={styles.appearanceControl}>
+          <SegmentedControl<AppearancePreference>
+            onChange={selectAppearance}
+            options={appearanceOptions.map((option) => ({
+              label: t(option.label),
+              value: option.value,
+            }))}
+            value={appearance}
           />
-          <View style={styles.appearanceCopy}>
-            <AppText style={styles.preferenceTitle}>{t('Apparence')}</AppText>
-            <View style={styles.appearanceOptions}>
-              {appearanceOptions.map((option) => {
-                const active = appearance === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => selectAppearance(option.value)}
-                    style={({ pressed }) => [
-                      styles.appearancePill,
-                      {
-                        backgroundColor: active ? `${palette.electric}22` : palette.inset,
-                        borderColor: active ? `${palette.electric}77` : 'transparent',
-                      },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <AppText style={styles.appearanceLabel} variant="caption">
-                      {t(option.label)}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
         </View>
         <SettingsDivider />
         <SettingsRow
@@ -294,7 +254,6 @@ export function SettingsScreen() {
           detail={t('Un groupe avec Dispo Groupe, tous les outils avec Premium.')}
           icon="pricetags"
           onPress={() => router.push('/premium' as Href)}
-          right={<Ionicons color={palette.muted} name="chevron-forward" size={16} />}
           title={t('Dispo Groupe & Premium')}
         />
       </SettingsSection>
@@ -304,7 +263,6 @@ export function SettingsScreen() {
           color={palette.electric}
           icon="play-circle"
           onPress={() => router.push('/welcome' as Href)}
-          right={<Ionicons color={palette.muted} name="chevron-forward" size={16} />}
           title={t("Revoir l'onboarding")}
         />
         <SettingsDivider />
@@ -313,7 +271,7 @@ export function SettingsScreen() {
           detail="ludovic@dispoapp.net"
           icon="mail"
           onPress={() => void Linking.openURL('mailto:ludovic@dispoapp.net')}
-          right={<Ionicons color={palette.muted} name="open-outline" size={16} />}
+          right={<SettingsValueAccessory icon="open-outline" />}
           title={t('Contacter le support')}
         />
         <SettingsDivider />
@@ -321,7 +279,7 @@ export function SettingsScreen() {
           color={palette.bronze}
           icon="help-circle"
           onPress={() => void Linking.openURL(supportPage(i18n.resolvedLanguage ?? 'fr'))}
-          right={<Ionicons color={palette.muted} name="open-outline" size={16} />}
+          right={<SettingsValueAccessory icon="open-outline" />}
           title={t("Centre d'aide")}
         />
         <SettingsDivider />
@@ -329,7 +287,7 @@ export function SettingsScreen() {
           color={palette.bronze}
           icon="hand-left"
           onPress={() => void Linking.openURL(privacyPage(i18n.resolvedLanguage ?? 'fr'))}
-          right={<Ionicons color={palette.muted} name="open-outline" size={16} />}
+          right={<SettingsValueAccessory icon="open-outline" />}
           title={t('Confidentialité')}
         />
         <SettingsDivider />
@@ -337,7 +295,7 @@ export function SettingsScreen() {
           color={palette.bronze}
           icon="document-text"
           onPress={() => void Linking.openURL(termsPage)}
-          right={<Ionicons color={palette.muted} name="open-outline" size={16} />}
+          right={<SettingsValueAccessory icon="open-outline" />}
           title={t('Conditions d’utilisation')}
         />
         <SettingsDivider />
@@ -345,14 +303,7 @@ export function SettingsScreen() {
           color={palette.bronze}
           icon="sparkles"
           onPress={() => router.push('/patch-notes' as Href)}
-          right={
-            <View style={styles.rowRight}>
-              <AppText color={palette.muted} variant="caption">
-                v{version}
-              </AppText>
-              <Ionicons color={palette.muted} name="chevron-forward" size={16} />
-            </View>
-          }
+          right={<SettingsValueAccessory value={`v${version}`} />}
           title={t('Nouveautés')}
         />
       </SettingsSection>
@@ -365,38 +316,7 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  appearanceCopy: { flex: 1, gap: spacing.xs },
-  appearanceLabel: { fontSize: 10, fontWeight: '800' },
-  appearanceOptions: { flexDirection: 'row', gap: 6 },
-  appearancePill: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    borderWidth: 1,
-    minHeight: minimumTouchTarget,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  appearanceRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: 12,
-    minHeight: 70,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  errorBanner: {
-    alignItems: 'center',
-    borderRadius: radii.ticket,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
-  errorCopy: { flex: 1 },
+  appearanceControl: { paddingBottom: spacing.sm, paddingHorizontal: spacing.sm },
   footerText: { paddingBottom: spacing.sm, textAlign: 'center' },
-  linkedStatus: { alignItems: 'center', flexDirection: 'row', gap: 5 },
-  linkedText: { fontWeight: '800' },
-  preferenceTitle: { fontSize: 15, fontWeight: '600' },
-  pressed: { opacity: 0.72 },
-  rowRight: { alignItems: 'center', flexDirection: 'row', gap: 7 },
+  linkedStatus: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
 });

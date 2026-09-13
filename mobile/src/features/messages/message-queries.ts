@@ -38,7 +38,7 @@ import type { Page } from '@/domain/pagination';
 import { useAuth } from '@/features/auth/auth-context';
 import { useReadThreadNotifications } from '@/features/notifications/use-read-thread-notifications';
 
-export const messageKeys = {
+const messageKeys = {
   contact: (userId: string, conversationId: string) =>
     ['messages', 'contact', userId, conversationId] as const,
   conversations: (userId: string) => ['messages', 'conversations', userId] as const,

@@ -103,7 +103,7 @@ function destinationTime(destination: GroupSongCopyDestination): number | null {
  * Conserve les événements passés, place toutes les dates dans l'ordre
  * chronologique, puis les événements sans date et enfin les répertoires.
  */
-export function sortGroupSongCopyDestinations(
+function sortGroupSongCopyDestinations(
   destinations: readonly GroupSongCopyDestination[],
 ): GroupSongCopyDestination[] {
   return [...destinations].sort((left, right) => {

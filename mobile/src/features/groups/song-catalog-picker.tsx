@@ -10,8 +10,9 @@ import { SongArtwork, SongStoreBadge } from './group-song-row';
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
+import { SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export function SongCatalogPicker({
   onSelect,
@@ -37,7 +38,7 @@ export function SongCatalogPicker({
   });
   return (
     <Card style={styles.card}>
-      <AppText variant="title">{t('Catalogue musical')}</AppText>
+      <SectionHeader title={t('Catalogue musical')} />
       <FormField
         label={t('Chercher')}
         value={search}
@@ -55,20 +56,26 @@ export function SongCatalogPicker({
         query.data?.map((item) => (
           <Pressable
             key={item.catalogId}
+            accessibilityLabel={`${item.title} — ${item.artist}`}
             accessibilityRole="button"
+            accessibilityState={{ selected: selectedId === item.catalogId }}
             onPress={() => {
               onSelect(item);
               setSearch('');
               setTerm('');
             }}
-            style={[styles.row, { borderBottomColor: palette.border }]}
+            style={({ pressed }) => [
+              styles.row,
+              { borderBottomColor: palette.border },
+              pressed && pressedStyle,
+            ]}
           >
-            <SongArtwork song={item} radius={8} size={42} />
+            <SongArtwork song={item} radius={radii.xs} size={42} />
             <View style={styles.copy}>
-              <AppText numberOfLines={1} style={styles.bold}>
+              <AppText numberOfLines={2} variant="headline">
                 {item.title}
               </AppText>
-              <AppText color={palette.muted} numberOfLines={1} variant="caption2">
+              <AppText color={palette.muted} numberOfLines={1} variant="caption">
                 {item.artist}
                 {item.albumTitle ? ` · ${item.albumTitle}` : ''}
               </AppText>
@@ -96,12 +103,12 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   row: {
     alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.xs,
+    minHeight: minimumTouchTarget,
     paddingVertical: spacing.xs,
-    borderBottomWidth: 1,
   },
   copy: { flex: 1, minWidth: 0 },
-  bold: { fontWeight: '700' },
   analysis: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });

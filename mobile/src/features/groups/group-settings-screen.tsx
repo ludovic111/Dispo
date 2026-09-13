@@ -1,10 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { GroupAvatar } from './group-avatar';
 import { useDeleteGroup, useGroup, useGroupPhoto, useUpdateGroupSettings } from './group-queries';
@@ -13,8 +12,10 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { usePremiumCapability } from '@/features/premium/subscription-queries';
@@ -130,17 +131,15 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
           <FormField
+            hint={t('Le nouveau nom s’affiche chez tous les membres.')}
             label={t('Nom du groupe')}
             onChangeText={setNameOverride}
             placeholder={t('Nom du groupe')}
             value={name}
           />
-          <AppText color={palette.muted} variant="caption">
-            {t('Le nouveau nom s’affiche chez tous les membres.')}
-          </AppText>
         </Card>
         <Card style={styles.card}>
-          <AppText variant="title">{t('Photo du groupe')}</AppText>
+          <SectionHeader title={t('Photo du groupe')} />
           <View style={styles.photoRow}>
             <GroupAvatar
               emoji={group.emoji}
@@ -153,63 +152,59 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
                 disabled={photo.isPending}
                 icon="camera"
                 onPress={() => void pickPhoto()}
+                size="compact"
                 variant="secondary"
               >
                 {group.photoUrl ? t('Changer la photo') : t('Ajouter une photo')}
               </DispoButton>
               {group.photoUrl ? (
-                <Pressable
+                <DispoButton
+                  disabled={photo.isPending}
+                  icon="trash-outline"
                   onPress={() =>
                     photo.mutate({ groupId: group.id, leaderId: group.leaderId, remove: true })
                   }
-                  style={styles.removePhoto}
+                  size="compact"
+                  variant="danger"
                 >
-                  <Ionicons color={palette.signal} name="trash-outline" size={15} />
-                  <AppText color={palette.signal} variant="caption">
-                    {t('Retirer')}
-                  </AppText>
-                </Pressable>
+                  {t('Retirer')}
+                </DispoButton>
               ) : null}
             </View>
           </View>
         </Card>
-        <Card style={styles.card}>
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <AppText variant="title">{t('Groupe public')}</AppText>
-              <AppText color={palette.muted} variant="caption">
-                {t('Visible sur le profil de ses membres.')}
-              </AppText>
-            </View>
+        <ListRow
+          accessory={
             <Switch
+              accessibilityLabel={t('Groupe public')}
               onValueChange={setPublicOverride}
               trackColor={{ false: palette.inset, true: palette.electric }}
               value={isPublic}
             />
-          </View>
-        </Card>
+          }
+          subtitle={t('Visible sur le profil de ses membres.')}
+          title={t('Groupe public')}
+        />
         <Card style={styles.card}>
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <AppText variant="title">{t('Auto-SOS')}</AppText>
-              <AppText color={palette.muted} variant="caption">
-                {t('Cherche automatiquement un remplaçant quand un rôle manque.')}
-              </AppText>
-            </View>
-            <Switch
-              onValueChange={(value) => {
-                if (value && !canAutoSOS) router.push('/premium');
-                else setAutoSosOverride(value);
-              }}
-              trackColor={{ false: palette.inset, true: palette.electric }}
-              value={autoSosEnabled}
-            />
-          </View>
+          <ListRow
+            accessory={
+              <Switch
+                accessibilityLabel={t('Auto-SOS')}
+                onValueChange={(value) => {
+                  if (value && !canAutoSOS) router.push('/premium');
+                  else setAutoSosOverride(value);
+                }}
+                trackColor={{ false: palette.inset, true: palette.electric }}
+                value={autoSosEnabled}
+              />
+            }
+            subtitle={t('Cherche automatiquement un remplaçant quand un rôle manque.')}
+            title={t('Auto-SOS')}
+            tone="plain"
+          />
           {autoSosEnabled && canAutoSOS ? (
             <View style={styles.levels}>
-              <AppText color={palette.bronze} variant="label">
-                {t('Niveau demandé')}
-              </AppText>
+              <SectionHeader title={t('Niveau demandé')} />
               <View style={styles.levelRow}>
                 {autoSosLevelRules.map((rule) => (
                   <ChoiceChip
@@ -247,12 +242,4 @@ const styles = StyleSheet.create({
   levels: { gap: spacing.xs },
   photoActions: { flex: 1, gap: spacing.xs },
   photoRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
-  removePhoto: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    flexDirection: 'row',
-    gap: spacing.xxs,
-  },
-  switchCopy: { flex: 1, gap: spacing.xxs },
-  switchRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
 });

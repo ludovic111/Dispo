@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/app-text';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, onAccent, radii, spacing } from '@/theme/tokens';
 
 export function NetworkBanner() {
   const network = useNetworkState();
@@ -29,8 +29,8 @@ export function NetworkBanner() {
         },
       ]}
     >
-      <Ionicons color="#FFFFFF" name="cloud-offline" size={16} />
-      <AppText color="#FFFFFF" style={styles.label} variant="caption">
+      <Ionicons color={onAccent} name="cloud-offline" size={16} />
+      <AppText color={onAccent} style={styles.label} variant="caption" weight="semibold">
         {t('Hors ligne — les changements seront disponibles dès le retour du réseau.')}
       </AppText>
     </View>
@@ -44,12 +44,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
     left: spacing.gutter,
-    minHeight: 44,
+    minHeight: minimumTouchTarget,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     position: 'absolute',
     right: spacing.gutter,
     zIndex: 100,
   },
-  label: { flex: 1, fontWeight: '800' },
+  label: { flex: 1 },
 });

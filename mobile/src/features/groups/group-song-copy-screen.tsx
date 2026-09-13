@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { GroupSong } from './group-model';
 import { useCopyGroupSong, useGroups } from './group-queries';
@@ -15,13 +15,12 @@ import {
 } from './group-song-copy';
 
 import { AppText } from '@/components/ui/app-text';
-import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
-import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { disabledStyle, spacing } from '@/theme/tokens';
 
 function DestinationRow({
   destination,
@@ -36,71 +35,42 @@ function DestinationRow({
 }) {
   const { i18n, t } = useTranslation();
   const { palette } = useDispoTheme();
+  const duplicate = destination.isAlreadyPresent;
   const date = destination.date
     ? new Intl.DateTimeFormat(i18n.resolvedLanguage || 'fr-CH', { dateStyle: 'full' }).format(
         new Date(destination.date),
       )
     : t('Sans date');
-  const duplicate = destination.isAlreadyPresent;
-  return (
-    <Pressable
+  const meta = [
+    t(destination.type),
+    destination.collection === 'event' ? destination.groupName : null,
+    destination.collection === 'event' ? date : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(' · ');
+  const status = duplicate
+    ? t('Déjà dans cette destination')
+    : destination.isDirect
+      ? t('Ajouté directement')
+      : t('Envoyé comme suggestion');
+  const row = (
+    <ListRow
       accessibilityLabel={`${destination.name}, ${t(destination.type)}, ${destination.groupName}`}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: duplicate || selected, disabled: duplicate || disabled }}
-      disabled={duplicate || disabled}
-      onPress={onToggle}
-      style={({ pressed }) => pressed && styles.pressed}
-    >
-      <Card
-        padding={12}
-        style={[
-          styles.destinationCard,
-          selected && { borderColor: palette.electric },
-          duplicate && styles.duplicate,
-        ]}
-      >
-        <View style={[styles.destinationIcon, { backgroundColor: palette.inset }]}>
-          <Ionicons
-            color={palette.bronze}
-            name={destination.collection === 'event' ? 'calendar' : 'musical-notes'}
-            size={19}
-          />
-        </View>
-        <View style={styles.copy}>
-          <AppText numberOfLines={1} style={styles.destinationTitle}>
-            {destination.name}
-          </AppText>
-          {destination.collection === 'event' ? (
-            <AppText color={palette.muted} variant="caption">
-              {date}
-            </AppText>
-          ) : null}
-          <View style={styles.tags}>
-            <Tag color={palette.bronze} label={t(destination.type)} />
-            {destination.collection === 'event' ? (
-              <Tag color={palette.electric} label={destination.groupName} />
-            ) : null}
-          </View>
-          <AppText
-            color={duplicate ? palette.muted : palette.bronze}
-            style={styles.hint}
-            variant="caption2"
-          >
-            {duplicate
-              ? t('Déjà dans cette destination')
-              : destination.isDirect
-                ? t('Ajouté directement')
-                : t('Envoyé comme suggestion')}
-          </AppText>
-        </View>
+      accessory={
         <Ionicons
           color={duplicate ? palette.muted : selected ? palette.electric : palette.bronze}
           name={duplicate || selected ? 'checkmark-circle' : 'ellipse-outline'}
           size={24}
         />
-      </Card>
-    </Pressable>
+      }
+      leadingIcon={destination.collection === 'event' ? 'calendar' : 'musical-notes'}
+      leadingIconColor={palette.bronze}
+      subtitle={`${meta}\n${status}`}
+      title={destination.name}
+      {...(duplicate || disabled ? {} : { onPress: onToggle })}
+    />
   );
+  return duplicate ? <View style={disabledStyle}>{row}</View> : row;
 }
 
 function resultMessage(
@@ -257,19 +227,12 @@ export function GroupSongCopyScreen({
   return (
     <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.sourceCard}>
-          <View style={[styles.songIcon, { backgroundColor: `${palette.bronze}1f` }]}>
-            <Ionicons color={palette.bronze} name="musical-note" size={20} />
-          </View>
-          <View style={styles.copy}>
-            <AppText numberOfLines={1} style={styles.songTitle}>
-              {song.title}
-            </AppText>
-            <AppText color={palette.muted} numberOfLines={1} variant="caption">
-              {song.artist}
-            </AppText>
-          </View>
-        </Card>
+        <ListRow
+          leadingIcon="musical-note"
+          leadingIconColor={palette.bronze}
+          title={song.title}
+          {...(song.artist ? { subtitle: song.artist } : {})}
+        />
         <AppText color={palette.muted} variant="caption">
           {t('Choisis où copier ce morceau.')}
         </AppText>
@@ -314,38 +277,7 @@ export function GroupSongCopyScreen({
 
 const styles = StyleSheet.create({
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  copy: { flex: 1, gap: 2 },
-  destinationCard: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.control,
-  },
-  destinationIcon: {
-    alignItems: 'center',
-    borderRadius: 11,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
   destinationStack: { gap: spacing.xs },
-  destinationTitle: { fontWeight: '800' },
-  duplicate: { opacity: 0.64 },
   footer: { gap: spacing.xs, paddingTop: spacing.xs },
-  hint: { fontWeight: '700', marginTop: 2 },
-  pressed: { opacity: 0.76 },
   selection: { textAlign: 'center' },
-  songIcon: {
-    alignItems: 'center',
-    borderRadius: 11,
-    height: 42,
-    justifyContent: 'center',
-    width: 42,
-  },
-  songTitle: { fontWeight: '800' },
-  sourceCard: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.control,
-  },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs, marginTop: spacing.xxs },
 });

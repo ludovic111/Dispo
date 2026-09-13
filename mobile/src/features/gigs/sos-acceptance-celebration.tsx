@@ -23,7 +23,11 @@ import {
 import Svg, { Path } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/app-text';
-import { billetInk } from '@/theme/tokens';
+import { useDispoTheme } from '@/theme/theme-context';
+import { billetInk, onAccent, radii, spacing, tint } from '@/theme/tokens';
+
+/** Palette décorative des confettis (aucune signification métier). */
+const CONFETTI_COLORS = ['#24A9F2', '#58D8EF', '#43CEA5', '#EFBC70'] as const;
 
 export interface AcceptedSos {
   title: string;
@@ -35,6 +39,7 @@ export const useSosAcceptanceCelebration = () => useContext(Context);
 
 function AcceptanceEffect({ sos, onComplete }: { sos: Celebration; onComplete: () => void }) {
   const { width, height } = useWindowDimensions();
+  const { palette } = useDispoTheme();
   const { t, i18n } = useTranslation();
   const [progress] = useState(() => new Animated.Value(0));
   const [reduced, setReduced] = useState<boolean | null>(null);
@@ -117,7 +122,7 @@ function AcceptanceEffect({ sos, onComplete }: { sos: Celebration; onComplete: (
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: '#050814',
+              backgroundColor: billetInk,
               opacity: progress.interpolate({
                 inputRange: [0, 0.12, 0.8, 1],
                 outputRange: [0.25, 0.72, 0.72, 0],
@@ -178,8 +183,8 @@ function AcceptanceEffect({ sos, onComplete }: { sos: Celebration; onComplete: (
                   }
                 >
                   <View style={styles.ticket}>
-                    <View style={{ width: seam - 22, gap: 8 }}>
-                      <AppText color="#05856E" variant="caption">
+                    <View style={{ width: seam - 22, gap: spacing.xs }}>
+                      <AppText color={palette.jam} variant="label">
                         {t('SOS')}
                       </AppText>
                       <AppText color={billetInk} numberOfLines={2} variant="title">
@@ -212,10 +217,12 @@ function AcceptanceEffect({ sos, onComplete }: { sos: Celebration; onComplete: (
             },
           ]}
         >
-          <AppText color="#FFFFFF" variant="title">
+          <AppText color={onAccent} variant="title">
             {t('Dépannage accepté')}
           </AppText>
-          <AppText color="#D9E9FF">{t('Retrouve ce rendez-vous dans Sessions')}</AppText>
+          <AppText color={tint(onAccent, 0.82)}>
+            {t('Retrouve ce rendez-vous dans Sessions')}
+          </AppText>
         </Animated.View>
         {!reduced
           ? Array.from({ length: 24 }, (_, index) => {
@@ -228,7 +235,7 @@ function AcceptanceEffect({ sos, onComplete }: { sos: Celebration; onComplete: (
                   style={[
                     styles.confetti,
                     {
-                      backgroundColor: ['#24A9F2', '#58D8EF', '#43CEA5', '#EFBC70'][index % 4],
+                      backgroundColor: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
                       left: width / 2,
                       width: index % 2 ? 5 : 7,
                       opacity: progress.interpolate({
@@ -285,13 +292,18 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   ticket: {
     height: 146,
-    padding: 16,
-    backgroundColor: '#F0F4FF',
-    borderRadius: 18,
+    padding: spacing.md,
+    backgroundColor: onAccent,
+    borderRadius: radii.ticket,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.tight,
   },
-  confirmation: { position: 'absolute', alignItems: 'center', gap: 8, paddingHorizontal: 24 },
-  confetti: { position: 'absolute', bottom: -10, height: 10, borderRadius: 1 },
+  confirmation: {
+    position: 'absolute',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xl,
+  },
+  confetti: { position: 'absolute', bottom: -10, height: 10 },
 });

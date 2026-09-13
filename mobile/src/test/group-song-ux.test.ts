@@ -48,7 +48,7 @@ describe('fiche et tuile morceau', () => {
     expect(row).not.toContain('onLongPress');
     expect(row).toContain("metadata.join(' · ')");
     expect(row).toContain('name="chevron-forward"');
-    expect(row).toContain('name="headset"');
+    expect(row).toContain('icon="headset"');
     expect(repertoire).toContain('const [reorderMode, setReorderMode]');
     expect(repertoire).toContain('const reorderActive = reorderMode');
     expect(repertoire).toContain('<SongReorderList');

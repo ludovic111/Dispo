@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
+import { IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm, type GigFormInitial } from '@/features/gigs/gig-form';
 import type { GigFormDefaults } from '@/features/gigs/gig-model';
@@ -41,7 +41,11 @@ export default function DirectGigRequestScreen() {
   const create = useCreateGig();
   const { t } = useTranslation();
   const back = (
-    <HeaderAction icon="chevron-back" label={t('Retour')} onPress={() => router.back()} />
+    <IconButton
+      accessibilityLabel={t('Retour')}
+      icon="chevron-back"
+      onPress={() => router.back()}
+    />
   );
 
   const waiting =
@@ -128,5 +132,5 @@ export default function DirectGigRequestScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl },
+  content: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
 });

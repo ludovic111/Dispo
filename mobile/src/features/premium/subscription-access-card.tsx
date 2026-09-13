@@ -5,12 +5,13 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { useDispoTheme } from '@/theme/theme-context';
+import { spacing } from '@/theme/tokens';
 
 export function SubscriptionAccessCard({ groupCreation = false }: { groupCreation?: boolean }) {
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   return (
-    <Card style={{ gap: 12 }}>
+    <Card style={{ gap: spacing.sm }}>
       <AppText variant="headline">
         {t(groupCreation ? 'Crée ton groupe' : 'Inclus avec Premium')}
       </AppText>

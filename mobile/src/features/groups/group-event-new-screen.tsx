@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { recurrenceDates, type GroupEventKind, type GroupRecurrence } from './group-model';
 import { useCreateGroupEvents, useGroup } from './group-queries';
@@ -13,8 +13,9 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { NativeDateTimeField } from '@/components/ui/native-date-time-field';
-import { DispoButton } from '@/components/ui/pressable';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { usePremiumCapability } from '@/features/premium/subscription-queries';
@@ -125,7 +126,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
     <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
-          <AppText variant="title">{t('Titre')}</AppText>
+          <SectionHeader title={t('Titre')} />
           <View style={styles.wrap}>
             {eventKinds.map((item) => (
               <ChoiceChip
@@ -139,7 +140,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           </View>
         </Card>
         <Card style={styles.card}>
-          <AppText variant="title">{t('Date et heure')}</AppText>
+          <SectionHeader title={t('Date et heure')} />
           <NativeDateTimeField
             dateLabel={t('Date')}
             minimumDate={new Date()}
@@ -149,7 +150,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           />
         </Card>
         <Card style={styles.card}>
-          <AppText variant="title">{t('Lieu')}</AppText>
+          <SectionHeader title={t('Lieu')} />
           <FormField
             label={t('Salle ou bar')}
             onChangeText={setVenue}
@@ -183,7 +184,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
             placeholder={t('Rue, numéro, entrée…')}
             value={exactAddress}
           />
-          <View style={styles.privateNote}>
+          <View style={styles.note}>
             <Ionicons color={palette.jam} name="shield-checkmark" size={16} />
             <AppText color={palette.jam} style={styles.flex} variant="caption">
               {t('L’adresse exacte reste cachée aux membres qui n’ont pas confirmé leur présence.')}
@@ -191,7 +192,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           </View>
         </Card>
         <Card style={styles.card}>
-          <AppText variant="title">{t('Rythme')}</AppText>
+          <SectionHeader title={t('Rythme')} />
           <View style={styles.wrap}>
             {recurrences.map((option) => (
               <ChoiceChip
@@ -207,21 +208,23 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           </View>
           {canRepeat && recurrence !== 'Ponctuel' ? (
             <View style={styles.counter}>
-              <Pressable
+              <IconButton
+                accessibilityLabel={t('Retirer une date')}
+                disabled={count <= 2}
+                icon="remove"
+                iconColor={palette.text}
                 onPress={() => setOccurrenceCount(Math.max(2, count - 1))}
-                style={[styles.counterButton, { borderColor: palette.border }]}
-              >
-                <Ionicons color={palette.text} name="remove" size={18} />
-              </Pressable>
-              <AppText style={styles.counterText}>
+              />
+              <AppText style={styles.counterText} variant="headline">
                 {formatSwiftPlaceholders(t('%lld dates'), count)}
               </AppText>
-              <Pressable
+              <IconButton
+                accessibilityLabel={t('Ajouter une date')}
+                disabled={count >= maxCount}
+                icon="add"
+                iconColor={palette.text}
                 onPress={() => setOccurrenceCount(Math.min(maxCount, count + 1))}
-                style={[styles.counterButton, { borderColor: palette.border }]}
-              >
-                <Ionicons color={palette.text} name="add" size={18} />
-              </Pressable>
+              />
             </View>
           ) : null}
           {previews.slice(0, 5).map((value) => (
@@ -239,7 +242,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
           ) : null}
         </Card>
         <Card style={styles.card}>
-          <AppText variant="title">{t('Rappel')}</AppText>
+          <SectionHeader title={t('Rappel')} />
           {canConfigureReminder ? (
             <View style={styles.wrap}>
               {reminderOptions.map((days) => (
@@ -252,7 +255,7 @@ export function GroupEventNewScreen({ groupId }: { groupId: string }) {
               ))}
             </View>
           ) : (
-            <View style={styles.privateNote}>
+            <View style={styles.note}>
               <Ionicons color={palette.bronze} name="notifications" size={16} />
               <AppText color={palette.muted} style={styles.flex} variant="caption">
                 {t(
@@ -285,16 +288,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: 'center',
   },
-  counterButton: {
-    alignItems: 'center',
-    borderRadius: 19,
-    borderWidth: 1,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  counterText: { fontWeight: '800', minWidth: 75, textAlign: 'center' },
+  counterText: { minWidth: 88, textAlign: 'center' },
   flex: { flex: 1 },
-  privateNote: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
+  note: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

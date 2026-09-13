@@ -1,15 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { GroupAvatar } from './group-avatar';
-import {
-  latestGroupMessage,
-  upcomingGroupEvents,
-  type MusicGroup,
-  type PendingGroupInvitation,
-} from './group-model';
+import { latestGroupMessage, type MusicGroup, type PendingGroupInvitation } from './group-model';
 import {
   useGroupInvitations,
   useGroups,
@@ -18,7 +13,9 @@ import {
 } from './group-queries';
 
 import { AppText } from '@/components/ui/app-text';
+import { CountBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
@@ -27,7 +24,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { formatRelativeTime } from '@/i18n/relative-time';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing, typography } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 function relativeDate(value: string, locale: string): string {
   const date = new Date(value);
@@ -44,7 +41,7 @@ export function InvitationCard({ invitation }: { invitation: PendingGroupInvitat
   const { t } = useTranslation();
   const response = useInvitationResponse();
   return (
-    <Card padding={13}>
+    <Card padding={spacing.sm}>
       <View style={styles.invitationTop}>
         <GroupAvatar
           emoji={invitation.groupEmoji}
@@ -53,11 +50,10 @@ export function InvitationCard({ invitation }: { invitation: PendingGroupInvitat
         />
         <View style={styles.copy}>
           <View style={styles.titleLine}>
-            <AppText numberOfLines={1} style={styles.groupTitle}>
+            <AppText numberOfLines={2} style={styles.groupTitle} variant="headline">
               {invitation.groupName}
             </AppText>
             <Tag color={palette.electric} label={t('Invitation')} />
-            {invitation.kind === 'guest' ? <AppText>🌠</AppText> : null}
           </View>
           <AppText color={palette.muted} variant="caption">
             {formatSwiftPlaceholders(
@@ -66,7 +62,7 @@ export function InvitationCard({ invitation }: { invitation: PendingGroupInvitat
             )}
           </AppText>
           {invitation.kind === 'guest' ? (
-            <AppText color={palette.bronze} style={styles.guest} variant="caption2">
+            <AppText color={palette.bronze} variant="caption2" weight="semibold">
               🌠 {t('Special guest')} · {t('membre temporaire')}
             </AppText>
           ) : null}
@@ -78,6 +74,7 @@ export function InvitationCard({ invitation }: { invitation: PendingGroupInvitat
             disabled={response.isPending}
             icon="checkmark"
             onPress={() => response.mutate({ accept: true, invitationId: invitation.id })}
+            size="compact"
           >
             {t('Accepter')}
           </DispoButton>
@@ -86,6 +83,7 @@ export function InvitationCard({ invitation }: { invitation: PendingGroupInvitat
           <DispoButton
             disabled={response.isPending}
             onPress={() => response.mutate({ accept: false, invitationId: invitation.id })}
+            size="compact"
             variant="secondary"
           >
             {t('Refuser')}
@@ -108,69 +106,33 @@ export function GroupRow({
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const last = latestGroupMessage(group.messages);
-  const songs = group.repertoire.filter((song) => song.isApproved).length;
-  const dates = upcomingGroupEvents(group.events).length;
+  const preview = last
+    ? last.deletedAt
+      ? t('Message supprimé')
+      : `${last.senderId === userId ? t('Toi') : last.senderName} : ${last.text || last.attachmentName || t('Fichier')}`
+    : t('Écris le premier message du groupe');
   return (
-    <Pressable
+    <ListRow
       accessibilityLabel={`${t('Ouvrir')} ${group.name}`}
-      accessibilityRole="button"
-      onPress={() => router.push(`/groups/${group.id}` as never)}
-      style={({ pressed }) => pressed && styles.pressed}
-    >
-      <Card padding={13}>
-        <View style={styles.row}>
-          <GroupAvatar emoji={group.emoji} name={group.name} photoUrl={group.photoUrl} />
-          <View style={styles.copy}>
-            <View style={styles.titleLine}>
-              <AppText numberOfLines={1} style={styles.groupTitle}>
-                {group.name}
-              </AppText>
-              {group.isPublic ? <Tag color={palette.jam} label={t('Public')} /> : null}
-              <View style={styles.spacer} />
-              {last ? (
-                <AppText color={palette.muted} variant="caption2">
-                  {relativeDate(last.createdAt, i18n.resolvedLanguage ?? i18n.language ?? 'fr')}
-                </AppText>
-              ) : null}
-            </View>
-            <AppText
-              color={palette.bronze}
-              numberOfLines={1}
-              style={styles.meta}
-              variant="caption2"
-            >
-              {formatSwiftPlaceholders(
-                t('%lld membres · %lld morceaux · %lld événements'),
-                group.members.length,
-                songs,
-                dates,
-              )}
+      accessory={
+        <View style={styles.trailing}>
+          {last ? (
+            <AppText color={palette.muted} variant="caption2">
+              {relativeDate(last.createdAt, i18n.resolvedLanguage ?? i18n.language ?? 'fr')}
             </AppText>
-            {last ? (
-              <AppText color={palette.muted} numberOfLines={1} variant="caption">
-                {last.deletedAt
-                  ? t('Message supprimé')
-                  : `${last.senderId === userId ? t('Toi') : last.senderName} : ${last.text || last.attachmentName || t('Fichier')}`}
-              </AppText>
-            ) : (
-              <AppText color={palette.muted} numberOfLines={1} variant="caption">
-                {t('Écris le premier message du groupe')}
-              </AppText>
-            )}
-          </View>
-          <View style={styles.trailing}>
-            {unread > 0 ? (
-              <View style={[styles.unread, { backgroundColor: palette.electric }]}>
-                <AppText color="#050814" style={styles.unreadText}>
-                  {unread > 99 ? '99+' : unread}
-                </AppText>
-              </View>
-            ) : null}
+          ) : null}
+          {unread > 0 ? (
+            <CountBadge count={unread} />
+          ) : (
             <Ionicons color={palette.muted} name="chevron-forward" size={16} />
-          </View>
+          )}
         </View>
-      </Card>
-    </Pressable>
+      }
+      leading={<GroupAvatar emoji={group.emoji} name={group.name} photoUrl={group.photoUrl} />}
+      onPress={() => router.push(`/groups/${group.id}` as never)}
+      subtitle={preview}
+      title={group.name}
+    />
   );
 }
 
@@ -234,6 +196,10 @@ export function GroupListScreen() {
           ))
         ) : invitations.data?.length ? null : (
           <EmptyState
+            action={{
+              label: t('Nouveau groupe'),
+              onPress: () => router.push('/groups/new' as never),
+            }}
             icon="people-circle-outline"
             message={t(
               'Crée ton premier groupe : messages, membres, répertoire et dates seront réunis ici.',
@@ -248,24 +214,11 @@ export function GroupListScreen() {
 
 const styles = StyleSheet.create({
   actionGrow: { flex: 1 },
-  content: { gap: spacing.cluster, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
-  copy: { flex: 1, gap: 3 },
-  groupTitle: { flexShrink: 1, fontWeight: '800' },
-  guest: { fontWeight: '700' },
-  invitationActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.control },
+  content: { gap: spacing.sm, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
+  copy: { flex: 1, gap: spacing.xxs },
+  groupTitle: { flexShrink: 1 },
+  invitationActions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
   invitationTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  meta: { fontWeight: '700' },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
-  row: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  spacer: { flex: 1 },
-  titleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  trailing: { alignItems: 'center', gap: spacing.xs },
-  unread: {
-    alignItems: 'center',
-    borderRadius: 11,
-    minHeight: 22,
-    minWidth: 22,
-    paddingHorizontal: 5,
-  },
-  unreadText: { fontFamily: typography.monoSemibold, fontSize: 10, lineHeight: 22 },
+  titleLine: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.tight },
+  trailing: { alignItems: 'flex-end', gap: spacing.xs, justifyContent: 'center' },
 });

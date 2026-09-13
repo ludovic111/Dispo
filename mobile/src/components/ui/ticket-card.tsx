@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { billetInk, lightPalette, radii, tint } from '@/theme/tokens';
+
 interface TicketCardProps extends PropsWithChildren {
   backgroundColor?: string;
   notchFromTrailing?: number;
@@ -44,7 +46,7 @@ function roundedTicketPath(
 }
 
 export function TicketCard({
-  backgroundColor = '#F0F4FF',
+  backgroundColor = lightPalette.background,
   children,
   notchFromTrailing = 74,
   notchRadius = 7,
@@ -113,13 +115,13 @@ export function Barcode({ seed }: { seed: string }) {
 }
 
 const styles = StyleSheet.create({
-  bar: { backgroundColor: 'rgba(5,8,20,0.42)', height: 9 },
+  bar: { backgroundColor: tint(billetInk, 0.42), height: 9 },
   barcode: { alignItems: 'center', flexDirection: 'row', gap: 2 },
   mask: { minHeight: 1 },
   shadow: {
-    borderRadius: 18,
+    borderRadius: radii.ticket,
     elevation: 9,
-    shadowColor: '#000000',
+    shadowColor: billetInk,
     shadowOffset: { height: 7, width: 0 },
     shadowOpacity: 0.28,
     shadowRadius: 12,

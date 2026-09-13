@@ -6,9 +6,11 @@ import { cardShadow, radii, spacing } from '@/theme/tokens';
 
 interface CardProps extends ViewProps {
   padding?: number;
+  /** `default` : surface principale · `elevated` : surface au-dessus · `inset` : surface en creux. */
   tone?: 'default' | 'elevated' | 'inset';
 }
 
+/** Surface de base de Dispo : un rayon, une bordure, une ombre. Rien d'autre. */
 export function Card({
   children,
   padding = spacing.md,
@@ -24,34 +26,20 @@ export function Card({
         ? palette.cardMuted
         : palette.card;
   return (
-    <View style={[styles.shadow, cardShadow(dark ? 'dark' : 'light')]}>
-      <View
-        {...props}
-        style={[styles.card, { backgroundColor, borderColor: palette.border, padding }, style]}
-      >
-        <View
-          pointerEvents="none"
-          style={[
-            styles.highlight,
-            { borderColor: dark ? `${palette.jazzGlow}1A` : 'rgba(255,255,255,0.84)' },
-          ]}
-        />
-        {children}
-      </View>
+    <View
+      {...props}
+      style={[
+        styles.card,
+        tone === 'inset' ? null : cardShadow(dark ? 'dark' : 'light'),
+        { backgroundColor, borderColor: palette.border, padding },
+        style,
+      ]}
+    >
+      {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.card, borderWidth: 1, overflow: 'hidden' },
-  highlight: {
-    borderRadius: radii.card - 1,
-    borderTopWidth: 1,
-    height: '50%',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  shadow: { alignSelf: 'stretch', borderRadius: radii.card },
+  card: { alignSelf: 'stretch', borderRadius: radii.card, borderWidth: StyleSheet.hairlineWidth },
 });

@@ -5,6 +5,7 @@ import { AppText } from './app-text';
 
 import { privacyPage, termsPage } from '@/features/settings/settings-model';
 import { useDispoTheme } from '@/theme/theme-context';
+import { minimumTouchTarget, pressedStyle, spacing } from '@/theme/tokens';
 
 export function LegalLinks() {
   const { t, i18n } = useTranslation();
@@ -25,7 +26,7 @@ export function LegalLinks() {
           accessibilityRole="link"
           key={label}
           onPress={() => open(url)}
-          style={styles.link}
+          style={({ pressed }) => [styles.link, pressed && pressedStyle]}
         >
           <AppText variant="caption" color={palette.electric} style={styles.text}>
             {t(label)}
@@ -36,7 +37,7 @@ export function LegalLinks() {
   );
 }
 const styles = StyleSheet.create({
-  links: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
-  link: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
-  text: { textDecorationLine: 'underline', textAlign: 'center' },
+  link: { justifyContent: 'center', minHeight: minimumTouchTarget, paddingHorizontal: spacing.xs },
+  links: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, justifyContent: 'center' },
+  text: { textAlign: 'center', textDecorationLine: 'underline' },
 });

@@ -4,6 +4,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { GroupMessagesTab } from '@/features/groups/group-messages-tab';
 import { type GroupMessage, type MusicGroup } from '@/features/groups/group-model';
 jest.mock('expo-router', () => ({ useIsFocused: () => true }));
+jest.mock('react-native-reanimated', () => ({ useReducedMotion: () => true }));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -21,6 +22,7 @@ jest.mock('@/theme/theme-context', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  useSafeAreaInsets: () => ({ bottom: 0, left: 0, right: 0, top: 0 }),
 }));
 jest.mock('@/features/messages/message-attachments', () => ({
   MessageAttachmentCard: () => null,

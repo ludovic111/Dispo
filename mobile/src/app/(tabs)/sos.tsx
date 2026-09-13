@@ -8,6 +8,8 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigCard } from '@/features/gigs/gig-card';
 import { openGigInstruments, triageHostedGigs, type GigSummary } from '@/features/gigs/gig-model';
@@ -16,43 +18,9 @@ import { useGigs, useHostedGigs } from '@/features/gigs/gig-queries';
 import { useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { pressedStyle, spacing } from '@/theme/tokens';
 
 type Segment = 'feed' | 'hosting';
-
-function SegmentButton({
-  count,
-  label,
-  onPress,
-  selected,
-}: {
-  count: number;
-  label: string;
-  onPress: () => void;
-  selected: boolean;
-}) {
-  const { palette } = useDispoTheme();
-  return (
-    <Pressable
-      accessibilityRole="tab"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.segment,
-        selected && {
-          backgroundColor: `${palette.electric}1F`,
-          borderColor: `${palette.electric}66`,
-        },
-        pressed && styles.pressed,
-      ]}
-    >
-      <AppText color={selected ? palette.electric : palette.muted} variant="subheadline">
-        {label}
-        {count > 0 ? ` · ${count}` : ''}
-      </AppText>
-    </Pressable>
-  );
-}
 
 function GigList({ gigs, opened }: { gigs: GigSummary[]; opened: ReadonlySet<string> }) {
   return (
@@ -118,32 +86,21 @@ export default function GigsScreen() {
     : 0;
 
   const add = (
-    <Pressable
+    <DispoButton
       accessibilityLabel={t('Publier un SOS')}
-      accessibilityRole="button"
+      icon="add"
       onPress={() => router.push('/gigs/create')}
-      style={({ pressed }) => [
-        styles.add,
-        { backgroundColor: palette.signal },
-        pressed && styles.pressed,
-      ]}
+      size="compact"
+      variant="signal"
     >
-      <Ionicons color="#FFFFFF" name="add" size={15} />
-      <AppText color="#FFFFFF" style={styles.addText} variant="caption">
-        {t('SOS')}
-      </AppText>
-    </Pressable>
+      {t('SOS')}
+    </DispoButton>
   );
 
   if (query.isLoading || hostedQuery.isLoading || profile.isLoading) {
     return (
       <Screen nativeTabRoot>
-        <ScreenHeader
-          action={add}
-          icon="flash"
-          subtitle={t('Dépannage')}
-          title={t('SOS dépannage')}
-        />
+        <ScreenHeader action={add} icon="flash" title={t('SOS dépannage')} />
         <LoadingState label={t('Chargement des annonces…')} />
       </Screen>
     );
@@ -156,12 +113,7 @@ export default function GigsScreen() {
       t('Chargement impossible.');
     return (
       <Screen nativeTabRoot>
-        <ScreenHeader
-          action={add}
-          icon="flash"
-          subtitle={t('Dépannage')}
-          title={t('SOS dépannage')}
-        />
+        <ScreenHeader action={add} icon="flash" title={t('SOS dépannage')} />
         <ErrorState
           message={message}
           onRetry={() =>
@@ -202,37 +154,39 @@ export default function GigsScreen() {
           title={t('SOS dépannage')}
         />
 
-        <View style={[styles.segmented, { backgroundColor: palette.cardMuted }]}>
-          <SegmentButton
-            count={freshCount}
-            label={t('SOS')}
-            onPress={() => setSegment('feed')}
-            selected={segment === 'feed'}
-          />
-          <SegmentButton
-            count={hosting.pendingApplicantCount}
-            label={t('Mes SOS')}
-            onPress={() => setSegment('hosting')}
-            selected={segment === 'hosting'}
-          />
-        </View>
+        <SegmentedControl
+          onChange={setSegment}
+          options={[
+            { count: freshCount, label: t('SOS'), value: 'feed' },
+            { count: hosting.pendingApplicantCount, label: t('Mes SOS'), value: 'hosting' },
+          ]}
+          value={segment}
+        />
 
         {segment === 'feed' ? (
           <>
             {mine.length > 0 ? (
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setSegment('hosting')}
-                style={({ pressed }) => pressed && styles.pressed}
+                style={({ pressed }) => pressed && pressedStyle}
               >
-                <Card style={[styles.mineHint, { backgroundColor: `${palette.bronze}16` }]}>
-                  <Ionicons color={palette.bronze} name="megaphone" size={14} />
-                  <AppText color={palette.bronze} style={styles.mineHintText} variant="caption">
-                    {formatSwiftPlaceholders(
-                      t('Tes %lld annonce·s sont dans « Mes SOS »'),
-                      mine.length,
-                    )}
-                  </AppText>
-                  <Ionicons color={palette.bronze} name="chevron-forward" size={13} />
+                <Card padding={spacing.sm} tone="inset">
+                  <View style={styles.mineHint}>
+                    <Ionicons color={palette.bronze} name="megaphone" size={14} />
+                    <AppText
+                      color={palette.bronze}
+                      style={styles.flex}
+                      variant="footnote"
+                      weight="semibold"
+                    >
+                      {formatSwiftPlaceholders(
+                        t('Tes %lld annonce·s sont dans « Mes SOS »'),
+                        mine.length,
+                      )}
+                    </AppText>
+                    <Ionicons color={palette.bronze} name="chevron-forward" size={13} />
+                  </View>
                 </Card>
               </Pressable>
             ) : null}
@@ -252,12 +206,10 @@ export default function GigsScreen() {
             {hosting.hosted.length > 0 ? <GigList gigs={hosting.hosted} opened={opened} /> : null}
             {hosting.sentDirect.length > 0 ? (
               <View style={styles.directSection}>
-                <AppText color={palette.bronze} variant="title">
-                  {t('Demandes envoyées')}
-                </AppText>
-                <AppText color={palette.muted} variant="caption">
-                  {t('Un musicien précis, à qui tu as demandé de dépanner')}
-                </AppText>
+                <SectionHeader
+                  subtitle={t('Un musicien précis, à qui tu as demandé de dépanner')}
+                  title={t('Demandes envoyées')}
+                />
                 <GigList gigs={hosting.sentDirect} opened={opened} />
               </View>
             ) : null}
@@ -290,30 +242,10 @@ export default function GigsScreen() {
 }
 
 const styles = StyleSheet.create({
-  add: {
-    alignItems: 'center',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: 4,
-    minHeight: 34,
-    paddingHorizontal: 13,
-  },
-  addText: { fontWeight: '900' },
   content: { gap: spacing.md, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   directSection: { gap: spacing.sm, width: '100%' },
+  flex: { flex: 1 },
   hostingSections: { gap: spacing.lg, width: '100%' },
   list: { gap: spacing.md, width: '100%' },
-  mineHint: { alignItems: 'center', flexDirection: 'row', gap: 7, paddingVertical: 9 },
-  mineHintText: { flex: 1, fontWeight: '700' },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
-  segment: {
-    alignItems: 'center',
-    borderColor: 'transparent',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 38,
-  },
-  segmented: { borderRadius: radii.button, flexDirection: 'row', padding: 3 },
+  mineHint: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
 });

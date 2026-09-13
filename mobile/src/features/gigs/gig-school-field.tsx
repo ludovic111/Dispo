@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { DispoButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
 import { useSchoolDirectory } from '@/features/schools/school-queries';
 import { getSupabaseClient } from '@/services/supabase/client';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -38,7 +39,7 @@ export function GigSchoolCriteria({ ids }: { ids: string[] }) {
           {schools.data.map((school) => school.name).join(' · ')}
         </AppText>
       ) : schools.isError ? (
-        <DispoButton variant="secondary" onPress={() => void schools.refetch()}>
+        <DispoButton onPress={() => void schools.refetch()} size="compact" variant="secondary">
           {t('Réessayer')}
         </DispoButton>
       ) : (
@@ -60,16 +61,16 @@ export function GigSchoolField({
   const { palette } = useDispoTheme();
   return (
     <Card style={styles.card}>
-      <AppText color={palette.bronze} variant="label">
-        {t('Écoles de musique recherchées')}
-      </AppText>
-      <AppText color={palette.muted} variant="caption">
-        {t('Sans sélection : toutes les écoles. Plusieurs écoles : membres de l’une ou l’autre.')}
-      </AppText>
+      <SectionHeader
+        subtitle={t(
+          'Sans sélection : toutes les écoles. Plusieurs écoles : membres de l’une ou l’autre.',
+        )}
+        title={t('Écoles de musique recherchées')}
+      />
       {schools.isLoading ? (
-        <AppText>{t('Chargement des écoles…')}</AppText>
+        <AppText color={palette.muted}>{t('Chargement des écoles…')}</AppText>
       ) : schools.isError ? (
-        <DispoButton variant="secondary" onPress={() => void schools.refetch()}>
+        <DispoButton onPress={() => void schools.refetch()} size="compact" variant="secondary">
           {t('Réessayer')}
         </DispoButton>
       ) : (
@@ -91,15 +92,16 @@ export function GigSchoolField({
         </View>
       )}
       {selected.length ? (
-        <DispoButton variant="secondary" onPress={() => onChange([])}>
+        <DispoButton onPress={() => onChange([])} size="compact" variant="ghost">
           {t('Effacer les écoles')}
         </DispoButton>
       ) : null}
       {schools.hasNextPage ? (
         <DispoButton
-          variant="secondary"
           loading={schools.isFetchingNextPage}
           onPress={() => void schools.fetchNextPage()}
+          size="compact"
+          variant="secondary"
         >
           {t('Voir plus')}
         </DispoButton>

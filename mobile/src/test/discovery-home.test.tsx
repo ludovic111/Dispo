@@ -9,6 +9,7 @@ import {
 } from '@/features/discovery/discovery-home-sections';
 import type { AvailabilityScope } from '@/features/discovery/discovery-model';
 
+jest.mock('react-native-reanimated', () => ({ useReducedMotion: () => true }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ i18n: { language: 'fr' }, t: (key: string) => key }),
 }));
@@ -60,7 +61,7 @@ it('opens the chosen group, keeps cached groups on refresh error and exposes cre
   expect(view.getByText('Aucune session · 1 membre')).toBeTruthy();
   await fireEvent.press(view.getByText('Mon groupe'));
   expect(onOpen).toHaveBeenCalledWith('two');
-  await fireEvent.press(view.getByRole('button', { name: 'Nouveau groupe' }));
+  await fireEvent.press(view.getByRole('button', { name: 'Créer' }));
   expect(onCreate).toHaveBeenCalledTimes(1);
   await view.unmount();
 });

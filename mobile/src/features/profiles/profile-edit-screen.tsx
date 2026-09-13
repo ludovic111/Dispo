@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { toggleProfileValue, type EditableProfile } from './profile-edit-model';
 import {
@@ -29,13 +29,13 @@ import { useAuth } from '@/features/auth/auth-context';
 import { GIG_GENRE_GROUPS } from '@/features/gigs/gig-model';
 import { instrumentCategories, levelOptions } from '@/features/onboarding/onboarding-model';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { billetInk, onAccent, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 const socialNetworks = [
-  { icon: 'logo-instagram' as const, key: 'instagram', label: 'Instagram' },
-  { icon: 'logo-tiktok' as const, key: 'tiktok', label: 'TikTok' },
-  { icon: 'logo-youtube' as const, key: 'youtube', label: 'YouTube' },
-  { icon: 'at' as const, key: 'x', label: 'X' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'youtube', label: 'YouTube' },
+  { key: 'x', label: 'X' },
 ] as const;
 
 export function ProfileEditScreen() {
@@ -146,11 +146,11 @@ export function ProfileEditScreen() {
           accessibilityLabel={t('Changer ma photo')}
           accessibilityRole="button"
           onPress={() => void pickPhoto()}
-          style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.avatarButton, pressed && pressedStyle]}
         >
           <Avatar name={value.name} size={86} uri={value.photoUrl} />
-          <View style={[styles.camera, { backgroundColor: '#FFFFFF' }]}>
-            <Ionicons color="#050814" name="camera" size={12} />
+          <View style={[styles.camera, { backgroundColor: onAccent }]}>
+            <Ionicons color={billetInk} name="camera" size={12} />
           </View>
           <AppText color={palette.electric} variant="caption">
             {uploading ? t('Envoi…') : t('Changer la photo')}
@@ -196,9 +196,7 @@ export function ProfileEditScreen() {
           <SectionHeader title={t('Mes instruments')} />
           {instrumentCategories.map((category) => (
             <Card key={category.label} style={styles.card}>
-              <AppText style={styles.cardTitle} variant="subheadline">
-                {t(category.label)}
-              </AppText>
+              <AppText variant="headline">{t(category.label)}</AppText>
               {category.instruments.map((instrument) => {
                 const selected = value.instruments.includes(instrument);
                 return (
@@ -261,23 +259,17 @@ export function ProfileEditScreen() {
           <SectionHeader title={t('Réseaux sociaux')} />
           <Card style={styles.card}>
             {socialNetworks.map((network) => (
-              <View key={network.key} style={styles.socialRow}>
-                <Ionicons color={palette.bronze} name={network.icon} size={22} />
-                <AppText style={styles.socialLabel} variant="subheadline">
-                  {t(network.label)}
-                </AppText>
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onChangeText={(handle) =>
-                    update({ socials: { ...value.socials, [network.key]: handle } })
-                  }
-                  placeholder={t('pseudo')}
-                  placeholderTextColor={palette.muted}
-                  style={[styles.socialInput, { color: palette.text }]}
-                  value={value.socials[network.key] ?? ''}
-                />
-              </View>
+              <FormField
+                autoCapitalize="none"
+                autoCorrect={false}
+                key={network.key}
+                label={t(network.label)}
+                onChangeText={(handle) =>
+                  update({ socials: { ...value.socials, [network.key]: handle } })
+                }
+                placeholder={t('pseudo')}
+                value={value.socials[network.key] ?? ''}
+              />
             ))}
           </Card>
         </View>
@@ -300,7 +292,7 @@ const styles = StyleSheet.create({
   bio: { minHeight: 100, textAlignVertical: 'top' },
   camera: {
     alignItems: 'center',
-    borderRadius: 11,
+    borderRadius: radii.round,
     height: 22,
     justifyContent: 'center',
     position: 'absolute',
@@ -309,7 +301,6 @@ const styles = StyleSheet.create({
     width: 22,
   },
   card: { gap: spacing.sm },
-  cardTitle: { fontWeight: '800' },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   city: { flex: 1 },
   content: { gap: spacing.lg, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
@@ -317,15 +308,5 @@ const styles = StyleSheet.create({
   levels: { flexDirection: 'row', gap: spacing.tight },
   placeRow: { flexDirection: 'row', gap: spacing.sm },
   postal: { width: 120 },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   section: { gap: spacing.sm },
-  socialInput: { flex: 1, fontSize: 15, minHeight: 44, textAlign: 'right' },
-  socialLabel: { flex: 1 },
-  socialRow: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    flexDirection: 'row',
-    gap: spacing.control,
-    minHeight: 48,
-  },
 });

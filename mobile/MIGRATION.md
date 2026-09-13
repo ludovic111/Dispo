@@ -1453,7 +1453,6 @@ livraison d’un lot fonctionnellement validé.
 - Build55 : archive, export, upload, verdict d’import et déploiements seront consignés après leur exécution. Les migrations55 sont encore locales à cette étape. Contrat Apple réservé au titulaire demain ; statut/coordonnéesDSA et droits sur les contenus tiers restent à confirmer. Aucune soumission AppReview autorisée ; le clic final reste à Ludovic.
 - Preuves horsGit : Dispo-dist/appstore/review-20260908/, en particulier validate55-release.log, native-account-quota55-proof.json, native-repertoire55-proof.json et native-purchases55-proof.json.
 
-
 ## 2026-09-08 — Livraison finale des profils, répertoire et abonnements — builds 55/56
 
 - Corrections finales : badge école visible, navigation iOS stable sans patch tiers conservé, unités des durées fiables sur Hermes et vrais pluriels ; le build56 retire le spinner permanent au retour sur l’accueil et traduit les lieux/rôles des sessions. Les trois onglets du profil, les réglages musicaux personnels et leur persistance ont été relus dans le simulateur final.
@@ -1464,7 +1463,6 @@ livraison d’un lot fonctionnellement validé.
 - App Store : build56 sélectionné, notes56 sauvegardées,5capturesFR+5EN actuelles COMPLETE. Les7anciennes capturesSwiftUI ont été supprimées individuellement puis leur set vide retiré ; héritage6.9vers6.5 contrôlé dans le navigateur. Brouillon938881a3-b65e-4bf0-abc6-d607e3aea6cc READY_FOR_REVIEW avec6éléments (app,4abonnements,groupe). Aucun Submit/Resubmit ni message à Apple.
 - Portes restantes : contrat du titulaire prévu demain, statut et coordonnées professionnellesDSA, droits sur les contenus tiers. L’ancien choix « aucun contenu tiers » reste à corriger après confirmation des droits. Achat/restauration Sandbox complets en attente de connexion utilisateur ; les4produits et l’annulation ont été vérifiés, pas l’attribution réelle consécutive à un achat. Les3comptes QA isolés locaux restent temporairement conservés pour la reprise ; aucune création QA en production.
 - Preuves horsGit : Dispo-dist/2.4/RELEASE-build55.md, RELEASE-build56.md et Dispo-dist/appstore/review-20260908/Apple-readiness56.md. Ces résultats ne garantissent pas une absence absolue de bugs ni l’approbation App Store.
-
 
 ## 2026-09-09 — Profil, liens, événements et SOS — build 59
 
@@ -1478,7 +1476,6 @@ livraison d’un lot fonctionnellement validé.
 - Deux chemins de splash devenus obsolètes depuis le changement de logo corrigés vers logo-mark-blue.png afin de permettre CNG. L’exception HTTP de l’émulateur a été retirée du manifeste généré avant les builds de distribution ; .env.local jamais modifié. Preuves hors Git : Dispo-dist/qa-20260909-profile/.
 - Archive, export et verdict Apple consignés après leur exécution. Aucune modification du dossier App Review déjà en attente, aucun groupe de testeurs activé, aucune publication Google Play.
 
-
 ### Livraison finale et examen Apple — build 59
 
 - Code applicatif `8dc6624` poussé sur origin/main. Validation et upload Apple sans erreur ; import/build VALID, APP_STORE_ELIGIBLE, identifiant `5d9414e0-cf93-496e-a026-522037184279`. IPA signé strictement, APNs production, Apple Sign In, débogage désactivé et configuration production contrôlés. Android Release compilé, APK signé v2 installé et démarré sur la connexion de production.
@@ -1486,7 +1483,6 @@ livraison d’un lot fonctionnellement validé.
 - Après la préparation ci-dessus, Ludovic a explicitement demandé la soumission à Apple. Ancien dossier58 retiré, build59 rattaché au nouveau dossier, captures natives du profil FR/EN remplacées et acceptées (cinq captures par langue), notes actualisées et accès reviewer conservés. Les quatre abonnements et leur groupe sont inclus avec l’app.
 - Soumission `5a6083e3-7607-4ce1-8f23-b33dff30d6b3` effectivement envoyée le `2026-09-09T13:55:37.892Z` : version et dossier WAITING_FOR_REVIEW vérifiés par API. Suisse uniquement et publication après approbation conservées. L’app n’est pas encore approuvée ni publiée ; aucun groupe de testeurs activé ni Google Play.
 - Vérification finale supplémentaire : lien YouTube iOS ouvre Safari, captures du nouveau profil FR/EN natives. Les trois comptes QA locaux et données associées ont été supprimés, sessions révoquées, identifiants temporaires et simulateur de captures retirés, environnements locaux arrêtés avec volumes conservés. Aucun ressenti haptique sur appareil physique testé ; intégration Spotify serveur non activée.
-
 
 ### 10 septembre 2026 — écoles, badge iTunes et solos, build 60
 
@@ -1496,13 +1492,11 @@ livraison d’un lot fonctionnellement validé.
 - Validation :422tests/79suites, TypeScript/ESLint, format ciblé, ExpoDoctor21/21, CNG/pods ; builds natifs iOS/Android Release et tests Gradle. Tests authentifiés locaux des droits, départ/réadhésion/écoles multiples, accès communauté retiré, sauvegarde répertoire/événement et compatibilité des anciens clients. Parcours natifs iOS annulation/changement/réadhésion et solos sauvegardés/réouverts ; Android départ et lecture du mode sauvegardé sur iOS. Captures dans Dispo-dist/qa-20260910-school-solos.
 - Livraison TestFlight en préparation ; App Review59 reste inchangée. Aucun backend production, groupe de testeurs ou Google Play modifié. Pas de test physique pour ce lot.
 
-
 ### Livraison et soumission finale — build 60
 
 - Code `3d41366` poussé ; IPA/APK de production signés et inspectés. Android final installé/démarré à la connexion. Validation/upload Apple réussis, build/import VALID et APP_STORE_ELIGIBLE : `764282a0-757f-47e0-8eb9-1a3cafeda92c`.
 - Instruction vocale ultérieure de Ludovic le 10 septembre : soumettre également ce lot en App Review. Cette instruction remplace la limite précédente. Dossier59 retiré, dossier60 `d6d615ce-541a-4a54-88d3-9c2e955fce2d` soumis à `2026-09-10T07:25:18.358Z`, app + quatre abonnements + groupe. Version/dossier WAITING_FOR_REVIEW confirmés, notes60 actualisées, captures FR/EN et accès reviewer conservés. Suisse uniquement et AFTER_APPROVAL maintenus. L’app n’est pas encore publiée.
 - Preuves et limites : Dispo-dist/2.4/RELEASE-build60.md et qa-20260910-school-solos. Sessions/comptes/groupe QA nettoyés, identifiants temporaires retirés, environnements locaux arrêtés et émulateur temporaire supprimé ; données antérieures conservées. Aucun backend production, compte/secret, groupe de testeurs ni Google Play modifié. Pas de test physique ni nouvel achat/restauration complet.
-
 
 ### 2026-09-10 — Correction des solos 4-4 et retour du logo dégradé (build 61)
 
@@ -1516,7 +1510,6 @@ livraison d’un lot fonctionnellement validé.
 - Code `a095a03` poussé. IPA/APK de production signés, versions et endpoints vérifiés, aucun endpoint QA ; logo embarqué identique à la source. Android final réinstallé et démarré à la connexion. Validation/upload Apple sans erreur, build/import VALID et APP_STORE_ELIGIBLE : `763971bc-3f42-4ef2-96db-b15708a2ce6a`. IPA SHA-256 `587baade0bf782e7c4819e1cdbb2c6e342bc64dde3139c266d110e14a38fc13b`. Aucune modification de la soumission App Review du build60, de Supabase production, des testeurs ou de Google Play.
 - QA clôturée : comptes/sessions/groupe locaux supprimés et absence vérifiée, identifiants temporaires retirés, Supabase/Colima arrêtés avec volumes conservés ; apps QA iOS désinstallées et simulateur arrêté ; émulateur Android temporaire supprimé, ancien AVD conservé. Pas de test physique ni nouvel achat/restauration Sandbox dans ce lot.
 
-
 ### 2026-09-12 — 2.4.1 (62), âge minimum et fiche App Store
 
 - Sur demande de Ludovic, la déclaration de connexion indique désormais 13 ans dans les neuf langues. Aucun dispositif de vérification de l’âge, contrôle parental ou changement de modération n’est prétendu.
@@ -1528,3 +1521,12 @@ livraison d’un lot fonctionnellement validé.
 - Clôture build 62 : iOS Release et XCTest français réussis, texte 13 affiché et ancien 18 absent ; IPA signé vérifié (APNs production, Apple Sign In, configuration production, logo exact, texte français UTF-16LE/anglais UTF-8). Code `eea354f` poussé. Validation/upload Apple sans erreur ; build/import VALID et APP_STORE_ELIGIBLE `23c52b3b-d8aa-4c7e-87d5-9c236fc50d6e`, rattaché au brouillon 2.4.1 PREPARE_FOR_SUBMISSION. Dix images COMPLETE après harmonisation des logos, angles des téléphones et alignements FR/EN. Rapport `../../Dispo-dist/2.4.1/RELEASE-build62.md`. Simulateurs arrêtés, aucun test physique ; App Review et site public restent en attente d’autorisation coordonnée.
 
 - Autorisation ultérieure de Ludovic le 12 septembre : 2.4.1/build62 soumis à App Review, dossier `d80d6810-b56a-4b35-a71c-437032d23466`, soumis à `2026-09-12T09:30:56.068Z`, version et dossier WAITING_FOR_REVIEW. 13+, images FR/EN et Suisse seule vérifiés ; AFTER_APPROVAL conservé. Textes 13 du site publiés sur Railway, commit site `8310672`, quatre pages canoniques FR/EN relues avec TLS strict et résolution DNS publique. Cache DNS local ancien hébergeur encore présent ; aucun DNS modifié. App pas encore approuvée/publiée en 2.4.1.
+
+### 2026-09-13 — 2.4.2 (63), système visuel unifié iOS / Android
+
+- Règle unique dans `docs/design-system.md` : trois familles typographiques par rôle (système, Fraunces éditorial, Spline Sans Mono pour données et étiquettes), échelle `AppText` avec graisse ≤ 700 et rien sous 11 pt, rayons et espacements sur grille de 4, palette et teintes via `tint()`, `onAccent`/`billetInk` pour les encres fixes, `pressedStyle`/`disabledStyle` communs.
+- Primitives ajoutées ou refondues dans `src/components/ui/` : `DispoButton` (tailles `regular`/`compact`, variante `ghost`), `IconButton`, `SectionHeader` avec action à droite, `ScreenHeader` sans surtitre décoratif, `ModalHeader`, `SegmentedControl`/`UnderlineTabs`, `CountBadge`/`UnreadDot`, `DateTicket`, `BottomSheet`, `ListRow`, `Tag` avec tonalités, `FormField` avec aide, `EmptyState` avec action, `NativeDateTimeField` avec `parts`, et un module `chat/` (`ChatBubble`, `ChatComposer`, `ChatDaySeparator`, `ConversationRow`) partagé par les discussions privées, de groupe et d’école.
+- Écrans migrés sur ces primitives (142 fichiers, −4 290 lignes nettes) : 172 graisses brutes, 141 tailles brutes, 122 rayons bruts et 340 espacements bruts retirés ; six contrôles segmentés, six pastilles de non-lus, trois billets de date, trois bulles de discussion, deux écrans d’onboarding dupliqués, quatre en-têtes de modale et huit états vides locaux ramenés à une seule implémentation chacun. Sous-titres redondants, surtitres décoratifs, filigrane Premium, code et styles morts supprimés ; lignes de liste limitées à une action visible avec le reste dans une feuille ; cibles tactiles ≥ 44/48 avec rôles d’accessibilité ; convention `KeyboardAvoidingView` unifiée. Barre d’onglets Android libellée avec pastilles signal ; barre iOS conservée, libellés 11 pt.
+- Notes de version 2.4.2 dans les neuf langues ; version 2.4.2 build 63.
+- Validation : TypeScript, ESLint sans avertissement, Prettier, 79 suites / 424 tests ; Expo Doctor 20/21 (29 écarts patch préexistants, laissés hors du lot). QA visuelle sur simulateur iPhone 17 (iOS 26.4) et émulateur Android 16 contre la pile Supabase locale avec quatre comptes fictifs : 23 écrans parcourus par lien profond sur chaque plateforme, en clair et sombre, thème, cinq défauts trouvés et corrigés (rangée d’actions du profil tronquée, espacement des segments Messages, état vide inversé dans les listes `inverted` sur les deux plateformes, tag d’école dupliqué, barres de maîtrise du répertoire). Captures hors Git dans `Dispo-dist/qa-20260913-ui-pass/`.
+- Point d’attention documenté dans la mémoire agent : Metro inlinait l’URL Supabase de production malgré `EXPO_NO_DOTENV` ; la QA locale exige d’échanger temporairement `.env.local` (restauré à l’octet près, SHA-256 identique) et de réinitialiser le trousseau du simulateur.

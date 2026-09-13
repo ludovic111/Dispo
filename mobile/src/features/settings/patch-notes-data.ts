@@ -7,6 +7,18 @@ export interface PatchNote {
 /** Release notes, newest first. Historical versions remain available below. */
 export const patchNotes: readonly PatchNote[] = [
   {
+    version: '2.4.2',
+    title: 'Une interface plus claire, partout',
+    points: [
+      'Une seule échelle de textes, de boutons et de cartes sur iOS et Android.',
+      'Les titres de section, les onglets et les compteurs de non-lus ont une forme unique.',
+      'Les listes montrent une action visible à la fois ; le reste se trouve dans un menu.',
+      'Les discussions privées, de groupe et d’école partagent les mêmes bulles et le même composeur.',
+      'Les boutons et les icônes ont une zone tactile confortable et sont annoncés par VoiceOver et TalkBack.',
+      'Moins d’éléments décoratifs : l’accent bleu jazz reste réservé aux actions.',
+    ],
+  },
+  {
     version: '2.4',
     title: 'Ton répertoire, tes groupes, ton réseau',
     points: [

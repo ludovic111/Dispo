@@ -5,7 +5,12 @@ import { Pressable, StyleSheet } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, spacing } from '@/theme/tokens';
+import {
+  disabledStyle,
+  minimumTouchTarget,
+  pressedStyleReducedMotion,
+  spacing,
+} from '@/theme/tokens';
 
 export function NativeHeaderButton({
   disabled = false,
@@ -13,8 +18,8 @@ export function NativeHeaderButton({
   label,
   onPress,
 }: {
-  disabled?: boolean;
-  icon?: ComponentProps<typeof Ionicons>['name'];
+  disabled?: boolean | undefined;
+  icon?: ComponentProps<typeof Ionicons>['name'] | undefined;
   label: string;
   onPress: () => void;
 }) {
@@ -29,14 +34,14 @@ export function NativeHeaderButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
+        pressed && pressedStyleReducedMotion,
+        disabled && disabledStyle,
       ]}
     >
       {icon ? (
         <Ionicons color={palette.electric} name={icon} size={22} />
       ) : (
-        <AppText color={palette.electric} numberOfLines={1} style={styles.label}>
+        <AppText color={palette.electric} numberOfLines={1} variant="callout" weight="semibold">
           {label}
         </AppText>
       )}
@@ -52,7 +57,4 @@ const styles = StyleSheet.create({
     minWidth: minimumTouchTarget,
     paddingHorizontal: spacing.xs,
   },
-  disabled: { opacity: 0.45 },
-  label: { fontSize: 16, fontWeight: '700' },
-  pressed: { opacity: 0.6 },
 });

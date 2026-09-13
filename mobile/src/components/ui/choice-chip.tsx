@@ -5,8 +5,16 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing } from '@/theme/tokens';
+import {
+  disabledStyle,
+  minimumTouchTarget,
+  pressedStyle,
+  radii,
+  spacing,
+  tint,
+} from '@/theme/tokens';
 
+/** Puce de choix (filtres, sélections multiples). Sélection = teinte bleu jazz. */
 export function ChoiceChip({
   disabled = false,
   icon,
@@ -21,6 +29,7 @@ export function ChoiceChip({
   selected: boolean;
 }) {
   const { palette } = useDispoTheme();
+  const foreground = selected ? palette.electric : palette.text;
   return (
     <Pressable
       accessibilityRole="button"
@@ -30,10 +39,11 @@ export function ChoiceChip({
       style={({ pressed }) => [
         styles.pressable,
         {
-          backgroundColor: selected ? `${palette.electric}26` : palette.card,
-          borderColor: selected ? `${palette.electric}8F` : palette.border,
+          backgroundColor: selected ? tint(palette.electric, 0.16) : palette.card,
+          borderColor: selected ? tint(palette.electric, 0.55) : palette.border,
         },
-        pressed && styles.pressed,
+        pressed && pressedStyle,
+        disabled && disabledStyle,
       ]}
     >
       <View style={styles.content}>
@@ -41,10 +51,11 @@ export function ChoiceChip({
           <Ionicons color={selected ? palette.electric : palette.muted} name={icon} size={14} />
         ) : null}
         <AppText
-          color={selected ? palette.electric : palette.text}
+          color={foreground}
           numberOfLines={1}
           style={styles.label}
           variant="subheadline"
+          weight="semibold"
         >
           {label}
         </AppText>
@@ -55,15 +66,14 @@ export function ChoiceChip({
 
 const styles = StyleSheet.create({
   content: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  label: { flexShrink: 1, fontWeight: '700' },
+  label: { flexShrink: 1 },
   pressable: {
-    borderRadius: radii.chip,
+    borderRadius: radii.round,
     borderWidth: 1,
     justifyContent: 'center',
-    minHeight: minimumTouchTarget,
     maxWidth: '100%',
+    minHeight: minimumTouchTarget - 4,
+    paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.tight,
-    paddingHorizontal: spacing.sm,
   },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
 });

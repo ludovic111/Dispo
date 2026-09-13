@@ -9,7 +9,7 @@ export interface MusicLink {
   url: string;
 }
 
-export const STREAMING_PLATFORM_IDS = [
+const STREAMING_PLATFORM_IDS = [
   'appleMusic',
   'spotify',
   'youtubeMusic',

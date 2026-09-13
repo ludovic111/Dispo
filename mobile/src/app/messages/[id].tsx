@@ -1,5 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,7 +7,6 @@ import type { TFunction } from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Alert,
   AppState,
   FlatList,
@@ -17,13 +14,13 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
+import { ChatComposer } from '@/components/ui/chat/chat-composer';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { PendingAttachmentChip } from '@/features/messages/message-attachments';
@@ -54,7 +51,7 @@ import {
 } from '@/features/messages/message-queries';
 import { openMessageAttachment } from '@/features/messages/message-repository';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { pressedStyle, spacing } from '@/theme/tokens';
 
 function pickedByteCount(uri: string, advertised?: number): number {
   if (advertised && advertised > 0) return advertised;
@@ -80,7 +77,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const { dark, palette } = useDispoTheme();
+  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const [appIsActive, setAppIsActive] = useState(AppState.currentState === 'active');
   const conversationIsActive = isFocused && appIsActive;
@@ -133,14 +130,14 @@ export default function ChatScreen() {
           accessibilityLabel={t('Voir le profil')}
           accessibilityRole="button"
           onPress={() => router.push(`/profiles/${profile.id}`)}
-          style={({ pressed }) => [styles.headerPrincipal, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.headerPrincipal, pressed && pressedStyle]}
         >
           <Avatar name={contactName} size={28} uri={profile.photoUrl} />
           <View style={styles.headerCopy}>
-            <AppText numberOfLines={1} style={styles.headerName} variant="subheadline">
+            <AppText numberOfLines={1} variant="headline">
               {contactName}
             </AppText>
-            <AppText color={palette.muted} style={styles.headerSubtitle} variant="caption2">
+            <AppText color={palette.muted} numberOfLines={1} variant="caption">
               {t('Voir le profil')}
             </AppText>
           </View>
@@ -293,7 +290,7 @@ export default function ChatScreen() {
   return (
     <Screen nativeHeader>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={headerHeight}
         style={styles.flex}
       >
@@ -325,103 +322,38 @@ export default function ChatScreen() {
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListFooterComponent={
-            query.isFetchingNextPage ? (
-              <ActivityIndicator color={palette.electric} style={styles.pageLoader} />
-            ) : null
-          }
+          ListFooterComponent={query.isFetchingNextPage ? <LoadingState /> : null}
         />
-        {localError ? (
-          <AppText color={palette.error} style={styles.error} variant="caption">
-            {localError}
-          </AppText>
-        ) : null}
-        <View
-          style={[
-            styles.composerShell,
-            { borderTopColor: palette.border, paddingBottom: Math.max(insets.bottom, spacing.sm) },
-          ]}
+        <ChatComposer
+          accessibilityLabel={t('Ton message')}
+          attachDisabled={preparingAttachment || send.isPending}
+          error={localError}
+          maxLength={MESSAGE_MAX_LENGTH}
+          onAttachFile={{ label: t('Joindre un fichier'), onPress: () => void pickDocument() }}
+          onAttachMedia={{
+            label: t('Joindre une photo ou une vidéo'),
+            onPress: () => void pickMedia(),
+          }}
+          onChangeText={(value) => {
+            setDraft(value);
+            if (value) typing.ping();
+          }}
+          onSend={submit}
+          paddingBottom={Math.max(insets.bottom, spacing.sm)}
+          placeholder={t('Ton message…')}
+          preparingAttachment={preparingAttachment}
+          sendDisabled={!canSend || send.isPending}
+          sendLabel={t('Envoyer')}
+          sending={send.isPending}
+          value={draft}
         >
-          <BlurView intensity={72} style={StyleSheet.absoluteFill} tint={dark ? 'dark' : 'light'} />
           {pendingAttachment ? (
             <PendingAttachmentChip
               attachment={pendingAttachment}
               onRemove={() => setPendingAttachment(null)}
             />
           ) : null}
-          <View style={styles.composer}>
-            <Pressable
-              accessibilityLabel={t('Joindre une photo ou une vidéo')}
-              accessibilityRole="button"
-              disabled={preparingAttachment || send.isPending}
-              onPress={() => void pickMedia()}
-              style={({ pressed }) => [
-                styles.attach,
-                { backgroundColor: palette.card },
-                pressed && styles.pressed,
-                (preparingAttachment || send.isPending) && styles.disabled,
-              ]}
-            >
-              {preparingAttachment ? (
-                <ActivityIndicator color={palette.electric} size="small" />
-              ) : (
-                <Ionicons color={palette.electric} name="images" size={18} />
-              )}
-            </Pressable>
-            <Pressable
-              accessibilityLabel={t('Joindre un fichier')}
-              accessibilityRole="button"
-              disabled={preparingAttachment || send.isPending}
-              onPress={() => void pickDocument()}
-              style={({ pressed }) => [
-                styles.attach,
-                { backgroundColor: palette.card },
-                pressed && styles.pressed,
-                (preparingAttachment || send.isPending) && styles.disabled,
-              ]}
-            >
-              <Ionicons color={palette.electric} name="attach" size={19} />
-            </Pressable>
-            <TextInput
-              accessibilityLabel={t('Ton message')}
-              maxLength={MESSAGE_MAX_LENGTH}
-              multiline
-              onChangeText={(value) => {
-                setDraft(value);
-                if (value) typing.ping();
-              }}
-              placeholder={t('Ton message…')}
-              placeholderTextColor={palette.muted}
-              selectionColor={palette.electric}
-              style={[
-                styles.input,
-                { backgroundColor: palette.card, borderColor: palette.border, color: palette.text },
-              ]}
-              value={draft}
-            />
-            <Pressable
-              accessibilityLabel={t('Envoyer')}
-              accessibilityRole="button"
-              disabled={!canSend || send.isPending}
-              onPress={submit}
-              style={({ pressed }) => [
-                styles.send,
-                pressed && styles.pressed,
-                (!canSend || send.isPending) && styles.disabled,
-              ]}
-            >
-              {send.isPending ? (
-                <ActivityIndicator color={palette.electric} size="small" />
-              ) : (
-                <Ionicons
-                  color={canSend ? palette.electric : palette.muted}
-                  name="arrow-up-circle"
-                  size={34}
-                />
-              )}
-            </Pressable>
-          </View>
-        </View>
+        </ChatComposer>
       </KeyboardAvoidingView>
       {actionMessage ? (
         <MessageActionsModal
@@ -452,42 +384,9 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  attach: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
-  composer: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.control },
-  composerShell: {
-    borderTopWidth: 1,
-    gap: spacing.xs,
-    overflow: 'hidden',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-  },
-  disabled: { opacity: 0.4 },
-  error: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   flex: { flex: 1 },
-  headerCopy: { alignItems: 'flex-start' },
-  headerName: { fontWeight: '700', lineHeight: 18 },
+  headerCopy: { alignItems: 'flex-start', flexShrink: 1 },
   headerPrincipal: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  headerSubtitle: { fontSize: 10, lineHeight: 12 },
-  input: {
-    borderRadius: 20,
-    borderWidth: 1,
-    flex: 1,
-    fontSize: 16,
-    maxHeight: 104,
-    minHeight: 40,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    textAlignVertical: 'center',
-  },
   messages: { padding: spacing.md },
-  pageLoader: { paddingVertical: spacing.md },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.94 }] },
-  send: { alignItems: 'center', height: 40, justifyContent: 'center', width: 36 },
-  separator: { height: 10 },
+  separator: { height: spacing.xs },
 });

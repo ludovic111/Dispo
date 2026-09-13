@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   AffiliationStatusCard,
@@ -19,11 +19,13 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { radii, spacing, tint } from '@/theme/tokens';
 
 export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
   const { palette } = useDispoTheme();
@@ -84,6 +86,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
     );
   };
 
+  const proofColor = school.isVerified ? palette.jam : palette.bronze;
   return (
     <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -91,7 +94,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
           <SchoolAvatar school={school} size={72} />
           <View style={styles.heroCopy}>
             <View style={styles.titleRow}>
-              <AppText style={styles.title} variant="title2">
+              <AppText numberOfLines={2} style={styles.title} variant="title2">
                 {school.name}
               </AppText>
               {school.isVerified ? <VerifiedSchoolSeal compact /> : null}
@@ -104,20 +107,15 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
         </Card>
 
         <Card style={styles.proofCard}>
-          <View
-            style={[
-              styles.proofIcon,
-              { backgroundColor: school.isVerified ? `${palette.jam}18` : `${palette.bronze}18` },
-            ]}
-          >
+          <View style={[styles.proofIcon, { backgroundColor: tint(proofColor, 0.09) }]}>
             <Ionicons
-              color={school.isVerified ? palette.jam : palette.bronze}
+              color={proofColor}
               name={school.isVerified ? 'shield-checkmark' : 'information-circle'}
               size={22}
             />
           </View>
           <View style={styles.proofCopy}>
-            <AppText style={styles.proofTitle} variant="subheadline">
+            <AppText variant="headline">
               {school.isVerified
                 ? t('Identité institutionnelle vérifiée')
                 : t('École non vérifiée')}
@@ -133,21 +131,13 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
         </Card>
 
         {school.websiteUrl ? (
-          <Pressable
-            accessibilityRole="link"
+          <ListRow
+            accessory={<Ionicons color={palette.muted} name="open-outline" size={15} />}
+            leadingIcon="globe-outline"
+            leadingIconColor={palette.bronze}
             onPress={() => void Linking.openURL(school.websiteUrl ?? '')}
-            style={({ pressed }) => [
-              styles.website,
-              { backgroundColor: palette.card, borderColor: palette.border },
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons color={palette.bronze} name="globe-outline" size={18} />
-            <AppText numberOfLines={1} style={styles.websiteText}>
-              {formatSwiftPlaceholders(t('Site de %@'), schoolDisplayName(school))}
-            </AppText>
-            <Ionicons color={palette.muted} name="open-outline" size={15} />
-          </Pressable>
+            title={formatSwiftPlaceholders(t('Site de %@'), schoolDisplayName(school))}
+          />
         ) : null}
 
         {affiliation ? (
@@ -167,40 +157,19 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
               {t('Modifier mon affiliation')}
             </DispoButton>
 
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons color={palette.bronze} name="people" size={17} />
-                <AppText style={styles.sectionTitle} variant="subheadline">
-                  {t('Membres')}
-                </AppText>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push(`/schools/${school.id}/members` as never)}
-              >
-                <AppText color={palette.bronze} style={styles.seeAll} variant="caption">
-                  {formatSwiftPlaceholders(t('Voir les %lld'), affiliation.memberCount)}
-                </AppText>
-              </Pressable>
-            </View>
+            <SectionHeader
+              action={{
+                label: formatSwiftPlaceholders(t('Voir les %lld'), affiliation.memberCount),
+                onPress: () => router.push(`/schools/${school.id}/members` as never),
+              }}
+              title={t('Membres')}
+            />
             {members.isLoading ? <LoadingState label={t('Chargement des membres…')} /> : null}
             {members.isError ? (
-              <Card style={styles.inlineError}>
-                <Ionicons color={palette.signal} name="cloud-offline-outline" size={20} />
-                <View style={styles.inlineErrorCopy}>
-                  <AppText style={styles.inlineErrorTitle} variant="caption">
-                    {t('Membres indisponibles')}
-                  </AppText>
-                  <AppText color={palette.muted} variant="caption2">
-                    {t('Cette liste est réservée aux affiliations actives.')}
-                  </AppText>
-                </View>
-                <Pressable onPress={() => void members.refetch()}>
-                  <AppText color={palette.bronze} variant="caption">
-                    {t('Réessayer')}
-                  </AppText>
-                </Pressable>
-              </Card>
+              <ErrorState
+                message={t('Cette liste est réservée aux affiliations actives.')}
+                onRetry={() => void members.refetch()}
+              />
             ) : null}
             {visibleMembers.slice(0, 3).map((member) => (
               <SchoolMemberCard
@@ -216,9 +185,7 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
         ) : (
           <>
             <Card style={styles.joinCopy}>
-              <AppText style={styles.joinTitle} variant="subheadline">
-                {t('Ajouter mon école de musique')}
-              </AppText>
+              <AppText variant="headline">{t('Ajouter mon école de musique')}</AppText>
               <AppText color={palette.muted} variant="caption">
                 {t(
                   'Choisis ton rôle et qui peut voir cette affiliation. Ton rôle restera déclaré tant que l’établissement ne l’aura pas validé.',
@@ -239,17 +206,12 @@ export function SchoolDetailScreen({ schoolId }: { schoolId: string }) {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.cluster, padding: spacing.gutter, paddingBottom: spacing.xxl },
+  content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   hero: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
   heroCopy: { flex: 1, gap: spacing.tight },
-  inlineError: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  inlineErrorCopy: { flex: 1, gap: 2 },
-  inlineErrorTitle: { fontWeight: '800' },
   joinCopy: { gap: spacing.xs },
-  joinTitle: { fontWeight: '800' },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.97 }] },
   proofCard: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
-  proofCopy: { flex: 1, gap: 4 },
+  proofCopy: { flex: 1, gap: spacing.xxs },
   proofIcon: {
     alignItems: 'center',
     borderRadius: radii.button,
@@ -257,26 +219,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 42,
   },
-  proofTitle: { fontWeight: '800' },
-  sectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 2,
-  },
-  sectionTitle: { fontWeight: '800' },
-  sectionTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  seeAll: { fontWeight: '800' },
   title: { flexShrink: 1 },
   titleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  website: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 48,
-    paddingHorizontal: spacing.cluster,
-  },
-  websiteText: { flex: 1, fontWeight: '700' },
 });

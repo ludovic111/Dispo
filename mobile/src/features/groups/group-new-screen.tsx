@@ -23,15 +23,17 @@ import {
 import { useCreateGroup, useGroupProfileCandidates } from './group-queries';
 
 import { AppText } from '@/components/ui/app-text';
+import { CountBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
 import { useSubscription } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 const emojis = ['🎶', '🎷', '🪘', '🎸', '🎹', '🎺', '🥁', '🎻', '🎤', '⚡'];
 
@@ -82,7 +84,7 @@ export function GroupNewScreen() {
   )
     return (
       <Screen nativeHeader>
-        <View style={{ padding: 18 }}>
+        <View style={styles.gate}>
           <SubscriptionAccessCard groupCreation />
         </View>
       </Screen>
@@ -142,7 +144,7 @@ export function GroupNewScreen() {
   return (
     <Screen nativeHeader>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={headerHeight}
         style={styles.body}
       >
@@ -155,6 +157,7 @@ export function GroupNewScreen() {
             <FormField
               autoCapitalize="words"
               error={!name.trim() && create.isError ? t('Donne un nom au groupe.') : undefined}
+              hint={t('Membres, répertoire et événements passeront par toi.')}
               label={t('Le groupe')}
               onChangeText={setName}
               placeholder={t('Latin Vibes Quartet')}
@@ -173,27 +176,25 @@ export function GroupNewScreen() {
                     accessibilityState={{ selected: emoji === option }}
                     key={option}
                     onPress={() => setEmoji(option)}
-                    style={[
+                    style={({ pressed }) => [
                       styles.emoji,
-                      { backgroundColor: emoji === option ? `${palette.bronze}33` : 'transparent' },
+                      emoji === option && { backgroundColor: tint(palette.bronze, 0.2) },
+                      pressed && pressedStyle,
                     ]}
                   >
-                    <AppText style={styles.emojiText}>{option}</AppText>
+                    <AppText variant="title2">{option}</AppText>
                   </Pressable>
                 ))}
               </View>
             </ScrollView>
-            <AppText color={palette.muted} variant="caption">
-              {t('Membres, répertoire et événements passeront par toi.')}
-            </AppText>
           </Card>
 
           <Card style={styles.section}>
             <View style={styles.memberHeader}>
-              <AppText variant="title">{t('Membres')}</AppText>
-              <AppText color={palette.electric} style={styles.count}>
-                {memberIds.size}
-              </AppText>
+              <View style={styles.flex}>
+                <SectionHeader title={t('Membres')} />
+              </View>
+              <CountBadge count={memberIds.size} />
             </View>
             <FormField
               label={t('Rechercher')}
@@ -212,7 +213,7 @@ export function GroupNewScreen() {
                   style={({ pressed }) => [
                     styles.member,
                     { borderColor: selected ? palette.electric : palette.border },
-                    pressed && styles.pressed,
+                    pressed && pressedStyle,
                   ]}
                 >
                   <GroupAvatar
@@ -222,7 +223,7 @@ export function GroupNewScreen() {
                     size={40}
                   />
                   <View style={styles.memberCopy}>
-                    <AppText numberOfLines={1} style={styles.memberName}>
+                    <AppText numberOfLines={1} variant="headline">
                       {profile.name}
                     </AppText>
                     <AppText color={palette.muted} numberOfLines={1} variant="caption2">
@@ -260,28 +261,27 @@ export function GroupNewScreen() {
 
 const styles = StyleSheet.create({
   body: { flex: 1 },
-  content: { gap: spacing.cluster, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
-  count: { fontWeight: '800' },
+  content: { gap: spacing.sm, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   emoji: {
     alignItems: 'center',
-    borderRadius: 22,
-    height: 44,
+    borderRadius: radii.round,
+    height: minimumTouchTarget,
     justifyContent: 'center',
-    width: 44,
+    width: minimumTouchTarget,
   },
-  emojiText: { fontSize: 21 },
   emojis: { flexDirection: 'row', gap: spacing.tight },
   error: { textAlign: 'center' },
+  flex: { flex: 1 },
+  gate: { padding: spacing.gutter },
   member: {
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.control,
-    paddingVertical: spacing.control,
+    gap: spacing.sm,
+    minHeight: minimumTouchTarget,
+    paddingVertical: spacing.sm,
   },
   memberCopy: { flex: 1 },
-  memberHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  memberName: { fontWeight: '700' },
-  pressed: { opacity: 0.7 },
+  memberHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   section: { gap: spacing.sm },
 });

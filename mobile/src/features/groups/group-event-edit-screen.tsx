@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
   parseGroupEventVenueLabel,
@@ -19,6 +19,7 @@ import { FormField } from '@/components/ui/form-field';
 import { NativeDateTimeField } from '@/components/ui/native-date-time-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
 import { usePremiumCapability } from '@/features/premium/subscription-queries';
@@ -89,21 +90,21 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
     <Screen nativeHeader>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Card style={styles.card}>
-          <AppText variant="title">{t('Titre')}</AppText>
+          <SectionHeader title={t('Titre')} />
           <View style={styles.wrap}>
             {(['Répétition', 'Concert', 'Jam'] as const).map((option) => (
               <ChoiceChip
                 key={option}
                 label={t(option)}
-                selected={kind === option}
                 onPress={() => setKind(option)}
+                selected={kind === option}
               />
             ))}
           </View>
           <NativeDateTimeField
             dateLabel={t('Date')}
-            timeLabel={t('Heure')}
             onChange={setDate}
+            timeLabel={t('Heure')}
             value={date}
           />
           {dayChanges ? (
@@ -116,6 +117,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
           ) : null}
         </Card>
         <Card style={styles.card}>
+          <SectionHeader title={t('Lieu')} />
           <FormField
             label={t('Salle ou bar')}
             onChangeText={setVenue}
@@ -143,6 +145,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
             value={{ city, countryCode, postalCode }}
           />
           <FormField
+            hint={t("Effacer simplement le champ ne supprime rien : utilise l'action dédiée.")}
             label={t('Adresse privée')}
             multiline
             onChangeText={(value) => {
@@ -153,18 +156,19 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
             value={exactAddress}
           />
           {event.privateLocationState === 'available' && !clearExactAddress ? (
-            <Pressable
-              onPress={() => {
-                setExactAddress('');
-                setClearExactAddress(true);
-              }}
-              style={styles.removeAddress}
-            >
-              <Ionicons color={palette.signal} name="trash-outline" size={15} />
-              <AppText color={palette.signal} variant="caption">
+            <View style={styles.inlineAction}>
+              <DispoButton
+                icon="trash-outline"
+                onPress={() => {
+                  setExactAddress('');
+                  setClearExactAddress(true);
+                }}
+                size="compact"
+                variant="danger"
+              >
                 {t("Supprimer l'adresse privée")}
-              </AppText>
-            </Pressable>
+              </DispoButton>
+            </View>
           ) : null}
           {clearExactAddress ? (
             <View style={styles.note}>
@@ -172,16 +176,16 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
               <AppText color={palette.signal} style={styles.flex} variant="caption">
                 {t("L'adresse sera supprimée.")}
               </AppText>
-              <Pressable
+              <DispoButton
                 onPress={() => {
                   setClearExactAddress(false);
                   setExactAddress(event.exactAddress ?? '');
                 }}
+                size="compact"
+                variant="ghost"
               >
-                <AppText color={palette.electric} variant="caption">
-                  {t('Annuler la suppression')}
-                </AppText>
-              </Pressable>
+                {t('Annuler la suppression')}
+              </DispoButton>
             </View>
           ) : null}
           {event.privateLocationState === 'unknown' ? (
@@ -206,12 +210,9 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
               )}
             </AppText>
           </View>
-          <AppText color={palette.muted} variant="caption2">
-            {t("Effacer simplement le champ ne supprime rien : utilise l'action dédiée.")}
-          </AppText>
         </Card>
         <Card style={styles.card}>
-          <AppText variant="title">{t('Rappel')}</AppText>
+          <SectionHeader title={t('Rappel')} />
           {canConfigureReminder ? (
             <View style={styles.wrap}>
               {reminderOptions.map((days) => (
@@ -237,7 +238,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
         </Card>
         {event.seriesId ? (
           <Card style={styles.card}>
-            <AppText variant="title">{t("Ça s'applique à")}</AppText>
+            <SectionHeader title={t("Ça s'applique à")} />
             <View style={styles.wrap}>
               <ChoiceChip
                 label={t('Cette date seulement')}
@@ -309,7 +310,7 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   flex: { flex: 1 },
-  note: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
-  removeAddress: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  inlineAction: { alignSelf: 'flex-start' },
+  note: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

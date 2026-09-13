@@ -2,7 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { GroupEventsTab } from './group-events-tab';
 import { GroupMessagesTab } from './group-messages-tab';
@@ -11,21 +11,20 @@ import { useGroup, useMarkGroupSeen } from './group-queries';
 import { GroupRepertoireTab } from './group-repertoire-tab';
 
 import { AppText } from '@/components/ui/app-text';
-import { ChoiceChip } from '@/components/ui/choice-chip';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { UnderlineTabs } from '@/components/ui/segmented-control';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
-const tabs: { icon: 'calendar' | 'chatbubbles' | 'musical-notes'; id: GroupTab; label: string }[] =
-  [
-    { icon: 'chatbubbles', id: 'messages', label: 'Messages' },
-    { icon: 'musical-notes', id: 'repertoire', label: 'Répertoire' },
-    { icon: 'calendar', id: 'events', label: 'Événements' },
-  ];
+const tabs: { id: GroupTab; label: string }[] = [
+  { id: 'messages', label: 'Messages' },
+  { id: 'repertoire', label: 'Répertoire' },
+  { id: 'events', label: 'Événements' },
+];
 
 export function GroupDetailScreen({ groupId }: { groupId: string }) {
   const headerHeight = useHeaderHeight();
@@ -94,7 +93,7 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
         }}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={headerHeight}
         style={styles.body}
       >
@@ -114,23 +113,13 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
             {group.isPublic ? <Tag color={palette.jam} label={t('Public')} /> : null}
           </View>
         ) : null}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabs}
-          style={styles.tabStrip}
-        >
-          {tabs.map((item) => (
-            <View key={item.id} style={styles.tab}>
-              <ChoiceChip
-                icon={item.icon}
-                label={t(item.label)}
-                onPress={() => setTab(item.id)}
-                selected={tab === item.id}
-              />
-            </View>
-          ))}
-        </ScrollView>
+        <View style={styles.tabs}>
+          <UnderlineTabs
+            onChange={setTab}
+            options={tabs.map((item) => ({ label: t(item.label), value: item.id }))}
+            value={tab}
+          />
+        </View>
         <View style={styles.body}>
           {tab === 'messages' ? <GroupMessagesTab group={group} userId={userId} /> : null}
           {tab === 'repertoire' ? <GroupRepertoireTab group={group} userId={userId} /> : null}
@@ -142,21 +131,14 @@ export function GroupDetailScreen({ groupId }: { groupId: string }) {
 }
 
 const styles = StyleSheet.create({
-  groupSummary: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
   body: { flex: 1 },
-  tab: { flexGrow: 1, flexShrink: 0 },
-  tabStrip: { flexGrow: 0, flexShrink: 0 },
-  tabs: {
-    flexGrow: 1,
-    flexDirection: 'row',
-    gap: spacing.tight,
-    paddingHorizontal: spacing.gutter,
-    paddingVertical: spacing.xs,
-  },
+  groupSummary: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
   statusRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.tight,
     paddingHorizontal: spacing.gutter,
+    paddingTop: spacing.xxs,
   },
+  tabs: { paddingHorizontal: spacing.gutter, paddingTop: spacing.xs },
 });

@@ -138,5 +138,5 @@ export default function EditGigScreen() {
   );
 }
 const styles = StyleSheet.create({
-  content: { gap: spacing.md, padding: spacing.md, paddingBottom: spacing.xxl },
+  content: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
 });

@@ -9,6 +9,7 @@ import { IosTabs } from '@/features/navigation/ios-tabs';
 import { tabBadgeValue } from '@/features/navigation/tab-badge-model';
 import { useTabBadgeCounts } from '@/features/navigation/tab-badge-queries';
 import { useDispoTheme } from '@/theme/theme-context';
+import { onAccent, tint } from '@/theme/tokens';
 
 export default function TabsLayout() {
   const { isLoading, session } = useAuth();
@@ -37,9 +38,13 @@ export default function TabsLayout() {
       {...Platform.select({
         android: {
           backgroundColor: palette.card,
+          badgeBackgroundColor: palette.signal,
+          badgeTextColor: onAccent,
           iconColor: { default: palette.muted, selected: palette.electric },
-          labelStyle: { default: { color: palette.muted }, selected: { color: palette.electric } },
           indicatorColor: palette.inset,
+          labelStyle: { default: { color: palette.muted }, selected: { color: palette.electric } },
+          labelVisibilityMode: 'labeled' as const,
+          rippleColor: tint(palette.electric, 0.16),
         },
       })}
     >

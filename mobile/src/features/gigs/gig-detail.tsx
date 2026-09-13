@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import {
@@ -28,13 +28,19 @@ import { GigSchoolCriteria } from './gig-school-field';
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
+import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { Barcode, TicketCard } from '@/components/ui/ticket-card';
 import { shortProfileLevel } from '@/domain/profile';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, radii, spacing, typography } from '@/theme/tokens';
+import { billetInk, lightPalette, spacing, tint } from '@/theme/tokens';
+
+/** Le billet SOS est une surface claire fixe dans les deux thèmes : encre `billetInk`, accents clairs. */
+const billet = lightPalette;
 
 function paymentLabel(value: string | null, t: TFunction): string | null {
   if (!value) return null;
@@ -117,16 +123,11 @@ function PrivateLocationCard({ gig }: { gig: GigDetail }) {
     return (
       <Card padding={0}>
         <View style={styles.privateLocationHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Ionicons color={palette.jam} name="lock-open" size={18} />
-            <AppText color={palette.jam} variant="label">
-              {t('Rendez-vous privé')}
-            </AppText>
-          </View>
+          <SectionHeader
+            subtitle={t("Partagé uniquement avec l'organisateur et les personnes acceptées.")}
+            title={t('Rendez-vous privé')}
+          />
           <AppText variant="title">{location.exactAddress}</AppText>
-          <AppText color={palette.muted} variant="caption">
-            {t("Partagé uniquement avec l'organisateur et les personnes acceptées.")}
-          </AppText>
         </View>
         {coordinate && embeddedMapEnabled ? (
           <MapView
@@ -147,18 +148,15 @@ function PrivateLocationCard({ gig }: { gig: GigDetail }) {
             <Marker coordinate={coordinate} pinColor={palette.signal} title={t('Rendez-vous')} />
           </MapView>
         ) : null}
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => void openMap()}
-          style={({ pressed }) => [styles.routeButton, pressed && styles.routeButtonPressed]}
-        >
-          <Ionicons color={palette.bronze} name="navigate-circle" size={18} />
-          <AppText color={palette.bronze} style={styles.smallButtonLabel}>
-            {t("Ouvrir l'itinéraire")}
-          </AppText>
-          <View style={styles.routeSpacer} />
-          <Ionicons color={palette.muted} name="open-outline" size={14} />
-        </Pressable>
+        <View style={styles.routeRow}>
+          <ListRow
+            accessory={<Ionicons color={palette.muted} name="open-outline" size={16} />}
+            leadingIcon="navigate-circle"
+            onPress={() => void openMap()}
+            title={t("Ouvrir l'itinéraire")}
+            tone="plain"
+          />
+        </View>
       </Card>
     );
   }
@@ -197,7 +195,7 @@ function ApplicantRow({ applicant, gigId }: { applicant: GigApplication; gigId: 
           uri={applicant.musicianPhotoUrl}
         />
         <View style={styles.applicantText}>
-          <AppText style={styles.applicantName}>
+          <AppText numberOfLines={2} variant="title3">
             {applicant.musicianName || t('Musicien·ne')}
           </AppText>
           <AppText color={palette.muted} variant="caption">
@@ -212,49 +210,51 @@ function ApplicantRow({ applicant, gigId }: { applicant: GigApplication; gigId: 
         </AppText>
       ) : null}
       {applicant.status === 'pending' ? (
-        <View style={styles.actionsRow}>
-          <View style={styles.actionButton}>
-            <DispoButton
-              loading={decision.isPending}
-              onPress={() => run('decline')}
-              variant="danger"
-            >
-              {t('Refuser')}
-            </DispoButton>
-          </View>
-          <View style={styles.actionButton}>
-            <DispoButton loading={decision.isPending} onPress={() => run('accept')}>
-              {t('Accepter')}
-            </DispoButton>
-          </View>
+        <View style={styles.inlineActions}>
+          <DispoButton
+            loading={decision.isPending}
+            onPress={() => run('decline')}
+            size="compact"
+            variant="ghost"
+          >
+            {t('Refuser')}
+          </DispoButton>
+          <DispoButton loading={decision.isPending} onPress={() => run('accept')} size="compact">
+            {t('Accepter')}
+          </DispoButton>
         </View>
       ) : null}
       {applicant.status === 'accepted' ? (
-        <View style={styles.actionsRow}>
-          <View style={styles.actionButton}>
-            <DispoButton
-              loading={decision.isPending}
-              onPress={() => run('reopen')}
-              variant="secondary"
-            >
-              {t('Remettre en attente')}
-            </DispoButton>
-          </View>
-          <View style={styles.actionButton}>
-            <DispoButton
-              loading={decision.isPending}
-              onPress={() => run('decline')}
-              variant="danger"
-            >
-              {t('Libérer')}
-            </DispoButton>
-          </View>
+        <View style={styles.inlineActions}>
+          <DispoButton
+            loading={decision.isPending}
+            onPress={() => run('reopen')}
+            size="compact"
+            variant="ghost"
+          >
+            {t('Remettre en attente')}
+          </DispoButton>
+          <DispoButton
+            loading={decision.isPending}
+            onPress={() => run('decline')}
+            size="compact"
+            variant="danger"
+          >
+            {t('Libérer')}
+          </DispoButton>
         </View>
       ) : null}
       {applicant.status === 'declined' ? (
-        <DispoButton loading={decision.isPending} onPress={() => run('reopen')} variant="secondary">
-          {t('Replacer en attente')}
-        </DispoButton>
+        <View style={styles.inlineActions}>
+          <DispoButton
+            loading={decision.isPending}
+            onPress={() => run('reopen')}
+            size="compact"
+            variant="secondary"
+          >
+            {t('Replacer en attente')}
+          </DispoButton>
+        </View>
       ) : null}
       {decision.error ? (
         <AppText color={palette.error} variant="caption">
@@ -282,9 +282,7 @@ function OrganizerPanel({
   const unslotted = unslottedGigApplicants(gig);
   return (
     <Card style={styles.section}>
-      <AppText color={palette.bronze} variant="label">
-        {t('J’organise')}
-      </AppText>
+      <SectionHeader title={t('J’organise')} />
       {gig.targetId ? (
         <View style={styles.statusLine}>
           <Tag
@@ -518,28 +516,15 @@ function ViewerPanel({ gig, userId }: { gig: GigDetail; userId: string }) {
 
   return (
     <Card style={styles.section}>
-      <AppText color={palette.bronze} variant="label">
-        {t('Je peux dépanner')}
-      </AppText>
+      <SectionHeader title={t('Je peux dépanner')} />
       <View style={styles.chips}>
         {open.map((value) => (
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ selected: instrument === value }}
+          <ChoiceChip
             key={value}
+            label={t(value)}
             onPress={() => setInstrument(value)}
-            style={[
-              styles.instrumentChoice,
-              {
-                backgroundColor: instrument === value ? `${palette.electric}22` : palette.inset,
-                borderColor: instrument === value ? palette.electric : palette.border,
-              },
-            ]}
-          >
-            <AppText color={instrument === value ? palette.electric : palette.text}>
-              {t(value)}
-            </AppText>
-          </Pressable>
+            selected={instrument === value}
+          />
         ))}
       </View>
       <FormField
@@ -593,31 +578,29 @@ export function GigDetailContent({
         <View style={styles.ticket}>
           <View style={styles.ticketMain}>
             <View style={styles.chips}>
-              <Tag color="#B33D17" label={gig.targetId ? t('Demande directe') : t('SOS')} />
-              <Tag color="#475569" label={t(gig.genre)} />
+              <Tag color={billet.signal} label={gig.targetId ? t('Demande directe') : t('SOS')} />
+              <Tag color={billet.bronze} label={t(gig.genre)} />
             </View>
             <AppText color={billetInk} variant="display">
               {gig.title}
             </AppText>
             <View style={styles.ticketMeta}>
-              <Ionicons color="rgba(5,8,20,0.62)" name="calendar-outline" size={16} />
-              <AppText color="rgba(5,8,20,0.72)">{date}</AppText>
+              <Ionicons color={billet.muted} name="calendar-outline" size={16} />
+              <AppText color={billet.muted}>{date}</AppText>
             </View>
             <View style={styles.ticketMeta}>
-              <Ionicons color="rgba(5,8,20,0.62)" name="location-outline" size={16} />
-              <AppText color="rgba(5,8,20,0.72)">{gig.place}</AppText>
+              <Ionicons color={billet.muted} name="location-outline" size={16} />
+              <AppText color={billet.muted}>{gig.place}</AppText>
             </View>
           </View>
-          <View style={styles.ticketStub}>
+          <View style={[styles.ticketStub, { borderColor: tint(billetInk, 0.28) }]}>
             <Barcode seed={gig.id} />
           </View>
         </View>
       </TicketCard>
 
       <Card style={styles.section}>
-        <AppText color={palette.bronze} variant="label">
-          {t('Organisateur')}
-        </AppText>
+        <SectionHeader title={t('Organisateur')} />
         <View style={styles.organizer}>
           <Avatar name={hostName} size={44} uri={gig.hostPhotoUrl} />
           <AppText variant="title">{hostName}</AppText>
@@ -658,7 +641,7 @@ export function GigDetailContent({
         {gig.fee !== null ? (
           <View style={styles.feeRow}>
             <Ionicons color={palette.jam} name="cash-outline" size={18} />
-            <AppText color={palette.jam} style={styles.fee}>
+            <AppText color={palette.jam} variant="mono">
               {gig.fee === 0
                 ? t('Sans cachet')
                 : new Intl.NumberFormat(locale, {
@@ -697,44 +680,37 @@ export function GigDetailContent({
 const styles = StyleSheet.create({
   actionButton: { flex: 1 },
   actionsRow: { alignItems: 'stretch', flexDirection: 'row', gap: spacing.xs },
-  applicant: { borderTopWidth: 1, gap: spacing.sm, paddingTop: spacing.sm },
+  applicant: { borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.sm, paddingTop: spacing.sm },
   applicantGroup: { gap: spacing.sm },
-  applicantName: { fontWeight: '800' },
-  applicantText: { flex: 1, gap: 2 },
+  applicantText: { flex: 1, gap: spacing.xxs },
   applicantTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   content: { gap: spacing.md },
-  fee: { fontFamily: typography.monoSemibold, fontSize: 16 },
   feeRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  instrumentChoice: {
-    borderRadius: radii.chip,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  inlineActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    justifyContent: 'flex-end',
   },
   organizer: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   privateLocationHeader: { gap: spacing.xs, padding: spacing.md },
   privateMap: { height: 150, width: '100%' },
-  routeButton: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
-  routeButtonPressed: { opacity: 0.72 },
-  routeSpacer: { flex: 1 },
+  routeRow: { paddingHorizontal: spacing.md },
   section: { gap: spacing.sm },
   sectionTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  smallButtonLabel: { fontSize: 13, fontWeight: '800' },
   statusLine: { alignItems: 'center', flexDirection: 'row' },
   textarea: { minHeight: 84, textAlignVertical: 'top' },
-  ticket: { flexDirection: 'row', minHeight: 178 },
+  ticket: { flexDirection: 'row' },
   ticketMain: { flex: 1, gap: spacing.sm, padding: spacing.md },
   ticketMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   ticketStub: {
     alignItems: 'center',
+    borderLeftWidth: 1.5,
+    borderStyle: 'dashed',
     justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-    width: 74,
+    marginVertical: spacing.xxs,
+    paddingHorizontal: spacing.md,
   },
 });

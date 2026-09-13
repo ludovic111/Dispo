@@ -43,6 +43,6 @@ describe('sorties de navigation', () => {
 
     expect(whatsNew).toContain('icon="close"');
     expect(affiliation).toContain('styles.stateHeader');
-    expect(messageControls).toContain('styles.closeButton');
+    expect(messageControls).toContain('icon="close"');
   });
 });

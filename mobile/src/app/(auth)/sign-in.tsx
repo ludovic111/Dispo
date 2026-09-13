@@ -1,27 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { z } from 'zod';
 
 import { AppText } from '@/components/ui/app-text';
 import { BrandLogo } from '@/components/ui/brand';
 import { Card } from '@/components/ui/card';
+import { FormField } from '@/components/ui/form-field';
 import { LegalLinks } from '@/components/ui/legal-links';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import {
   requestEmailSignInLink,
@@ -32,57 +25,14 @@ import {
   signUpWithPassword,
 } from '@/features/auth/auth-service';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { disabledStyle, radii, spacing, tint } from '@/theme/tokens';
 
 interface Credentials {
   email: string;
   password: string;
 }
 
-interface AuthFieldProps extends ComponentProps<typeof TextInput> {
-  error?: string | undefined;
-  label: string;
-}
-
-function AuthField({ error, label, onBlur, onFocus, style, ...props }: AuthFieldProps) {
-  const { palette } = useDispoTheme();
-  const [focused, setFocused] = useState(false);
-
-  return (
-    <View style={styles.field}>
-      <AppText color={palette.muted} style={styles.fieldLabel}>
-        {label}
-      </AppText>
-      <TextInput
-        {...props}
-        onBlur={(event) => {
-          setFocused(false);
-          onBlur?.(event);
-        }}
-        onFocus={(event) => {
-          setFocused(true);
-          onFocus?.(event);
-        }}
-        placeholderTextColor={palette.muted}
-        selectionColor={palette.electric}
-        style={[
-          styles.input,
-          {
-            backgroundColor: focused ? palette.cardElevated : palette.cardMuted,
-            borderColor: error ? palette.error : focused ? palette.electric : palette.border,
-            color: palette.text,
-          },
-          style,
-        ]}
-      />
-      {error ? (
-        <AppText color={palette.error} variant="caption">
-          {error}
-        </AppText>
-      ) : null}
-    </View>
-  );
-}
+type AuthMode = 'signin' | 'signup';
 
 export default function SignInScreen() {
   const { authCallbackError, configurationReady } = useAuth();
@@ -242,11 +192,10 @@ export default function SignInScreen() {
           <View style={styles.content}>
             <View style={styles.hero}>
               <BrandLogo markSize={48} />
-              <View style={[styles.heroRule, { backgroundColor: palette.electric }]} />
               <AppText style={styles.title} variant="display">
                 {t('Le réseau des musiciens\nqui se dépannent')}
               </AppText>
-              <AppText color={palette.muted} style={styles.subtitle}>
+              <AppText color={palette.muted} style={styles.subtitle} variant="callout">
                 {t(
                   'Un musicien te lâche ? Trouve un remplaçant fiable en quelques minutes à Genève.',
                 )}
@@ -265,7 +214,7 @@ export default function SignInScreen() {
                     buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
                     cornerRadius={radii.button}
                     onPress={() => void authenticateWithApple()}
-                    style={[styles.appleButton, appleWorking && styles.disabled]}
+                    style={[styles.appleButton, appleWorking && disabledStyle]}
                   />
                   <View style={styles.separator}>
                     <View style={[styles.separatorLine, { backgroundColor: palette.border }]} />
@@ -305,64 +254,26 @@ export default function SignInScreen() {
               ) : null}
 
               <Card padding={spacing.gutter} style={styles.card} tone="elevated">
-                <View
-                  accessibilityLabel={t('Mode')}
-                  accessibilityRole="tablist"
-                  style={[styles.modePicker, { backgroundColor: palette.inset }]}
-                >
-                  <Pressable
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: !registering }}
-                    onPress={() => selectMode(false)}
-                    style={({ pressed }) => [
-                      styles.modeOption,
-                      !registering && {
-                        backgroundColor: `${palette.electric}1F`,
-                        borderColor: `${palette.electric}66`,
-                      },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <AppText
-                      color={!registering ? palette.electric : palette.muted}
-                      style={styles.modeText}
-                    >
-                      {t('Se connecter')}
-                    </AppText>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: registering }}
-                    onPress={() => selectMode(true)}
-                    style={({ pressed }) => [
-                      styles.modeOption,
-                      registering && {
-                        backgroundColor: `${palette.electric}1F`,
-                        borderColor: `${palette.electric}66`,
-                      },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <AppText
-                      color={registering ? palette.electric : palette.muted}
-                      style={styles.modeText}
-                    >
-                      {t('Créer un compte')}
-                    </AppText>
-                  </Pressable>
-                </View>
+                <SegmentedControl<AuthMode>
+                  onChange={(mode) => selectMode(mode === 'signup')}
+                  options={[
+                    { label: t('Se connecter'), value: 'signin' },
+                    { label: t('Créer un compte'), value: 'signup' },
+                  ]}
+                  value={registering ? 'signup' : 'signin'}
+                />
 
                 {!configurationReady ? (
                   <View
                     style={[
                       styles.notice,
                       {
-                        backgroundColor: `${palette.signal}18`,
-                        borderColor: `${palette.signal}55`,
+                        backgroundColor: tint(palette.signal, 0.1),
+                        borderColor: tint(palette.signal, 0.33),
                       },
                     ]}
                   >
-                    <AppText color={palette.signal}>
+                    <AppText color={palette.signal} variant="footnote">
                       {t(
                         'Configuration Supabase manquante. Copie `.env.example` vers `.env.local` et renseigne uniquement les valeurs publiques.',
                       )}
@@ -374,7 +285,7 @@ export default function SignInScreen() {
                   control={control}
                   name="email"
                   render={({ field, fieldState }) => (
-                    <AuthField
+                    <FormField
                       autoCapitalize="none"
                       autoComplete="email"
                       error={fieldState.error?.message}
@@ -393,7 +304,7 @@ export default function SignInScreen() {
                   control={control}
                   name="password"
                   render={({ field, fieldState }) => (
-                    <AuthField
+                    <FormField
                       autoCapitalize="none"
                       autoComplete={registering ? 'new-password' : 'current-password'}
                       error={fieldState.error?.message}
@@ -435,32 +346,20 @@ export default function SignInScreen() {
                     >
                       {t('Recevoir un lien de connexion')}
                     </DispoButton>
-                    <Pressable
-                      accessibilityRole="button"
+                    <DispoButton
                       disabled={
                         !configurationReady ||
                         emailLinkWorking ||
                         formState.isSubmitting ||
-                        resetting ||
                         !normalizedEmail.includes('@')
                       }
-                      hitSlop={8}
+                      loading={resetting}
                       onPress={() => void forgotPassword()}
-                      style={({ pressed }) => [
-                        styles.forgotButton,
-                        pressed && styles.pressed,
-                        (!configurationReady ||
-                          emailLinkWorking ||
-                          formState.isSubmitting ||
-                          resetting ||
-                          !normalizedEmail.includes('@')) &&
-                          styles.disabled,
-                      ]}
+                      size="compact"
+                      variant="ghost"
                     >
-                      <AppText color={palette.muted} variant="caption">
-                        {resetting ? t('Envoi…') : t('Mot de passe oublié ?')}
-                      </AppText>
-                    </Pressable>
+                      {t('Mot de passe oublié ?')}
+                    </DispoButton>
                   </>
                 ) : null}
               </Card>
@@ -493,66 +392,28 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   appleButton: { height: 50, width: '100%' },
   authBlock: { gap: spacing.md, width: '100%' },
-  card: { gap: 14, width: '100%' },
+  card: { gap: spacing.md, width: '100%' },
   content: {
     alignItems: 'center',
     gap: spacing.xl,
     maxWidth: 520,
     width: '100%',
   },
-  disabled: { opacity: 0.45 },
-  field: { gap: 7 },
-  fieldLabel: { fontSize: 12, fontWeight: '700', lineHeight: 16 },
   flex: { flex: 1 },
-  forgotButton: { alignItems: 'center', minHeight: 24, justifyContent: 'center' },
-  hero: { alignItems: 'center', gap: spacing.control, width: '100%' },
-  heroRule: { borderRadius: 2, height: 3, marginBottom: 2, width: 42 },
-  input: {
-    borderRadius: radii.input,
-    borderWidth: 1,
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  legal: {
-    fontSize: 11,
-    lineHeight: 14,
-    maxWidth: 360,
-    paddingHorizontal: 14,
-    textAlign: 'center',
-  },
-  modeOption: {
-    alignItems: 'center',
-    borderColor: 'transparent',
-    borderRadius: 8,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 34,
-    paddingHorizontal: spacing.xs,
-  },
-  modePicker: { borderRadius: radii.input, flexDirection: 'row', gap: 3, padding: 3 },
-  modeText: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
-  notice: { borderRadius: 14, borderWidth: 1, padding: spacing.sm },
-  pressed: { opacity: 0.72 },
+  hero: { alignItems: 'center', gap: spacing.sm, width: '100%' },
+  legal: { maxWidth: 360, paddingHorizontal: spacing.sm, textAlign: 'center' },
+  notice: { borderRadius: radii.button, borderWidth: 1, padding: spacing.sm },
   scroll: {
     alignItems: 'center',
     flexGrow: 1,
     paddingBottom: spacing.xl,
-    paddingHorizontal: 18,
+    paddingHorizontal: spacing.gutter,
     paddingTop: spacing.xxl,
   },
   separator: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   separatorLine: { flex: 1, height: StyleSheet.hairlineWidth },
   separatorText: { flexShrink: 0 },
   status: { paddingHorizontal: spacing.xs },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    maxWidth: 390,
-    paddingHorizontal: spacing.lg,
-    textAlign: 'center',
-  },
-  title: { fontSize: 28, lineHeight: 33, maxWidth: 390, textAlign: 'center' },
+  subtitle: { maxWidth: 390, paddingHorizontal: spacing.lg, textAlign: 'center' },
+  title: { maxWidth: 390, textAlign: 'center' },
 });

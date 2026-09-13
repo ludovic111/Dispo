@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText } from './app-text';
-import { BrandLogo } from './brand';
 import { Card } from './card';
 import { DispoBackground } from './dispo-background';
+import { DispoButton } from './pressable';
 
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
@@ -48,19 +48,23 @@ export function Screen({
 }
 
 interface ScreenHeaderProps {
-  action?: ReactNode;
-  eyebrow?: string;
-  icon?: ComponentProps<typeof Ionicons>['name'];
-  iconColor?: string;
-  inset?: boolean;
-  leadingAction?: ReactNode;
-  subtitle?: string;
+  /** Action(s) à droite : `IconButton` ou `NativeHeaderButton`. */
+  action?: ReactNode | undefined;
+  icon?: ComponentProps<typeof Ionicons>['name'] | undefined;
+  iconColor?: string | undefined;
+  inset?: boolean | undefined;
+  /** Action à gauche, typiquement un bouton Retour / Fermer. */
+  leadingAction?: ReactNode | undefined;
+  subtitle?: string | undefined;
   title: string;
 }
 
+/**
+ * En-tête d'écran personnalisé (onglets et modales sans header natif).
+ * Titre Fraunces, sous-titre optionnel. Pas de surtitre décoratif.
+ */
 export function ScreenHeader({
   action,
-  eyebrow,
   icon,
   iconColor,
   inset = true,
@@ -69,31 +73,20 @@ export function ScreenHeader({
   title,
 }: ScreenHeaderProps) {
   const { palette } = useDispoTheme();
-  const resolvedIconColor = iconColor ?? palette.electric;
   return (
     <View style={[styles.header, !inset && styles.headerWithoutInset]}>
       {leadingAction ?? null}
       {icon ? (
-        <View
-          style={[
-            styles.icon,
-            { backgroundColor: palette.cardMuted, borderColor: `${resolvedIconColor}42` },
-          ]}
-        >
-          <Ionicons color={resolvedIconColor} name={icon} size={18} />
+        <View style={[styles.icon, { backgroundColor: palette.cardMuted }]}>
+          <Ionicons color={iconColor ?? palette.electric} name={icon} size={20} />
         </View>
       ) : null}
       <View style={styles.headerText}>
-        {eyebrow ? (
-          <AppText color={palette.electric} style={styles.headerEyebrow} variant="label">
-            {eyebrow}
-          </AppText>
-        ) : null}
-        <AppText numberOfLines={2} style={styles.headerTitle} variant="display">
+        <AppText numberOfLines={2} variant="display">
           {title}
         </AppText>
         {subtitle ? (
-          <AppText color={palette.muted} style={styles.headerSubtitle}>
+          <AppText color={palette.muted} numberOfLines={2} variant="subheadline">
             {subtitle}
           </AppText>
         ) : null}
@@ -103,57 +96,81 @@ export function ScreenHeader({
   );
 }
 
-export function LoadingState({ label }: { label?: string }) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
+/**
+ * En-tête de modale : action à gauche (Annuler / Fermer), titre centré,
+ * action à droite (OK / Enregistrer). Une seule forme pour toutes les feuilles.
+ */
+export function ModalHeader({
+  leading,
+  title,
+  trailing,
+}: {
+  leading?: ReactNode | undefined;
+  title: string;
+  trailing?: ReactNode | undefined;
+}) {
   return (
-    <View style={styles.center}>
-      <View
-        style={[
-          styles.loadingMark,
-          { backgroundColor: palette.cardMuted, borderColor: palette.border },
-        ]}
-      >
-        <BrandLogo markSize={30} showWordmark={false} />
-        <View style={[styles.loadingSpinner, { backgroundColor: palette.background }]}>
-          <ActivityIndicator color={palette.electric} size="small" />
-        </View>
-      </View>
-      <AppText color={palette.muted}>{label ?? t('Chargement…')}</AppText>
+    <View style={styles.modalHeader}>
+      <View style={styles.modalSide}>{leading ?? null}</View>
+      <AppText numberOfLines={1} style={styles.modalTitle} variant="headline">
+        {title}
+      </AppText>
+      <View style={[styles.modalSide, styles.modalSideEnd]}>{trailing ?? null}</View>
     </View>
   );
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function LoadingState({ label }: { label?: string | undefined }) {
+  const { palette } = useDispoTheme();
+  const { t } = useTranslation();
+  return (
+    <View accessibilityRole="progressbar" style={styles.center}>
+      <ActivityIndicator color={palette.electric} />
+      <AppText color={palette.muted} variant="subheadline">
+        {label ?? t('Chargement…')}
+      </AppText>
+    </View>
+  );
+}
+
+export function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: (() => void) | undefined;
+}) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   return (
     <View style={styles.center}>
-      <Ionicons color={palette.signal} name="cloud-offline-outline" size={34} />
+      <View style={[styles.stateIcon, { backgroundColor: palette.cardMuted }]}>
+        <Ionicons color={palette.signal} name="cloud-offline-outline" size={26} />
+      </View>
       <AppText style={styles.centerText} variant="title">
         {t('Erreur')}
       </AppText>
-      <AppText color={palette.muted} style={styles.centerText}>
+      <AppText color={palette.muted} style={styles.centerText} variant="subheadline">
         {message}
       </AppText>
       {onRetry ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onRetry}
-          style={[styles.retry, { borderColor: palette.border }]}
-        >
-          <AppText style={styles.retryText}>{t('Réessayer')}</AppText>
-        </Pressable>
+        <View style={styles.retry}>
+          <DispoButton onPress={onRetry} size="compact" variant="secondary">
+            {t('Réessayer')}
+          </DispoButton>
+        </View>
       ) : null}
     </View>
   );
 }
 
 export function EmptyState({
+  action,
   icon,
   message,
   title,
 }: {
+  action?: { label: string; onPress: () => void } | undefined;
   icon: ComponentProps<typeof Ionicons>['name'];
   message: string;
   title: string;
@@ -162,90 +179,71 @@ export function EmptyState({
   return (
     <Card accessible accessibilityRole="summary" style={styles.emptyCard}>
       <View style={styles.emptyContent}>
-        <View
-          style={[
-            styles.emptyIcon,
-            { backgroundColor: palette.cardMuted, borderColor: palette.border },
-          ]}
-        >
-          <Ionicons color={palette.electric} name={icon} size={27} />
+        <View style={[styles.stateIcon, { backgroundColor: palette.cardMuted }]}>
+          <Ionicons color={palette.electric} name={icon} size={26} />
         </View>
         <AppText numberOfLines={2} style={styles.centerText} variant="title">
           {title}
         </AppText>
-        <AppText color={palette.muted} style={styles.centerText}>
+        <AppText color={palette.muted} style={styles.centerText} variant="subheadline">
           {message}
         </AppText>
+        {action ? (
+          <View style={styles.retry}>
+            <DispoButton onPress={action.onPress} size="compact" variant="secondary">
+              {action.label}
+            </DispoButton>
+          </View>
+        ) : null}
       </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { alignItems: 'center', gap: spacing.sm, justifyContent: 'center', padding: spacing.xxl },
+  center: { alignItems: 'center', gap: spacing.xs, justifyContent: 'center', padding: spacing.xxl },
   centerText: { textAlign: 'center' },
-  emptyCard: { minHeight: 180 },
+  emptyCard: { minHeight: 168 },
   emptyContent: {
     alignItems: 'center',
     flex: 1,
-    gap: spacing.sm,
+    gap: spacing.xs,
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-  },
-  emptyIcon: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    borderWidth: 1,
-    height: 56,
-    justifyContent: 'center',
-    width: 56,
+    paddingVertical: spacing.sm,
   },
   header: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.cluster,
-    justifyContent: 'space-between',
+    gap: spacing.sm,
     paddingHorizontal: spacing.gutter,
     paddingVertical: spacing.sm,
   },
-  headerSubtitle: { fontSize: 15, lineHeight: 20 },
-  headerEyebrow: { letterSpacing: 1.15 },
-  headerText: { flex: 1, flexShrink: 1, gap: 3 },
-  headerTitle: { fontSize: 27, lineHeight: 31 },
+  headerText: { flex: 1, flexShrink: 1, gap: 2 },
   headerWithoutInset: { paddingHorizontal: 0 },
+  modalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    minHeight: 52,
+    paddingHorizontal: spacing.xs,
+  },
+  modalSide: { flexDirection: 'row', minWidth: 72 },
+  modalSideEnd: { justifyContent: 'flex-end' },
+  modalTitle: { flex: 1, textAlign: 'center' },
   icon: {
     alignItems: 'center',
     borderRadius: radii.button,
-    borderWidth: 1,
     height: 44,
     justifyContent: 'center',
     width: 44,
   },
-  retry: {
-    borderRadius: radii.button,
-    borderWidth: 1,
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  retryText: { fontWeight: '800' },
-  loadingMark: {
-    alignItems: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    height: 62,
-    justifyContent: 'center',
-    width: 62,
-  },
-  loadingSpinner: {
-    alignItems: 'center',
-    borderRadius: 10,
-    bottom: -5,
-    height: 22,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: -5,
-    width: 22,
-  },
+  retry: { alignSelf: 'center', marginTop: spacing.xxs },
   safe: { flex: 1 },
+  stateIcon: {
+    alignItems: 'center',
+    borderRadius: radii.round,
+    height: 56,
+    justifyContent: 'center',
+    marginBottom: spacing.xxs,
+    width: 56,
+  },
 });

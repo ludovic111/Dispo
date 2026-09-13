@@ -22,7 +22,6 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -58,13 +57,14 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { LinkifiedText } from '@/components/ui/linkified-text';
+import { ListRow } from '@/components/ui/list-row';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
-import { DispoButton } from '@/components/ui/pressable';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 function SongKeyboardScrollView({
   children,
@@ -524,19 +524,17 @@ export function GroupSongScreen({
                   const member = group.members.find((item) => item.id === memberId);
                   const name = isTradingFours ? TRADING_FOURS_SOLO_ID : (member?.name ?? memberId);
                   return (
-                    <View key={memberId} style={[styles.soloRow, { borderColor: palette.border }]}>
-                      <View style={[styles.soloIndex, { backgroundColor: palette.inset }]}>
-                        <AppText style={styles.bold} variant="caption">
-                          {index + 1}
-                        </AppText>
-                      </View>
+                    <Card key={memberId} padding={spacing.xs} style={styles.soloRow} tone="inset">
+                      <AppText color={palette.muted} style={styles.soloIndex} variant="mono">
+                        {index + 1}
+                      </AppText>
                       {isTradingFours ? (
                         <TradingFoursIcon />
                       ) : (
                         <Avatar name={name} size={34} uri={member?.photoUrl ?? null} />
                       )}
                       <View style={styles.soloCopy}>
-                        <AppText numberOfLines={1} style={styles.bold}>
+                        <AppText numberOfLines={1} variant="headline">
                           {name}
                         </AppText>
                         {member?.instruments.length ? (
@@ -547,43 +545,37 @@ export function GroupSongScreen({
                       </View>
                       {isLeader ? (
                         <View style={styles.soloActions}>
-                          <Pressable
+                          <IconButton
                             accessibilityLabel={t('Monter')}
-                            accessibilityRole="button"
                             disabled={index === 0}
+                            icon="chevron-up"
+                            iconColor={palette.text}
                             onPress={() => moveSolo(index, -1)}
-                            style={[styles.iconAction, index === 0 && styles.disabledAction]}
-                          >
-                            <Ionicons color={palette.text} name="chevron-up" size={17} />
-                          </Pressable>
-                          <Pressable
+                            variant="plain"
+                          />
+                          <IconButton
                             accessibilityLabel={t('Descendre')}
-                            accessibilityRole="button"
                             disabled={index === draftSolos.length - 1}
+                            icon="chevron-down"
+                            iconColor={palette.text}
                             onPress={() => moveSolo(index, 1)}
-                            style={[
-                              styles.iconAction,
-                              index === draftSolos.length - 1 && styles.disabledAction,
-                            ]}
-                          >
-                            <Ionicons color={palette.text} name="chevron-down" size={17} />
-                          </Pressable>
-                          <Pressable
+                            variant="plain"
+                          />
+                          <IconButton
                             accessibilityLabel={t('Retirer ce solo')}
-                            accessibilityRole="button"
+                            icon="close"
+                            iconColor={palette.error}
                             onPress={() =>
                               patch(
                                 'solos',
                                 draftSolos.filter((id) => id !== memberId),
                               )
                             }
-                            style={styles.iconAction}
-                          >
-                            <Ionicons color={palette.signal} name="close" size={17} />
-                          </Pressable>
+                            variant="plain"
+                          />
                         </View>
                       ) : null}
-                    </View>
+                    </Card>
                   );
                 })}
               </View>
@@ -600,49 +592,36 @@ export function GroupSongScreen({
                   </DispoButton>
                 ) : null}
                 {soloPickerVisible ? (
-                  <View style={styles.soloCandidates}>
+                  <View>
                     {!draftSolos.includes(TRADING_FOURS_SOLO_ID) ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="4-4"
+                      <ListRow
+                        accessory={
+                          <Ionicons color={palette.electric} name="add-circle" size={22} />
+                        }
+                        leading={<TradingFoursIcon />}
                         onPress={() => patch('solos', [...draftSolos, TRADING_FOURS_SOLO_ID])}
-                        style={({ pressed }) => [
-                          styles.soloCandidate,
-                          { borderBottomColor: palette.border },
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <TradingFoursIcon />
-                        <View style={styles.soloCopy}>
-                          <AppText style={styles.bold}>4-4</AppText>
-                        </View>
-                        <Ionicons color={palette.electric} name="add-circle" size={22} />
-                      </Pressable>
+                        title={TRADING_FOURS_SOLO_ID}
+                        tone="plain"
+                      />
                     ) : null}
                     {selectableSoloMembers.map((member) => (
-                      <Pressable
-                        accessibilityRole="button"
+                      <ListRow
+                        accessory={
+                          <Ionicons color={palette.electric} name="add-circle" size={22} />
+                        }
                         key={member.id}
+                        leading={<Avatar name={member.name} size={36} uri={member.photoUrl} />}
                         onPress={() => patch('solos', [...draftSolos, member.id])}
-                        style={({ pressed }) => [
-                          styles.soloCandidate,
-                          { borderBottomColor: palette.border },
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <Avatar name={member.name} size={36} uri={member.photoUrl} />
-                        <View style={styles.soloCopy}>
-                          <AppText numberOfLines={1} style={styles.bold}>
-                            {member.name}
-                          </AppText>
-                          {member.instruments.length ? (
-                            <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                              {member.instruments.map((instrument) => t(instrument)).join(' · ')}
-                            </AppText>
-                          ) : null}
-                        </View>
-                        <Ionicons color={palette.electric} name="add-circle" size={22} />
-                      </Pressable>
+                        title={member.name}
+                        tone="plain"
+                        {...(member.instruments.length
+                          ? {
+                              subtitle: member.instruments
+                                .map((instrument) => t(instrument))
+                                .join(' · '),
+                            }
+                          : {})}
+                      />
                     ))}
                   </View>
                 ) : null}
@@ -652,7 +631,7 @@ export function GroupSongScreen({
         ) : null}
         {!isNew && activeTab === 'documents' ? (
           <Card style={styles.card}>
-            <SectionHeader subtitle={t('Partitions liées au morceau')} title={t('Documents')} />
+            <SectionHeader title={t('Documents')} />
             <View style={styles.wrap}>
               <ChoiceChip
                 label={t('Tout le monde')}
@@ -685,38 +664,37 @@ export function GroupSongScreen({
               </DispoButton>
             </View>
             {documents.map((document) => (
-              <View
+              <ListRow
+                accessibilityLabel={`${t('Ouvrir')} ${document.title}`}
+                accessory={
+                  isLeader || document.addedById === userId ? (
+                    <IconButton
+                      accessibilityLabel={t('Supprimer le document')}
+                      icon="trash-outline"
+                      iconColor={palette.error}
+                      onPress={() =>
+                        deleteDocument.mutate(document, {
+                          onError: () =>
+                            setDocumentError(
+                              t("L'action n'a pas pu être enregistrée. Réessaie dans un instant."),
+                            ),
+                        })
+                      }
+                      variant="plain"
+                    />
+                  ) : (
+                    <Ionicons color={palette.muted} name="chevron-forward" size={18} />
+                  )
+                }
                 key={document.id}
-                style={[styles.documentRow, { borderBottomColor: palette.border }]}
-              >
-                <Pressable onPress={() => void openDocument(document)} style={styles.documentOpen}>
-                  <Ionicons color={palette.electric} name="document-text" size={18} />
-                  <View style={styles.flex}>
-                    <AppText style={styles.bold}>{document.title}</AppText>
-                    <AppText color={palette.muted} variant="caption2">
-                      {document.extension.toUpperCase()}
-                      {document.instrument ? ` · ${t(document.instrument)}` : ''}
-                    </AppText>
-                  </View>
-                </Pressable>
-                {isLeader || document.addedById === userId ? (
-                  <Pressable
-                    accessibilityLabel={t('Supprimer le document')}
-                    accessibilityRole="button"
-                    onPress={() =>
-                      deleteDocument.mutate(document, {
-                        onError: () =>
-                          setDocumentError(
-                            t("L'action n'a pas pu être enregistrée. Réessaie dans un instant."),
-                          ),
-                      })
-                    }
-                    style={styles.iconAction}
-                  >
-                    <Ionicons color={palette.signal} name="trash-outline" size={17} />
-                  </Pressable>
-                ) : null}
-              </View>
+                leadingIcon="document-text"
+                onPress={() => void openDocument(document)}
+                subtitle={`${document.extension.toUpperCase()}${
+                  document.instrument ? ` · ${t(document.instrument)}` : ''
+                }`}
+                title={document.title}
+                tone="plain"
+              />
             ))}
             {!documents.length ? (
               <AppText color={palette.muted} variant="caption">
@@ -724,7 +702,7 @@ export function GroupSongScreen({
               </AppText>
             ) : null}
             {documentError ? (
-              <AppText color={palette.signal} variant="caption">
+              <AppText color={palette.error} variant="caption">
                 {documentError}
               </AppText>
             ) : null}
@@ -732,27 +710,26 @@ export function GroupSongScreen({
         ) : null}
         {!isNew && activeTab === 'comments' ? (
           <Card style={styles.card}>
-            <SectionHeader subtitle={t('Notes du groupe')} title={t('Commentaires')} />
+            <SectionHeader title={t('Commentaires')} />
             {comments.map((item) => (
               <View key={item.id} style={styles.commentRow}>
                 <Avatar name={item.authorName} size={30} />
                 <View style={styles.commentCopy}>
-                  <AppText style={styles.bold} variant="caption">
+                  <AppText variant="caption" weight="bold">
                     {item.authorName}
                   </AppText>
                   <LinkifiedText>{item.text}</LinkifiedText>
                   <SongCommentMeta createdAt={item.createdAt} isAuthor={item.authorId === userId} />
                 </View>
                 {isLeader || item.authorId === userId ? (
-                  <Pressable
+                  <IconButton
                     accessibilityLabel={t('Supprimer')}
-                    accessibilityRole="button"
                     disabled={deleteComment.isPending}
+                    icon="trash-outline"
+                    iconColor={palette.error}
                     onPress={() => confirmCommentDeletion(item)}
-                    style={styles.iconAction}
-                  >
-                    <Ionicons color={palette.signal} name="trash-outline" size={16} />
-                  </Pressable>
+                    variant="plain"
+                  />
                 ) : null}
               </View>
             ))}
@@ -774,10 +751,10 @@ export function GroupSongScreen({
                   value={commentText}
                 />
               </View>
-              <Pressable
-                accessibilityLabel={t('Envoyer')}
-                accessibilityRole="button"
+              <DispoButton
                 disabled={!commentText.trim() || comment.isPending}
+                icon="arrow-up"
+                loading={comment.isPending}
                 onPress={() => {
                   setCommentError(null);
                   comment.mutate(
@@ -789,10 +766,10 @@ export function GroupSongScreen({
                     },
                   );
                 }}
-                style={[styles.searchButton, { backgroundColor: palette.electric }]}
+                size="compact"
               >
-                <Ionicons color="#050814" name="arrow-up" size={18} />
-              </Pressable>
+                {t('Envoyer')}
+              </DispoButton>
             </View>
             {commentError ? (
               <AppText accessibilityLiveRegion="polite" color={palette.error} variant="caption">
@@ -848,106 +825,20 @@ export function GroupSongScreen({
 }
 
 const styles = StyleSheet.create({
-  analysisRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  arrangementChip: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: spacing.compact,
-    maxWidth: '100%',
-    paddingHorizontal: 7,
-    paddingVertical: spacing.xxs,
-  },
-  arrangementText: { flexShrink: 1, fontWeight: '800' },
-  bold: { fontWeight: '700' },
   card: { gap: spacing.sm },
-  catalogRow: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
   center: { textAlign: 'center' },
   commentComposer: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
-  commentCopy: { flex: 1, gap: spacing.xxxs },
+  commentCopy: { flex: 1, gap: spacing.xxs },
   commentInput: { minHeight: 84, textAlignVertical: 'top' },
   commentRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  documentOpen: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    minHeight: minimumTouchTarget,
-  },
   documentActions: { gap: spacing.xs },
-  documentRow: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  editorFields: { gap: spacing.sm },
-  disabledAction: { opacity: 0.28 },
-  fieldsRow: { flexDirection: 'row', gap: spacing.xs },
   flex: { flex: 1 },
-  heroAction: {
-    alignItems: 'center',
-    borderRadius: 18,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
-  heroCopy: { flex: 1, gap: spacing.xxxs, minWidth: 0 },
-  heroTitle: { fontSize: 19, lineHeight: 23 },
-  iconAction: {
-    alignItems: 'center',
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
-  pressed: { opacity: 0.72 },
-  searchButton: {
-    alignItems: 'center',
-    borderRadius: 22,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    marginBottom: 3,
-    width: minimumTouchTarget,
-  },
-  searchRow: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
-  soloIndex: {
-    alignItems: 'center',
-    borderRadius: 999,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
   soloActions: { alignItems: 'center', flexDirection: 'row' },
-  soloCandidate: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    minHeight: 52,
-    paddingVertical: spacing.xs,
-  },
-  soloCandidates: { gap: spacing.xxxs },
   soloCopy: { flex: 1, minWidth: 0 },
   soloEmpty: { paddingVertical: spacing.xs, textAlign: 'center' },
+  soloIndex: { minWidth: 18, textAlign: 'right' },
   soloList: { gap: spacing.xs },
-  soloRow: {
-    alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    minHeight: minimumTouchTarget,
-    paddingLeft: spacing.xs,
-  },
-  songHero: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  soloRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

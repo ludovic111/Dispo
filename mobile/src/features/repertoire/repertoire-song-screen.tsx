@@ -19,11 +19,13 @@ import { ChoiceChip } from '@/components/ui/choice-chip';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import type { GroupSong } from '@/features/groups/group-model';
 import { SongInfoPanel } from '@/features/groups/song-info-panel';
 import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
+import { spacing } from '@/theme/tokens';
 
 export function RepertoireSongScreen({ profileId, songId }: { profileId: string; songId: string }) {
   const { session } = useAuth();
@@ -140,7 +142,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
           </DispoButton>
         ) : null}
         <Card style={styles.section}>
-          <AppText variant="headline">{t(self ? 'Ma maîtrise' : 'Maîtrise')}</AppText>
+          <SectionHeader title={t(self ? 'Ma maîtrise' : 'Maîtrise')} />
           {canEdit ? (
             <View style={styles.chips}>
               {masteryLabels.map((label, mastery) => (
@@ -163,7 +165,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
         </Card>
         {canEdit ? (
           <Card style={styles.section}>
-            <AppText variant="headline">{t('Style')}</AppText>
+            <SectionHeader title={t('Style')} />
             <View style={styles.chips}>
               {repertoireStyles.map((style) => (
                 <ChoiceChip
@@ -204,7 +206,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
   );
 }
 const styles = StyleSheet.create({
-  content: { padding: 18, paddingBottom: 40, gap: 16 },
-  section: { gap: 12 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  content: { padding: spacing.gutter, paddingBottom: spacing.xxl, gap: spacing.md },
+  section: { gap: spacing.sm },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
 });

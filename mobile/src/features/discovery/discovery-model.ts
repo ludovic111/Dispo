@@ -117,7 +117,7 @@ export interface DiscoverySearchOptions {
   translate?: (value: string) => string;
 }
 
-export function normalizeSearch(value: string): string {
+function normalizeSearch(value: string): string {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -185,7 +185,7 @@ function translatedTerms(value: string, translate?: (value: string) => string): 
   return translated && translated !== value ? [value, translated] : [value];
 }
 
-export function genreFamilyLabel(genre: string): string | null {
+function genreFamilyLabel(genre: string): string | null {
   const group = GIG_GENRE_GROUPS.find(({ values }) =>
     (values as readonly string[]).includes(genre),
   );
@@ -276,7 +276,7 @@ export function searchDiscovery(
   return { gigs: matchedGigs, profiles: matchedProfiles };
 }
 
-export function dateKey(value: Date): string {
+function dateKey(value: Date): string {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
@@ -339,19 +339,12 @@ export function profileAvailability(
   };
 }
 
-export function hasFutureAvailability(
-  profile: Pick<ProfileSummary, 'availableDates'>,
-  now = new Date(),
-): boolean {
-  return profileAvailability(profile, now).kind !== 'unavailable';
-}
-
-export function isAvailableOn(profile: ProfileSummary, date: Date): boolean {
+function isAvailableOn(profile: ProfileSummary, date: Date): boolean {
   const wanted = dateKey(date);
   return profile.availableDates.some((value) => value.slice(0, 10) === wanted);
 }
 
-export function availabilityPlaceCovers(
+function availabilityPlaceCovers(
   place: NonNullable<ProfileSummary['availabilityPlaces']>[number],
   date: Date,
 ): boolean {
@@ -419,7 +412,7 @@ export function weekendDays(now = new Date()): Date[] {
   return result;
 }
 
-export function remainingWeekDays(now = new Date()): Date[] {
+function remainingWeekDays(now = new Date()): Date[] {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const days = 7 - ((start.getDay() + 6) % 7);
   return Array.from({ length: days }, (_, offset) => {

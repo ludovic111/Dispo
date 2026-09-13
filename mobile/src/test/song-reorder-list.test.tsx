@@ -10,6 +10,7 @@ jest.mock('react-i18next', () => ({
   ...jest.requireActual<typeof import('react-i18next')>('react-i18next'),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+jest.mock('react-native-reanimated', () => ({ useReducedMotion: () => true }));
 jest.mock('@/theme/theme-context', () => ({
   useDispoTheme: () => ({
     dark: true,

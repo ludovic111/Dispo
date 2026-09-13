@@ -6,7 +6,10 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { useDispoTheme } from '@/theme/theme-context';
-import { spacing } from '@/theme/tokens';
+import { onAccent, spacing } from '@/theme/tokens';
+
+/** Fond du lecteur : noir vidéo, identique dans les deux thèmes. */
+const playerBackground = '#000000';
 
 export function ProfileVideoPlayer({ url }: { url: string }) {
   const { palette } = useDispoTheme();
@@ -24,7 +27,7 @@ export function ProfileVideoPlayer({ url }: { url: string }) {
   }, [player, t]);
 
   return (
-    <View style={[styles.root, { backgroundColor: '#000000' }]}>
+    <View style={[styles.root, { backgroundColor: playerBackground }]}>
       <VideoView
         contentFit="contain"
         fullscreenOptions={{ enable: true }}
@@ -34,8 +37,8 @@ export function ProfileVideoPlayer({ url }: { url: string }) {
       />
       {!ready && !error ? (
         <View style={styles.overlay}>
-          <ActivityIndicator color="#FFFFFF" size="large" />
-          <AppText color="#FFFFFF">{t('Chargement de la vidéo…')}</AppText>
+          <ActivityIndicator color={onAccent} size="large" />
+          <AppText color={onAccent}>{t('Chargement de la vidéo…')}</AppText>
         </View>
       ) : null}
       {error ? (

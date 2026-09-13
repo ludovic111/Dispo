@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { unseenEventStyle, useEventHasUnseenChange } from './group-event-changes';
+import { unseenEventStyleFor, useEventHasUnseenChange } from './group-event-changes';
 import { groupEventColor } from './group-event-presentation';
 import {
   attendanceFor,
@@ -17,39 +16,13 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { DateTicket } from '@/components/ui/date-ticket';
 import { EmptyState } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, radii, spacing, typography } from '@/theme/tokens';
-
-function DateTicket({ event }: { event: GroupEvent }) {
-  const { palette } = useDispoTheme();
-  const { i18n } = useTranslation();
-  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
-  const date = new Date(event.date);
-  const day = new Intl.DateTimeFormat(locale, { day: '2-digit' }).format(date);
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
-  const month = new Intl.DateTimeFormat(locale, { month: 'short' })
-    .format(date)
-    .replace('.', '')
-    .toUpperCase();
-  const color = groupEventColor(event.kind, palette) ?? palette.rehearsal;
-  return (
-    <LinearGradient colors={[color, color]} style={styles.ticket}>
-      <AppText color={billetInk} style={styles.ticketWeekday}>
-        {weekday}
-      </AppText>
-      <AppText color={billetInk} style={styles.ticketDay}>
-        {day}
-      </AppText>
-      <AppText color={billetInk} style={styles.ticketMonth}>
-        {month}
-      </AppText>
-    </LinearGradient>
-  );
-}
+import { pressedStyle, spacing } from '@/theme/tokens';
 
 function EventCard({
   event,
@@ -63,9 +36,11 @@ function EventCard({
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const changed = useEventHasUnseenChange(userId, event.id, event.scheduleChangedAt);
+  const unseenStyle = unseenEventStyleFor(palette);
   const summary = eventAttendanceSummary(event);
   const status = attendanceFor(event, userId);
   const lineup = groupLineupState(event, group.members);
+  const approvedCount = event.setlist.filter((song) => song.isApproved).length;
   const date = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
     hour: '2-digit',
     minute: '2-digit',
@@ -77,22 +52,26 @@ function EventCard({
       accessibilityLabel={`${t('Ouvrir')} ${t(event.kind)}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
       accessibilityRole="button"
       onPress={() => router.push(`/groups/${group.id}/events/${event.id}` as never)}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => pressed && pressedStyle}
     >
-      <Card padding={0} style={changed && unseenEventStyle}>
+      <Card padding={spacing.sm} style={changed && unseenStyle}>
         <View style={styles.eventRow}>
-          <DateTicket event={event} />
+          <DateTicket
+            color={groupEventColor(event.kind, palette) ?? palette.rehearsal}
+            date={event.date}
+            weekday
+          />
           <View style={styles.eventCopy}>
             <View style={styles.titleLine}>
-              <AppText numberOfLines={1} style={styles.eventTitle}>
+              <AppText numberOfLines={2} style={styles.eventTitle} variant="headline">
                 {t(event.kind)}
               </AppText>
               {changed ? (
                 <Ionicons
                   accessibilityLabel={t('Date, heure ou lieu modifié')}
+                  color={unseenStyle.borderColor}
                   name="alert-circle"
                   size={20}
-                  color={unseenEventStyle.borderColor}
                 />
               ) : null}
             </View>
@@ -104,13 +83,10 @@ function EventCard({
               {event.recurrence && event.recurrence !== 'Ponctuel' ? (
                 <Tag color={palette.rehearsal} label={t(event.recurrence)} />
               ) : null}
-              {event.setlist.filter((song) => song.isApproved).length ? (
+              {approvedCount ? (
                 <Tag
                   color={palette.bronze}
-                  label={formatSwiftPlaceholders(
-                    t('%lld morceaux'),
-                    event.setlist.filter((song) => song.isApproved).length,
-                  )}
+                  label={formatSwiftPlaceholders(t('%lld morceaux'), approvedCount)}
                 />
               ) : null}
               <Tag
@@ -171,24 +147,19 @@ export function GroupEventsTab({ group, userId }: { group: MusicGroup; userId: s
   const isLeader = group.leaderId === userId;
   return (
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.sectionHeading}>
-        <SectionHeader
-          subtitle={t('{{count}} prochaines dates', { count: upcoming.length })}
-          title={t('Événements')}
-        />
-        {isLeader ? (
-          <Pressable
-            accessibilityLabel={t('Créer un événement')}
-            onPress={() => router.push(`/groups/${group.id}/events/new` as never)}
-            style={[styles.addButton, { backgroundColor: `${palette.electric}20` }]}
-          >
-            <Ionicons color={palette.electric} name="add-circle" size={18} />
-            <AppText color={palette.electric} style={styles.addText}>
-              {t('Nouvelle date')}
-            </AppText>
-          </Pressable>
-        ) : null}
-      </View>
+      <SectionHeader
+        {...(isLeader
+          ? {
+              action: {
+                icon: 'add-circle' as const,
+                label: t('Nouvelle date'),
+                onPress: () => router.push(`/groups/${group.id}/events/new` as never),
+              },
+            }
+          : {})}
+        subtitle={t('{{count}} prochaines dates', { count: upcoming.length })}
+        title={t('Événements')}
+      />
       {!isLeader ? (
         <AppText color={palette.muted} variant="caption">
           {t('Le leader crée les dates; chaque membre confirme ensuite sa présence.')}
@@ -207,9 +178,7 @@ export function GroupEventsTab({ group, userId }: { group: MusicGroup; userId: s
       )}
       {past.length ? (
         <View style={styles.pastSection}>
-          <AppText color={palette.muted} variant="label">
-            {t('Dates passées')}
-          </AppText>
+          <SectionHeader title={t('Dates passées')} />
           {past.slice(0, 6).map((event) => (
             <EventCard event={event} group={group} key={event.id} userId={userId} />
           ))}
@@ -220,38 +189,12 @@ export function GroupEventsTab({ group, userId }: { group: MusicGroup; userId: s
 }
 
 const styles = StyleSheet.create({
-  addButton: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    flexDirection: 'row',
-    gap: spacing.tight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  addText: { fontSize: 13, fontWeight: '800' },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  eventCopy: { flex: 1, gap: spacing.xxs, paddingVertical: spacing.sm },
-  eventRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingRight: spacing.sm,
-  },
-  eventTitle: { flexShrink: 1, fontWeight: '800' },
+  eventCopy: { flex: 1, gap: spacing.xxs },
+  eventRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  eventTitle: { flexShrink: 1 },
   lineup: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
-  pastSection: { gap: spacing.sm, marginTop: spacing.md, opacity: 0.82 },
-  pressed: { opacity: 0.76 },
-  sectionHeading: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  pastSection: { gap: spacing.sm, marginTop: spacing.md },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs },
-  ticket: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    justifyContent: 'center',
-    minHeight: 104,
-    width: 68,
-  },
-  ticketDay: { fontFamily: typography.display, fontSize: 26, lineHeight: 28 },
-  ticketWeekday: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  ticketMonth: { fontFamily: typography.monoSemibold, fontSize: 10, letterSpacing: 0.7 },
   titleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
 });

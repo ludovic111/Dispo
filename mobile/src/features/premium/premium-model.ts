@@ -20,7 +20,6 @@ export const subscriptionPlans = Object.freeze({
   group: { name: 'Dispo Groupe', monthly: 290, annual: 2900, groupLimit: 1 },
   premium: { name: 'Dispo Premium', monthly: 690, annual: 6900, groupLimit: Infinity },
 });
-export const partnerSchoolDiscountPercent = 30;
 /** Reference prices in CHF cents; checkout always uses localized StoreKit prices. */
 export function subscriptionPrice(
   tier: Exclude<SubscriptionTier, 'free'>,

@@ -142,7 +142,7 @@ export function profileSocialUrl(network: ProfileSocialNetwork, rawHandle: strin
 
 export type RelationshipFilter = 'all' | 'friend' | 'sameSchool';
 
-export function isAmrSchool(school: SchoolAffiliation): boolean {
+function isAmrSchool(school: SchoolAffiliation): boolean {
   return (
     school.slug.trim().toLowerCase() === 'amr' || school.shortName?.trim().toUpperCase() === 'AMR'
   );

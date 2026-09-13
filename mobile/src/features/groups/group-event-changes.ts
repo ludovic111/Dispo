@@ -3,7 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 
-export const unseenEventStyle = { borderColor: '#EF4444', borderWidth: 2 } as const;
+import type { DispoPalette } from '@/theme/tokens';
+
+/** Contour d'un événement dont la date, l'heure ou le lieu a changé sans avoir été relu. */
+export function unseenEventStyleFor(palette: Pick<DispoPalette, 'error'>) {
+  return { borderColor: palette.error, borderWidth: 2 } as const;
+}
 
 const key = (userId: string, eventId: string) => `dispo.event.seen.v1:${userId}:${eventId}`;
 const queryKey = (userId: string, eventId: string) => ['event-seen', userId, eventId] as const;

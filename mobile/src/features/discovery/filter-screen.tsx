@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -9,11 +9,12 @@ import { Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react
 import { useDiscoveryState } from './discovery-context';
 
 import { AppText } from '@/components/ui/app-text';
+import { CountBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
-import { DispoButton } from '@/components/ui/pressable';
-import { Screen, ScreenHeader } from '@/components/ui/screen';
-import { HeaderAction, SectionHeader } from '@/components/ui/section';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
+import { LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
 import { shortProfileLevel } from '@/domain/profile';
 import { GIG_GENRE_GROUPS } from '@/features/gigs/gig-model';
 import { PostalPlaceField, type PostalPlaceDraft } from '@/features/location';
@@ -25,7 +26,7 @@ import {
 import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { useSchoolDirectory } from '@/features/schools/school-queries';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 function toggle(list: readonly string[], value: string): string[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -50,11 +51,10 @@ function FilterSwitch({
   const { palette } = useDispoTheme();
   return (
     <View style={styles.switchRow}>
-      <AppText style={styles.switchLabel}>{label}</AppText>
+      <AppText style={styles.flex}>{label}</AppText>
       <Switch
         ios_backgroundColor={palette.inset}
         onValueChange={onValueChange}
-        thumbColor={Platform.OS === 'android' ? palette.text : undefined}
         trackColor={{ false: palette.inset, true: palette.electric }}
         value={value}
       />
@@ -63,17 +63,71 @@ function FilterSwitch({
 }
 
 function ClearSelectionButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { palette } = useDispoTheme();
+  return (
+    <View style={styles.inlineAction}>
+      <DispoButton icon="close-circle-outline" onPress={onPress} size="compact" variant="ghost">
+        {label}
+      </DispoButton>
+    </View>
+  );
+}
+
+/** Sélecteur de jour natif : contrôle compact sur iOS, boîte de dialogue système sur Android. */
+function NeededDateField({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: Date) => void;
+  value: Date;
+}) {
+  const { dark, palette } = useDispoTheme();
+  const { i18n } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
+  const today = new Date();
+  const minimumDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (Platform.OS === 'ios') {
+    return (
+      <View style={[styles.dateField, { backgroundColor: palette.inset }]}>
+        <AppText color={palette.muted} style={styles.flex} variant="caption">
+          {label}
+        </AppText>
+        <DateTimePicker
+          accentColor={palette.electric}
+          display="compact"
+          minimumDate={minimumDate}
+          mode="date"
+          onValueChange={(_event, picked) => onChange(picked)}
+          textColor={palette.text}
+          themeVariant={dark ? 'dark' : 'light'}
+          value={value}
+        />
+      </View>
+    );
+  }
+  const dateText = new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(value);
   return (
     <Pressable
+      accessibilityLabel={`${label}: ${dateText}`}
       accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
+      onPress={() =>
+        DateTimePickerAndroid.open({
+          display: 'default',
+          minimumDate,
+          mode: 'date',
+          onValueChange: (_event, picked) => onChange(picked),
+          value,
+        })
+      }
+      style={({ pressed }) => [
+        styles.dateField,
+        { backgroundColor: palette.inset },
+        pressed && pressedStyle,
+      ]}
     >
-      <Ionicons color={palette.electric} name="close-circle-outline" size={16} />
-      <AppText color={palette.electric} style={styles.clearLabel} variant="caption">
-        {label}
-      </AppText>
+      <Ionicons color={palette.electric} name="calendar" size={17} />
+      <AppText style={styles.flex}>{dateText}</AppText>
     </Pressable>
   );
 }
@@ -87,8 +141,7 @@ export function FilterScreen() {
     else router.push('/premium');
   };
   const { palette } = useDispoTheme();
-  const { i18n, t } = useTranslation();
-  const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
+  const { t } = useTranslation();
   const [expandedGenreFamilies, setExpandedGenreFamilies] = useState<Set<string>>(
     () =>
       new Set(
@@ -104,7 +157,9 @@ export function FilterScreen() {
     postalCode: filters.placePostalCode,
   };
   const date = filters.neededDate ? new Date(`${filters.neededDate}T12:00:00`) : new Date();
-  const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
+  const close = (
+    <IconButton accessibilityLabel={t('Fermer')} icon="close" onPress={() => router.back()} />
+  );
   const updatePlace = (place: PostalPlaceDraft) => {
     setFilters({
       ...filters,
@@ -147,39 +202,15 @@ export function FilterScreen() {
               onValueChange={(enabled) => {
                 setScope('nearby');
                 setFilters({ ...filters, neededDate: enabled ? inputDate(new Date()) : null });
-                setShowDatePicker(enabled && Platform.OS === 'android');
               }}
               value={Boolean(filters.neededDate)}
             />
             {filters.neededDate ? (
-              Platform.OS === 'ios' || showDatePicker ? (
-                <DateTimePicker
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  minimumDate={new Date()}
-                  mode="date"
-                  onDismiss={() => {
-                    if (Platform.OS === 'android') setShowDatePicker(false);
-                  }}
-                  onValueChange={(_event, value) => {
-                    if (Platform.OS === 'android') setShowDatePicker(false);
-                    setFilters({ ...filters, neededDate: inputDate(value) });
-                  }}
-                  value={date}
-                />
-              ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setShowDatePicker(true)}
-                  style={[styles.dateButton, { backgroundColor: palette.inset }]}
-                >
-                  <Ionicons color={palette.electric} name="calendar" size={17} />
-                  <AppText>
-                    {new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language ?? 'fr', {
-                      dateStyle: 'long',
-                    }).format(date)}
-                  </AppText>
-                </Pressable>
-              )
+              <NeededDateField
+                label={t('Dispo à une date précise')}
+                onChange={(value) => setFilters({ ...filters, neededDate: inputDate(value) })}
+                value={date}
+              />
             ) : null}
           </Card>
         </View>
@@ -199,7 +230,7 @@ export function FilterScreen() {
             <Card key={category.label} style={styles.card}>
               <View style={styles.categoryTitle}>
                 <Ionicons color={palette.bronze} name={category.icon} size={16} />
-                <AppText style={styles.categoryLabel} variant="subheadline">
+                <AppText variant="subheadline" weight="semibold">
                   {t(category.label)}
                 </AppText>
               </View>
@@ -257,17 +288,13 @@ export function FilterScreen() {
                       return next;
                     })
                   }
-                  style={({ pressed }) => [styles.genreHeader, pressed && styles.pressed]}
+                  style={({ pressed }) => [styles.genreHeader, pressed && pressedStyle]}
                 >
-                  <AppText style={styles.categoryLabel} variant="subheadline">
+                  <AppText style={styles.flex} variant="subheadline" weight="semibold">
                     {t(group.label)}
                   </AppText>
                   <View style={styles.genreHeaderMeta}>
-                    {selectedCount > 0 ? (
-                      <AppText color={palette.electric} style={styles.selectionCount}>
-                        {selectedCount}
-                      </AppText>
-                    ) : null}
+                    <CountBadge count={selectedCount} />
                     <Ionicons
                       color={palette.muted}
                       name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -327,7 +354,7 @@ export function FilterScreen() {
             ) : null}
             <View style={styles.radiusHeader}>
               <AppText>{t('Rayon')}</AppText>
-              <AppText color={palette.electric} style={styles.radiusValue} variant="subheadline">
+              <AppText color={palette.electric} variant="subheadline" weight="bold">
                 {filters.radiusKm} km
               </AppText>
             </View>
@@ -394,23 +421,19 @@ export function FilterScreen() {
           ) : null}
           <Card style={styles.card}>
             {schoolDirectory.isLoading ? (
-              <AppText color={palette.muted} variant="caption">
-                {t('Chargement des écoles…')}
-              </AppText>
+              <LoadingState label={t('Chargement des écoles…')} />
             ) : schoolDirectory.isError ? (
               <View style={styles.schoolError}>
-                <AppText color={palette.signal} style={styles.flex} variant="caption">
+                <AppText color={palette.error} style={styles.flex} variant="caption">
                   {t("L'annuaire des écoles n'a pas pu être chargé.")}
                 </AppText>
-                <Pressable
-                  accessibilityRole="button"
+                <DispoButton
                   onPress={() => void schoolDirectory.refetch()}
-                  style={styles.retryButton}
+                  size="compact"
+                  variant="ghost"
                 >
-                  <AppText color={palette.electric} variant="caption">
-                    {t('Réessayer')}
-                  </AppText>
-                </Pressable>
+                  {t('Réessayer')}
+                </DispoButton>
               </View>
             ) : schools.length > 0 ? (
               <>
@@ -496,51 +519,40 @@ export function FilterScreen() {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  categoryLabel: { fontWeight: '800' },
   categoryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  clearButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.compact,
-    minHeight: 36,
-  },
-  clearLabel: { fontWeight: '800' },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   content: { gap: spacing.lg, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   countryChoices: { flexDirection: 'row', gap: spacing.xs },
-  dateButton: {
+  dateField: {
     alignItems: 'center',
-    borderRadius: radii.button,
+    borderRadius: radii.input,
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 48,
+    minHeight: minimumTouchTarget + spacing.xxs,
     paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
   },
   divider: { height: StyleSheet.hairlineWidth },
   flex: { flex: 1 },
   genreHeader: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: spacing.sm,
     justifyContent: 'space-between',
-    minHeight: 32,
+    minHeight: minimumTouchTarget,
   },
   genreHeaderMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  pressed: { opacity: 0.94, transform: [{ scale: 0.98 }] },
+  inlineAction: { alignSelf: 'flex-start' },
   radiusHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  radiusValue: { fontWeight: '800' },
-  retryButton: { justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.xs },
   schoolError: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   section: { gap: spacing.sm },
-  selectionCount: { fontWeight: '900' },
   sliderLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  switchLabel: { flex: 1 },
   switchPad: { paddingHorizontal: spacing.md },
   switchRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'space-between',
-    minHeight: 54,
+    minHeight: minimumTouchTarget + spacing.xs,
   },
 });

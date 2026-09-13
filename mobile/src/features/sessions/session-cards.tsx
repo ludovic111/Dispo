@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -9,27 +8,21 @@ import {
   type DirectPendingResponse,
   type GroupPendingResponse,
   type SessionItem,
-  type SessionsScope,
 } from './session-model';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
+import { DateTicket } from '@/components/ui/date-ticket';
 import { DispoButton } from '@/components/ui/pressable';
-import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/features/auth/auth-context';
-import { unseenEventStyle, useEventHasUnseenChange } from '@/features/groups/group-event-changes';
+import {
+  unseenEventStyleFor,
+  useEventHasUnseenChange,
+} from '@/features/groups/group-event-changes';
 import { groupEventColor } from '@/features/groups/group-event-presentation';
 import { useDispoTheme } from '@/theme/theme-context';
-import {
-  billetInk,
-  gradients,
-  minimumTouchTarget,
-  radii,
-  spacing,
-  typography,
-  type DispoPalette,
-} from '@/theme/tokens';
+import { pressedStyle, radii, spacing, type DispoPalette } from '@/theme/tokens';
 
 function useSessionChange(item: SessionItem) {
   const { session } = useAuth();
@@ -43,15 +36,10 @@ function useSessionChange(item: SessionItem) {
 function dateParts(value: string, locale: string) {
   const date = new Date(value);
   return {
-    day: new Intl.DateTimeFormat(locale, { day: '2-digit' }).format(date),
     full: new Intl.DateTimeFormat(locale, {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(date),
-    month: new Intl.DateTimeFormat(locale, { month: 'short' })
-      .format(date)
-      .replace(/\.$/, '')
-      .toLocaleUpperCase(locale),
     time: new Intl.DateTimeFormat(locale, {
       hour: '2-digit',
       minute: '2-digit',
@@ -80,16 +68,17 @@ function eventColor(kind: string | null, palette: DispoPalette): string {
   return groupEventColor(kind, palette) ?? palette.electric;
 }
 
-function itemGradient(item: SessionItem, palette: DispoPalette): readonly [string, string] {
-  if (item.source === 'playing') return gradients.series;
-  if (item.source !== 'group') return gradients.hero;
+/** Couleur du billet de date : le type de session d'abord, l'état du line-up ensuite. */
+function ticketColor(item: SessionItem, palette: DispoPalette, withLineup: boolean): string {
+  if (item.source === 'playing') return withLineup ? palette.bronze : palette.electric;
+  if (item.source !== 'group') return palette.electric;
   if (['Concert', 'Jam', 'Répétition'].includes(item.eventKind ?? '')) {
     const color = eventColor(item.eventKind, palette);
-    return [color, color];
+    return color;
   }
-  if (item.lineupState === 'complete') return [palette.jam, palette.jam];
-  if (item.lineupState === 'late') return gradients.alert;
-  return [palette.electric, palette.electric];
+  if (withLineup && item.lineupState === 'complete') return palette.jam;
+  if (withLineup && item.lineupState === 'late') return palette.signal;
+  return palette.electric;
 }
 
 function DeadlineBadge({ deadline }: { deadline: string }) {
@@ -100,37 +89,12 @@ function DeadlineBadge({ deadline }: { deadline: string }) {
   const left = countdownLabel(deadline, now, locale);
   const remainingMilliseconds = new Date(deadline).getTime() - now.getTime();
   const urgent = !left || remainingMilliseconds < 24 * 60 * 60 * 1000;
-  const color = urgent ? palette.signal : palette.bronze;
   return (
-    <View style={[styles.deadlineBadge, { backgroundColor: `${color}24` }]}>
-      <Ionicons color={color} name={left ? 'timer-outline' : 'alert-circle'} size={11} />
-      <AppText color={color} style={styles.deadlineText}>
-        {left ? t('Réponds sous {{duration}}', { duration: left }) : t('Réponse attendue')}
-      </AppText>
-    </View>
-  );
-}
-
-function DateTicket({ item, large = false }: { item: SessionItem; large?: boolean }) {
-  const { palette } = useDispoTheme();
-  const { i18n } = useTranslation();
-  const date = dateParts(item.date, i18n.resolvedLanguage ?? i18n.language ?? 'fr');
-  const colors = large
-    ? item.source === 'group'
-      ? ['Concert', 'Jam', 'Répétition'].includes(item.eventKind ?? '')
-        ? ([eventColor(item.eventKind, palette), eventColor(item.eventKind, palette)] as const)
-        : ([palette.electric, palette.electric] as const)
-      : gradients.hero
-    : itemGradient(item, palette);
-  return (
-    <LinearGradient colors={colors} style={[styles.ticket, large && styles.ticketLarge]}>
-      <AppText color={billetInk} style={[styles.ticketDay, large && styles.ticketDayLarge]}>
-        {date.day}
-      </AppText>
-      <AppText color={billetInk} style={styles.ticketMonth}>
-        {date.month}
-      </AppText>
-    </LinearGradient>
+    <Tag
+      color={urgent ? palette.signal : palette.bronze}
+      icon={left ? 'timer-outline' : 'alert-circle'}
+      label={left ? t('Réponds sous {{duration}}', { duration: left }) : t('Réponse attendue')}
+    />
   );
 }
 
@@ -140,7 +104,13 @@ function SessionTags({ isPast, item }: { isPast: boolean; item: SessionItem }) {
   if (item.source === 'group') {
     return (
       <View style={styles.tags}>
-        <AppText color={palette.bronze} numberOfLines={1} style={styles.groupName}>
+        <AppText
+          color={palette.bronze}
+          numberOfLines={1}
+          style={styles.groupName}
+          variant="caption"
+          weight="semibold"
+        >
           {item.groupEmoji} {item.groupName}
         </AppText>
         {item.eventKind ? (
@@ -219,7 +189,7 @@ function SessionTrailing({ isPast, item }: { isPast: boolean; item: SessionItem 
     i18n.resolvedLanguage ?? i18n.language ?? 'fr',
   );
   return left ? (
-    <AppText color={palette.bronze} style={styles.countdown}>
+    <AppText color={palette.bronze} style={styles.countdown} variant="caption2" weight="bold">
       {t('dans {{duration}}', { duration: left })}
     </AppText>
   ) : null;
@@ -239,13 +209,13 @@ export function SessionRow({
   const changed = useSessionChange(item);
   const date = dateParts(item.date, i18n.resolvedLanguage ?? i18n.language ?? 'fr');
   const content = (
-    <Card padding={0} style={[isPast && styles.pastCard, changed && unseenEventStyle]}>
+    <Card padding={0} style={[isPast && styles.pastCard, changed && unseenEventStyleFor(palette)]}>
       <View style={styles.row}>
         <View style={styles.rowTicketWrap}>
-          <DateTicket item={item} />
+          <DateTicket color={ticketColor(item, palette, true)} date={item.date} />
         </View>
         <View style={styles.rowContent}>
-          <AppText numberOfLines={1} style={styles.rowTitle}>
+          <AppText numberOfLines={2} variant="headline">
             {item.title}
           </AppText>
           <AppText color={palette.muted} numberOfLines={1} variant="caption">
@@ -255,7 +225,7 @@ export function SessionRow({
         </View>
         <View style={styles.trailing}>
           <SessionTrailing isPast={isPast} item={item} />
-          {onPress ? <Ionicons color={palette.bronze} name="chevron-forward" size={16} /> : null}
+          {onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={16} /> : null}
         </View>
       </View>
     </Card>
@@ -266,7 +236,7 @@ export function SessionRow({
       accessibilityLabel={`${t('Ouvrir {{title}}', { title: item.title })}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => pressed && pressedStyle}
     >
       {content}
     </Pressable>
@@ -281,7 +251,7 @@ function LineupLine({ item }: { item: SessionItem }) {
     return (
       <View style={styles.lineupLine}>
         <Ionicons color={palette.jam} name="checkmark-circle" size={15} />
-        <AppText color={palette.jam} style={styles.lineupText}>
+        <AppText color={palette.jam} style={styles.flex} variant="caption" weight="semibold">
           {t('Line-up complet — tout le monde est là')}
         </AppText>
       </View>
@@ -291,7 +261,13 @@ function LineupLine({ item }: { item: SessionItem }) {
     return (
       <View style={styles.lineupLine}>
         <Ionicons color={palette.signal} name="warning" size={15} />
-        <AppText color={palette.signal} numberOfLines={2} style={styles.lineupText}>
+        <AppText
+          color={palette.signal}
+          numberOfLines={2}
+          style={styles.flex}
+          variant="caption"
+          weight="semibold"
+        >
           {item.missingRoles.length > 0
             ? t('Il manque : {{roles}}', {
                 roles: item.missingRoles.map((role) => t(role)).join(', '),
@@ -304,7 +280,7 @@ function LineupLine({ item }: { item: SessionItem }) {
   return (
     <View style={styles.lineupLine}>
       <Ionicons color={palette.muted} name="people" size={14} />
-      <AppText color={palette.muted} style={styles.lineupText}>
+      <AppText color={palette.muted} style={styles.flex} variant="caption" weight="semibold">
         {t('Présence : {{available}}/{{total}}', {
           available: item.availableCount,
           total: item.rosterCount,
@@ -328,11 +304,11 @@ export function NextSessionCard({
   const changed = useSessionChange(item);
   const left = countdownLabel(item.date, new Date(), locale);
   const content = (
-    <Card style={changed && unseenEventStyle}>
+    <Card style={changed && unseenEventStyleFor(palette)}>
       <View style={styles.nextTop}>
-        <DateTicket item={item} large />
+        <DateTicket color={ticketColor(item, palette, false)} date={item.date} size="large" />
         <View style={styles.nextContent}>
-          <AppText numberOfLines={2} style={styles.nextTitle}>
+          <AppText numberOfLines={2} variant="title2">
             {item.title}
           </AppText>
           <View style={styles.metaLine}>
@@ -342,12 +318,12 @@ export function NextSessionCard({
             </AppText>
           </View>
           {left ? (
-            <AppText color={palette.bronze} style={styles.nextCountdown}>
+            <AppText color={palette.bronze} variant="caption" weight="bold">
               {t('dans {{duration}}', { duration: left })}
             </AppText>
           ) : null}
         </View>
-        {onPress ? <Ionicons color={palette.bronze} name="chevron-forward" size={18} /> : null}
+        {onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={18} /> : null}
       </View>
       <LineupLine item={item} />
     </Card>
@@ -358,7 +334,7 @@ export function NextSessionCard({
       accessibilityLabel={`${t('Ouvrir {{title}}', { title: item.title })}${changed ? ` · ${t('Date, heure ou lieu modifié')}` : ''}`}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => pressed && pressedStyle}
     >
       {content}
     </Pressable>
@@ -380,13 +356,19 @@ export function AttendanceAnswerCard({
   return (
     <Card>
       <View style={styles.answerTopline}>
-        <AppText color={palette.bronze} numberOfLines={1} style={styles.groupName}>
+        <AppText
+          color={palette.bronze}
+          numberOfLines={1}
+          style={styles.groupName}
+          variant="caption"
+          weight="semibold"
+        >
           {response.groupEmoji} {response.groupName}
         </AppText>
         <DeadlineBadge deadline={response.confirmDeadline} />
       </View>
       <View style={styles.answerInfo}>
-        <AppText numberOfLines={1} style={styles.answerTitle}>
+        <AppText numberOfLines={2} variant="headline">
           {response.title}
         </AppText>
         <AppText color={palette.muted} numberOfLines={1} variant="caption">
@@ -426,7 +408,7 @@ export function DirectAnswerCard({
     <Card>
       <View style={styles.directTitleLine}>
         <Ionicons color={palette.signal} name="flash" size={15} />
-        <AppText numberOfLines={2} style={styles.answerTitle}>
+        <AppText numberOfLines={2} style={styles.flex} variant="headline">
           {t('{{name}} te demande de dépanner', {
             name: response.hostName || t('Organisateur'),
           })}
@@ -514,8 +496,8 @@ export function PastSummaryCard({ sessions }: { sessions: SessionItem[] }) {
       <View style={styles.metrics}>
         {metrics.map((metric) => (
           <View key={metric.label} style={[styles.metric, { backgroundColor: palette.inset }]}>
-            <AppText style={styles.metricValue}>{metric.value}</AppText>
-            <AppText color={palette.muted} style={styles.metricLabel}>
+            <AppText variant="title2">{metric.value}</AppText>
+            <AppText color={palette.muted} variant="caption2" weight="semibold">
               {metric.label}
             </AppText>
           </View>
@@ -534,124 +516,38 @@ export function PastSummaryCard({ sessions }: { sessions: SessionItem[] }) {
   );
 }
 
-export function SessionsSegmentedControl({
-  onChange,
-  value,
-}: {
-  onChange: (scope: SessionsScope) => void;
-  value: SessionsScope;
-}) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  return (
-    <View
-      accessibilityRole="tablist"
-      style={[styles.segment, { backgroundColor: palette.inset, borderColor: palette.border }]}
-    >
-      {(
-        [
-          ['upcoming', t('À venir')],
-          ['past', t('Passés')],
-        ] as const
-      ).map(([scope, label]) => {
-        const selected = value === scope;
-        return (
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            key={scope}
-            onPress={() => onChange(scope)}
-            style={[
-              styles.segmentOption,
-              selected && { backgroundColor: palette.card, borderColor: palette.border },
-            ]}
-          >
-            <AppText color={selected ? palette.text : palette.muted} style={styles.segmentText}>
-              {label}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-export function SessionsSectionHeading({ subtitle, title }: { subtitle?: string; title: string }) {
-  const { t } = useTranslation();
-  return <SectionHeader title={t(title)} {...(subtitle ? { subtitle: t(subtitle) } : {})} />;
-}
-
 const styles = StyleSheet.create({
   answerButton: { flex: 1 },
   answerButtons: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  answerInfo: { gap: 3, marginTop: spacing.sm },
-  answerTitle: { flex: 1, fontSize: 14, fontWeight: '800', lineHeight: 19 },
+  answerInfo: { gap: spacing.xxs, marginTop: spacing.sm },
   answerTopline: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'space-between',
   },
-  countdown: { fontSize: 10, fontWeight: '900', textAlign: 'right' },
-  deadlineBadge: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderRadius: radii.round,
-    flexDirection: 'row',
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-  deadlineText: { fontSize: 9, fontWeight: '900' },
+  countdown: { textAlign: 'right' },
   description: { marginTop: spacing.sm },
-  directDetails: { gap: 5, marginTop: spacing.sm },
+  directDetails: { gap: spacing.xxs, marginTop: spacing.sm },
   directTitleLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  groupName: { flexShrink: 1, fontSize: 11, fontWeight: '800' },
-  lineupLine: { alignItems: 'center', flexDirection: 'row', gap: 6, marginTop: spacing.sm },
-  lineupText: { flex: 1, fontSize: 12, fontWeight: '700' },
-  metaLine: { alignItems: 'center', flexDirection: 'row', gap: 4 },
-  metric: { alignItems: 'center', borderRadius: 11, flex: 1, paddingVertical: spacing.xs },
-  metricLabel: { fontSize: 10, fontWeight: '700' },
+  flex: { flex: 1 },
+  groupName: { flexShrink: 1 },
+  lineupLine: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.tight,
+    marginTop: spacing.sm,
+  },
+  metaLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
+  metric: { alignItems: 'center', borderRadius: radii.sm, flex: 1, paddingVertical: spacing.xs },
   metrics: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
-  metricValue: { fontFamily: typography.display, fontSize: 22, lineHeight: 26 },
-  nextContent: { flex: 1, gap: 4 },
-  nextCountdown: { fontSize: 12, fontWeight: '900' },
-  nextTitle: { fontFamily: typography.display, fontSize: 21, lineHeight: 25 },
+  nextContent: { flex: 1, gap: spacing.xxs },
   nextTop: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   pastCard: { opacity: 0.75 },
-  pressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
   row: { alignItems: 'center', flexDirection: 'row', minHeight: 94 },
-  rowContent: { flex: 1, gap: 3, paddingVertical: spacing.sm },
+  rowContent: { flex: 1, gap: spacing.xxs, paddingVertical: spacing.sm },
   rowTicketWrap: { paddingLeft: spacing.sm, paddingRight: spacing.sm },
-  rowTitle: { fontSize: 14, fontWeight: '800' },
-  segment: {
-    borderRadius: radii.button,
-    borderWidth: 1,
-    flexDirection: 'row',
-    padding: 3,
-  },
-  segmentOption: {
-    alignItems: 'center',
-    borderColor: 'transparent',
-    borderRadius: 11,
-    borderWidth: 1,
-    flex: 1,
-    minHeight: minimumTouchTarget,
-    paddingVertical: 8,
-  },
-  segmentText: { fontSize: 13, fontWeight: '800' },
   summaryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  tags: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  ticket: {
-    alignItems: 'center',
-    borderRadius: 11,
-    justifyContent: 'center',
-    minHeight: 58,
-    width: 48,
-  },
-  ticketDay: { fontFamily: typography.display, fontSize: 21, lineHeight: 23 },
-  ticketDayLarge: { fontSize: 30, lineHeight: 33 },
-  ticketLarge: { borderRadius: 14, minHeight: 72, width: 62 },
-  ticketMonth: { fontFamily: typography.monoSemibold, fontSize: 9, letterSpacing: 0.7 },
-  trailing: { alignItems: 'flex-end', gap: 4, paddingHorizontal: spacing.sm },
+  tags: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs },
+  trailing: { alignItems: 'flex-end', gap: spacing.xxs, paddingHorizontal: spacing.sm },
 });

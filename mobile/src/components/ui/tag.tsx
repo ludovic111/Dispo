@@ -1,21 +1,36 @@
+import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii } from '@/theme/tokens';
+import { radii, spacing, tint } from '@/theme/tokens';
 
 interface TagProps {
   color?: string;
+  icon?: ComponentProps<typeof Ionicons>['name'];
   label: string;
+  /** `tinted` : fond teinté (défaut) · `solid` : fond plein, texte inversé · `outline` : contour seul. */
+  tone?: 'tinted' | 'solid' | 'outline';
 }
 
-export function Tag({ color, label }: TagProps) {
+/** Étiquette non interactive (instrument, style, statut). Pour un choix, utiliser `ChoiceChip`. */
+export function Tag({ color, icon, label, tone = 'tinted' }: TagProps) {
   const { palette } = useDispoTheme();
   const resolved = color ?? palette.electric;
+  const foreground = tone === 'solid' ? palette.textInverse : resolved;
   return (
-    <View style={[styles.tag, { backgroundColor: `${resolved}18`, borderColor: `${resolved}55` }]}>
-      <AppText color={resolved} style={styles.text}>
+    <View
+      style={[
+        styles.tag,
+        tone === 'tinted' && { backgroundColor: tint(resolved, 0.14) },
+        tone === 'solid' && { backgroundColor: resolved },
+        tone === 'outline' && { borderColor: tint(resolved, 0.5), borderWidth: 1 },
+      ]}
+    >
+      {icon ? <Ionicons color={foreground} name={icon} size={12} /> : null}
+      <AppText color={foreground} numberOfLines={1} variant="caption" weight="semibold">
         {label}
       </AppText>
     </View>
@@ -24,12 +39,14 @@ export function Tag({ color, label }: TagProps) {
 
 const styles = StyleSheet.create({
   tag: {
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    borderRadius: radii.round,
+    flexDirection: 'row',
+    gap: spacing.xxs,
     maxWidth: '100%',
-    borderRadius: radii.chip,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    minHeight: 26,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: spacing.xxs,
   },
-  text: { fontSize: 12, fontWeight: '600' },
 });

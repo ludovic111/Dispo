@@ -8,7 +8,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export type NativeDateTimePart = 'date' | 'time';
 
@@ -29,21 +29,27 @@ export function mergeNativeDateTimePart(
 
 interface NativeDateTimeFieldProps {
   dateLabel: string;
-  disabled?: boolean;
-  minimumDate?: Date;
+  disabled?: boolean | undefined;
+  minimumDate?: Date | undefined;
   onChange: (value: Date) => void;
-  timeLabel: string;
+  /** `both` (défaut) : date et heure · `date` : jour seul · `time` : heure seule. */
+  parts?: 'both' | 'date' | 'time' | undefined;
+  timeLabel?: string | undefined;
   value: Date;
 }
 
+/** Sélecteur de date / heure natif : champs compacts sur iOS, boîtes de dialogue sur Android. */
 export function NativeDateTimeField({
   dateLabel,
   disabled = false,
   minimumDate,
   onChange,
-  timeLabel,
+  parts = 'both',
+  timeLabel = '',
   value,
 }: NativeDateTimeFieldProps) {
+  const showDate = parts !== 'time';
+  const showTime = parts !== 'date';
   const { dark, palette } = useDispoTheme();
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
@@ -68,37 +74,41 @@ export function NativeDateTimeField({
   if (Platform.OS === 'ios') {
     return (
       <View style={styles.row}>
-        <View style={[styles.iosField, { backgroundColor: palette.inset }]}>
-          <AppText color={palette.muted} variant="caption">
-            {dateLabel}
-          </AppText>
-          <DateTimePicker
-            accentColor={palette.electric}
-            display="compact"
-            disabled={disabled}
-            {...(dateMinimum ? { minimumDate: dateMinimum } : {})}
-            mode="date"
-            onValueChange={(_event, picked) => apply(picked, 'date')}
-            textColor={disabled ? palette.muted : palette.text}
-            themeVariant={dark ? 'dark' : 'light'}
-            value={value}
-          />
-        </View>
-        <View style={[styles.iosField, { backgroundColor: palette.inset }]}>
-          <AppText color={palette.muted} variant="caption">
-            {timeLabel}
-          </AppText>
-          <DateTimePicker
-            accentColor={palette.electric}
-            display="compact"
-            disabled={disabled}
-            mode="time"
-            onValueChange={(_event, picked) => apply(picked, 'time')}
-            textColor={disabled ? palette.muted : palette.text}
-            themeVariant={dark ? 'dark' : 'light'}
-            value={value}
-          />
-        </View>
+        {showDate ? (
+          <View style={[styles.iosField, { backgroundColor: palette.inset }]}>
+            <AppText color={palette.muted} variant="caption">
+              {dateLabel}
+            </AppText>
+            <DateTimePicker
+              accentColor={palette.electric}
+              display="compact"
+              disabled={disabled}
+              {...(dateMinimum ? { minimumDate: dateMinimum } : {})}
+              mode="date"
+              onValueChange={(_event, picked) => apply(picked, 'date')}
+              textColor={disabled ? palette.muted : palette.text}
+              themeVariant={dark ? 'dark' : 'light'}
+              value={value}
+            />
+          </View>
+        ) : null}
+        {showTime ? (
+          <View style={[styles.iosField, { backgroundColor: palette.inset }]}>
+            <AppText color={palette.muted} variant="caption">
+              {timeLabel}
+            </AppText>
+            <DateTimePicker
+              accentColor={palette.electric}
+              display="compact"
+              disabled={disabled}
+              mode="time"
+              onValueChange={(_event, picked) => apply(picked, 'time')}
+              textColor={disabled ? palette.muted : palette.text}
+              themeVariant={dark ? 'dark' : 'light'}
+              value={value}
+            />
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -110,62 +120,65 @@ export function NativeDateTimeField({
   }).format(value);
   return (
     <View style={styles.row}>
-      <Pressable
-        accessibilityLabel={`${dateLabel}: ${dateText}`}
-        accessibilityRole="button"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={() => openAndroid('date')}
-        style={({ pressed }) => [
-          styles.androidField,
-          { backgroundColor: palette.inset, borderColor: palette.border },
-          pressed && styles.pressed,
-        ]}
-      >
-        <AppText color={palette.muted} variant="caption">
-          {dateLabel}
-        </AppText>
-        <AppText color={disabled ? palette.muted : palette.text}>{dateText}</AppText>
-      </Pressable>
-      <Pressable
-        accessibilityLabel={`${timeLabel}: ${timeText}`}
-        accessibilityRole="button"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={() => openAndroid('time')}
-        style={({ pressed }) => [
-          styles.androidField,
-          { backgroundColor: palette.inset, borderColor: palette.border },
-          pressed && styles.pressed,
-        ]}
-      >
-        <AppText color={palette.muted} variant="caption">
-          {timeLabel}
-        </AppText>
-        <AppText color={disabled ? palette.muted : palette.text}>{timeText}</AppText>
-      </Pressable>
+      {showDate ? (
+        <Pressable
+          accessibilityLabel={`${dateLabel}: ${dateText}`}
+          accessibilityRole="button"
+          accessibilityState={{ disabled }}
+          disabled={disabled}
+          onPress={() => openAndroid('date')}
+          style={({ pressed }) => [
+            styles.androidField,
+            { backgroundColor: palette.inset, borderColor: palette.border },
+            pressed && pressedStyle,
+          ]}
+        >
+          <AppText color={palette.muted} variant="caption">
+            {dateLabel}
+          </AppText>
+          <AppText color={disabled ? palette.muted : palette.text}>{dateText}</AppText>
+        </Pressable>
+      ) : null}
+      {showTime ? (
+        <Pressable
+          accessibilityLabel={`${timeLabel}: ${timeText}`}
+          accessibilityRole="button"
+          accessibilityState={{ disabled }}
+          disabled={disabled}
+          onPress={() => openAndroid('time')}
+          style={({ pressed }) => [
+            styles.androidField,
+            { backgroundColor: palette.inset, borderColor: palette.border },
+            pressed && pressedStyle,
+          ]}
+        >
+          <AppText color={palette.muted} variant="caption">
+            {timeLabel}
+          </AppText>
+          <AppText color={disabled ? palette.muted : palette.text}>{timeText}</AppText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   androidField: {
-    borderRadius: radii.button,
+    borderRadius: radii.input,
     borderWidth: 1,
     flex: 1,
-    gap: 3,
+    gap: spacing.xxs,
     minHeight: 60,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
   iosField: {
     alignItems: 'flex-start',
-    borderRadius: radii.button,
+    borderRadius: radii.input,
     flex: 1,
-    gap: 2,
+    gap: spacing.xxs,
     paddingHorizontal: spacing.xs,
-    paddingVertical: 5,
+    paddingVertical: spacing.xxs,
   },
-  pressed: { opacity: 0.72 },
   row: { alignItems: 'stretch', flexDirection: 'row', gap: spacing.sm },
 });

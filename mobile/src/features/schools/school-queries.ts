@@ -40,7 +40,7 @@ import {
 import type { Page } from '@/domain/pagination';
 import { useAuth } from '@/features/auth/auth-context';
 
-export const schoolKeys = {
+const schoolKeys = {
   all: ['schools'] as const,
   communities: (userId: string) => ['schools', 'communities', userId] as const,
   detail: (userId: string, schoolId: string) => ['schools', 'detail', userId, schoolId] as const,

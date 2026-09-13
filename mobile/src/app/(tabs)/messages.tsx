@@ -1,12 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AppText } from '@/components/ui/app-text';
+import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
+import { SectionHeader } from '@/components/ui/section';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/auth-context';
 import { GroupRow, InvitationCard } from '@/features/groups/group-list-screen';
 import {
@@ -17,58 +18,9 @@ import {
 import { ConversationCard } from '@/features/messages/conversation-card';
 import { useConversations } from '@/features/messages/message-queries';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
 
 type MessageSegment = 'conversations' | 'groups';
-
-function SegmentControl({
-  onChange,
-  value,
-}: {
-  onChange: (value: MessageSegment) => void;
-  value: MessageSegment;
-}) {
-  const { palette } = useDispoTheme();
-  const { t } = useTranslation();
-  const options: { label: string; value: MessageSegment }[] = [
-    { label: t('Conversations'), value: 'conversations' },
-    { label: t('Groupes'), value: 'groups' },
-  ];
-  return (
-    <View
-      accessibilityLabel={t('Espace')}
-      accessibilityRole="tablist"
-      style={[styles.segment, { backgroundColor: palette.cardMuted }]}
-    >
-      {options.map((option) => {
-        const selected = value === option.value;
-        return (
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
-            key={option.value}
-            onPress={() => onChange(option.value)}
-            style={({ pressed }) => [
-              styles.segmentOption,
-              selected && {
-                backgroundColor: `${palette.electric}1F`,
-                borderColor: `${palette.electric}66`,
-              },
-              pressed && styles.pressed,
-            ]}
-          >
-            <AppText
-              color={selected ? palette.electric : palette.muted}
-              style={styles.segmentLabel}
-            >
-              {option.label}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
 
 export default function MessagesScreen() {
   const params = useLocalSearchParams<{ segment?: string | string[] }>();
@@ -91,13 +43,15 @@ export default function MessagesScreen() {
 
   const header = (
     <View style={styles.header}>
-      <ScreenHeader
-        icon="chatbubbles"
-        iconColor={palette.electric}
-        subtitle={t('Cale tes prochains dépannages')}
-        title={t('Messages')}
+      <ScreenHeader icon="chatbubbles" inset={false} title={t('Messages')} />
+      <SegmentedControl
+        onChange={changeSegment}
+        options={[
+          { label: t('Conversations'), value: 'conversations' },
+          { label: t('Groupes'), value: 'groups' },
+        ]}
+        value={segment}
       />
-      <SegmentControl onChange={changeSegment} value={segment} />
     </View>
   );
 
@@ -179,27 +133,18 @@ export default function MessagesScreen() {
       >
         {header}
         <View style={styles.sectionHeading}>
-          <View style={styles.sectionHeadingTitle}>
-            <Ionicons color={palette.electric} name="people" size={17} />
-            <AppText style={styles.sectionHeadingText} variant="subheadline">
-              {t('Groupes')}
-            </AppText>
+          <View style={styles.flex}>
+            <SectionHeader title={t('Groupes')} />
           </View>
-          <Pressable
+          <DispoButton
             accessibilityLabel={t('Nouveau groupe')}
-            accessibilityRole="button"
+            icon="add-circle"
             onPress={() => router.push('/groups/new' as never)}
-            style={({ pressed }) => [
-              styles.newGroup,
-              { backgroundColor: `${palette.electric}20` },
-              pressed && styles.pressed,
-            ]}
+            size="compact"
+            variant="secondary"
           >
-            <Ionicons color={palette.electric} name="add-circle" size={15} />
-            <AppText color={palette.electric} style={styles.newGroupLabel} variant="caption">
-              {t('Nouveau')}
-            </AppText>
-          </Pressable>
+            {t('Nouveau')}
+          </DispoButton>
         </View>
         {groupLoading ? <LoadingState label={t('Chargement des groupes…')} /> : null}
         {groupError ? (
@@ -239,49 +184,18 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   directContent: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
+  flex: { flex: 1, minWidth: 0 },
   groupContent: {
-    gap: spacing.cluster,
+    gap: spacing.sm,
     paddingBottom: spacing.xxl,
     paddingHorizontal: spacing.gutter,
   },
-  header: { gap: spacing.sm, marginHorizontal: -spacing.gutter },
-  newGroup: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    flexDirection: 'row',
-    gap: spacing.tight,
-    minHeight: 34,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  newGroupLabel: { fontWeight: '800' },
-  pressed: { opacity: 0.74, transform: [{ scale: 0.98 }] },
-  segment: {
-    borderRadius: radii.button,
-    flexDirection: 'row',
-    gap: 2,
-    marginHorizontal: spacing.gutter,
-    padding: 2,
-  },
-  segmentLabel: { fontSize: 13, fontWeight: '800' },
-  segmentOption: {
-    alignItems: 'center',
-    borderColor: 'transparent',
-    borderRadius: 10,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 34,
-    paddingHorizontal: spacing.xs,
-  },
+  header: { gap: spacing.sm, paddingBottom: spacing.sm },
   sectionHeading: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 2,
+    gap: spacing.sm,
     paddingTop: spacing.xs,
   },
-  sectionHeadingText: { fontWeight: '800' },
-  sectionHeadingTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   separator: { height: spacing.sm },
 });

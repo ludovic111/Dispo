@@ -235,7 +235,7 @@ export function formatAttachmentBytes(byteCount: number, locale = 'fr'): string 
   }).format(value);
 }
 
-export function attachmentFileExtension(fileName: string, contentType: string): string {
+function attachmentFileExtension(fileName: string, contentType: string): string {
   const supplied =
     fileName
       .split('.')

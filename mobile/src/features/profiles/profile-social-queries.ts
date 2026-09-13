@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/features/auth/auth-context';
 import { profileKeys } from '@/features/profiles/profile-queries';
 
-export const profileSocialKeys = {
+const profileSocialKeys = {
   all: ['profile-social'] as const,
   collaborators: (profileId: string) => ['profile-social', 'collaborators', profileId] as const,
   followers: (profileId: string) => ['profile-social', 'followers', profileId] as const,

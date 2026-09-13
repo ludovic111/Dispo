@@ -30,7 +30,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
-import { DispoButton } from '@/components/ui/pressable';
+import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
@@ -38,7 +38,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import type { GigApplication, GigDetail } from '@/features/gigs/gig-model';
 import { useGigApplicationDecision } from '@/features/gigs/gig-queries';
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 function ApplicantDecisionRow({
   applicant,
@@ -64,7 +64,7 @@ function ApplicantDecisionRow({
         ? { color: palette.signal, label: t('Écarté·e') }
         : { color: palette.bronze, label: t('En attente') };
   return (
-    <View style={[styles.applicant, { borderColor: palette.border }]}>
+    <Card padding={spacing.sm} style={styles.applicant} tone="inset">
       <View style={styles.applicantTop}>
         <Avatar
           name={applicant.musicianName || t('Musicien·ne')}
@@ -72,7 +72,9 @@ function ApplicantDecisionRow({
           uri={applicant.musicianPhotoUrl}
         />
         <View style={styles.flex}>
-          <AppText style={styles.strong}>{applicant.musicianName || t('Musicien·ne')}</AppText>
+          <AppText numberOfLines={2} variant="headline">
+            {applicant.musicianName || t('Musicien·ne')}
+          </AppText>
           <AppText color={palette.muted} variant="caption2">
             {applicant.instrument ? t(applicant.instrument) : t('Instrument à préciser')}
           </AppText>
@@ -90,24 +92,30 @@ function ApplicantDecisionRow({
             <DispoButton
               loading={decision.isPending}
               onPress={() => run('decline')}
+              size="compact"
               variant="danger"
             >
               {t('Refuser')}
             </DispoButton>
           </View>
           <View style={styles.flex}>
-            <DispoButton loading={decision.isPending} onPress={() => run('accept')}>
+            <DispoButton loading={decision.isPending} onPress={() => run('accept')} size="compact">
               {t('Accepter')}
             </DispoButton>
           </View>
         </View>
       ) : null}
       {applicant.status === 'accepted' ? (
-        <DispoButton loading={decision.isPending} onPress={() => run('reopen')} variant="secondary">
+        <DispoButton
+          loading={decision.isPending}
+          onPress={() => run('reopen')}
+          size="compact"
+          variant="secondary"
+        >
           {t('Remettre en attente')}
         </DispoButton>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -117,16 +125,13 @@ function LinkedSosCard({ gigs, onChanged }: { gigs: GigDetail[]; onChanged: () =
   if (!gigs.length) return null;
   return (
     <Card style={styles.card}>
-      <View style={styles.sectionTitleRow}>
-        <Ionicons color={palette.signal} name="flash" size={18} />
-        <AppText variant="title">{t('SOS en cours pour ce concert')}</AppText>
-      </View>
+      <SectionHeader title={t('SOS en cours pour ce concert')} />
       {gigs.map((gig) => {
         const waiting = gig.applicants.filter((applicant) => applicant.status === 'pending').length;
         return (
-          <View key={gig.id} style={[styles.sos, { borderColor: palette.border }]}>
+          <Card key={gig.id} padding={spacing.sm} style={styles.card} tone="inset">
             <View style={styles.titleLine}>
-              <AppText style={[styles.flex, styles.strong]}>
+              <AppText style={styles.flex} variant="headline">
                 {gig.wantedInstruments.map((instrument) => t(instrument)).join(' · ')}
               </AppText>
               <Tag
@@ -160,7 +165,7 @@ function LinkedSosCard({ gigs, onChanged }: { gigs: GigDetail[]; onChanged: () =
                 {t('Aucune candidature pour le moment.')}
               </AppText>
             )}
-          </View>
+          </Card>
         );
       })}
     </Card>
@@ -259,6 +264,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
     const rightMatch = right.instruments.some((instrument) => missingRoles.includes(instrument));
     return Number(rightMatch) - Number(leftMatch) || left.name.localeCompare(right.name, locale);
   });
+  const lineupColor = lineup === 'complete' ? palette.jam : palette.signal;
 
   const openSong = (song: GroupSong) =>
     router.push({
@@ -292,6 +298,34 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
       },
       pathname: '/gigs/create',
     } as never);
+  const inviteMusician = (profileId: string) => {
+    setInvitingProfileId(profileId);
+    invite.mutate(
+      {
+        eventId: event.id,
+        groupId: group.id,
+        invitedBy: userId,
+        message: t(
+          'Salut ! On a une place pour « {{event}} » ({{group}}) le {{date}} à {{venue}}. Tu es dispo — tu nous rejoins ?',
+          { date, event: event.title, group: group.name, venue: event.venue },
+        ),
+        profileId,
+      },
+      {
+        onSettled: () => setInvitingProfileId(null),
+        onSuccess: (result) => {
+          if (!result.attendancePrefilled || !result.messageSent) {
+            Alert.alert(
+              t('Invitation envoyée'),
+              t(
+                'L’invitation est partie. Une aide de présence ou le message direct devra peut-être être repris manuellement.',
+              ),
+            );
+          }
+        },
+      },
+    );
+  };
 
   if (reorderActive) {
     return (
@@ -348,11 +382,11 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             <AppText style={styles.flex}>{event.publicLocationLabel || event.venue}</AppText>
           </View>
           {event.privateLocationState === 'available' && event.exactAddress ? (
-            <View style={[styles.privateAddress, { backgroundColor: `${palette.jam}18` }]}>
+            <View style={[styles.privateAddress, { backgroundColor: tint(palette.jam, 0.1) }]}>
               <View style={styles.infoRow}>
                 <Ionicons color={palette.jam} name="lock-open" size={18} />
                 <View style={styles.flex}>
-                  <AppText color={palette.jam} style={styles.strong} variant="caption">
+                  <AppText color={palette.jam} variant="caption" weight="semibold">
                     {t('Rendez-vous privé')}
                   </AppText>
                   <AppText variant="caption">{event.exactAddress}</AppText>
@@ -360,7 +394,11 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               </View>
             </View>
           ) : event.privateLocationState === 'unknown' ? (
-            <Pressable onPress={() => void query.refetch()} style={styles.infoRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void query.refetch()}
+              style={({ pressed }) => [styles.infoRow, styles.touchRow, pressed && pressedStyle]}
+            >
               <Ionicons color={palette.signal} name="refresh-circle" size={18} />
               <AppText color={palette.signal} style={styles.flex} variant="caption">
                 {t('Adresse privée non chargée — réessaie dans un instant')}
@@ -388,38 +426,30 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
           ) : null}
         </Card>
         {isLeader ? (
-          <Pressable
-            onPress={() =>
-              router.push(`/groups/${group.id}/events/edit?eventId=${event.id}` as never)
-            }
-            style={[styles.editButton, { backgroundColor: `${palette.electric}20` }]}
-          >
-            <Ionicons color={palette.electric} name="create-outline" size={17} />
-            <AppText color={palette.electric} style={styles.editText}>
+          <View style={styles.inlineAction}>
+            <DispoButton
+              icon="create-outline"
+              onPress={() =>
+                router.push(`/groups/${group.id}/events/edit?eventId=${event.id}` as never)
+              }
+              size="compact"
+              variant="secondary"
+            >
               {t('Modifier la session')}
-            </AppText>
-          </Pressable>
+            </DispoButton>
+          </View>
         ) : null}
 
         <Card style={styles.card}>
           {lineup !== 'forming' ? (
-            <View
-              style={[
-                styles.lineupBanner,
-                { backgroundColor: `${lineup === 'complete' ? palette.jam : palette.signal}18` },
-              ]}
-            >
+            <View style={[styles.lineupBanner, { backgroundColor: tint(lineupColor, 0.1) }]}>
               <Ionicons
-                color={lineup === 'complete' ? palette.jam : palette.signal}
+                color={lineupColor}
                 name={lineup === 'complete' ? 'checkmark-circle' : 'alert-circle'}
                 size={20}
               />
               <View style={styles.flex}>
-                <AppText
-                  color={lineup === 'complete' ? palette.jam : palette.signal}
-                  style={styles.strong}
-                  variant="caption"
-                >
+                <AppText color={lineupColor} variant="caption" weight="semibold">
                   {lineup === 'complete' ? t('Line-up complet') : t('Il manque du monde')}
                 </AppText>
                 <AppText color={palette.muted} variant="caption2">
@@ -434,15 +464,10 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               </View>
             </View>
           ) : null}
-          <View style={styles.sectionTitleRow}>
-            <Ionicons color={palette.bronze} name="person-circle-outline" size={19} />
-            <AppText style={styles.flex} variant="title">
-              {t('Ta présence')}
-            </AppText>
-            <AppText color={palette.bronze} style={styles.strong} variant="caption">
-              {availableMembers.length}/{group.members.length}
-            </AppText>
-          </View>
+          <SectionHeader
+            subtitle={`${availableMembers.length}/${group.members.length}`}
+            title={t('Ta présence')}
+          />
           <View style={styles.choiceRow}>
             <View style={styles.flex}>
               <ChoiceChip
@@ -478,7 +503,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             <View key={row.label} style={styles.attendanceSummary}>
               <View style={styles.summaryTitle}>
                 <View style={[styles.dot, { backgroundColor: row.color }]} />
-                <AppText color={row.color} style={styles.strong} variant="caption">
+                <AppText color={row.color} variant="caption" weight="semibold">
                   {row.label} · {row.members.length}
                 </AppText>
               </View>
@@ -497,13 +522,13 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             </AppText>
           ) : guests.length ? (
             <View style={styles.guestList}>
-              <AppText color={palette.bronze} style={styles.strong} variant="caption">
+              <AppText color={palette.bronze} variant="caption" weight="semibold">
                 {t('Invités')} · {guests.length}
               </AppText>
               {guests.map((guest) => (
                 <View key={`${guest.eventId}:${guest.musicianId}`} style={styles.memberRow}>
                   <Avatar name={guest.name} size={28} uri={guest.photoUrl} />
-                  <AppText style={[styles.flex, styles.strong]} variant="caption">
+                  <AppText style={styles.flex} variant="caption" weight="semibold">
                     {guest.name}
                   </AppText>
                   {guest.instrument ? (
@@ -517,88 +542,69 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             </View>
           ) : null}
           {resources.isError ? (
-            <Pressable onPress={() => void resources.refetch()}>
-              <AppText color={palette.signal} variant="caption">
+            <View style={styles.inlineAction}>
+              <DispoButton
+                icon="refresh"
+                onPress={() => void resources.refetch()}
+                size="compact"
+                variant="ghost"
+              >
                 {t('Les remplaçant·es n’ont pas pu être chargé·es. Réessayer')}
-              </AppText>
-            </Pressable>
+              </DispoButton>
+            </View>
           ) : null}
         </Card>
 
         {isLeader && lineup !== 'complete' && invitees.length ? (
           <Card style={styles.card}>
-            <View style={styles.sectionTitleRow}>
-              <Ionicons color={palette.bronze} name="person-add" size={18} />
-              <AppText style={styles.flex} variant="title">
-                {t('Dispos ce jour-là')}
-              </AppText>
-              <Tag color={palette.bronze} label={String(invitees.length)} />
-            </View>
-            <AppText color={palette.muted} variant="caption">
-              {t(
+            <SectionHeader
+              subtitle={t(
                 'Un tap envoie une invitation comme invité·e, pré-coche cette date et ouvre le contact direct.',
               )}
-            </AppText>
+              title={`${t('Dispos ce jour-là')} · ${invitees.length}`}
+            />
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.inviteesRow}>
                 {invitees.slice(0, 12).map((musician) => {
                   const matching = musician.instruments.filter((instrument) =>
                     missingRoles.includes(instrument),
                   );
+                  const instrument = matching[0] ?? musician.instruments[0];
                   return (
                     <View key={musician.id} style={styles.invitee}>
                       <Avatar name={musician.name} size={48} uri={musician.photoUrl} />
-                      <AppText numberOfLines={1} style={styles.inviteeName} variant="caption2">
+                      <AppText
+                        numberOfLines={1}
+                        style={styles.inviteeText}
+                        variant="caption2"
+                        weight="semibold"
+                      >
                         {musician.name.split(' ')[0]}
                       </AppText>
-                      <AppText color={palette.muted} numberOfLines={1} variant="caption2">
-                        {(matching[0] ?? musician.instruments[0])
-                          ? t(matching[0] ?? musician.instruments[0]!)
-                          : t('Musicien·ne')}
-                      </AppText>
-                      <Pressable
-                        disabled={invite.isPending}
-                        onPress={() => {
-                          setInvitingProfileId(musician.id);
-                          invite.mutate(
-                            {
-                              eventId: event.id,
-                              groupId: group.id,
-                              invitedBy: userId,
-                              message: t(
-                                'Salut ! On a une place pour « {{event}} » ({{group}}) le {{date}} à {{venue}}. Tu es dispo — tu nous rejoins ?',
-                                { date, event: event.title, group: group.name, venue: event.venue },
-                              ),
-                              profileId: musician.id,
-                            },
-                            {
-                              onSettled: () => setInvitingProfileId(null),
-                              onSuccess: (result) => {
-                                if (!result.attendancePrefilled || !result.messageSent) {
-                                  Alert.alert(
-                                    t('Invitation envoyée'),
-                                    t(
-                                      'L’invitation est partie. Une aide de présence ou le message direct devra peut-être être repris manuellement.',
-                                    ),
-                                  );
-                                }
-                              },
-                            },
-                          );
-                        }}
-                        style={[styles.inviteButton, { backgroundColor: palette.bronze }]}
+                      <AppText
+                        color={palette.muted}
+                        numberOfLines={1}
+                        style={styles.inviteeText}
+                        variant="caption2"
                       >
-                        <AppText color="#FFFFFF" style={styles.inviteButtonText}>
-                          {invitingProfileId === musician.id ? '…' : t('Inviter')}
-                        </AppText>
-                      </Pressable>
+                        {instrument ? t(instrument) : t('Musicien·ne')}
+                      </AppText>
+                      <DispoButton
+                        accessibilityLabel={t('Inviter {{name}}', { name: musician.name })}
+                        disabled={invite.isPending}
+                        loading={invitingProfileId === musician.id}
+                        onPress={() => inviteMusician(musician.id)}
+                        variant="secondary"
+                      >
+                        {t('Inviter')}
+                      </DispoButton>
                     </View>
                   );
                 })}
               </View>
             </ScrollView>
             {invite.isError ? (
-              <AppText color={palette.signal} variant="caption">
+              <AppText color={palette.error} variant="caption">
                 {t('L’invitation n’a pas pu être envoyée.')}
               </AppText>
             ) : null}
@@ -632,7 +638,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             />
             {pendingSongs.map((song) => (
               <GroupSongRow
-                cardStyle={{ borderColor: `${palette.signal}55` }}
+                cardStyle={{ borderColor: tint(palette.signal, 0.33) }}
                 key={song.id}
                 members={group.members}
                 onPress={() => openSong(song)}
@@ -643,26 +649,22 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
                 trailing={
                   isLeader ? (
                     <View style={styles.songActions}>
-                      <Pressable
+                      <IconButton
                         accessibilityLabel={t('Refuser')}
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: saveSetlist.isPending }}
                         disabled={saveSetlist.isPending}
+                        icon="close-circle"
+                        iconColor={palette.muted}
                         onPress={() => saveSuggestion(song, false)}
-                        style={styles.songActionButton}
-                      >
-                        <Ionicons color={palette.muted} name="close-circle" size={24} />
-                      </Pressable>
-                      <Pressable
+                        variant="plain"
+                      />
+                      <IconButton
                         accessibilityLabel={t('Accepter')}
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: saveSetlist.isPending }}
                         disabled={saveSetlist.isPending}
+                        icon="checkmark-circle"
+                        iconColor={palette.jam}
                         onPress={() => saveSuggestion(song, true)}
-                        style={styles.songActionButton}
-                      >
-                        <Ionicons color={palette.jam} name="checkmark-circle" size={24} />
-                      </Pressable>
+                        variant="plain"
+                      />
                     </View>
                   ) : (
                     <Tag color={palette.bronze} label={t('En attente')} />
@@ -688,58 +690,34 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               ? t('Ajouter un morceau à cet événement')
               : t('Suggérer un morceau pour cet événement')}
           </DispoButton>
-          <View style={styles.setlistHeader}>
-            <View style={styles.flex}>
-              <SectionHeader
-                subtitle={t('{{count}} morceaux', { count: approvedSongs.length })}
-                title={t('Setlist')}
-              />
-            </View>
-            {isLeader && approvedSongs.length > 1 ? (
-              <Pressable
-                accessibilityLabel={reorderMode ? t('Terminé') : t('Réorganiser')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: reorderMode }}
-                onPress={() => setReorderMode((current) => !current)}
-                style={({ pressed }) => [
-                  styles.reorderButton,
-                  {
-                    backgroundColor: reorderMode ? `${palette.jam}1F` : palette.inset,
-                    borderColor: reorderMode ? `${palette.jam}66` : palette.border,
+          <SectionHeader
+            {...(isLeader && approvedSongs.length > 1
+              ? {
+                  action: {
+                    icon: 'reorder-three' as const,
+                    label: t('Réorganiser'),
+                    onPress: () => setReorderMode(true),
                   },
-                  pressed && styles.songActionActive,
-                ]}
-              >
-                <Ionicons
-                  color={reorderMode ? palette.jam : palette.electric}
-                  name={reorderMode ? 'checkmark' : 'reorder-three'}
-                  size={17}
-                />
-                <AppText
-                  color={reorderMode ? palette.jam : palette.electric}
-                  style={styles.reorderLabel}
-                  variant="caption2"
-                >
-                  {reorderMode ? t('Terminé') : t('Réorganiser')}
-                </AppText>
-              </Pressable>
-            ) : null}
-          </View>
+                }
+              : {})}
+            subtitle={t('{{count}} morceaux', { count: approvedSongs.length })}
+            title={t('Setlist')}
+          />
           {approvedSongs.length ? (
             approvedSongs.map((song, index) => (
               <View key={song.id} style={styles.songStack}>
                 {(index === 0 && approvedSongs.some((item, i) => i > 0 && item.startsSet)) ||
                 (index > 0 && song.startsSet) ? (
-                  <AppText color={palette.bronze} variant="label">
-                    {t('Set {{number}}', {
+                  <SectionHeader
+                    title={t('Set {{number}}', {
                       number:
                         1 +
                         approvedSongs.slice(1, index + 1).filter((item) => item.startsSet).length,
                     })}
-                  </AppText>
+                  />
                 ) : null}
                 <View style={styles.numberedSongRow}>
-                  <AppText color={palette.muted} style={styles.songIndex} variant="caption">
+                  <AppText color={palette.muted} style={styles.songIndex} variant="mono">
                     {index + 1}.
                   </AppText>
                   <View style={styles.flex}>
@@ -769,14 +747,23 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             />
             {repertoireChoices.map((song) => (
               <Pressable
+                accessibilityLabel={`${isLeader ? t('Ajouter à la setlist') : t('Suggérer pour la setlist')} · ${song.title}`}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: copySong.isPending }}
                 disabled={copySong.isPending}
                 key={song.id}
                 onPress={() => addFromRepertoire(song)}
-                style={[styles.songRow, { borderBottomColor: palette.border }]}
+                style={({ pressed }) => [
+                  styles.songRow,
+                  { borderBottomColor: palette.border },
+                  pressed && pressedStyle,
+                ]}
               >
                 <Ionicons color={palette.bronze} name="add-circle" size={23} />
                 <View style={styles.flex}>
-                  <AppText style={styles.strong}>{song.title}</AppText>
+                  <AppText numberOfLines={2} variant="headline">
+                    {song.title}
+                  </AppText>
                   <AppText color={palette.muted} variant="caption2">
                     {song.artist}
                   </AppText>
@@ -784,7 +771,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               </Pressable>
             ))}
             {copySong.isError ? (
-              <AppText color={palette.signal} variant="caption">
+              <AppText color={palette.error} variant="caption">
                 {t('Le morceau n’a pas pu être ajouté.')}
               </AppText>
             ) : null}
@@ -828,30 +815,19 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
 
 const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: spacing.xs },
-  applicant: { borderRadius: radii.button, borderWidth: 1, gap: spacing.xs, padding: spacing.sm },
+  applicant: { gap: spacing.xs },
   applicantTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   attendanceSummary: { gap: spacing.xxs },
   card: { gap: spacing.sm },
   choiceRow: { flexDirection: 'row', gap: spacing.xs },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  dot: { borderRadius: 999, height: 7, width: 7 },
-  editButton: {
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  editText: { fontSize: 13, fontWeight: '800' },
+  dot: { borderRadius: radii.round, height: 7, width: 7 },
   flex: { flex: 1 },
   guestList: { gap: spacing.xs },
   infoRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
-  inviteButton: { borderRadius: 999, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  inviteButtonText: { fontSize: 11, fontWeight: '800' },
-  invitee: { alignItems: 'center', gap: spacing.xxs, width: 92 },
-  inviteeName: { fontWeight: '700', maxWidth: 88 },
+  inlineAction: { alignSelf: 'flex-start' },
+  invitee: { alignItems: 'center', gap: spacing.xxs, maxWidth: 132, minWidth: 96 },
+  inviteeText: { alignSelf: 'stretch', textAlign: 'center' },
   inviteesRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xxs },
   lineupBanner: {
     alignItems: 'center',
@@ -863,37 +839,18 @@ const styles = StyleSheet.create({
   memberRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   numberedSongRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   privateAddress: { borderRadius: radii.button, padding: spacing.sm },
-  reorderButton: {
-    alignItems: 'center',
-    borderRadius: radii.chip,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.tight,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
-  },
-  reorderLabel: { fontWeight: '800' },
-  sectionTitleRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  setlistHeader: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  songActions: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  songActionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    minWidth: 44,
-  },
-  songActionActive: { opacity: 0.72 },
-  songIndex: { fontWeight: '800', textAlign: 'right', width: 22 },
+  songActions: { alignItems: 'center', flexDirection: 'row' },
+  songIndex: { minWidth: spacing.xl, textAlign: 'right' },
   songRow: {
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.control,
+    gap: spacing.sm,
+    minHeight: minimumTouchTarget,
     paddingVertical: spacing.xs,
   },
   songStack: { gap: spacing.xs },
-  sos: { borderRadius: radii.button, borderWidth: 1, gap: spacing.sm, padding: spacing.sm },
-  strong: { fontWeight: '700' },
   summaryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   titleLine: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  touchRow: { minHeight: minimumTouchTarget - 8 },
 });

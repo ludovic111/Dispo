@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { Tag } from '@/components/ui/tag';
 import {
   schoolAcronym,
   shortProfileLevel,
@@ -12,6 +13,7 @@ import {
 } from '@/domain/profile';
 import { profileDistanceLabel } from '@/features/discovery/discovery-model';
 import { useDispoTheme } from '@/theme/theme-context';
+import { pressedStyle, spacing } from '@/theme/tokens';
 
 export function CompactProfileCard({
   profile,
@@ -26,7 +28,6 @@ export function CompactProfileCard({
 }) {
   const { t, i18n } = useTranslation();
   const { palette } = useDispoTheme();
-  const { fontScale } = useWindowDimensions();
   const school = primarySchool === undefined ? profile.schools[0] : primarySchool;
   const relation =
     profile.isFriend || profile.relationship === 'friend'
@@ -56,7 +57,6 @@ export function CompactProfileCard({
   const place = [profile.city || t('Lieu non renseigné'), distance].filter(Boolean).join(' · ');
   return (
     <Pressable
-      accessibilityRole="button"
       accessibilityLabel={[
         profile.name,
         school?.name,
@@ -66,30 +66,19 @@ export function CompactProfileCard({
       ]
         .filter(Boolean)
         .join(', ')}
+      accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => pressed && styles.pressed}
+      style={({ pressed }) => pressed && pressedStyle}
     >
-      <Card
-        padding={12}
-        style={{ height: 32 + 60 * Math.max(1, fontScale), justifyContent: 'center' }}
-      >
+      <Card padding={spacing.sm}>
         <View style={styles.row}>
           <Avatar name={profile.name} size={48} uri={profile.photoUrl} />
           <View style={styles.copy}>
             <View style={styles.nameRow}>
-              <AppText numberOfLines={1} style={styles.name} variant="headline">
+              <AppText numberOfLines={2} style={styles.name} variant="headline">
                 {profile.name}
               </AppText>
-              {school ? (
-                <AppText
-                  color={palette.muted}
-                  numberOfLines={1}
-                  style={[styles.school, { backgroundColor: palette.inset }]}
-                  variant="caption"
-                >
-                  {schoolAcronym(school)}
-                </AppText>
-              ) : null}
+              {school ? <Tag color={palette.bronze} label={schoolAcronym(school)} /> : null}
             </View>
             <AppText color={palette.bronze} numberOfLines={1} variant="subheadline">
               {instruments}
@@ -99,17 +88,7 @@ export function CompactProfileCard({
             </AppText>
           </View>
           {relation ? (
-            <AppText
-              color={relation === 'Ami' ? palette.jam : palette.muted}
-              numberOfLines={1}
-              style={[
-                styles.relation,
-                { backgroundColor: relation === 'Ami' ? `${palette.jam}18` : palette.inset },
-              ]}
-              variant="caption"
-            >
-              {t(relation)}
-            </AppText>
+            <Tag color={relation === 'Ami' ? palette.jam : palette.muted} label={t(relation)} />
           ) : null}
         </View>
       </Card>
@@ -118,26 +97,8 @@ export function CompactProfileCard({
 }
 
 const styles = StyleSheet.create({
-  row: { alignItems: 'center', flexDirection: 'row', gap: 12 },
-  copy: { flex: 1, minWidth: 0, gap: 2 },
-  nameRow: { alignItems: 'center', flexDirection: 'row', gap: 6 },
+  copy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
   name: { flexShrink: 1 },
-  school: {
-    flexShrink: 0,
-    maxWidth: 58,
-    borderRadius: 7,
-    overflow: 'hidden',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  relation: {
-    flexShrink: 0,
-    maxWidth: 76,
-    fontWeight: '700',
-    borderRadius: 10,
-    overflow: 'hidden',
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-  },
-  pressed: { opacity: 0.75 },
+  nameRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
+  row: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
 });
