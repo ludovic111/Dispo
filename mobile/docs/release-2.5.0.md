@@ -37,3 +37,12 @@ La version reprend la session Claude interrompue par sa limite d’usage, puis a
 - Le site présente la 2.5 en aperçu jusqu’à l’approbation Apple. TestFlight, App Review et publication restent des états distincts.
 
 Les preuves de signature, import Apple, revue et déploiement sont conservées hors Git dans `Dispo-dist/qa-20260913-release-2.5/` et `Dispo-dist/2.5.0/`.
+
+## Livraison confirmée
+
+- PR [#2](https://github.com/ludovic111/Dispo/pull/2) fusionnée sur `main` : `8dbe3b5`.
+- iOS 2.5.0 (64) signé, import `VALID`, `APP_STORE_ELIGIBLE`, TestFlight interne `IN_BETA_TESTING`.
+- Soumission Apple `1c58e7ad-94b4-461c-95eb-7f936ed3b524` : `WAITING_FOR_REVIEW` depuis le 13 septembre 2026 à 18:59:33 Europe/Paris. Dix captures FR/EN `COMPLETE`, descriptions et nouveautés actualisées. Suisse et 13+ conservés.
+- Site `7822345` déployé sur Railway, état `SUCCESS` ; routes et association de domaine HTTP 200.
+- Passkeys iPhone : association Apple et configuration Auth actives ; challenge serveur pour `dispoapp.net` confirmé. Validation physique iCloud toujours à faire.
+- APK Android de validation conservé hors Git ; signature de debug, aucune distribution Google Play.
