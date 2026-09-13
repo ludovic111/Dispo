@@ -35,6 +35,7 @@ export interface SchoolAffiliation {
 
 export interface SchoolMember {
   instruments: string[];
+  isPremium: boolean;
   isPrimary: boolean;
   joinedAt: string;
   level: string;

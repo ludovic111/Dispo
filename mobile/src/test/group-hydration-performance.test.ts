@@ -17,6 +17,7 @@ export function installGroupFixture(groupCount = 3) {
     | 'group_invitations'
     | 'event_attendance'
     | 'group_message_reactions'
+    | 'song_comment_reactions'
     | 'profiles',
     Record<string, unknown>[]
   > = {
@@ -29,6 +30,7 @@ export function installGroupFixture(groupCount = 3) {
     group_invitations: [],
     event_attendance: [],
     group_message_reactions: [],
+    song_comment_reactions: [],
     profiles: [],
   };
   const messages: Record<string, unknown>[] = [];
@@ -124,6 +126,7 @@ export function installGroupFixture(groupCount = 3) {
       select: () => chain,
       order: () => chain,
       in: () => chain,
+      is: () => chain,
       abortSignal: () => chain,
       then: (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve),
     };

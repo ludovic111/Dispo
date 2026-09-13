@@ -186,7 +186,11 @@ enable_manual_linking = false
 minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+# Durcissement 2.5 : minuscule + majuscule + chiffre. Le projet hébergé doit
+# refléter cette valeur à la main (Authentication → Sign In / Providers →
+# Password requirements) ; la protection HIBP « mot de passe compromis » y est
+# déjà active depuis le 21.07.2026 et n'existe pas en local.
+password_requirements = "lower_upper_letters_digits"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -259,9 +263,19 @@ otp_expiry = 3600
 # content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
+# Dispo 2.5 — vérification du numéro de téléphone (écran « Vérification du compte »).
+# Le client appelle `auth.updateUser({ phone })` puis `auth.verifyOtp({ type: 'phone_change' })`.
+# Sans fournisseur SMS (Twilio ci-dessous désactivé, aucun secret en local), Supabase répond
+# par une erreur de fournisseur : l'app affiche « La vérification par SMS sera activée
+# prochainement » et ne bloque jamais l'utilisateur. Pour rendre la vérification obligatoire
+# en production : (1) renseigner les identifiants Twilio dans les réglages Auth hébergés
+# (jamais dans Git), (2) activer le fournisseur, (3) poser
+# `update public.app_settings set value='true' where key='require_phone_verification'`.
 # Allow/disallow new user signups via SMS to your project.
 enable_signup = false
 # If enabled, users need to confirm their phone number before signing in.
+# Laisser à `false` : l'obligation de vérification est pilotée par `public.app_settings`
+# (`require_phone_verification`), lue par `get_my_account_status()`, pas par Auth lui-même.
 enable_confirmations = false
 # Template for sending OTP to users
 template = "Your code is {{ `{{ .Code }}` }}"
@@ -273,11 +287,15 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
+# Durcissement 2.5 : une session expire au plus tard après 30 jours et après
+# 90 jours d'inactivité ; le SDK mobile rafraîchit les jetons en silence bien
+# avant. Le projet hébergé doit reprendre ces deux valeurs (Authentication →
+# Sessions), elles ne sont pas déployées par le CLI.
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "720h"
 # Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
+inactivity_timeout = "2160h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]

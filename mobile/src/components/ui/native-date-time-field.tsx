@@ -8,7 +8,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { pressedStyle, radii, spacing } from '@/theme/tokens';
+import { insetStyle, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export type NativeDateTimePart = 'date' | 'time';
 
@@ -75,7 +75,7 @@ export function NativeDateTimeField({
     return (
       <View style={styles.row}>
         {showDate ? (
-          <View style={[styles.iosField, { backgroundColor: palette.inset }]}>
+          <View style={[styles.iosField, insetStyle(palette)]}>
             <AppText color={palette.muted} variant="caption">
               {dateLabel}
             </AppText>
@@ -93,7 +93,7 @@ export function NativeDateTimeField({
           </View>
         ) : null}
         {showTime ? (
-          <View style={[styles.iosField, { backgroundColor: palette.inset }]}>
+          <View style={[styles.iosField, insetStyle(palette)]}>
             <AppText color={palette.muted} variant="caption">
               {timeLabel}
             </AppText>
@@ -129,7 +129,7 @@ export function NativeDateTimeField({
           onPress={() => openAndroid('date')}
           style={({ pressed }) => [
             styles.androidField,
-            { backgroundColor: palette.inset, borderColor: palette.border },
+            insetStyle(palette),
             pressed && pressedStyle,
           ]}
         >
@@ -148,7 +148,7 @@ export function NativeDateTimeField({
           onPress={() => openAndroid('time')}
           style={({ pressed }) => [
             styles.androidField,
-            { backgroundColor: palette.inset, borderColor: palette.border },
+            insetStyle(palette),
             pressed && pressedStyle,
           ]}
         >
@@ -165,7 +165,6 @@ export function NativeDateTimeField({
 const styles = StyleSheet.create({
   androidField: {
     borderRadius: radii.input,
-    borderWidth: 1,
     flex: 1,
     gap: spacing.xxs,
     minHeight: 60,

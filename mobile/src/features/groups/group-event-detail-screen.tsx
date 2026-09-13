@@ -30,11 +30,15 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
+import { VuMeter } from '@/components/ui/vu-meter';
 import { useAuth } from '@/features/auth/auth-context';
+import { AddToCalendarButton } from '@/features/calendar/add-to-calendar-button';
+import { groupEventCalendarSourceId, sessionDeepLink } from '@/features/calendar/calendar-sync';
 import type { GigApplication, GigDetail } from '@/features/gigs/gig-model';
 import { useGigApplicationDecision } from '@/features/gigs/gig-queries';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -248,6 +252,11 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
   const date = new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeStyle: 'short' }).format(
     new Date(event.date),
   );
+  const calendarDeepLink = sessionDeepLink({
+    eventId: event.id,
+    gigId: null,
+    groupId: group.id,
+  });
   const futureSeriesIds = event.seriesId
     ? group.events
         .filter((item) => item.seriesId === event.seriesId && item.date >= event.date)
@@ -377,22 +386,32 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             <Ionicons color={palette.electric} name="calendar-outline" size={18} />
             <AppText style={styles.flex}>{date}</AppText>
           </View>
+          <View style={styles.inlineAction}>
+            <AddToCalendarButton
+              location={event.publicLocationLabel || event.venue}
+              notes={[group.name, calendarDeepLink].filter(Boolean).join('\n')}
+              sourceId={groupEventCalendarSourceId(event.id)}
+              startsAt={event.date}
+              title={event.title}
+              url={calendarDeepLink ?? undefined}
+            />
+          </View>
           <View style={styles.infoRow}>
             <Ionicons color={palette.electric} name="location-outline" size={18} />
             <AppText style={styles.flex}>{event.publicLocationLabel || event.venue}</AppText>
           </View>
           {event.privateLocationState === 'available' && event.exactAddress ? (
-            <View style={[styles.privateAddress, { backgroundColor: tint(palette.jam, 0.1) }]}>
+            <Card padding={spacing.sm} tone="inset">
               <View style={styles.infoRow}>
                 <Ionicons color={palette.jam} name="lock-open" size={18} />
                 <View style={styles.flex}>
-                  <AppText color={palette.jam} variant="caption" weight="semibold">
+                  <AppText color={palette.jam} variant="label">
                     {t('Rendez-vous privé')}
                   </AppText>
                   <AppText variant="caption">{event.exactAddress}</AppText>
                 </View>
               </View>
-            </View>
+            </Card>
           ) : event.privateLocationState === 'unknown' ? (
             <Pressable
               accessibilityRole="button"
@@ -440,33 +459,45 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
           </View>
         ) : null}
 
-        <Card style={styles.card}>
+        <Card style={styles.card} tone="elevated">
           {lineup !== 'forming' ? (
-            <View style={[styles.lineupBanner, { backgroundColor: tint(lineupColor, 0.1) }]}>
-              <Ionicons
-                color={lineupColor}
-                name={lineup === 'complete' ? 'checkmark-circle' : 'alert-circle'}
-                size={20}
-              />
-              <View style={styles.flex}>
-                <AppText color={lineupColor} variant="caption" weight="semibold">
-                  {lineup === 'complete' ? t('Line-up complet') : t('Il manque du monde')}
-                </AppText>
-                <AppText color={palette.muted} variant="caption2">
-                  {lineup === 'complete'
-                    ? t('Tout le monde est là — le concert peut se jouer.')
-                    : missingRoles.length
-                      ? t('Postes à pourvoir : {{roles}}', {
-                          roles: missingRoles.map((role) => t(role)).join(', '),
-                        })
-                      : t('La date limite de réponse est passée.')}
-                </AppText>
+            <Card padding={spacing.sm} tone="inset">
+              <View style={styles.lineupBanner}>
+                <Ionicons
+                  color={lineupColor}
+                  name={lineup === 'complete' ? 'checkmark-circle' : 'alert-circle'}
+                  size={20}
+                />
+                <View style={styles.flex}>
+                  <AppText color={lineupColor} variant="label">
+                    {lineup === 'complete' ? t('Line-up complet') : t('Il manque du monde')}
+                  </AppText>
+                  <AppText color={palette.muted} variant="caption2">
+                    {lineup === 'complete'
+                      ? t('Tout le monde est là — le concert peut se jouer.')
+                      : missingRoles.length
+                        ? t('Postes à pourvoir : {{roles}}', {
+                            roles: missingRoles.map((role) => t(role)).join(', '),
+                          })
+                        : t('La date limite de réponse est passée.')}
+                  </AppText>
+                </View>
               </View>
-            </View>
+            </Card>
           ) : null}
           <SectionHeader
             subtitle={`${availableMembers.length}/${group.members.length}`}
             title={t('Ta présence')}
+          />
+          <VuMeter
+            accessibilityLabel={t('{{count}} présent·es sur {{total}}', {
+              count: availableMembers.length,
+              total: group.members.length,
+            })}
+            label={t('Présences')}
+            segments={Math.min(12, Math.max(4, group.members.length))}
+            tone={lineup === 'complete' ? 'accent' : 'level'}
+            value={availableMembers.length / Math.max(group.members.length, 1)}
           />
           <View style={styles.choiceRow}>
             <View style={styles.flex}>
@@ -503,7 +534,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             <View key={row.label} style={styles.attendanceSummary}>
               <View style={styles.summaryTitle}>
                 <View style={[styles.dot, { backgroundColor: row.color }]} />
-                <AppText color={row.color} variant="caption" weight="semibold">
+                <AppText color={row.color} variant="label">
                   {row.label} · {row.members.length}
                 </AppText>
               </View>
@@ -522,7 +553,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             </AppText>
           ) : guests.length ? (
             <View style={styles.guestList}>
-              <AppText color={palette.bronze} variant="caption" weight="semibold">
+              <AppText color={palette.bronze} variant="label">
                 {t('Invités')} · {guests.length}
               </AppText>
               {guests.map((guest) => (
@@ -746,29 +777,19 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
               title={isLeader ? t('Ajouter à la setlist') : t('Suggérer pour la setlist')}
             />
             {repertoireChoices.map((song) => (
-              <Pressable
+              <ListRow
                 accessibilityLabel={`${isLeader ? t('Ajouter à la setlist') : t('Suggérer pour la setlist')} · ${song.title}`}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: copySong.isPending }}
+                accessory={<Ionicons color={palette.bronze} name="add-circle" size={23} />}
                 disabled={copySong.isPending}
                 key={song.id}
+                leadingIcon="musical-note"
+                leadingIconColor={palette.bronze}
                 onPress={() => addFromRepertoire(song)}
-                style={({ pressed }) => [
-                  styles.songRow,
-                  { borderBottomColor: palette.border },
-                  pressed && pressedStyle,
-                ]}
-              >
-                <Ionicons color={palette.bronze} name="add-circle" size={23} />
-                <View style={styles.flex}>
-                  <AppText numberOfLines={2} variant="headline">
-                    {song.title}
-                  </AppText>
-                  <AppText color={palette.muted} variant="caption2">
-                    {song.artist}
-                  </AppText>
-                </View>
-              </Pressable>
+                subtitle={song.artist}
+                title={song.title}
+                titleLines={2}
+                tone="plain"
+              />
             ))}
             {copySong.isError ? (
               <AppText color={palette.error} variant="caption">
@@ -829,26 +850,11 @@ const styles = StyleSheet.create({
   invitee: { alignItems: 'center', gap: spacing.xxs, maxWidth: 132, minWidth: 96 },
   inviteeText: { alignSelf: 'stretch', textAlign: 'center' },
   inviteesRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xxs },
-  lineupBanner: {
-    alignItems: 'center',
-    borderRadius: radii.button,
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
+  lineupBanner: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   memberRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   numberedSongRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  privateAddress: { borderRadius: radii.button, padding: spacing.sm },
   songActions: { alignItems: 'center', flexDirection: 'row' },
   songIndex: { minWidth: spacing.xl, textAlign: 'right' },
-  songRow: {
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: minimumTouchTarget,
-    paddingVertical: spacing.xs,
-  },
   songStack: { gap: spacing.xs },
   summaryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   titleLine: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

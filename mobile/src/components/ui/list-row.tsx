@@ -59,7 +59,12 @@ export function ListRow({
     <View style={[styles.row, disabled && disabledStyle]}>
       {leading ??
         (leadingIcon ? (
-          <View style={[styles.iconWell, { backgroundColor: palette.cardMuted }]}>
+          <View
+            style={[
+              styles.iconWell,
+              { backgroundColor: palette.cardMuted, borderColor: palette.edge },
+            ]}
+          >
             <Ionicons color={leadingIconColor ?? palette.electric} name={leadingIcon} size={20} />
           </View>
         ) : null)}
@@ -114,6 +119,7 @@ const styles = StyleSheet.create({
   iconWell: {
     alignItems: 'center',
     borderRadius: radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
     height: 44,
     justifyContent: 'center',
     width: 44,

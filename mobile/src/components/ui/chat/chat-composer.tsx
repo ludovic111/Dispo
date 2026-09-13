@@ -7,7 +7,7 @@ import { Card } from '../card';
 import { IconButton } from '../pressable';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing, typography } from '@/theme/tokens';
+import { insetInputStyle, minimumTouchTarget, radii, spacing, typography } from '@/theme/tokens';
 
 interface ChatComposerProps extends PropsWithChildren {
   accessibilityLabel: string;
@@ -67,7 +67,7 @@ export function ChatComposer({
     <View
       style={[
         styles.shell,
-        { backgroundColor: palette.background, borderTopColor: palette.border, paddingBottom },
+        { backgroundColor: palette.background, borderTopColor: palette.edge, paddingBottom },
       ]}
     >
       {error ? (
@@ -111,10 +111,7 @@ export function ChatComposer({
           placeholderTextColor={palette.muted}
           ref={inputRef}
           selectionColor={palette.electric}
-          style={[
-            styles.input,
-            { backgroundColor: palette.card, borderColor: palette.border, color: palette.text },
-          ]}
+          style={[styles.input, insetInputStyle(palette), { color: palette.text }]}
           value={value}
         />
         {sending ? (
@@ -128,6 +125,7 @@ export function ChatComposer({
             icon={sendIcon}
             iconColor={sendDisabled ? palette.muted : palette.electric}
             onPress={onSend}
+            variant={sendDisabled ? 'filled' : 'accent'}
           />
         )}
       </View>
@@ -178,7 +176,6 @@ const styles = StyleSheet.create({
   error: { paddingHorizontal: spacing.xxs },
   input: {
     borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     flex: 1,
     fontFamily: typography.body,
     fontSize: 16,

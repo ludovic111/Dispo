@@ -95,17 +95,20 @@ export function schoolAcronym(school: Pick<SchoolAffiliation, 'name' | 'shortNam
   return initials || school.name.trim().slice(0, 3).toLocaleUpperCase('fr');
 }
 
-export function shortProfileLevel(level: string, compact = false): string {
-  if (compact) {
-    const abbreviations: Record<string, string> = {
-      Débutant: 'déb',
-      Intermédiaire: 'int',
-      Avancé: 'av',
-      Professionnel: 'pro',
-    };
-    return abbreviations[level] ?? level;
-  }
-  return level === 'Professionnel' ? 'Pro' : level;
+/**
+ * Libellé court d'un niveau : 'Déb.' / 'Inter.' / 'Av.' / 'Pro' — des clés i18n, à
+ * passer dans `t()`. Le paramètre `compact` est conservé pour compatibilité ; depuis
+ * 2.5 les cartes denses utilisent la même abréviation que le reste de l'app.
+ * La valeur stockée (`Professionnel`…) n'est jamais modifiée.
+ */
+export function shortProfileLevel(level: string, _compact = false): string {
+  const abbreviations: Record<string, string> = {
+    Débutant: 'Déb.',
+    Intermédiaire: 'Inter.',
+    Avancé: 'Av.',
+    Professionnel: 'Pro',
+  };
+  return abbreviations[level] ?? level;
 }
 
 export function profileHandle(name: string): string {

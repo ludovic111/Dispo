@@ -88,7 +88,6 @@ const instrumentAliases: Record<string, readonly string[]> = {
   Orgue: ['organiste'],
   Percussions: ['percussionniste', 'percu'],
   Piano: ['pianiste', 'pianist', 'claviériste', 'keys'],
-  Saxophone: ['saxophoniste', 'sax', 'saxo'],
   'Saxophone alto': ['saxophoniste', 'sax', 'saxo', 'alto', 'eb'],
   'Saxophone ténor': ['saxophoniste', 'sax', 'saxo', 'ténor', 'tenor', 'bb'],
   'Synthé / MAO': ['claviériste', 'producteur', 'beatmaker', 'mao'],
@@ -612,14 +611,4 @@ export function openingScope(
   if (profilesForScope(profiles, 'today', now).length > 0) return 'today';
   if (profilesForScope(profiles, 'weekend', now).length > 0) return 'weekend';
   return 'nearby';
-}
-
-/** Advanced predicates are removed from effective searches after Premium expires. */
-export function effectiveDiscoveryFilters(
-  filters: DiscoveryFilters,
-  premium: boolean,
-): DiscoveryFilters {
-  return premium
-    ? filters
-    : { ...filters, genres: [], levels: [], playedWithFriend: false, wellRated: false };
 }

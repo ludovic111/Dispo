@@ -18,7 +18,14 @@ import { useGigs } from '@/features/gigs/gig-queries';
 import { useDiscoveryProfiles, useProfile } from '@/features/profiles/profile-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, pressedStyle, radii, spacing, typography } from '@/theme/tokens';
+import {
+  insetStyle,
+  minimumTouchTarget,
+  pressedStyle,
+  radii,
+  spacing,
+  typography,
+} from '@/theme/tokens';
 
 const suggestions = ['pianiste Carouge', 'salsa ce soir', '@marco', 'batteur jazz'] as const;
 
@@ -54,9 +61,7 @@ export function SearchScreen() {
   return (
     <Screen nativeHeader>
       <View style={styles.searchWrap}>
-        <View
-          style={[styles.search, { backgroundColor: palette.card, borderColor: palette.border }]}
-        >
+        <View style={[styles.search, insetStyle(palette)]}>
           <Ionicons color={palette.muted} name="search" size={17} />
           <TextInput
             autoCapitalize="none"
@@ -178,7 +183,6 @@ const styles = StyleSheet.create({
   search: {
     alignItems: 'center',
     borderRadius: radii.control,
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.xs,
     minHeight: minimumTouchTarget + spacing.xxs,

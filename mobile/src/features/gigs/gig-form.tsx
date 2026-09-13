@@ -111,7 +111,7 @@ function ChoiceSection({
   const { t } = useTranslation();
   return (
     <View style={styles.choiceSection}>
-      <AppText color={palette.muted} variant="caption">
+      <AppText color={palette.bronze} variant="label">
         {t(label)}
       </AppText>
       <View style={styles.chips}>
@@ -266,13 +266,13 @@ export function GigForm({
   return (
     <View style={styles.form}>
       <Card style={styles.section}>
-        <SectionHeader
-          title={
-            mode === 'direct'
-              ? t('Demande à {{name}}', { name: targetName ?? t('ce musicien') })
-              : t('Le concert')
-          }
-        />
+        {mode === 'direct' ? (
+          <SectionHeader
+            title={t('Demande à {{name}}', { name: targetName ?? t('ce musicien') })}
+          />
+        ) : (
+          <SectionHeader subtitle={t('Titre, date et heure du SOS.')} title={t('Détails')} />
+        )}
         <FormField
           label={t('Titre')}
           onChangeText={setTitle}
@@ -296,7 +296,7 @@ export function GigForm({
         )}
         {mode === 'direct' && availableDates.length > 0 ? (
           <View style={styles.choiceSection}>
-            <AppText color={palette.muted} variant="caption">
+            <AppText color={palette.bronze} variant="label">
               {t('Jours où {{name}} s’est déclaré·e disponible', {
                 name: targetName ?? t('la personne'),
               })}
@@ -465,7 +465,7 @@ export function GigForm({
           ) : null}
           {feeMode !== 'none' ? (
             <View style={styles.choiceSection}>
-              <AppText color={palette.muted} variant="caption">
+              <AppText color={palette.bronze} variant="label">
                 {t('Moyen de versement (facultatif)')}
               </AppText>
               <View style={styles.chips}>

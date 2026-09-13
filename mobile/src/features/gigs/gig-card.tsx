@@ -8,13 +8,15 @@ import { DateTicket } from '@/components/ui/date-ticket';
 import { Tag } from '@/components/ui/tag';
 import { Barcode, TicketCard } from '@/components/ui/ticket-card';
 import { useAuth } from '@/features/auth/auth-context';
-import { openGigInstruments, type GigSummary } from '@/features/gigs/gig-model';
-import { useGigMatches } from '@/features/gigs/gig-queries';
+import { GigMatchSummaryLine } from '@/features/gigs/gig-match-chips';
+import { openGigInstruments, type GigMatchInfo, type GigSummary } from '@/features/gigs/gig-model';
+import { useGigCandidateCount } from '@/features/gigs/gig-queries';
+import { readableOn } from '@/theme/color';
 import { useDispoTheme } from '@/theme/theme-context';
-import { billetInk, lightPalette, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
+import { blend, onAccent, pressedStyle, spacing, tint } from '@/theme/tokens';
 
-/** Le billet SOS est une surface claire fixe dans les deux thèmes : encre `billetInk`, accents clairs. */
-const billet = lightPalette;
+/** Largeur de la souche : le billet de date (52 pt) et sa marge, alignée sur la perforation. */
+const stubWidth = 52 + spacing.sm * 2;
 
 function formatGigDate(
   value: string,
@@ -31,10 +33,27 @@ function formatGigDate(
   };
 }
 
-export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void }) {
+/**
+ * Billet SOS du fil : papier clair du thème (`palette.paper`, fixe en clair
+ * comme en sombre), encre choisie par contraste, perforation et code-barres
+ * du `TicketCard`, VU-mètre de compatibilité quand l'annonce correspond.
+ */
+export function GigCard({
+  gig,
+  match,
+  onPress,
+}: {
+  gig: GigSummary;
+  /** Compatibilité du viewer avec cette annonce (fil « SOS »). */
+  match?: GigMatchInfo | undefined;
+  onPress: () => void;
+}) {
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
+  const paper = palette.paper;
+  const ink = readableOn(paper, [palette.ink, palette.paper, onAccent]);
+  const inkMuted = blend(ink, paper, 0.42);
   const date = formatGigDate(gig.date, locale);
   const openInstruments = openGigInstruments(gig);
   const { session } = useAuth();
@@ -45,46 +64,38 @@ export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void
     !gig.targetId &&
     openInstruments.length > 0 &&
     Date.parse(gig.date) > new Date().getTime();
-  const matches = useGigMatches(canFindMatch ? gig.id : '', canFindMatch ? 30_000 : false);
-  const hasMatch =
-    canFindMatch &&
-    !matches.isError &&
-    Boolean(
-      matches.data?.pages.some((page) =>
-        page.items.some((match) =>
-          match.matchingInstruments.some((instrument) => openInstruments.includes(instrument)),
-        ),
-      ),
-    );
+  const candidates = useGigCandidateCount(gig.id, canFindMatch);
+  const hasMatch = canFindMatch && !candidates.isError && (candidates.data ?? 0) > 0;
+  const viewerMatch = match && match.instruments.length > 0 ? match : null;
   const visibleInstruments = openInstruments.slice(0, 3);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${gig.title} · ${date.day} ${date.month} ${date.time} · ${gig.place} · ${openInstruments.map((instrument) => t(instrument)).join(', ')}${hasMatch ? ` · ${t('Musicien compatible')}` : ''}`}
+      accessibilityLabel={`${gig.title} · ${date.day} ${date.month} ${date.time} · ${gig.place} · ${openInstruments.map((instrument) => t(instrument)).join(', ')}${hasMatch ? ` · ${t('Musicien compatible')}` : ''}${viewerMatch ? ` · ${t('Match {{score}} %', { score: viewerMatch.score })}` : ''}`}
       accessibilityHint={
         hasMatch ? t('Musicien compatible : ouvre le SOS pour envoyer une demande') : undefined
       }
       onPress={onPress}
       style={({ pressed }) => pressed && pressedStyle}
     >
-      <TicketCard>
+      <TicketCard backgroundColor={paper} notchFromTrailing={stubWidth}>
         <View style={styles.row}>
           <View style={styles.content}>
             <View style={styles.topline}>
-              <View style={[styles.signalDot, { backgroundColor: billet.signal }]} />
-              <AppText color={billet.signal} numberOfLines={1} variant="label">
+              <Ionicons color={palette.signal} name="flash" size={12} />
+              <AppText color={palette.signal} engraved={false} numberOfLines={1} variant="label">
                 {t(gig.genre)}
               </AppText>
-              {gig.isFresh ? <Tag color={billet.signal} label={t('Nouveau')} /> : null}
+              {gig.isFresh ? <Tag color={palette.signal} label={t('Nouveau')} /> : null}
               {(gig.pendingApplicantCount ?? 0) > 0 ? (
                 <Tag
-                  color={billet.signal}
+                  color={palette.signal}
                   label={t('{{count}} à traiter', { count: gig.pendingApplicantCount })}
                 />
               ) : null}
               {gig.targetId ? (
                 <Tag
-                  color={billet.bronze}
+                  color={inkMuted}
                   label={
                     gig.targetStatus === 'accepted'
                       ? t('Demande acceptée')
@@ -95,52 +106,49 @@ export function GigCard({ gig, onPress }: { gig: GigSummary; onPress: () => void
                 />
               ) : null}
             </View>
-            <AppText color={billetInk} numberOfLines={2} variant="title">
+            <AppText color={ink} numberOfLines={2} variant="title">
               {gig.title}
             </AppText>
             <View style={styles.meta}>
-              <Ionicons color={billet.muted} name="location-outline" size={13} />
-              <AppText color={billet.muted} numberOfLines={1} variant="caption">
+              <Ionicons color={inkMuted} name="location-outline" size={13} />
+              <AppText color={inkMuted} numberOfLines={1} variant="caption">
                 {gig.place}
               </AppText>
             </View>
             <View style={styles.instruments}>
-              <AppText color={billet.muted} variant="label">
+              <AppText color={inkMuted} engraved={false} variant="label">
                 {t('Cherche')}
               </AppText>
               {visibleInstruments.map((instrument) => (
-                <Tag color={billet.bronze} key={instrument} label={t(instrument)} />
+                <Tag color={inkMuted} key={instrument} label={t(instrument)} />
               ))}
               {openInstruments.length > 3 ? (
-                <Tag color={billet.bronze} label={`+${openInstruments.length - 3}`} />
+                <Tag color={inkMuted} label={`+${openInstruments.length - 3}`} />
               ) : null}
               {openInstruments.length === 0 ? (
-                <Tag color={billet.jam} label={t('Complet')} />
+                <Tag color={palette.jam} label={t('Complet')} />
               ) : null}
             </View>
+            {viewerMatch ? (
+              <GigMatchSummaryLine color={palette.jam} ink={ink} match={viewerMatch} />
+            ) : null}
           </View>
-          <View style={[styles.stub, hasMatch && { backgroundColor: tint(billet.jam, 0.18) }]}>
+          <View style={[styles.stub, hasMatch && { backgroundColor: tint(palette.jam, 0.18) }]}>
             {hasMatch ? (
               <View
                 pointerEvents="none"
-                style={[styles.matchBorder, { backgroundColor: billet.jam }]}
+                style={[styles.matchBorder, { backgroundColor: palette.jam }]}
               />
             ) : null}
-            <View
-              style={[
-                styles.perforation,
-                { borderColor: hasMatch ? billet.jam : tint(billetInk, 0.28) },
-              ]}
-            />
             <DateTicket color={palette.signal} date={gig.date} />
-            <AppText color={billet.muted} variant="label">
+            <AppText color={inkMuted} engraved={false} variant="label">
               {date.time}
             </AppText>
             <Barcode seed={gig.title} />
             {hasMatch ? (
               <Ionicons
                 accessibilityLabel={t('Musicien compatible')}
-                color={billet.jam}
+                color={palette.jam}
                 name="person-add"
                 size={16}
               />
@@ -163,22 +171,14 @@ const styles = StyleSheet.create({
     width: spacing.xxs,
   },
   meta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
-  perforation: {
-    borderLeftWidth: 1.5,
-    borderStyle: 'dashed',
-    bottom: spacing.xxs,
-    left: 0,
-    position: 'absolute',
-    top: spacing.xxs,
-  },
   row: { alignItems: 'stretch', flexDirection: 'row' },
-  signalDot: { borderRadius: radii.round, height: 7, width: 7 },
   stub: {
     alignItems: 'center',
     gap: spacing.xxs,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    width: stubWidth,
   },
   topline: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.tight },
 });

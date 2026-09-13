@@ -37,11 +37,11 @@ export default function TabsLayout() {
       tintColor={palette.electric}
       {...Platform.select({
         android: {
-          backgroundColor: palette.card,
+          backgroundColor: palette.cardElevated,
           badgeBackgroundColor: palette.signal,
           badgeTextColor: onAccent,
           iconColor: { default: palette.muted, selected: palette.electric },
-          indicatorColor: palette.inset,
+          indicatorColor: palette.accentSoft,
           labelStyle: { default: { color: palette.muted }, selected: { color: palette.electric } },
           labelVisibilityMode: 'labeled' as const,
           rippleColor: tint(palette.electric, 0.16),

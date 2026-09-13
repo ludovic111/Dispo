@@ -28,14 +28,12 @@ import {
   View,
 } from 'react-native';
 
-import type { GroupSong, GroupSongComment } from './group-model';
+import type { GroupSong } from './group-model';
 import {
   useDeleteGroupDocument,
-  useDeleteSongComment,
   useGroup,
   useSaveEventSetlist,
   useSaveGroupRepertoire,
-  useSongComment,
   useUploadGroupDocument,
 } from './group-queries';
 import {
@@ -46,7 +44,7 @@ import {
 import { songSoloOrder, TRADING_FOURS_SOLO_ID, withSoloOrder } from './group-song-row-model';
 import { emptyGroupSong, mergeCatalogEnrichment, selectCatalogSong } from './song-catalog-model';
 import { SongCatalogPicker } from './song-catalog-picker';
-import { SongCommentMeta } from './song-comment-meta';
+import { SongCommentsPanel } from './song-comments-panel';
 import { SongDetailTabs, type SongDetailTab } from './song-detail-tabs';
 import { SongInfoPanel } from './song-info-panel';
 import { TradingFoursIcon } from './trading-fours-icon';
@@ -55,8 +53,6 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
-import { FormField } from '@/components/ui/form-field';
-import { LinkifiedText } from '@/components/ui/linkified-text';
 import { ListRow } from '@/components/ui/list-row';
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
 import { DispoButton, IconButton } from '@/components/ui/pressable';
@@ -137,8 +133,6 @@ export function GroupSongScreen({
   const query = useGroup(groupId);
   const saveRepertoire = useSaveGroupRepertoire();
   const saveSetlist = useSaveEventSetlist();
-  const comment = useSongComment();
-  const deleteComment = useDeleteSongComment();
   const upload = useUploadGroupDocument();
   const deleteDocument = useDeleteGroupDocument();
   const group = query.data;
@@ -158,9 +152,8 @@ export function GroupSongScreen({
   const catalogRequestRef = useRef(0);
   const enrichedExistingRef = useRef(new Set<string>());
   const [activeTab, setActiveTab] = useState<SongDetailTab>('info');
-  const [commentText, setCommentText] = useState('');
-  const [commentError, setCommentError] = useState<string | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const [commentDraft, setCommentDraft] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   const commentInputFocusedRef = useRef(false);
@@ -440,21 +433,6 @@ export function GroupSongScreen({
     void Haptics.selectionAsync();
     patch('solos', next);
   };
-  const confirmCommentDeletion = (item: GroupSongComment) => {
-    Alert.alert(t('Supprimer ce commentaire ?'), t('Cette action est définitive.'), [
-      { style: 'cancel', text: t('Annuler') },
-      {
-        onPress: () => {
-          setCommentError(null);
-          deleteComment.mutate(item, {
-            onError: () => setCommentError(t("Le commentaire n'a pas pu être supprimé. Réessaie.")),
-          });
-        },
-        style: 'destructive',
-        text: t('Supprimer'),
-      },
-    ]);
-  };
   return (
     <Screen nativeHeader>
       <Stack.Screen
@@ -499,6 +477,8 @@ export function GroupSongScreen({
             <SongInfoPanel
               draft={draft}
               canEdit={canEdit}
+              leaderId={group.leaderId}
+              members={group.members}
               patch={patch}
               subtitle={group.name}
               arrangementSubtitle={t('Arrangement partagé avec le groupe')}
@@ -709,74 +689,20 @@ export function GroupSongScreen({
           </Card>
         ) : null}
         {!isNew && activeTab === 'comments' ? (
-          <Card style={styles.card}>
-            <SectionHeader title={t('Commentaires')} />
-            {comments.map((item) => (
-              <View key={item.id} style={styles.commentRow}>
-                <Avatar name={item.authorName} size={30} />
-                <View style={styles.commentCopy}>
-                  <AppText variant="caption" weight="bold">
-                    {item.authorName}
-                  </AppText>
-                  <LinkifiedText>{item.text}</LinkifiedText>
-                  <SongCommentMeta createdAt={item.createdAt} isAuthor={item.authorId === userId} />
-                </View>
-                {isLeader || item.authorId === userId ? (
-                  <IconButton
-                    accessibilityLabel={t('Supprimer')}
-                    disabled={deleteComment.isPending}
-                    icon="trash-outline"
-                    iconColor={palette.error}
-                    onPress={() => confirmCommentDeletion(item)}
-                    variant="plain"
-                  />
-                ) : null}
-              </View>
-            ))}
-            <View style={styles.commentComposer}>
-              <View style={styles.flex}>
-                <FormField
-                  ref={commentInputRef}
-                  label={t('Ajouter une note')}
-                  multiline
-                  numberOfLines={3}
-                  onBlur={() => {
-                    commentInputFocusedRef.current = false;
-                  }}
-                  onChangeText={setCommentText}
-                  onFocus={revealCommentComposer}
-                  onPressIn={revealCommentComposer}
-                  placeholder={t('Intro, fin, consigne…')}
-                  style={styles.commentInput}
-                  value={commentText}
-                />
-              </View>
-              <DispoButton
-                disabled={!commentText.trim() || comment.isPending}
-                icon="arrow-up"
-                loading={comment.isPending}
-                onPress={() => {
-                  setCommentError(null);
-                  comment.mutate(
-                    { groupId: group.id, songId: draft.id, text: commentText },
-                    {
-                      onError: () =>
-                        setCommentError(t("Le commentaire n'a pas pu être enregistré. Réessaie.")),
-                      onSuccess: () => setCommentText(''),
-                    },
-                  );
-                }}
-                size="compact"
-              >
-                {t('Envoyer')}
-              </DispoButton>
-            </View>
-            {commentError ? (
-              <AppText accessibilityLiveRegion="polite" color={palette.error} variant="caption">
-                {commentError}
-              </AppText>
-            ) : null}
-          </Card>
+          <SongCommentsPanel
+            comments={comments}
+            draft={commentDraft}
+            groupId={group.id}
+            inputRef={commentInputRef}
+            isLeader={isLeader}
+            onComposerBlur={() => {
+              commentInputFocusedRef.current = false;
+            }}
+            onComposerFocus={revealCommentComposer}
+            onDraftChange={setCommentDraft}
+            songId={draft.id}
+            userId={userId}
+          />
         ) : null}
         {canEdit && isNew ? (
           <DispoButton
@@ -827,10 +753,6 @@ export function GroupSongScreen({
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   center: { textAlign: 'center' },
-  commentComposer: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.xs },
-  commentCopy: { flex: 1, gap: spacing.xxs },
-  commentInput: { minHeight: 84, textAlignVertical: 'top' },
-  commentRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
   documentActions: { gap: spacing.xs },
   flex: { flex: 1 },

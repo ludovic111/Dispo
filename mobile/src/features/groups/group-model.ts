@@ -18,6 +18,8 @@ export interface GroupMember {
   id: string;
   instruments: string[];
   isLeader: boolean;
+  /** Abonné·e Premium (sceau vérifié à côté du nom). */
+  isPremium?: boolean;
   kind: GroupMemberKind;
   name: string;
   photoUrl: string | null;
@@ -70,9 +72,12 @@ export interface GroupMessage {
   editedAt: string | null;
   groupId: string;
   id: string;
+  /** Texte remplacé par le serveur après modération. */
+  moderated?: boolean;
   reactions: GroupReactionSummary[];
   replyToId?: string | null;
   senderId: string;
+  senderIsPremium?: boolean;
   senderName: string;
   senderPhotoUrl: string | null;
   text: string;
@@ -149,11 +154,98 @@ export interface GroupDocument {
 export interface GroupSongComment {
   authorId: string | null;
   authorName: string;
+  authorPhotoUrl: string | null;
   createdAt: string;
+  editedAt: string | null;
   groupId: string;
   id: string;
+  /** Emoji posé par l'utilisateur courant, dérivé des réactions. */
+  myReaction: GroupReactionEmoji | null;
+  /** Commentaire racine auquel cette réponse se rapporte ; `null` = ouvre une discussion. */
+  parentId: string | null;
+  reactions: GroupReactionSummary[];
   songId: string;
   text: string;
+}
+
+export interface SongCommentThread {
+  replies: GroupSongComment[];
+  root: GroupSongComment;
+}
+
+function compareSongCommentsOldestFirst(left: GroupSongComment, right: GroupSongComment): number {
+  return left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id);
+}
+
+/**
+ * Un seul niveau de réponses : chaque racine porte ses réponses dans l'ordre
+ * d'arrivée. Une réponse orpheline (racine hors de la page ou supprimée
+ * ailleurs) est promue racine plutôt que perdue.
+ */
+export function threadSongComments(comments: readonly GroupSongComment[]): SongCommentThread[] {
+  const ordered = [...comments].sort(compareSongCommentsOldestFirst);
+  const rootIds = new Set(
+    ordered.filter((comment) => comment.parentId === null).map((comment) => comment.id),
+  );
+  const repliesByRoot = new Map<string, GroupSongComment[]>();
+  const roots: GroupSongComment[] = [];
+  for (const comment of ordered) {
+    const parentId = comment.parentId;
+    if (parentId !== null && rootIds.has(parentId)) {
+      const replies = repliesByRoot.get(parentId) ?? [];
+      replies.push(comment);
+      repliesByRoot.set(parentId, replies);
+    } else {
+      roots.push(comment);
+    }
+  }
+  return roots.map((root) => ({ replies: repliesByRoot.get(root.id) ?? [], root }));
+}
+
+export function myGroupReaction(
+  reactions: readonly GroupReactionSummary[],
+): GroupReactionEmoji | null {
+  return reactions.find((reaction) => reaction.reactedByMe)?.emoji ?? null;
+}
+
+/** Applique une réaction en optimiste sur un commentaire (toggle si même emoji). */
+export function withOptimisticCommentReaction(
+  comment: GroupSongComment,
+  emoji: GroupReactionEmoji,
+): GroupSongComment {
+  const next = comment.myReaction === emoji ? null : emoji;
+  const reactions = optimisticGroupReactions(comment.reactions, next);
+  return { ...comment, myReaction: myGroupReaction(reactions), reactions };
+}
+
+export interface SongSuggester {
+  id: string | null;
+  name: string;
+  photoUrl: string | null;
+}
+
+const uuidLikePattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * `suggested_by` est un UUID de profil sur les clients récents et un nom
+ * affiché sur les anciens. On résout d'abord contre les membres, puis on garde
+ * le texte s'il ressemble à un nom, sinon le repli générique.
+ */
+export function resolveSongSuggester(
+  suggestedBy: string,
+  members: readonly GroupMember[],
+): SongSuggester | null {
+  const raw = suggestedBy.trim();
+  if (!raw) return null;
+  const lowered = raw.toLowerCase();
+  const member =
+    members.find((item) => item.id.toLowerCase() === lowered) ??
+    (uuidLikePattern.test(raw)
+      ? undefined
+      : members.find((item) => item.name.trim().toLowerCase() === lowered));
+  if (member) return { id: member.id, name: member.name, photoUrl: member.photoUrl };
+  if (uuidLikePattern.test(raw)) return { id: lowered, name: i18n.t('Membre'), photoUrl: null };
+  return { id: null, name: raw, photoUrl: null };
 }
 
 export interface GroupAttendance {
@@ -209,9 +301,39 @@ export function removeSongCommentFromGroups(
 ): MusicGroup[] {
   return groups.map((group) =>
     group.id === groupId
-      ? { ...group, comments: group.comments.filter((comment) => comment.id !== commentId) }
+      ? {
+          ...group,
+          comments: group.comments.filter(
+            (comment) => comment.id !== commentId && comment.parentId !== commentId,
+          ),
+        }
       : group,
   );
+}
+
+export function updateSongCommentInGroups(
+  groups: readonly MusicGroup[],
+  groupId: string,
+  commentId: string,
+  update: (comment: GroupSongComment) => GroupSongComment,
+): MusicGroup[] {
+  return groups.map((group) =>
+    group.id === groupId
+      ? {
+          ...group,
+          comments: group.comments.map((comment) =>
+            comment.id === commentId ? update(comment) : comment,
+          ),
+        }
+      : group,
+  );
+}
+
+export function removeGroupFromGroups(
+  groups: readonly MusicGroup[],
+  groupId: string,
+): MusicGroup[] {
+  return groups.filter((group) => group.id !== groupId);
 }
 
 export interface PendingGroupMember {

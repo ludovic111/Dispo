@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet } from 'react-native';
+import { Alert, ScrollView, StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { DispoButton } from '@/components/ui/pressable';
@@ -8,17 +8,25 @@ import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
 import { GigForm } from '@/features/gigs/gig-form';
-import { useGigForEdit, useGigFormDefaults, useUpdateGig } from '@/features/gigs/gig-queries';
+import {
+  useDeleteGig,
+  useGigForEdit,
+  useGigFormDefaults,
+  useUpdateGig,
+} from '@/features/gigs/gig-queries';
 import { parseGroupEventVenueLabel } from '@/features/groups/group-model';
+import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
 export default function EditGigScreen() {
   const { id = '' } = useLocalSearchParams<{ id?: string }>();
   const { session } = useAuth();
+  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const gig = useGigForEdit(id);
   const defaults = useGigFormDefaults();
   const update = useUpdateGig();
+  const remove = useDeleteGig();
   if (gig.isLoading || defaults.isLoading)
     return (
       <Screen nativeHeader>
@@ -133,6 +141,33 @@ export default function EditGigScreen() {
             )
           }
         />
+        <DispoButton
+          icon="trash-outline"
+          loading={remove.isPending}
+          onPress={() =>
+            Alert.alert(
+              t('Retirer ce SOS ?'),
+              t('Les candidatures liées seront aussi supprimées.'),
+              [
+                { style: 'cancel', text: t('Annuler') },
+                {
+                  onPress: () =>
+                    remove.mutate(item.id, {
+                      onSuccess: () => router.replace('/(tabs)/sos'),
+                    }),
+                  style: 'destructive',
+                  text: t('Retirer'),
+                },
+              ],
+            )
+          }
+          variant="danger"
+        >
+          {t('Retirer ce SOS')}
+        </DispoButton>
+        {remove.error ? (
+          <AppText color={palette.error}>{t('Le SOS n’a pas pu être retiré.')}</AppText>
+        ) : null}
       </ScrollView>
     </Screen>
   );

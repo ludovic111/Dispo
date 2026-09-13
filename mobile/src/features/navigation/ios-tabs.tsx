@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { fontWeights, onAccent, radii, spacing } from '@/theme/tokens';
+import { elevation, fontWeights, onAccent, radii, spacing, surfaceStyle } from '@/theme/tokens';
 
 const destinations = [
   { name: 'index', label: 'Accueil', icon: 'home-outline', selected: 'home' },
@@ -20,15 +20,21 @@ const tabBarHeight = 64;
 /** Libellé de la barre d'onglets : taille minimale lisible (≥ `caption2`), graisse semibold. */
 const tabLabelFontSize = 11;
 
-/** Keep labels measurable on iOS 26, including before a tab's first selection. */
+/**
+ * Barre d'onglets iOS : un plateau flottant relevé (surface dégradée, liseré
+ * clair, arête sombre, ombre) ; l'onglet courant porte une pastille accent
+ * au-dessus de son icône. Les libellés restent mesurables sur iOS 26,
+ * y compris avant la première sélection d'un onglet.
+ */
 export function IosTabs({
   badges,
 }: {
   badges: Partial<Record<(typeof destinations)[number]['name'], string | undefined>>;
 }) {
-  const { palette, dark } = useDispoTheme();
+  const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const surface = surfaceStyle(palette, 'elevated');
   return (
     <Tabs
       screenOptions={{
@@ -36,14 +42,13 @@ export function IosTabs({
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: palette.electric,
         tabBarInactiveTintColor: palette.muted,
-        tabBarActiveBackgroundColor: palette.inset,
+        tabBarActiveBackgroundColor: 'transparent',
         tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: { fontSize: tabLabelFontSize, fontWeight: fontWeights.semibold },
         tabBarItemStyle: {
           marginHorizontal: spacing.xxs,
           marginVertical: spacing.xxs,
           borderRadius: radii.xl,
-          overflow: 'hidden',
         },
         tabBarBadgeStyle: { backgroundColor: palette.signal, color: onAccent },
         tabBarStyle: {
@@ -54,12 +59,20 @@ export function IosTabs({
           paddingTop: 0,
           borderRadius: radii.round,
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: palette.border,
-          backgroundColor: palette.card,
-          overflow: 'hidden',
+          borderColor: palette.edge,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: palette.edge,
+          backgroundColor: palette.cardElevated,
+          ...elevation(2, palette),
         },
         tabBarBackground: () => (
-          <BlurView intensity={45} tint={dark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={styles.tray}>
+            <LinearGradient
+              colors={surface.gradient ?? [palette.cardElevated, palette.cardElevated]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[styles.trayHighlight, { backgroundColor: palette.highlight }]} />
+          </View>
         ),
       }}
     >
@@ -74,7 +87,12 @@ export function IosTabs({
               tabBarAccessibilityLabel: t(label),
               ...(badge === undefined ? {} : { tabBarBadge: badge }),
               tabBarIcon: ({ color, focused }) => (
-                <Ionicons name={focused ? selected : icon} color={color} size={26} />
+                <View style={styles.icon}>
+                  <Ionicons name={focused ? selected : icon} color={color} size={26} />
+                  {focused ? (
+                    <View style={[styles.dot, { backgroundColor: palette.accent }]} />
+                  ) : null}
+                </View>
               ),
             }}
           />
@@ -83,3 +101,18 @@ export function IosTabs({
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  dot: { borderRadius: radii.round, height: 4, position: 'absolute', top: -7, width: 12 },
+  icon: { alignItems: 'center', justifyContent: 'center' },
+  tray: {
+    borderRadius: radii.round,
+    bottom: 0,
+    left: 0,
+    overflow: 'hidden',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  trayHighlight: { height: 1, left: radii.xl, position: 'absolute', right: radii.xl, top: 0 },
+});

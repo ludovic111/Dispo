@@ -112,6 +112,7 @@ describe('présentation des profils', () => {
     );
     const stored = 'Professionnel';
     expect(shortProfileLevel(stored)).toBe('Pro');
+    expect(shortProfileLevel('Intermédiaire')).toBe('Inter.');
     expect(stored).toBe('Professionnel');
   });
 
@@ -132,7 +133,7 @@ describe('présentation des profils', () => {
     const paths = [
       'src/features/profiles/compact-profile-card.tsx',
       'src/features/discovery/filter-screen.tsx',
-      'src/features/onboarding/onboarding-screen.tsx',
+      'src/features/onboarding/onboarding-steps.tsx',
       'src/features/profiles/profile-connection-row.tsx',
       'src/features/profiles/profile-detail.tsx',
       'src/features/profiles/profile-edit-screen.tsx',
@@ -192,6 +193,7 @@ describe('création de groupe', () => {
   it('conserve la navigation vers le groupe créé', () => {
     const screen = source('src/features/groups/group-new-screen.tsx');
     expect(screen).toContain('router.replace(`/groups/${groupId}` as never)');
-    expect(screen).toContain('disabled={!name.trim() || memberIds.size === 0 || create.isPending}');
+    expect(screen).toContain('disabled={!name.trim() || memberIds.size === 0 || pending}');
+    expect(screen).toContain('const pending = create.isPending || createWorkshop.isPending;');
   });
 });

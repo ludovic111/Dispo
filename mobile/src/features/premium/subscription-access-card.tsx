@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -11,14 +12,14 @@ export function SubscriptionAccessCard({ groupCreation = false }: { groupCreatio
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   return (
-    <Card style={{ gap: spacing.sm }}>
+    <Card style={styles.card} tone="elevated">
       <AppText variant="headline">
         {t(groupCreation ? 'Crée ton groupe' : 'Inclus avec Premium')}
       </AppText>
       <AppText color={palette.muted}>
         {t(
           groupCreation
-            ? 'Groupe permet de diriger un groupe. Premium permet d’en diriger autant que tu veux.'
+            ? 'Groupe permet de diriger un groupe. Premium permet d’en diriger jusqu’à 6.'
             : 'Ton contenu reste conservé. Premium débloque les ajouts, les modifications et le partage.',
         )}
       </AppText>
@@ -26,3 +27,5 @@ export function SubscriptionAccessCard({ groupCreation = false }: { groupCreatio
     </Card>
   );
 }
+
+const styles = StyleSheet.create({ card: { gap: spacing.sm } });

@@ -7,6 +7,24 @@ export interface PatchNote {
 /** Release notes, newest first. Historical versions remain available below. */
 export const patchNotes: readonly PatchNote[] = [
   {
+    version: '2.5.0',
+    title: 'Le match, les groupes, et une nouvelle peau',
+    points: [
+      'Un système de match précis pour les SOS : score de compatibilité, dispo le jour même, niveau, école, styles et morceaux en commun.',
+      'Depuis ton SOS, ouvre le profil d’un candidat et contacte-le une fois avant de l’accepter.',
+      'Impossible d’envoyer deux demandes de dépannage à la même personne.',
+      'Commentaires de morceaux : réponses, réactions et modification ; seul le leader ouvre une discussion.',
+      'Chaque suggestion de morceau affiche qui l’a proposée. Un membre peut quitter un groupe.',
+      'Synchronise tes sessions avec le calendrier du téléphone et masque les pochettes si tu préfères.',
+      'Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.',
+      'Modération automatique des contenus. La vérification par SMS sera activée prochainement.',
+      'Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.',
+      'Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.',
+      'Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.',
+      'Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.',
+    ],
+  },
+  {
     version: '2.4.2',
     title: 'Une interface plus claire, partout',
     points: [

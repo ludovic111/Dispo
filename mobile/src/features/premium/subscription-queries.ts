@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import type { PremiumCapability } from './premium-model';
+import { subscriptionCanUse, type PremiumCapability } from './premium-model';
 import {
   fetchSubscription,
   refreshStoreSubscription,
@@ -21,8 +21,8 @@ export function useSubscription() {
     refetchInterval: 60_000,
   });
 }
-export function usePremiumCapability(_capability: PremiumCapability): boolean {
-  return useSubscription().data?.tier === 'premium';
+export function usePremiumCapability(capability: PremiumCapability): boolean {
+  return subscriptionCanUse(useSubscription().data?.tier ?? 'free', capability);
 }
 export function SubscriptionSyncBridge() {
   const { session } = useAuth();

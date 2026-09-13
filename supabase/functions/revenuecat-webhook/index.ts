@@ -1,5 +1,6 @@
 // RevenueCat notifications trigger a canonical lookup; event payloads never grant access.
 import { createClient } from "@supabase/supabase-js";
+import { constantTimeEqual } from "../_shared/constant-time-equal.ts";
 import { lookupSubscription } from "../_shared/subscription-state.ts";
 import { type RevenueCatEvent, targetProfileIDs } from "./logic.ts";
 
@@ -36,7 +37,10 @@ export function createHandler(
     const secret = environment("REVENUECAT_WEBHOOK_SECRET");
     if (!secret) return json({ error: "webhook_secret_missing" }, 503);
     const authorization = req.headers.get("authorization") ?? "";
-    if (authorization !== secret && authorization !== `Bearer ${secret}`) {
+    // Both accepted spellings are compared in constant time.
+    const bare = constantTimeEqual(authorization, secret);
+    const bearer = constantTimeEqual(authorization, `Bearer ${secret}`);
+    if (!bare && !bearer) {
       return json({ error: "unauthorized" }, 401);
     }
     let event: RevenueCatEvent | undefined;
@@ -61,6 +65,15 @@ export function createHandler(
     const key = environment("SUPABASE_SERVICE_ROLE_KEY");
     if (!url || !key) return json({ error: "configuration_missing" }, 503);
     const admin = createClient(url, key, { auth: { persistSession: false } });
+    // Replay protection: an event id is processed once. A failed delivery
+    // releases its claim below so RevenueCat's retry is processed normally.
+    const claim = await admin.rpc("claim_revenuecat_event", {
+      p_event_id: event.id,
+    });
+    if (claim.error) {
+      return json({ error: "replay_store_unavailable", retry: true }, 503);
+    }
+    if (claim.data === false) return json({ ok: true, duplicate: true });
     let applied = 0;
     let failures = 0;
     for (const profileId of ids) {
@@ -88,6 +101,9 @@ export function createHandler(
       } catch {
         failures += 1;
       }
+    }
+    if (failures) {
+      await admin.rpc("release_revenuecat_event", { p_event_id: event.id });
     }
     return failures
       ? json({

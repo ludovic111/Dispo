@@ -22,6 +22,7 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { ChatComposer } from '@/components/ui/chat/chat-composer';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { useAuth } from '@/features/auth/auth-context';
 import { PendingAttachmentChip } from '@/features/messages/message-attachments';
 import { MessageBubble } from '@/features/messages/message-bubble';
@@ -50,6 +51,7 @@ import {
   useTypingPresence,
 } from '@/features/messages/message-queries';
 import { openMessageAttachment } from '@/features/messages/message-repository';
+import { reportSendFailure } from '@/features/messages/moderated-message';
 import { useDispoTheme } from '@/theme/theme-context';
 import { pressedStyle, spacing } from '@/theme/tokens';
 
@@ -134,9 +136,12 @@ export default function ChatScreen() {
         >
           <Avatar name={contactName} size={28} uri={profile.photoUrl} />
           <View style={styles.headerCopy}>
-            <AppText numberOfLines={1} variant="headline">
-              {contactName}
-            </AppText>
+            <View style={styles.headerName}>
+              <AppText numberOfLines={1} style={styles.headerTitle} variant="headline">
+                {contactName}
+              </AppText>
+              {profile.isPremium ? <VerifiedBadge size="sm" /> : null}
+            </View>
             <AppText color={palette.muted} numberOfLines={1} variant="caption">
               {t('Voir le profil')}
             </AppText>
@@ -160,8 +165,11 @@ export default function ChatScreen() {
         onError: (error) => {
           setDraft((current) => current || text);
           setPendingAttachment((current) => current ?? attachment);
-          setLocalError(
+          reportSendFailure(
+            error,
+            t,
             attachment ? attachmentErrorMessage(error, t) : t('Le message n’a pas pu être envoyé.'),
+            setLocalError,
           );
         },
       },
@@ -386,7 +394,9 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   headerCopy: { alignItems: 'flex-start', flexShrink: 1 },
+  headerName: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
   headerPrincipal: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  headerTitle: { flexShrink: 1 },
   messages: { padding: spacing.md },
   separator: { height: spacing.xs },
 });

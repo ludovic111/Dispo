@@ -4,11 +4,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
-import { BrandLogo } from '@/components/ui/brand';
 import { IconButton } from '@/components/ui/pressable';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
+import { insetStyle, minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export function DiscoveryHomeWelcome({
   availabilityColor,
@@ -39,7 +38,6 @@ export function DiscoveryHomeWelcome({
     <>
       <View style={styles.topRow}>
         <View style={styles.greeting}>
-          <BrandLogo markSize={20} />
           <AppText numberOfLines={2} variant="display">
             {greeting}, {firstName}
           </AppText>
@@ -82,11 +80,7 @@ export function DiscoveryHomeWelcome({
         accessibilityRole="search"
         accessibilityLabel={t('Musicien, @pseudo, instrument, lieu…')}
         onPress={onSearch}
-        style={({ pressed }) => [
-          styles.search,
-          { backgroundColor: palette.cardMuted, borderColor: palette.border },
-          pressed && pressedStyle,
-        ]}
+        style={({ pressed }) => [styles.search, insetStyle(palette), pressed && pressedStyle]}
       >
         <Ionicons color={palette.muted} name="search" size={17} />
         <AppText
@@ -103,6 +97,7 @@ export function DiscoveryHomeWelcome({
 }
 
 const styles = StyleSheet.create({
+  // Pastille de présence : l'anneau de 2 pt la détache de la photo (couleur du fond).
   availableDot: {
     borderRadius: radii.round,
     borderWidth: 2,
@@ -119,7 +114,6 @@ const styles = StyleSheet.create({
   search: {
     alignItems: 'center',
     borderRadius: radii.control,
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.xs,
     minHeight: minimumTouchTarget + spacing.xxs,

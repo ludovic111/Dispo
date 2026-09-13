@@ -10,7 +10,7 @@ import { DispoBackground } from './dispo-background';
 import { DispoButton } from './pressable';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { elevation, insetStyle, radii, spacing } from '@/theme/tokens';
 
 const screenEdges = ['top', 'bottom'] as const;
 const nativeHeaderScreenEdges = ['bottom'] as const;
@@ -77,7 +77,13 @@ export function ScreenHeader({
     <View style={[styles.header, !inset && styles.headerWithoutInset]}>
       {leadingAction ?? null}
       {icon ? (
-        <View style={[styles.icon, { backgroundColor: palette.cardMuted }]}>
+        <View
+          style={[
+            styles.icon,
+            { backgroundColor: palette.cardElevated, borderColor: palette.edge },
+            elevation(1, palette),
+          ]}
+        >
           <Ionicons color={iconColor ?? palette.electric} name={icon} size={20} />
         </View>
       ) : null}
@@ -144,7 +150,7 @@ export function ErrorState({
   const { t } = useTranslation();
   return (
     <View style={styles.center}>
-      <View style={[styles.stateIcon, { backgroundColor: palette.cardMuted }]}>
+      <View style={[styles.stateIcon, insetStyle(palette)]}>
         <Ionicons color={palette.signal} name="cloud-offline-outline" size={26} />
       </View>
       <AppText style={styles.centerText} variant="title">
@@ -179,7 +185,7 @@ export function EmptyState({
   return (
     <Card accessible accessibilityRole="summary" style={styles.emptyCard}>
       <View style={styles.emptyContent}>
-        <View style={[styles.stateIcon, { backgroundColor: palette.cardMuted }]}>
+        <View style={[styles.stateIcon, insetStyle(palette)]}>
           <Ionicons color={palette.electric} name={icon} size={26} />
         </View>
         <AppText numberOfLines={2} style={styles.centerText} variant="title">
@@ -232,6 +238,7 @@ const styles = StyleSheet.create({
   icon: {
     alignItems: 'center',
     borderRadius: radii.button,
+    borderWidth: StyleSheet.hairlineWidth,
     height: 44,
     justifyContent: 'center',
     width: 44,

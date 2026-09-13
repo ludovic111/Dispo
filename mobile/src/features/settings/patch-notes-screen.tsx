@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { patchNotes, type PatchNote } from './patch-notes-data';
+import { RaisedIconWell } from './settings-components';
 import { normalizeMarketingVersion } from './settings-model';
 
 import { AppText } from '@/components/ui/app-text';
@@ -14,7 +14,7 @@ import { ModalHeader, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
+import { radii, spacing } from '@/theme/tokens';
 
 function NoteCard({ current, note }: { current: boolean; note: PatchNote }) {
   const { palette } = useDispoTheme();
@@ -25,7 +25,7 @@ function NoteCard({ current, note }: { current: boolean; note: PatchNote }) {
       {current ? <Tag icon="checkmark-circle" label={t('Version actuelle')} /> : null}
       {note.points.map((point) => (
         <View key={point} style={styles.pointRow}>
-          <Ionicons color={palette.bronze} name="sparkles" size={12} style={styles.sparkle} />
+          <View style={[styles.bullet, { backgroundColor: palette.accent }]} />
           <AppText style={styles.pointText} variant="footnote">
             {t(point)}
           </AppText>
@@ -51,9 +51,7 @@ export function PatchNotesScreen() {
         keyExtractor={(note) => note.version}
         ListHeaderComponent={
           <Card style={styles.feedback} tone="inset">
-            <View style={[styles.feedbackIcon, { backgroundColor: tint(palette.electric, 0.12) }]}>
-              <Ionicons color={palette.electric} name="heart" size={22} />
-            </View>
+            <RaisedIconWell icon="heart" />
             <View style={styles.feedbackCopy}>
               <AppText variant="headline">{t("Merci d'utiliser Dispo !")}</AppText>
               <AppText color={palette.muted} variant="footnote">
@@ -78,17 +76,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
+  bullet: { borderRadius: radii.round, height: 8, marginTop: spacing.tight, width: 8 },
   feedbackCopy: { flex: 1, gap: spacing.xxs },
-  feedbackIcon: {
-    alignItems: 'center',
-    borderRadius: radii.round,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
   list: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   noteCard: { gap: spacing.xs, marginBottom: spacing.md },
   pointRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.xs },
   pointText: { flex: 1 },
-  sparkle: { marginTop: spacing.xxs },
 });

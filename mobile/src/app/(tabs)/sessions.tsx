@@ -106,7 +106,7 @@ export default function SessionsScreen() {
           onChange={setScope}
           options={[
             { label: t('À venir'), value: 'upcoming' },
-            { label: t('Passés'), value: 'past' },
+            { label: t('Passées'), value: 'past' },
           ]}
           value={scope}
         />

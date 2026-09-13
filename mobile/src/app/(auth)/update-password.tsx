@@ -5,10 +5,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 
 import { AppText } from '@/components/ui/app-text';
 import { BrandLogo } from '@/components/ui/brand';
-import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
 import { DispoButton } from '@/components/ui/pressable';
 import { Screen } from '@/components/ui/screen';
+import { AuthCase } from '@/features/auth/auth-case';
 import { useAuth } from '@/features/auth/auth-context';
 import { updatePassword } from '@/features/auth/auth-service';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -63,7 +63,7 @@ export default function UpdatePasswordScreen() {
                 {t('Choisis un mot de passe d’au moins 8 caractères pour ton compte Dispo.')}
               </AppText>
             </View>
-            <Card style={styles.card}>
+            <AuthCase>
               <FormField
                 autoCapitalize="none"
                 autoComplete="new-password"
@@ -90,7 +90,7 @@ export default function UpdatePasswordScreen() {
               <DispoButton disabled={password.length < 8} loading={working} onPress={submit}>
                 {t('Enregistrer')}
               </DispoButton>
-            </Card>
+            </AuthCase>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -99,7 +99,6 @@ export default function UpdatePasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.sm, width: '100%' },
   center: { textAlign: 'center' },
   content: { alignItems: 'center', gap: spacing.xl, maxWidth: 520, width: '100%' },
   flex: { flex: 1 },

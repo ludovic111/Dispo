@@ -22,6 +22,7 @@ import {
   useGroup,
   useGroupProfileCandidates,
   useInviteGroupMember,
+  useLeaveGroup,
   useRemoveGroupMember,
   useTransferGroupLeadership,
   useUpdateGroupMember,
@@ -37,9 +38,10 @@ import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/sc
 import { SectionHeader } from '@/components/ui/section';
 import { BottomSheet } from '@/components/ui/sheet';
 import { Tag } from '@/components/ui/tag';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
-import { pressedStyle, spacing, tint } from '@/theme/tokens';
+import { disabledStyle, pressedStyle, spacing, tint } from '@/theme/tokens';
 
 interface MemberAction {
   destructive?: boolean;
@@ -109,6 +111,7 @@ function MemberHeader({
             <AppText numberOfLines={2} style={styles.memberName} variant="headline">
               {isMe ? t('Toi') : member.name}
             </AppText>
+            {member.isPremium ? <VerifiedBadge size="sm" /> : null}
             {member.isLeader ? <Tag color={palette.bronze} label={t('👑 Leader')} /> : null}
             {!member.isLeader && member.kind === 'guest' ? (
               <Tag color={palette.rehearsal} label={`🌠 ${t('Special guest')}`} />
@@ -153,11 +156,29 @@ function MemberCard({
   const update = useUpdateGroupMember();
   const remove = useRemoveGroupMember();
   const transfer = useTransferGroupLeadership();
+  const leave = useLeaveGroup();
   const [role, setRole] = useState(member.role ?? '');
   const [actionsOpen, setActionsOpen] = useState(false);
   const isMe = member.id === userId;
   const canManage = isCurrentLeader && !isMe && !member.isLeader;
   const roleDirty = role.trim() !== (member.role ?? '');
+  const confirmLeave = () =>
+    Alert.alert(
+      t('Quitter le groupe ?'),
+      t('Tu ne verras plus ses messages, ses morceaux ni ses dates.'),
+      [
+        { style: 'cancel', text: t('Annuler') },
+        {
+          onPress: () =>
+            leave.mutate(
+              { groupId },
+              { onError: () => Alert.alert(t("Le groupe n'a pas pu être quitté. Réessaie.")) },
+            ),
+          style: 'destructive',
+          text: t('Quitter'),
+        },
+      ],
+    );
   const actions: MemberAction[] = [
     ...(member.kind === 'permanent'
       ? [
@@ -201,6 +222,31 @@ function MemberCard({
         {...(canManage ? { onOpenActions: () => setActionsOpen(true) } : {})}
         userId={userId}
       />
+      {isMe ? (
+        <View style={[styles.manage, { borderTopColor: tint(palette.bronze, 0.2) }]}>
+          {member.isLeader ? (
+            <DispoButton
+              disabled
+              icon="exit-outline"
+              onPress={() => undefined}
+              size="compact"
+              variant="ghost"
+            >
+              {t("Transférer d'abord le rôle de leader")}
+            </DispoButton>
+          ) : (
+            <DispoButton
+              icon="exit-outline"
+              loading={leave.isPending}
+              onPress={confirmLeave}
+              size="compact"
+              variant="danger"
+            >
+              {t('Quitter le groupe')}
+            </DispoButton>
+          )}
+        </View>
+      ) : null}
       {canManage ? (
         <View style={[styles.manage, { borderTopColor: tint(palette.bronze, 0.2) }]}>
           <View style={styles.kindRow}>
@@ -601,7 +647,7 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
               }
               key={pending.id}
               leading={
-                <View style={styles.dimmed}>
+                <View style={disabledStyle}>
                   <GroupAvatar
                     emoji="🎵"
                     name={pending.name}
@@ -689,7 +735,6 @@ export function GroupMembersScreen({ groupId }: { groupId: string }) {
 
 const styles = StyleSheet.create({
   content: { gap: spacing.sm, padding: spacing.gutter, paddingBottom: spacing.xxl },
-  dimmed: { opacity: 0.55 },
   flex: { flex: 1 },
   inlineAction: { alignSelf: 'flex-start', marginTop: spacing.xs },
   instruments: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs },

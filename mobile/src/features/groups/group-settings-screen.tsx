@@ -18,7 +18,6 @@ import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { communityContentMessage } from '@/domain/community-content';
 import { useAuth } from '@/features/auth/auth-context';
-import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -33,7 +32,6 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
   const { palette } = useDispoTheme();
   const query = useGroup(groupId);
   const save = useUpdateGroupSettings();
-  const canAutoSOS = usePremiumCapability('autoSOS');
   const photo = useGroupPhoto();
   const remove = useDeleteGroup();
   const group = query.data;
@@ -190,10 +188,7 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
             accessory={
               <Switch
                 accessibilityLabel={t('Auto-SOS')}
-                onValueChange={(value) => {
-                  if (value && !canAutoSOS) router.push('/premium');
-                  else setAutoSosOverride(value);
-                }}
+                onValueChange={setAutoSosOverride}
                 trackColor={{ false: palette.inset, true: palette.electric }}
                 value={autoSosEnabled}
               />
@@ -202,7 +197,7 @@ export function GroupSettingsScreen({ groupId }: { groupId: string }) {
             title={t('Auto-SOS')}
             tone="plain"
           />
-          {autoSosEnabled && canAutoSOS ? (
+          {autoSosEnabled ? (
             <View style={styles.levels}>
               <SectionHeader title={t('Niveau demandé')} />
               <View style={styles.levelRow}>

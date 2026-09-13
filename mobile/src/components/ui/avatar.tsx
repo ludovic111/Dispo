@@ -1,9 +1,13 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from './app-text';
+
+import { readableOn } from '@/theme/color';
+import { useDispoTheme } from '@/theme/theme-context';
+import { blend, onAccent, tint, type DispoPalette } from '@/theme/tokens';
 
 interface AvatarProps {
   name: string;
@@ -11,7 +15,14 @@ interface AvatarProps {
   uri?: string | null;
 }
 
+/**
+ * Avatar : photo si elle est servie en HTTPS (ou depuis le réseau local),
+ * sinon initiales sur un duotone dérivé de l'accent du thème. Trois nuances
+ * du même duotone se répartissent entre les personnes selon leur nom : la
+ * palette reste celle du thème, jamais un dégradé aléatoire.
+ */
 export function Avatar({ name, size = 56, uri }: AvatarProps) {
+  const { palette } = useDispoTheme();
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const initials = name
     .split(/\s+/)
@@ -22,17 +33,20 @@ export function Avatar({ name, size = 56, uri }: AvatarProps) {
 
   if (isAllowedAvatarUri(uri) && failedUri !== uri) {
     return (
-      <Image
-        contentFit="cover"
-        onError={() => setFailedUri(uri)}
-        source={{ uri }}
-        style={{ borderRadius: size / 2, height: size, width: size }}
-        transition={180}
-      />
+      <View style={[styles.ring, { borderColor: palette.edge, borderRadius: size / 2 }]}>
+        <Image
+          contentFit="cover"
+          onError={() => setFailedUri(uri)}
+          source={{ uri }}
+          style={{ borderRadius: size / 2, height: size, width: size }}
+          transition={180}
+        />
+      </View>
     );
   }
 
-  const colors = avatarGradient(name);
+  const colors = avatarDuotone(palette, name);
+  const ink = readableOn(blend(colors[0], colors[1], 0.5), [palette.ink, palette.paper, onAccent]);
 
   return (
     <LinearGradient
@@ -42,6 +56,7 @@ export function Avatar({ name, size = 56, uri }: AvatarProps) {
       style={[
         styles.fallback,
         {
+          borderColor: tint(onAccent, 0.22),
           borderRadius: size / 2,
           height: size,
           width: size,
@@ -49,23 +64,17 @@ export function Avatar({ name, size = 56, uri }: AvatarProps) {
       ]}
     >
       <AppText
-        color="#FFFFFF"
+        color={ink}
         maxFontSizeMultiplier={1}
         numberOfLines={1}
-        style={{ fontSize: size * 0.38, lineHeight: size * 0.48, fontWeight: '800' }}
+        style={{ fontSize: size * 0.38, lineHeight: size * 0.48 }}
+        variant="title2"
       >
         {initials || 'D'}
       </AppText>
     </LinearGradient>
   );
 }
-
-const avatarGradients = [
-  ['#00D2FF', '#0099FF'],
-  ['#0099FF', '#2A3A66'],
-  ['#00D2FF', '#0E1835'],
-  ['#8E9AAF', '#0A1128'],
-] as const;
 
 function stableHash(value: string): number {
   let hash = 5381;
@@ -75,8 +84,14 @@ function stableHash(value: string): number {
   return hash >>> 0;
 }
 
-function avatarGradient(name: string): (typeof avatarGradients)[number] {
-  return avatarGradients[stableHash(name) % avatarGradients.length] ?? avatarGradients[0];
+/** Trois duotones du thème : accent profond → accent, nuit → accent profond, accent → accent doux. */
+export function avatarDuotone(palette: DispoPalette, name: string): readonly [string, string] {
+  const variants: readonly (readonly [string, string])[] = [
+    [palette.accentDeep, palette.accent],
+    [palette.jazzDeep, palette.accentDeep],
+    [palette.accent, blend(palette.accent, palette.accentSoft, 0.55)],
+  ];
+  return variants[stableHash(name) % variants.length] ?? variants[0]!;
 }
 
 function isAllowedAvatarUri(uri: string | null | undefined): uri is string {
@@ -96,5 +111,10 @@ function isAllowedAvatarUri(uri: string | null | undefined): uri is string {
 }
 
 const styles = StyleSheet.create({
-  fallback: { alignItems: 'center', justifyContent: 'center' },
+  fallback: {
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+  },
+  ring: { borderWidth: StyleSheet.hairlineWidth },
 });

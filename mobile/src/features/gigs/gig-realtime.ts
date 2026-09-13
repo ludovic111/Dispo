@@ -74,6 +74,8 @@ export async function invalidateGigRealtimeData(
     queryClient.invalidateQueries({ exact: true, queryKey: gigKeys.hosted(userId) }),
     queryClient.invalidateQueries({ queryKey: gigKeys.details(userId) }),
     queryClient.invalidateQueries({ queryKey: gigKeys.matchesForUser(userId) }),
+    queryClient.invalidateQueries({ queryKey: gigKeys.myMatches(userId) }),
+    queryClient.invalidateQueries({ queryKey: gigKeys.pendingDirect(userId) }),
     queryClient.invalidateQueries({ queryKey: sessionKeys.all }),
   ]);
 }

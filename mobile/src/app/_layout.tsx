@@ -6,6 +6,8 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { NativeHeaderButton } from '@/components/ui/native-header-button';
+import { AccountStatusGate } from '@/features/auth/account-status-gate';
+import { CalendarSyncBridge } from '@/features/calendar/calendar-sync-bridge';
 import {
   headerlessModalStackRoutes,
   headerlessStackRoutes,
@@ -109,7 +111,10 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
   return (
     <AppProviders>
-      <Navigation />
+      <AccountStatusGate>
+        <CalendarSyncBridge />
+        <Navigation />
+      </AccountStatusGate>
     </AppProviders>
   );
 }

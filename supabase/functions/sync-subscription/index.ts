@@ -26,6 +26,18 @@ export function createHandler(
       authorization.slice(7),
     );
     if (error || !user) return json({ error: "unauthorized" }, 401);
+    // Per-user budget: 10 syncs per 10 minutes. The budget store is a soft
+    // guard; if it is unreachable the sync itself must still go through, so
+    // only an explicit `false` refuses the call.
+    const budget = await admin.rpc("consume_edge_call", {
+      p_fn: "sync-subscription",
+      p_limit: 10,
+      p_user: user.id,
+      p_window: "10 minutes",
+    });
+    if (!budget.error && budget.data === false) {
+      return json({ error: "rate_limited", retry_after_seconds: 600 }, 429);
+    }
     // The caller supplies neither a profile ID, a tier nor a purchase receipt.
     // Only a live RevenueCat response for the authenticated UUID is trusted.
     try {

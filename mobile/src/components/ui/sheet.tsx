@@ -5,19 +5,20 @@ import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import type { EdgeInsets } from 'react-native-safe-area-context';
 
 import { AppText } from './app-text';
+import { GrainOverlay } from './dispo-background';
 
 import { useDispoTheme } from '@/theme/theme-context';
-import { radii, spacing } from '@/theme/tokens';
+import { elevation, radii, scrimFor, spacing } from '@/theme/tokens';
 
 /** Repli quand aucun `SafeAreaProvider` n'est monté (tests, aperçus). */
 const fallbackInsetsContext = createContext<EdgeInsets | null>(null);
 
-/** Voile unique posé derrière les feuilles et les menus. */
+/** Voile historique (thème Jazz). Préférer `scrimFor(palette)`. */
 export const scrimColor = 'rgba(5, 8, 20, 0.6)';
 
 /**
- * Feuille montante : voile, poignée, surface carte, titre optionnel.
- * Toutes les feuilles d'action / de choix de l'app passent par ici.
+ * Feuille montante : voile, poignée en creux, surface grainée, titre
+ * optionnel. Toutes les feuilles d'action / de choix de l'app passent par ici.
  */
 export function BottomSheet({
   avoidKeyboard = false,
@@ -47,25 +48,41 @@ export function BottomSheet({
           accessibilityLabel={t('Fermer')}
           accessibilityRole="button"
           onPress={onClose}
-          style={[StyleSheet.absoluteFill, { backgroundColor: scrimColor }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: scrimFor(palette) }]}
         />
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: palette.card,
-              borderColor: palette.border,
-              paddingBottom: Math.max(bottomInset, spacing.md),
-            },
-          ]}
-        >
-          <View style={[styles.handle, { backgroundColor: palette.border }]} />
-          {title ? (
-            <AppText numberOfLines={2} style={styles.title} variant="title3">
-              {title}
-            </AppText>
-          ) : null}
-          {children}
+        <View style={[styles.shadow, elevation(3, palette)]}>
+          <View
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: palette.cardElevated,
+                borderColor: palette.edge,
+                paddingBottom: Math.max(bottomInset, spacing.md),
+              },
+            ]}
+          >
+            <GrainOverlay />
+            <View
+              pointerEvents="none"
+              style={[styles.highlight, { backgroundColor: palette.highlight }]}
+            />
+            <View
+              style={[
+                styles.handle,
+                {
+                  backgroundColor: palette.inset,
+                  borderBottomColor: palette.highlight,
+                  borderTopColor: palette.edge,
+                },
+              ]}
+            />
+            {title ? (
+              <AppText numberOfLines={2} style={styles.title} variant="title3">
+                {title}
+              </AppText>
+            ) : null}
+            {children}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -75,18 +92,23 @@ export function BottomSheet({
 const styles = StyleSheet.create({
   handle: {
     alignSelf: 'center',
+    borderBottomWidth: 1,
     borderRadius: radii.round,
-    height: 5,
+    borderTopWidth: 1,
+    height: 6,
     marginBottom: spacing.sm,
     width: 40,
   },
+  highlight: { height: 1, left: radii.xl, position: 'absolute', right: radii.xl, top: 0 },
   root: { flex: 1, justifyContent: 'flex-end' },
+  shadow: { borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, maxHeight: '88%' },
   sheet: {
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.xs,
-    maxHeight: '88%',
+    maxHeight: '100%',
+    overflow: 'hidden',
     paddingHorizontal: spacing.gutter,
     paddingTop: spacing.sm,
   },

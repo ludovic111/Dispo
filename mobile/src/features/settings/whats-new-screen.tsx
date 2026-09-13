@@ -42,39 +42,42 @@ export function WhatsNewScreen() {
           inset={false}
           title={t('Nouveautés')}
         />
-        <View
-          style={[
-            styles.banner,
-            { backgroundColor: tint(palette.signal, 0.1), borderColor: tint(palette.signal, 0.35) },
-          ]}
+        <Card
+          accessibilityRole="alert"
+          padding={spacing.sm}
+          style={{
+            backgroundColor: tint(palette.warning, 0.12),
+            borderColor: tint(palette.warning, 0.4),
+          }}
+          tone="muted"
         >
-          <Ionicons color={palette.signal} name="chatbubble-ellipses" size={21} />
-          <View style={styles.bannerCopy}>
-            <AppText color={palette.signal} variant="subheadline" weight="bold">
-              {t('Important — à lire')}
-            </AppText>
-            <AppText color={palette.muted} variant="footnote">
-              {t(
-                "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.",
-              )}
-            </AppText>
+          <View style={styles.banner}>
+            <Ionicons color={palette.warning} name="warning" size={21} />
+            <View style={styles.bannerCopy}>
+              <AppText color={palette.warning} variant="subheadline" weight="bold">
+                {t('Important — à lire')}
+              </AppText>
+              <AppText color={palette.muted} variant="footnote">
+                {t(
+                  "Cette mise à jour déplace des choses dans l'app. Une minute de lecture t'évitera de chercher.",
+                )}
+              </AppText>
+            </View>
           </View>
-        </View>
+        </Card>
 
         {note ? (
-          <>
+          <Card style={styles.points} tone="elevated">
             <SectionHeader subtitle={`v${note.version}`} title={t(note.title)} />
-            <Card style={styles.points}>
-              {note.points.map((point) => (
-                <View key={point} style={styles.point}>
-                  <Ionicons color={palette.bronze} name="sparkles" size={12} />
-                  <AppText style={styles.pointCopy} variant="subheadline">
-                    {t(point)}
-                  </AppText>
-                </View>
-              ))}
-            </Card>
-          </>
+            {note.points.map((point) => (
+              <View key={point} style={styles.point}>
+                <View style={[styles.bullet, { backgroundColor: palette.accent }]} />
+                <AppText style={styles.pointCopy} variant="subheadline">
+                  {t(point)}
+                </AppText>
+              </View>
+            ))}
+          </Card>
         ) : null}
 
         <DispoButton
@@ -92,15 +95,9 @@ export function WhatsNewScreen() {
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    alignItems: 'flex-start',
-    borderRadius: radii.card,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.sm,
-  },
+  banner: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   bannerCopy: { flex: 1, gap: spacing.xxs },
+  bullet: { borderRadius: radii.round, height: 8, marginTop: spacing.tight, width: 8 },
   content: {
     gap: spacing.md,
     paddingBottom: spacing.xxl,

@@ -22,7 +22,6 @@ import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { PostalPlaceField, type ResolvedPostalPlace } from '@/features/location';
-import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -32,7 +31,6 @@ const reminderOptions = [0, 1, 2, 7, 14];
 function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  const canConfigureReminder = usePremiumCapability('configurableReminders');
   const update = useUpdateGroupEvent();
   const parsedPlace = parseGroupEventVenueLabel(
     event.publicLocationLabel || event.venue,
@@ -78,7 +76,7 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
         leaderId: group.leaderId,
         longitude: resolvedPlace?.longitude ?? event.longitude ?? null,
         postalCode,
-        reminderLeadDays: canConfigureReminder ? reminderLeadDays : 2,
+        reminderLeadDays,
         scope,
         title: kind,
         kind,
@@ -213,28 +211,22 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
         </Card>
         <Card style={styles.card}>
           <SectionHeader title={t('Rappel')} />
-          {canConfigureReminder ? (
-            <View style={styles.wrap}>
-              {reminderOptions.map((days) => (
-                <ChoiceChip
-                  key={days}
-                  label={
-                    days === 0
-                      ? t('Le jour même')
-                      : days === 1
-                        ? t('La veille')
-                        : formatSwiftPlaceholders(t('%lld jours avant'), days)
-                  }
-                  onPress={() => setReminderLeadDays(days)}
-                  selected={reminderLeadDays === days}
-                />
-              ))}
-            </View>
-          ) : (
-            <AppText color={palette.muted} variant="caption">
-              {t('Le rappel gratuit reste fixé à 2 jours avant.')}
-            </AppText>
-          )}
+          <View style={styles.wrap}>
+            {reminderOptions.map((days) => (
+              <ChoiceChip
+                key={days}
+                label={
+                  days === 0
+                    ? t('Le jour même')
+                    : days === 1
+                      ? t('La veille')
+                      : formatSwiftPlaceholders(t('%lld jours avant'), days)
+                }
+                onPress={() => setReminderLeadDays(days)}
+                selected={reminderLeadDays === days}
+              />
+            ))}
+          </View>
         </Card>
         {event.seriesId ? (
           <Card style={styles.card}>

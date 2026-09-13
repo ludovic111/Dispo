@@ -17,9 +17,11 @@ import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Tag } from '@/components/ui/tag';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
+import { shortProfileLevel } from '@/domain/profile';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
-import { pressedStyle, radii, spacing, tint } from '@/theme/tokens';
+import { insetStyle, pressedStyle, radii, spacing, tint } from '@/theme/tokens';
 
 type AffiliationIdentity = Pick<
   SchoolAffiliation | SchoolMember,
@@ -40,7 +42,8 @@ export function SchoolAvatar({ school, size = 44 }: { school: MusicSchool; size?
     <View
       style={[
         styles.schoolAvatar,
-        { backgroundColor: palette.inset, borderRadius: radius, height: size, width: size },
+        insetStyle(palette),
+        { borderRadius: radius, height: size, width: size },
       ]}
     >
       {school.logoUrl ? (
@@ -211,14 +214,19 @@ export function SchoolMemberCard({
 }) {
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
+  const level = t(shortProfileLevel(member.level));
+  const instruments = member.instruments.map((instrument) => t(instrument)).join(' · ');
   const content = (
     <Card padding={spacing.sm}>
       <View style={styles.row}>
         <Avatar name={member.name} size={42} uri={member.photoUrl} />
         <View style={styles.copy}>
-          <AppText numberOfLines={2} variant="headline">
-            {member.name}
-          </AppText>
+          <View style={styles.titleRow}>
+            <AppText numberOfLines={2} style={styles.title} variant="headline">
+              {member.name}
+            </AppText>
+            {member.isPremium ? <VerifiedBadge size="sm" /> : null}
+          </View>
           <View style={styles.memberStatus}>
             <AppText color={palette.muted} variant="caption2">
               {localizedAffiliationStatus(member, t)}
@@ -227,11 +235,9 @@ export function SchoolMemberCard({
               <Ionicons color={palette.jam} name="checkmark-circle" size={13} />
             ) : null}
           </View>
-          {member.instruments.length > 0 ? (
-            <AppText color={palette.bronze} numberOfLines={1} variant="caption2">
-              {member.instruments.map((instrument) => t(instrument)).join(' · ')}
-            </AppText>
-          ) : null}
+          <AppText color={palette.bronze} numberOfLines={1} variant="caption">
+            {instruments ? `${instruments} · ${level}` : level}
+          </AppText>
         </View>
         {onPress ? <Ionicons color={palette.muted} name="chevron-forward" size={15} /> : null}
       </View>
@@ -240,6 +246,14 @@ export function SchoolMemberCard({
   if (!onPress) return content;
   return (
     <Pressable
+      accessibilityLabel={[
+        member.name,
+        member.isPremium ? t('Membre Premium') : null,
+        localizedAffiliationStatus(member, t),
+        instruments ? `${instruments} · ${level}` : level,
+      ]
+        .filter(Boolean)
+        .join(', ')}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => pressed && pressedStyle}

@@ -52,6 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       ...config.ios,
       bundleIdentifier: production ? 'ch.dispo.app' : 'ch.dispo.app.dev',
+      associatedDomains: ['webcredentials:dispoapp.net'],
       entitlements: {
         ...config.ios?.entitlements,
         'aps-environment': production ? 'production' : 'development',

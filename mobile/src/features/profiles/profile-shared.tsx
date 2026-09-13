@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { IconButton } from '@/components/ui/pressable';
 import type { ProfileSocialNetwork } from '@/domain/profile';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, pressedStyle, spacing } from '@/theme/tokens';
+import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export const socialIcons: Record<ProfileSocialNetwork, ComponentProps<typeof Ionicons>['name']> = {
   instagram: 'logo-instagram',
@@ -24,11 +24,14 @@ export interface ProfileStat {
   value: string;
 }
 
-/** Carte de statistiques d'un profil (note / niveau, abonnés, collabs). Même forme partout. */
+/**
+ * Bloc de statistiques d'un profil (note / niveau, abonnés, collabs) : rail en
+ * creux dans l'étui, chiffres mono, étiquettes gravées. Même forme partout.
+ */
 export function ProfileStatsCard({ stats }: { stats: ProfileStat[] }) {
   const { palette } = useDispoTheme();
   return (
-    <Card padding={spacing.xs}>
+    <Card padding={spacing.xs} style={styles.statsCard} tone="inset">
       <View style={styles.stats}>
         {stats.map((stat, index) => {
           const content = (
@@ -45,7 +48,7 @@ export function ProfileStatsCard({ stats }: { stats: ProfileStat[] }) {
                 color={palette.muted}
                 numberOfLines={1}
                 style={styles.statLabel}
-                variant="caption2"
+                variant="label"
               >
                 {stat.label}
               </AppText>
@@ -132,4 +135,5 @@ const styles = StyleSheet.create({
   statLabel: { textAlign: 'center' },
   statValueRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
   stats: { flexDirection: 'row' },
+  statsCard: { borderRadius: radii.control },
 });

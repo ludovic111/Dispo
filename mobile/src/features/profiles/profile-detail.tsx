@@ -20,11 +20,13 @@ import {
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
+import { GrainOverlay } from '@/components/ui/dispo-background';
 import { ListRow } from '@/components/ui/list-row';
 import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { scrimColor } from '@/components/ui/sheet';
 import { Tag } from '@/components/ui/tag';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 import {
   profileHandle,
   profileSocialUrl,
@@ -35,17 +37,22 @@ import {
   type ProfileSummary,
 } from '@/domain/profile';
 import { useAuth } from '@/features/auth/auth-context';
+import { GigDirectRequestButton } from '@/features/gigs/gig-direct-request-button';
 import { ensureDirectConversation } from '@/features/messages/message-repository';
 import { PersonalRepertoireLink } from '@/features/repertoire/repertoire-screen';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
 import {
   disabledStyle,
+  elevation,
+  keyHighlight,
+  keyStyle,
   minimumTouchTarget,
   onAccent,
   pressedStyle,
   radii,
   spacing,
+  surfaceStyle,
   tint,
 } from '@/theme/tokens';
 
@@ -61,6 +68,35 @@ function formatDay(locale: string, date: string, weekday = true): string {
     month: 'short',
     ...(weekday ? { weekday: 'short' } : {}),
   }).format(new Date(`${date.slice(0, 10)}T12:00:00`));
+}
+
+/**
+ * Jour de disponibilité rendu comme une touche relevée : remplissage accent,
+ * liseré clair, arête basse plus sombre, chiffre en mono. Un jour coché est
+ * une touche enfoncée dans le calendrier, pas une simple étiquette.
+ */
+export function AvailabilityDayKey({ label }: { label: string }) {
+  const { palette } = useDispoTheme();
+  return (
+    <View
+      accessibilityLabel={label}
+      accessible
+      style={[
+        styles.dayKey,
+        keyStyle(palette.accent, palette.accentDeep),
+        { borderColor: palette.accentDeep },
+        elevation(1, palette),
+      ]}
+    >
+      <View
+        pointerEvents="none"
+        style={[styles.dayKeyHighlight, { backgroundColor: keyHighlight }]}
+      />
+      <AppText color={palette.accentInk} numberOfLines={1} variant="mono">
+        {label}
+      </AppText>
+    </View>
+  );
 }
 
 function TripRow({
@@ -136,7 +172,7 @@ export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSumma
           <SectionHeader title={t('Mes disponibilités')} />
           <View style={styles.tags}>
             {availableDates.map((date) => (
-              <Tag color={palette.jam} key={date} label={formatDay(locale, date)} />
+              <AvailabilityDayKey key={date} label={formatDay(locale, date)} />
             ))}
           </View>
         </Card>
@@ -208,6 +244,9 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
     const url = profileSocialUrl(network, handle);
     return url ? [{ network, onPress: () => void Linking.openURL(url) }] : [];
   });
+  const relations = relationTags(profile).filter(
+    (tag) => !profile.schools.some((school) => schoolAcronym(school) === tag),
+  );
   const stats: ProfileStat[] = [
     {
       label: t(profile.ratingAverage ? 'note' : 'niveau'),
@@ -290,81 +329,87 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.profileHeader}>
-        <View>
-          <Avatar name={profile.name} size={86} uri={profile.photoUrl} />
-          {upcomingDates.length > 0 ? (
-            <View
-              style={[
-                styles.availabilityDot,
-                { backgroundColor: palette.jam, borderColor: palette.background },
-              ]}
-            />
-          ) : null}
+      <Card style={styles.caseCard} tone="elevated">
+        <View style={styles.profileHeader}>
+          <View style={[styles.avatarWell, surfaceStyle(palette, 'default').container]}>
+            <Avatar name={profile.name} size={80} uri={profile.photoUrl} />
+            {upcomingDates.length > 0 ? (
+              <View
+                accessibilityLabel={t("Dispo aujourd'hui")}
+                style={[
+                  styles.availabilityDot,
+                  { backgroundColor: palette.jam, borderColor: palette.card },
+                ]}
+              />
+            ) : null}
+          </View>
+          <View style={styles.identityCopy}>
+            <View style={styles.nameRow}>
+              <AppText numberOfLines={2} style={styles.name} variant="title2">
+                {profile.name}
+              </AppText>
+              {profile.isPremium ? <VerifiedBadge /> : null}
+              {!viewingOwnProfile ? (
+                <IconButton
+                  accessibilityLabel={t('Sécurité')}
+                  icon="ellipsis-horizontal-circle"
+                  iconColor={palette.muted}
+                  onPress={showSafetyMenu}
+                  variant="plain"
+                />
+              ) : null}
+            </View>
+            <AppText color={palette.bronze} variant="mono">
+              {profileHandle(profile.name)}
+            </AppText>
+            <AppText color={palette.muted} numberOfLines={2} variant="caption">
+              {[
+                profile.age ? formatSwiftPlaceholders(t('%lld ans'), profile.age) : null,
+                profile.neighborhood || profile.city,
+                profile.country,
+              ]
+                .filter(Boolean)
+                .join(' · ') || t('Lieu non renseigné')}
+            </AppText>
+          </View>
         </View>
-        <View style={styles.headerStats}>
-          <ProfileStatsCard stats={stats} />
+        <View style={styles.tags}>
+          {profile.isDemo ? <Tag color={palette.bronze} label={t('Démo')} /> : null}
+          {profile.instruments.length > 0 ? (
+            profile.instruments.map((instrument) => (
+              <Tag
+                key={instrument}
+                label={`${t(instrument)} · ${t(
+                  shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
+                )}`}
+              />
+            ))
+          ) : (
+            <Tag color={palette.bronze} label={t(shortProfileLevel(profile.level))} />
+          )}
         </View>
-      </View>
+        <ProfileStatsCard stats={stats} />
+      </Card>
 
       <View style={styles.identity}>
-        <View style={styles.nameRow}>
-          <AppText numberOfLines={2} style={styles.name} variant="title2">
-            {profile.name}
-          </AppText>
-          {profile.isDemo ? <Tag color={palette.bronze} label={t('Démo')} /> : null}
-          {profile.isPremium ? (
-            <Ionicons color={palette.electric} name="sparkles" size={17} />
-          ) : null}
-          {!viewingOwnProfile ? (
-            <IconButton
-              accessibilityLabel={t('Sécurité')}
-              icon="ellipsis-horizontal-circle"
-              iconColor={palette.muted}
-              onPress={showSafetyMenu}
-              variant="plain"
-            />
-          ) : null}
-        </View>
         {profile.playedWithFriend ? (
           <Tag color={palette.jam} label={t('A joué avec un ami')} />
         ) : null}
-        <View style={styles.tags}>
-          <AppText color={palette.bronze} variant="caption">
-            {profileHandle(profile.name)}
-          </AppText>
-          {relationTags(profile)
-            .filter((tag) => !profile.schools.some((school) => schoolAcronym(school) === tag))
-            .map((tag) => (
+        {relations.length > 0 ? (
+          <View style={styles.tags}>
+            {relations.map((tag) => (
               <Tag key={tag} label={t(tag)} />
             ))}
-          <Tag color={palette.bronze} label={t(shortProfileLevel(profile.level))} />
-        </View>
-        <AppText color={palette.muted} variant="caption">
-          {[
-            profile.age ? formatSwiftPlaceholders(t('%lld ans'), profile.age) : null,
-            profile.neighborhood || profile.city,
-            profile.country,
-          ]
-            .filter(Boolean)
-            .join(' · ') || t('Lieu non renseigné')}
-        </AppText>
+          </View>
+        ) : null}
         {profile.bio ? <AppText variant="subheadline">{profile.bio}</AppText> : null}
-        <View style={styles.tags}>
-          {profile.genres.slice(0, 3).map((genre) => (
-            <Tag color={palette.bronze} key={genre} label={t(genre)} />
-          ))}
-        </View>
-        <View style={styles.tags}>
-          {profile.instruments.map((instrument) => (
-            <Tag
-              key={instrument}
-              label={`${t(instrument)} · ${t(
-                shortProfileLevel(profile.instrumentLevels[instrument] ?? profile.level),
-              )}`}
-            />
-          ))}
-        </View>
+        {profile.genres.length > 0 ? (
+          <View style={styles.tags}>
+            {profile.genres.slice(0, 3).map((genre) => (
+              <Tag color={palette.bronze} key={genre} label={t(genre)} />
+            ))}
+          </View>
+        ) : null}
         {profile.schools.length > 0 ? (
           <View style={styles.tags}>
             {profile.schools.map((school) => (
@@ -386,15 +431,7 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
 
       {viewingOwnProfile ? null : (
         <View style={styles.actions}>
-          {upcomingDates.length > 0 ? (
-            <DispoButton
-              icon="flash"
-              onPress={() => router.push(`/gigs/request?profileId=${profile.id}` as never)}
-              variant="signal"
-            >
-              {t('Demander un dépannage')}
-            </DispoButton>
-          ) : null}
+          {upcomingDates.length > 0 ? <GigDirectRequestButton profileId={profile.id} /> : null}
           <View style={styles.actionRow}>
             <View style={styles.actionHalf}>
               <DispoButton
@@ -428,7 +465,7 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
         <View style={styles.tags}>
           <Ionicons color={palette.muted} name="calendar-outline" size={14} />
           {upcomingDates.map((date) => (
-            <Tag color={palette.jam} key={date} label={formatDay(locale, date)} />
+            <AvailabilityDayKey key={date} label={formatDay(locale, date)} />
           ))}
         </View>
       ) : null}
@@ -580,6 +617,7 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
                   ) : (
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: palette.bronze }]} />
                   )}
+                  <GrainOverlay />
                   <Ionicons color={onAccent} name="play-circle" size={32} />
                   <View style={styles.videoCaption}>
                     <AppText color={onAccent} numberOfLines={1} variant="caption2">
@@ -600,6 +638,7 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
                   { backgroundColor: index % 2 ? palette.electric : palette.bronze },
                 ]}
               >
+                <GrainOverlay />
                 <Ionicons color={onAccent} name="play" size={18} />
               </View>
             ))}
@@ -621,20 +660,36 @@ const styles = StyleSheet.create({
   actionHalf: { flex: 1 },
   actionRow: { flexDirection: 'row', gap: spacing.xs },
   actions: { gap: spacing.xs },
+  // Anneau relevé autour de la photo : la surface `default` posée dans l'étui `elevated`.
+  avatarWell: { borderRadius: radii.round, padding: spacing.xxs },
+  // Pastille de présence : l'anneau de 2 pt la détache de la photo (couleur de la carte).
   availabilityDot: {
     borderRadius: radii.round,
     borderWidth: 2,
-    bottom: 1,
+    bottom: spacing.xxs,
     height: 16,
     position: 'absolute',
-    right: 1,
+    right: spacing.xxs,
     width: 16,
   },
+  caseCard: { gap: spacing.sm },
+  // Touche accent : arête fine `accentDeep`, arête basse de 2 pt posée par `keyStyle`.
+  dayKey: {
+    alignItems: 'center',
+    borderRadius: radii.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'center',
+    minHeight: 34,
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  dayKeyHighlight: { height: 1, left: radii.xs, position: 'absolute', right: radii.xs, top: 0 },
   demoNote: { width: '100%' },
   groupAvatar: { borderRadius: radii.round, height: 40, width: 40 },
   groupFallback: { alignItems: 'center', justifyContent: 'center' },
-  headerStats: { flex: 1, minWidth: 0 },
   identity: { alignItems: 'flex-start', gap: spacing.xs },
+  identityCopy: { flex: 1, gap: spacing.xxs, minWidth: 0 },
   name: { flexShrink: 1 },
   nameRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   playedRow: { alignSelf: 'flex-start' },

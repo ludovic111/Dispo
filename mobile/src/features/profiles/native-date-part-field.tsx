@@ -7,7 +7,14 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { useDispoTheme } from '@/theme/theme-context';
-import { disabledStyle, minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
+import {
+  disabledStyle,
+  insetStyle,
+  minimumTouchTarget,
+  pressedStyle,
+  radii,
+  spacing,
+} from '@/theme/tokens';
 
 interface NativeDatePartFieldProps {
   disabled?: boolean;
@@ -43,10 +50,8 @@ export function NativeDatePartField({
 
   if (Platform.OS === 'ios') {
     return (
-      <View
-        style={[styles.iosField, { backgroundColor: palette.inset }, disabled && disabledStyle]}
-      >
-        <AppText color={palette.muted} variant="caption">
+      <View style={[styles.iosField, insetStyle(palette), disabled && disabledStyle]}>
+        <AppText color={palette.muted} variant="label">
           {label}
         </AppText>
         <DateTimePicker
@@ -85,12 +90,12 @@ export function NativeDatePartField({
       }
       style={({ pressed }) => [
         styles.androidField,
-        { backgroundColor: palette.inset, borderColor: palette.border },
+        insetStyle(palette),
         pressed && pressedStyle,
         disabled && disabledStyle,
       ]}
     >
-      <AppText color={palette.muted} variant="caption">
+      <AppText color={palette.muted} variant="label">
         {label}
       </AppText>
       <AppText color={disabled ? palette.muted : palette.text}>{text}</AppText>
@@ -100,8 +105,7 @@ export function NativeDatePartField({
 
 const styles = StyleSheet.create({
   androidField: {
-    borderRadius: radii.button,
-    borderWidth: 1,
+    borderRadius: radii.input,
     flex: 1,
     gap: spacing.xxs,
     minHeight: 60,
@@ -110,7 +114,7 @@ const styles = StyleSheet.create({
   },
   iosField: {
     alignItems: 'flex-start',
-    borderRadius: radii.button,
+    borderRadius: radii.input,
     flex: 1,
     gap: spacing.xxs,
     minHeight: minimumTouchTarget,

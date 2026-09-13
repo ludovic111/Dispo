@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -17,7 +18,10 @@ import {
 import {
   mergeGroupMessagesNewestFirst,
   optimisticGroupReactions,
+  removeGroupFromGroups,
   removeSongCommentFromGroups,
+  updateSongCommentInGroups,
+  withOptimisticCommentReaction,
   type GroupAttendanceStatus,
   type GroupDocument,
   type GroupEventDraft,
@@ -51,14 +55,17 @@ import {
   deleteGroupMessage,
   deleteSongComment,
   editGroupMessage,
+  editSongComment,
   fetchGroupInvitations,
   fetchGroupMessageReactions,
   fetchGroupMessagesPage,
   fetchGroupReplyMessages,
   fetchGroupProfileCandidates,
   fetchGroups,
+  fetchSongCommentReactions,
   groupMessageFromRealtimeRow,
   inviteGroupMember,
+  leaveGroup,
   removeGroupMember,
   reorderGroupRepertoire,
   saveEventSetlist,
@@ -66,6 +73,7 @@ import {
   sendGroupMessage,
   setGroupEventAttendance,
   setGroupMessageReaction,
+  setSongCommentReaction,
   subscribeToGroupMessages,
   subscribeToGroupMessageSummaries,
   subscribeToGroupTyping,
@@ -702,6 +710,31 @@ export function useRemoveGroupMember() {
   });
 }
 
+/**
+ * Quitter un groupe : la liste en cache perd le groupe immédiatement, puis
+ * on revient sur la liste des groupes. Le leader est refusé par le serveur
+ * (`leader_must_transfer_or_delete`) : le cache reste intact.
+ */
+export function useLeaveGroup() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
+  const refresh = useRefreshGroups(true);
+  return useMutation<boolean, Error, { groupId: string }>({
+    mutationFn: (input) => leaveGroup(input.groupId),
+    onSuccess: async (_left, input) => {
+      const queryKey = groupKeys.list(userId);
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      queryClient.setQueryData<MusicGroup[]>(queryKey, (current) =>
+        current ? removeGroupFromGroups(current, input.groupId) : current,
+      );
+      void queryClient.removeQueries({ queryKey: groupKeys.messages(userId, input.groupId) });
+      router.replace('/groups' as never);
+      await refresh();
+    },
+  });
+}
+
 export function useTransferGroupLeadership() {
   const refresh = useRefreshGroups();
   return useMutation({
@@ -1013,9 +1046,118 @@ export function useSongComment() {
   const { session } = useAuth();
   const refresh = useRefreshGroups();
   return useMutation({
-    mutationFn: (input: { groupId: string; songId: string; text: string }) =>
-      addSongComment(input.groupId, input.songId, session?.user.id ?? '', input.text),
+    mutationFn: (input: {
+      groupId: string;
+      parentId?: string | null;
+      songId: string;
+      text: string;
+    }) =>
+      addSongComment(
+        input.groupId,
+        input.songId,
+        session?.user.id ?? '',
+        input.text,
+        input.parentId ?? null,
+      ),
     onSuccess: refresh,
+  });
+}
+
+interface SongCommentMutationContext {
+  previousGroups: MusicGroup[] | undefined;
+}
+
+export function useEditSongComment() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
+  const refresh = useRefreshGroups();
+  return useMutation<
+    void,
+    Error,
+    { comment: GroupSongComment; text: string },
+    SongCommentMutationContext
+  >({
+    mutationFn: (input) => editSongComment(input.comment.id, input.text),
+    onMutate: async (input) => {
+      const queryKey = groupKeys.list(userId);
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      const previousGroups = queryClient.getQueryData<MusicGroup[]>(queryKey);
+      const editedAt = new Date().toISOString();
+      queryClient.setQueryData<MusicGroup[]>(queryKey, (current) =>
+        current
+          ? updateSongCommentInGroups(current, input.comment.groupId, input.comment.id, (item) => ({
+              ...item,
+              editedAt,
+              text: input.text.trim(),
+            }))
+          : current,
+      );
+      return { previousGroups };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previousGroups) {
+        queryClient.setQueryData(groupKeys.list(userId), context.previousGroups);
+      }
+    },
+    onSettled: refresh,
+  });
+}
+
+/** Même contrat que les réactions de messages : toggle optimiste, puis relecture serveur. */
+export function useSongCommentReaction() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  const queryClient = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    { comment: GroupSongComment; emoji: GroupReactionEmoji },
+    SongCommentMutationContext
+  >({
+    mutationFn: (input) =>
+      setSongCommentReaction(
+        input.comment.id,
+        input.comment.myReaction === input.emoji ? null : input.emoji,
+      ),
+    onMutate: async (input) => {
+      const queryKey = groupKeys.list(userId);
+      await queryClient.cancelQueries({ exact: true, queryKey });
+      const previousGroups = queryClient.getQueryData<MusicGroup[]>(queryKey);
+      queryClient.setQueryData<MusicGroup[]>(queryKey, (current) =>
+        current
+          ? updateSongCommentInGroups(current, input.comment.groupId, input.comment.id, (item) =>
+              withOptimisticCommentReaction(item, input.emoji),
+            )
+          : current,
+      );
+      return { previousGroups };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previousGroups) {
+        queryClient.setQueryData(groupKeys.list(userId), context.previousGroups);
+      }
+    },
+    onSuccess: (_result, input) => {
+      void fetchSongCommentReactions(input.comment.id, userId)
+        .then((reactions) => {
+          queryClient.setQueryData<MusicGroup[]>(groupKeys.list(userId), (current) =>
+            current
+              ? updateSongCommentInGroups(
+                  current,
+                  input.comment.groupId,
+                  input.comment.id,
+                  (item) => ({
+                    ...item,
+                    myReaction: reactions.find((reaction) => reaction.reactedByMe)?.emoji ?? null,
+                    reactions,
+                  }),
+                )
+              : current,
+          );
+        })
+        .catch(() => undefined);
+    },
   });
 }
 

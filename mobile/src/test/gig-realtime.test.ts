@@ -69,18 +69,20 @@ describe('fraîcheur Realtime des SOS', () => {
     expect(invalidate).toHaveBeenCalledTimes(2);
   });
 
-  it('invalide le feed, tous les détails, les matches et Sessions du compte', async () => {
+  it('invalide le feed, les détails, les matches, le fil scoré, les demandes directes et Sessions', async () => {
     const queryClient = new QueryClient();
     const invalidate = jest.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
 
     await invalidateGigRealtimeData(queryClient, 'profile-me');
 
-    expect(invalidate).toHaveBeenCalledTimes(5);
+    expect(invalidate).toHaveBeenCalledTimes(7);
     expect(invalidate.mock.calls.map(([filter]) => filter)).toEqual([
       { exact: true, queryKey: gigKeys.feed('profile-me') },
       { exact: true, queryKey: gigKeys.hosted('profile-me') },
       { queryKey: gigKeys.details('profile-me') },
       { queryKey: gigKeys.matchesForUser('profile-me') },
+      { queryKey: gigKeys.myMatches('profile-me') },
+      { queryKey: gigKeys.pendingDirect('profile-me') },
       { queryKey: sessionKeys.all },
     ]);
   });

@@ -43,6 +43,7 @@ jest.mock('@/features/groups/group-song-row', () => ({
 jest.mock('@/features/messages/message-controls', () => ({ ReceiptChecks: () => null }));
 jest.mock('@/features/groups/group-repository', () => ({
   enrichSongCatalogResult: jest.fn(),
+  isValidSongComment: (text: string) => text.trim().length > 0 && text.trim().length <= 1000,
   openGroupDocument: jest.fn(),
   searchSongCatalog: jest.fn(),
 }));
@@ -65,7 +66,9 @@ jest.mock('@/features/groups/group-queries', () => ({
   useSaveEventSetlist: () => mockMutation,
   useDeleteGroupDocument: () => mockMutation,
   useDeleteSongComment: () => mockMutation,
+  useEditSongComment: () => mockMutation,
   useSongComment: () => mockMutation,
+  useSongCommentReaction: () => mockMutation,
   useUploadGroupDocument: () => mockMutation,
 }));
 function mockSong(id: string, isApproved = true): GroupSong {
@@ -177,7 +180,9 @@ describe('song detail tabs', () => {
       expect(view.getByText('Aucun solo prévu')).toBeTruthy();
       expect(view.queryByText('Ajouter un solo')).toBeNull();
       await fireEvent.press(view.getByRole('tab', { name: 'Commentaires' }));
-      expect(view.getByPlaceholderText('Intro, fin, consigne…')).toBeTruthy();
+      // Since 2.5 only the leader opens a thread; members reply and react.
+      expect(view.queryByPlaceholderText('Intro, fin, consigne…')).toBeNull();
+      expect(view.getByText(/Seul le leader peut ouvrir une discussion/)).toBeTruthy();
     } finally {
       mockUserId = 'leader';
     }

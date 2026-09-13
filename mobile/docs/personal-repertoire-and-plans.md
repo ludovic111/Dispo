@@ -25,23 +25,40 @@ Les deux migrations versionnées créent les tables, RLS et triggers, puis
 transfèrent l'ancien tableau de titres de profil avant de vider son champ public.
 La seconde migration évite qu'un ancien client contourne le choix privé.
 
-## Formules au lancement
+## Formules (2.5)
 
-| Formule | Mensuel CHF | Annuel CHF | Droits futurs                                                       |
-| ------- | ----------: | ---------: | ------------------------------------------------------------------- |
-| Groupe  |        2.90 |      29.00 | Créer et diriger un groupe, sans avantages Premium                  |
-| Premium |        6.90 |      69.00 | Groupes illimités, tous les avantages Premium, répertoire personnel |
+Seules des formules **mensuelles** sont vendues dans l'app (les identifiants
+annuels restent reconnus côté serveur pour les abonnés existants).
 
-La réduction des écoles partenaires est de 30 % : 2.03 / 20.30 CHF pour Groupe,
-4.83 / 48.30 CHF pour Premium. L'affiliation doit être validée ; le commutateur
-de tarifs permet seulement de prévisualiser la réduction.
+| Formule | Mensuel CHF | Groupes dirigés | Répertoire personnel | Vidéos de démo |
+| ------- | ----------: | --------------: | :------------------: | -------------: |
+| Gratuit |           — |               0 |          —           |   1 × 1 min 30 |
+| Groupe  |        2.90 |               1 |          —           |   1 × 1 min 30 |
+| Premium |        6.90 |               6 |         oui          |   6 × 1 min 30 |
 
-La bêta 2.4 reste gratuite. Aucun achat ni restriction de groupe n'est activé.
-Les prix et les futurs droits sont définis et testés dans `premium-model.ts` et
-présentés dans l'app et sur le site FR/EN. Avant une commercialisation : créer les
-produits et offres dans les boutiques, connecter la validation serveur des achats,
-les droits et les affiliations partenaires, puis tester achats/restaurations.
-Un prix de boutique réel devra toujours être lu depuis la boutique.
+Gratuit pour tout le monde depuis 2.5 : filtres avancés, dates récurrentes,
+rappels configurables et Auto-SOS (`freeCapabilities` dans `premium-model.ts`,
+triggers serveur relâchés par la migration `20260913152000_pricing_2_5_amr`).
+
+Écoles :
+
+- **Groupes d'atelier** : un membre actif d'une école dont
+  `music_schools.free_workshops_until` couvre la date du jour peut créer et
+  diriger des groupes portant `music_groups.school_id`, quelle que soit sa
+  formule ; ces groupes ne comptent jamais dans le quota payant. AMR :
+  `free_workshops_until = 2028-12-31`.
+- **Premium offert** : `public.school_premium_grants` définit des fenêtres
+  pendant lesquelles les membres actifs d'une école sont Premium sans achat
+  (`get_my_subscription()` renvoie `source = 'school_grant'`). AMR : du
+  1ᵉʳ octobre 2026 au 31 janvier 2027 (Europe/Zurich). `profiles.is_premium`
+  est recalculé à chaque changement d'affiliation et chaque nuit (pg_cron,
+  00:05 UTC, job `dispo-refresh-profile-premium-daily`).
+- Les codes d'offre Apple des écoles partenaires (réduction de 30 %) restent
+  utilisables via « Utiliser un code école ».
+
+Tout membre Premium — abonnement ou offre d'école — porte la coche bleue
+`VerifiedBadge` à côté de son nom. Les prix de boutique réels sont toujours lus
+depuis StoreKit ; `premium-model.ts` ne garde que des prix de référence.
 
 ## Vérification
 

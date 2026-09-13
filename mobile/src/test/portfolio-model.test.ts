@@ -66,14 +66,14 @@ describe('portfolio vidéo', () => {
 
     expect(() =>
       assertDemoVideoSelection({
-        durationMs: 181_000,
+        durationMs: 90_000,
         fileSize: DEMO_VIDEO_MAX_BYTES,
         mimeType: 'video/mp4',
       }),
     ).not.toThrow();
     expect(() =>
       assertDemoVideoSelection({
-        durationMs: 181_001,
+        durationMs: 90_001,
         fileSize: DEMO_VIDEO_MAX_BYTES,
         mimeType: 'video/mp4',
       }),
@@ -90,13 +90,13 @@ describe('portfolio vidéo', () => {
     ).toThrow(new PortfolioValidationError('demo_video_unsupported_type'));
     expect(() =>
       assertDemoVideoSource({
-        durationMs: 180_000,
+        durationMs: 89_000,
         mimeType: 'video/quicktime',
       }),
     ).not.toThrow();
     expect(() =>
       assertDemoVideoSource({
-        durationMs: 181_001,
+        durationMs: 90_001,
         mimeType: 'video/quicktime',
       }),
     ).toThrow(new PortfolioValidationError('demo_video_too_long'));

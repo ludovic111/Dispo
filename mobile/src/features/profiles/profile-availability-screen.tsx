@@ -33,7 +33,7 @@ import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/sc
 import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
+import { elevation, keyStyle, minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
 
 export function ProfileAvailabilityScreen() {
   const { session } = useAuth();
@@ -162,13 +162,7 @@ export function ProfileAvailabilityScreen() {
         {hasUnsavedChanges ? (
           <View
             accessibilityLiveRegion="polite"
-            style={[
-              styles.unsavedBanner,
-              {
-                backgroundColor: tint(palette.bronze, 0.09),
-                borderColor: tint(palette.bronze, 0.33),
-              },
-            ]}
+            style={[styles.unsavedBanner, { backgroundColor: tint(palette.bronze, 0.09) }]}
           >
             <Ionicons color={palette.bronze} name="alert-circle-outline" size={19} />
             <AppText color={palette.bronze} style={styles.flex} variant="caption">
@@ -236,8 +230,14 @@ export function ProfileAvailabilityScreen() {
               return (
                 <Card key={date} padding={0}>
                   <View style={styles.dateRow}>
-                    <View style={[styles.dateIcon, { backgroundColor: tint(palette.jam, 0.09) }]}>
-                      <Ionicons color={palette.jam} name="checkmark" size={17} />
+                    <View
+                      style={[
+                        styles.dateIcon,
+                        keyStyle(palette.accent, palette.accentDeep),
+                        elevation(1, palette),
+                      ]}
+                    >
+                      <Ionicons color={palette.accentInk} name="checkmark" size={17} />
                     </View>
                     <AppText style={styles.flex} variant="subheadline" weight="semibold">
                       {new Intl.DateTimeFormat(locale, {
@@ -256,7 +256,7 @@ export function ProfileAvailabilityScreen() {
                   <View style={[styles.slotSection, { borderTopColor: palette.border }]}>
                     <View style={styles.slotHeading}>
                       <View style={styles.flex}>
-                        <AppText variant="caption" weight="semibold">
+                        <AppText color={palette.muted} variant="label">
                           {t('Créneaux horaires')}
                         </AppText>
                         <AppText color={palette.muted} variant="caption2">
@@ -292,10 +292,7 @@ export function ProfileAvailabilityScreen() {
                           key={`${date}-${index}`}
                           style={[
                             styles.slotRow,
-                            !valid && {
-                              backgroundColor: tint(palette.signal, 0.06),
-                              borderColor: tint(palette.signal, 0.33),
-                            },
+                            !valid && { backgroundColor: tint(palette.signal, 0.06) },
                           ]}
                         >
                           <NativeDatePartField
@@ -370,9 +367,10 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   content: { gap: spacing.md, padding: spacing.gutter, paddingBottom: spacing.xxl },
   dateCards: { gap: spacing.sm },
+  // Touche accent : le jour coché est enfoncé dans le calendrier.
   dateIcon: {
     alignItems: 'center',
-    borderRadius: radii.round,
+    borderRadius: radii.xs,
     height: 32,
     justifyContent: 'center',
     width: 32,
@@ -399,9 +397,7 @@ const styles = StyleSheet.create({
   slotHeading: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   slotRow: {
     alignItems: 'center',
-    borderColor: 'transparent',
     borderRadius: radii.button,
-    borderWidth: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
@@ -415,7 +411,6 @@ const styles = StyleSheet.create({
   unsavedBanner: {
     alignItems: 'center',
     borderRadius: radii.button,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: spacing.xs,
     minHeight: minimumTouchTarget,

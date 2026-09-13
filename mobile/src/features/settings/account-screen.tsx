@@ -1,21 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking, StyleSheet, View } from 'react-native';
 
 import { disconnectWithBestEffortPushCleanup } from './account-session';
-import { SettingsErrorBanner, SettingsShell } from './settings-components';
+import {
+  RaisedIconWell,
+  SettingsDivider,
+  SettingsErrorBanner,
+  SettingsRow,
+  SettingsSection,
+  SettingsShell,
+  SettingsValueAccessory,
+} from './settings-components';
 import { deleteCurrentAccount, unregisterPushDevice } from './settings-service';
 import { clearPushToken, loadPushToken } from './settings-storage';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { DispoButton } from '@/components/ui/pressable';
+import { useAccountStatus } from '@/features/auth/account-status';
 import { useAuth } from '@/features/auth/auth-context';
 import { signOut } from '@/features/auth/auth-service';
 import { useDispoTheme } from '@/theme/theme-context';
-import { minimumTouchTarget, radii, spacing, tint } from '@/theme/tokens';
+import { radii, spacing } from '@/theme/tokens';
 
 export function AccountScreen() {
   const { session } = useAuth();
@@ -23,6 +32,7 @@ export function AccountScreen() {
   const { t } = useTranslation();
   const [deleting, setDeleting] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const accountStatus = useAccountStatus();
 
   const disconnect = async () => {
     setErrorText(null);
@@ -99,15 +109,13 @@ export function AccountScreen() {
 
   return (
     <SettingsShell nativeHeader>
-      <Card>
+      <Card tone="elevated">
         <View style={styles.introRow}>
-          <View style={[styles.introIcon, { backgroundColor: tint(statusColor, 0.12) }]}>
-            <Ionicons
-              color={statusColor}
-              name={session ? 'cloud-done' : 'cloud-outline'}
-              size={24}
-            />
-          </View>
+          <RaisedIconWell
+            color={statusColor}
+            icon={session ? 'cloud-done' : 'cloud-outline'}
+            shape="square"
+          />
           <View style={styles.introCopy}>
             <AppText variant="headline">
               {session ? t('Connecté au réseau Dispo') : t('Rejoins le réseau Dispo')}
@@ -161,8 +169,63 @@ export function AccountScreen() {
         </DispoButton>
       )}
 
+      {session ? (
+        <SettingsSection title={t('Vérification')}>
+          <SettingsRow
+            color={palette.electric}
+            icon="key"
+            onPress={() => router.push('/settings/passkeys' as Href)}
+            title={t('Clés d’accès')}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            color={accountStatus.data?.emailVerified ? palette.jam : palette.bronze}
+            icon="mail"
+            onPress={() => router.push('/verify' as Href)}
+            right={
+              accountStatus.data?.emailVerified ? (
+                <VerifiedAccessory label={t('E-mail vérifié')} />
+              ) : (
+                <SettingsValueAccessory value={t('Vérifier')} />
+              )
+            }
+            title={t('E-mail')}
+            {...(session.user.email ? { detail: session.user.email } : {})}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            color={accountStatus.data?.phoneVerified ? palette.jam : palette.bronze}
+            icon="call"
+            onPress={() => router.push('/verify' as Href)}
+            right={
+              accountStatus.data?.phoneVerified ? (
+                <VerifiedAccessory label={t('Téléphone vérifié')} />
+              ) : (
+                <SettingsValueAccessory
+                  value={accountStatus.data?.phone ? t('Vérifier') : t('Ajouter un numéro')}
+                />
+              )
+            }
+            title={t('Téléphone')}
+            {...(accountStatus.data?.phone ? { detail: accountStatus.data.phone } : {})}
+          />
+        </SettingsSection>
+      ) : null}
+
       <SettingsErrorBanner text={errorText} />
     </SettingsShell>
+  );
+}
+
+function VerifiedAccessory({ label }: { label: string }) {
+  const { palette } = useDispoTheme();
+  return (
+    <View accessibilityLabel={label} style={styles.verified}>
+      <Ionicons color={palette.jam} name="checkmark-circle" size={17} />
+      <AppText color={palette.jam} variant="footnote" weight="semibold">
+        {label}
+      </AppText>
+    </View>
   );
 }
 
@@ -170,14 +233,8 @@ const styles = StyleSheet.create({
   card: { gap: spacing.md },
   divider: { height: StyleSheet.hairlineWidth },
   introCopy: { flex: 1, gap: spacing.xxs },
-  introIcon: {
-    alignItems: 'center',
-    borderRadius: radii.sm,
-    height: minimumTouchTarget,
-    justifyContent: 'center',
-    width: minimumTouchTarget,
-  },
   introRow: { alignItems: 'flex-start', flexDirection: 'row', gap: spacing.sm },
   liveDot: { borderRadius: radii.round, height: 10, width: 10 },
   sessionRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  verified: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
 });

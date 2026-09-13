@@ -17,6 +17,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import type { GroupMember, GroupSong } from './group-model';
 import { soloOrderMembers, songSoloOrder, TRADING_FOURS_SOLO_ID } from './group-song-row-model';
 import { TradingFoursIcon } from './trading-fours-icon';
+import { useHideAlbumCovers } from './use-hide-album-covers';
 
 import { AppText } from '@/components/ui/app-text';
 import { Avatar } from '@/components/ui/avatar';
@@ -35,12 +36,13 @@ import { appleArtworkPromotion, type ArtworkSong } from '@/domain/song-artwork';
 import { useDispoTheme } from '@/theme/theme-context';
 import {
   billetInk,
+  blend,
+  insetStyle,
   onAccent,
   pressedStyle,
   pressedStyleReducedMotion,
   radii,
   spacing,
-  tint,
 } from '@/theme/tokens';
 
 const platformLabels: Record<StreamingPlatformId, string> = {
@@ -52,15 +54,18 @@ const platformLabels: Record<StreamingPlatformId, string> = {
   youtubeMusic: 'YouTube Music',
 };
 
+/** Cyan de la marque Amazon Music (sourire du logo). */
+const amazonCyan = '#25D1DA';
+
 /** Logos des services d'écoute : les couleurs de marque ne vivent qu'ici. */
 function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId; size?: number }) {
-  const { dark } = useDispoTheme();
+  const { dark, palette } = useDispoTheme();
   if (platform === 'deezer') {
     const colors = ['#A238FF', '#5A5BFF', '#00B9FF', '#00D88A', '#F5D90A', '#FF7A21', '#FF3055'];
     return (
       <View
         accessible={false}
-        style={[styles.logoSurface, { backgroundColor: '#111118', height: size, width: size }]}
+        style={[styles.logoSurface, { backgroundColor: palette.ink, height: size, width: size }]}
       >
         <View style={styles.deezerBars}>
           {colors.map((color, index) => (
@@ -99,12 +104,20 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
     return (
       <View
         accessible={false}
-        style={[styles.logoSurface, { backgroundColor: '#172235', height: size, width: size }]}
+        style={[
+          styles.logoSurface,
+          { backgroundColor: blend(palette.ink, amazonCyan, 0.14), height: size, width: size },
+        ]}
       >
         <Ionicons color={onAccent} name="logo-amazon" size={size * 0.58} />
         <Svg height={size * 0.22} style={styles.amazonSmile} viewBox="0 0 24 6" width={size * 0.68}>
-          <Path d="M2 1.5c5.8 3.7 12.3 3.8 19.6.1" fill="none" stroke="#25D1DA" strokeWidth="2" />
-          <Path d="m18.7.5 3.2 1-1.1 3" fill="none" stroke="#25D1DA" strokeWidth="1.6" />
+          <Path
+            d="M2 1.5c5.8 3.7 12.3 3.8 19.6.1"
+            fill="none"
+            stroke={amazonCyan}
+            strokeWidth="2"
+          />
+          <Path d="m18.7.5 3.2 1-1.1 3" fill="none" stroke={amazonCyan} strokeWidth="1.6" />
         </Svg>
       </View>
     );
@@ -125,6 +138,10 @@ function StreamingLogo({ platform, size = 34 }: { platform: StreamingPlatformId;
   );
 }
 
+/**
+ * Pochette d'un morceau. Respecte le réglage « masquer les pochettes » : la
+ * tuile de repli (note de musique en creux) remplace alors toute image Apple.
+ */
 export function SongArtwork({
   song,
   radius,
@@ -135,7 +152,8 @@ export function SongArtwork({
   size: number;
 }) {
   const { palette } = useDispoTheme();
-  const promotion = appleArtworkPromotion(song);
+  const hideCovers = useHideAlbumCovers();
+  const promotion = hideCovers ? null : appleArtworkPromotion(song);
   if (promotion) {
     return (
       <Image
@@ -149,14 +167,12 @@ export function SongArtwork({
   }
   return (
     <View
+      accessible={false}
+      testID="song-artwork-fallback"
       style={[
         styles.artworkFallback,
-        {
-          backgroundColor: tint(palette.bronze, 0.14),
-          borderRadius: radius,
-          height: size,
-          width: size,
-        },
+        insetStyle(palette),
+        { borderRadius: radius, height: size, width: size },
       ]}
     >
       <Ionicons color={palette.bronze} name="musical-note" size={size * 0.42} />
@@ -164,7 +180,10 @@ export function SongArtwork({
   );
 }
 
-/** Badge officiel iTunes Store, obligatoire à côté d'une pochette Apple. */
+/**
+ * Badge officiel iTunes Store, obligatoire à côté d'une pochette Apple — donc
+ * absent dès que les pochettes sont masquées.
+ */
 export function SongStoreBadge({
   song,
   compact = false,
@@ -173,8 +192,9 @@ export function SongStoreBadge({
   compact?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const hideCovers = useHideAlbumCovers();
   const storeName = 'iTunes Store';
-  const promotion = appleArtworkPromotion(song);
+  const promotion = hideCovers ? null : appleArtworkPromotion(song);
   if (!promotion) return null;
   return (
     <Pressable
@@ -412,8 +432,9 @@ export function GroupSongRow({
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
+  const hideCovers = useHideAlbumCovers();
   const [sheetVisible, setSheetVisible] = useState(false);
-  const promotion = appleArtworkPromotion(song);
+  const promotion = hideCovers ? null : appleArtworkPromotion(song);
   const showSoloOrder = showSoloAction && songSoloOrder(song).length > 0;
   const metadata = [
     song.key?.trim(),

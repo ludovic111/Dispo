@@ -2,16 +2,20 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
   applyToGig,
+  contactGigApplicant,
   createGig,
   updateGig,
   decideGigApplication,
   deleteGig,
   fetchGig,
+  fetchGigCandidateCount,
+  fetchGigCandidates,
   fetchGigForEdit,
   fetchGigFormDefaults,
-  fetchGigMatches,
   fetchGigsPage,
   fetchHostedGigsPage,
+  fetchMyGigMatches,
+  fetchMyPendingDirectTargets,
   respondToDirectGig,
   withdrawGigApplication,
 } from './gig-repository';
@@ -30,6 +34,10 @@ export const gigKeys = {
   hosted: (userId: string) => ['gigs', 'hosted', userId] as const,
   matchesForUser: (userId: string) => ['gigs', 'matches', userId] as const,
   matches: (userId: string, id: string) => [...gigKeys.matchesForUser(userId), id] as const,
+  candidateCount: (userId: string, id: string) =>
+    [...gigKeys.matchesForUser(userId), id, 'count'] as const,
+  myMatches: (userId: string) => ['gigs', 'my-matches', userId] as const,
+  pendingDirect: (userId: string) => ['gigs', 'pending-direct', userId] as const,
 };
 
 export function useGigs() {
@@ -119,33 +127,50 @@ export function useGigFormDefaults() {
   });
 }
 
-export function useGigMatches(gigId: string, refreshInterval: number | false = false) {
+/** Hôte : profils compatibles avec un poste ouvert, triés par score serveur. */
+export function useGigCandidates(gigId: string) {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const query = useInfiniteQuery({
+  return useQuery({
     queryKey: gigKeys.matches(userId, gigId),
-    refetchInterval: refreshInterval,
-    queryFn: ({ pageParam, signal }) => fetchGigMatches(gigId, userId, pageParam, 50, signal),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
+    queryFn: ({ signal }) => fetchGigCandidates(gigId, 50, signal),
     enabled: Boolean(userId && gigId),
   });
-  const exhaustive = useExhaustivePages({
-    enabled: Boolean(userId && gigId),
-    fetchNextPage: query.fetchNextPage,
-    hasNextPage: query.hasNextPage,
-    isError: query.isError || query.isFetchNextPageError,
-    isFetchingNextPage: query.isFetchingNextPage,
-    isLoading: query.isLoading,
-    loadKey: gigKeys.matches(userId, gigId).join(':'),
+}
+
+/** Hôte : compteur léger de profils compatibles (talon vert du ticket), rafraîchi toutes les 60 s. */
+export function useGigCandidateCount(gigId: string, enabled: boolean) {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  return useQuery({
+    queryKey: gigKeys.candidateCount(userId, gigId),
+    queryFn: ({ signal }) => fetchGigCandidateCount(gigId, signal),
+    enabled: Boolean(userId && gigId && enabled),
+    refetchInterval: enabled ? 60_000 : false,
+    staleTime: 30_000,
   });
-  return {
-    ...query,
-    isExhaustiveError: query.isError || query.isFetchNextPageError,
-    isExhaustive: exhaustive.isComplete,
-    isExhaustiveLoading: exhaustive.isLoading,
-    isLoading: query.isLoading || exhaustive.isLoading,
-  };
+}
+
+/** Viewer : annonces du fil où il joue un poste ouvert, avec leur score. */
+export function useMyGigMatches() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  return useQuery({
+    queryKey: gigKeys.myMatches(userId),
+    queryFn: ({ signal }) => fetchMyGigMatches(100, signal),
+    enabled: Boolean(userId),
+  });
+}
+
+/** Viewer : personnes à qui une demande directe est encore en attente. */
+export function useMyPendingDirectTargets() {
+  const { session } = useAuth();
+  const userId = session?.user.id ?? '';
+  return useQuery({
+    queryKey: gigKeys.pendingDirect(userId),
+    queryFn: ({ signal }) => fetchMyPendingDirectTargets(userId, signal),
+    enabled: Boolean(userId),
+  });
 }
 
 function useInvalidateGig() {
@@ -156,6 +181,8 @@ function useInvalidateGig() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: gigKeys.feed(userId) }),
       queryClient.invalidateQueries({ queryKey: gigKeys.hosted(userId) }),
+      queryClient.invalidateQueries({ queryKey: gigKeys.myMatches(userId) }),
+      queryClient.invalidateQueries({ queryKey: gigKeys.pendingDirect(userId) }),
       queryClient.invalidateQueries({ queryKey: ['sessions'] }),
       ...(gigId
         ? [
@@ -251,5 +278,22 @@ export function useDeleteGig() {
   return useMutation({
     mutationFn: (gigId: string) => deleteGig(gigId),
     onSuccess: (_data, gigId) => invalidate(gigId),
+  });
+}
+
+/** Contact unique d'un candidat : renvoie l'identifiant de la conversation ouverte. */
+export function useContactGigApplicant() {
+  const invalidate = useInvalidateGig();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { applicationId: string; gigId: string; text: string }) =>
+      contactGigApplicant(input.applicationId, input.text),
+    onSuccess: async (_conversationId, input) => {
+      await Promise.all([
+        invalidate(input.gigId),
+        client.invalidateQueries({ queryKey: ['messages'] }),
+        client.invalidateQueries({ queryKey: ['tab-badges'] }),
+      ]);
+    },
   });
 }

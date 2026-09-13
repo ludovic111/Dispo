@@ -2,9 +2,11 @@ import { useTranslation } from 'react-i18next';
 
 import { messageAttachmentLabel, relativeMessageDate } from './message-model';
 import type { ConversationSummary } from './message-repository';
+import { isModeratedMessage, moderatedPreview } from './moderated-message';
 
 import { Avatar } from '@/components/ui/avatar';
 import { ConversationRow } from '@/components/ui/chat/conversation-row';
+import { VerifiedBadge } from '@/components/ui/verified-badge';
 
 export function ConversationCard({
   conversation,
@@ -22,12 +24,14 @@ export function ConversationCard({
   const last = conversation.lastMessage;
   const preview = last?.deletedAt
     ? t('Message supprimé')
-    : last?.text ||
-      messageAttachmentLabel(last?.attachment ?? null, {
-        photo: t('Photo'),
-        video: t('Vidéo'),
-      }) ||
-      t('Commence la conversation');
+    : last && isModeratedMessage(last)
+      ? moderatedPreview(t)
+      : last?.text ||
+        messageAttachmentLabel(last?.attachment ?? null, {
+          photo: t('Photo'),
+          video: t('Vidéo'),
+        }) ||
+        t('Commence la conversation');
   return (
     <ConversationRow
       leading={<Avatar name={contactName} size={50} uri={conversation.contactPhotoUrl} />}
@@ -36,6 +40,7 @@ export function ConversationCard({
       preview={`${conversation.lastMessageIsMine && last ? `${t('Toi')} : ` : ''}${preview}`}
       subtitle={contactInstrument}
       title={contactName}
+      titleAccessory={conversation.contactIsPremium ? <VerifiedBadge size="sm" /> : undefined}
       unreadCount={conversation.unreadCount}
     />
   );

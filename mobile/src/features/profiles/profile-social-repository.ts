@@ -9,12 +9,13 @@ import {
 } from '@/features/profiles/profile-social-model';
 import { getSupabaseClient } from '@/services/supabase/client';
 
-const connectionColumns = 'id,name,photo_url,instruments,level,is_demo' as const;
+const connectionColumns = 'id,name,photo_url,instruments,level,is_demo,is_premium' as const;
 
 function connection(profile: {
   id: string;
   instruments: string[];
   is_demo: boolean;
+  is_premium: boolean;
   level: string;
   name: string;
   photo_url: string | null;
@@ -23,6 +24,7 @@ function connection(profile: {
     id: profile.id,
     instruments: profile.instruments,
     isDemo: profile.is_demo,
+    isPremium: profile.is_premium,
     level: profile.level,
     name: profile.name,
     photoUrl: profile.photo_url,

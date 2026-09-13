@@ -9,6 +9,7 @@ import {
   personalSongStyle,
   repertoireStyles,
   personalArrangementChanges,
+  withoutSongArtwork,
 } from './repertoire-model';
 import { usePersonalRepertoire, usePersonalRepertoireActions } from './repertoire-queries';
 import { savePersonalArrangement } from './repertoire-repository';
@@ -24,6 +25,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import type { GroupSong } from '@/features/groups/group-model';
 import { SongInfoPanel } from '@/features/groups/song-info-panel';
 import { usePremiumCapability } from '@/features/premium/subscription-queries';
+import { hideAlbumCoversKey, useBooleanPreference } from '@/features/settings/settings-storage';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
 
@@ -38,6 +40,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
   const client = useQueryClient();
   const [draft, setDraft] = useState<GroupSong | null>(null);
   const [original, setOriginal] = useState<GroupSong | null>(null);
+  const [hideArtwork] = useBooleanPreference(hideAlbumCoversKey);
   const save = useMutation({
     mutationFn: () =>
       savePersonalArrangement(songId, personalArrangementChanges(original!, draft!)),
@@ -126,7 +129,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
         contentContainerStyle={styles.content}
       >
         <SongInfoPanel
-          draft={song}
+          draft={hideArtwork ? withoutSongArtwork(song) : song}
           canEdit={canEdit && !save.isPending}
           patch={patch}
           subtitle={t(self ? 'Mon répertoire' : 'Répertoire musical')}
@@ -187,6 +190,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
           <DispoButton
             icon="copy-outline"
             onPress={() => router.push(`/repertoire/songs/${songId}/copy` as never)}
+            variant="secondary"
           >
             {t('Copier vers un groupe ou événement')}
           </DispoButton>
