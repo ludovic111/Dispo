@@ -1,6 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
+  recurringAvailableDates,
+  normalizeWeeklyAvailability,
+  profileAvailabilitySignature,
   availableDayKey,
   dateFromLocalTime,
   hasInvalidAvailabilityTimeSlots,
@@ -72,8 +75,46 @@ describe('disponibilités du profil', () => {
     };
     expect(hasInvalidAvailabilityTimeSlots(availability)).toBe(true);
     expect(removeAvailableDay(availability, '2026-09-07')).toEqual({
+      weekly: {},
       dates: ['2026-09-08'],
       timeSlots: { '2026-09-08': [{ end: '12:00', start: '09:00' }] },
     });
+  });
+});
+
+describe('weekly availability', () => {
+  it.each([0, 1, 2, 3, 4, 5, 6])(
+    'preserves weekday %i across both daylight-saving changes',
+    (weekday) => {
+      const dates = recurringAvailableDates(
+        { [weekday]: [{ start: '18:00', end: '22:00' }] },
+        new Date(2026, 0, 1, 12),
+        364,
+      );
+      expect(dates).toHaveLength(52);
+      expect(new Set(dates).size).toBe(52);
+      expect(dates.every((day) => new Date(`${day}T12:00:00`).getDay() === weekday)).toBe(true);
+    },
+  );
+  it('persists weekly changes, keeps one-off dates independent, and rejects invalid times', () => {
+    const original = {
+      dates: ['2026-09-18'],
+      timeSlots: {},
+      weekly: { '5': [{ start: '18:00', end: '22:00' }] },
+    };
+    expect(removeAvailableDay(original, '2026-09-18').weekly).toEqual(original.weekly);
+    expect(profileAvailabilitySignature(original)).not.toBe(
+      profileAvailabilitySignature({ ...original, weekly: {} }),
+    );
+    expect(
+      hasInvalidAvailabilityTimeSlots({
+        ...original,
+        weekly: { '5': [{ start: '22:00', end: '18:00' }] },
+      }),
+    ).toBe(true);
+    expect(
+      normalizeWeeklyAvailability({ '5': [{ start: '22:00', end: '18:00' }], '8': [], '2': [] }),
+    ).toEqual({ '2': [] });
+    expect(normalizeWeeklyAvailability(original.weekly)).toEqual(original.weekly);
   });
 });

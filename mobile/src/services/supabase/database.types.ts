@@ -9,6 +9,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      profile_common_songs: {
+        Args: { p_profiles: string[] };
+        Returns: { profile_id: string; song_count: number; titles: string[] }[];
+      };
+      profile_school_affiliations: {
+        Args: { p_profiles: string[] };
+        Returns: { profile_id: string; school_id: string; is_primary: boolean }[];
+      };
+
       graphql: {
         Args: {
           extensions?: Json;
@@ -1117,6 +1126,7 @@ export type Database = {
           age: number | null;
           availability_places: Json;
           availability_time_slots: Json;
+          weekly_availability: Json;
           available_dates: string[];
           bio: string;
           city: string | null;
@@ -1153,6 +1163,7 @@ export type Database = {
           age?: number | null;
           availability_places?: Json;
           availability_time_slots?: Json;
+          weekly_availability?: Json;
           available_dates?: string[];
           bio?: string;
           city?: string | null;
@@ -1189,6 +1200,7 @@ export type Database = {
           age?: number | null;
           availability_places?: Json;
           availability_time_slots?: Json;
+          weekly_availability?: Json;
           available_dates?: string[];
           bio?: string;
           city?: string | null;
@@ -1910,6 +1922,15 @@ export type Database = {
       };
     };
     Functions: {
+      profile_common_songs: {
+        Args: { p_profiles: string[] };
+        Returns: { profile_id: string; song_count: number; titles: string[] }[];
+      };
+      profile_school_affiliations: {
+        Args: { p_profiles: string[] };
+        Returns: { profile_id: string; school_id: string; is_primary: boolean }[];
+      };
+
       accept_gig_application: {
         Args: { application_id: string };
         Returns: undefined;

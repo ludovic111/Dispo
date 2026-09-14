@@ -110,7 +110,6 @@ export function PremiumScreen() {
               icon="options"
               text={t('Filtres avancés, dates récurrentes, rappels et Auto-SOS')}
             />
-            <FreeLine icon="people" text={t("Groupes d'atelier de ton école")} />
           </View>
         </Card>
       </ScrollView>

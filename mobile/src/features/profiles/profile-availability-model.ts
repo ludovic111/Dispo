@@ -7,10 +7,12 @@ export interface AvailabilityTimeSlot {
 }
 
 export type AvailabilityTimeSlots = Record<string, AvailabilityTimeSlot[]>;
+export type WeeklyAvailability = Record<string, AvailabilityTimeSlot[]>;
 
 export interface ProfileAvailability {
   dates: string[];
   timeSlots: AvailabilityTimeSlots;
+  weekly?: WeeklyAvailability;
 }
 
 export function isAvailableDayKey(value: string): boolean {
@@ -58,6 +60,26 @@ export function isValidAvailabilityTimeSlot(slot: AvailabilityTimeSlot): boolean
   );
 }
 
+function normalizeTimeSlotList(slots: unknown[]): AvailabilityTimeSlot[] {
+  const seen = new Set<string>();
+  const normalized = slots
+    .flatMap((slot): AvailabilityTimeSlot[] => {
+      if (!slot || Array.isArray(slot) || typeof slot !== 'object') return [];
+      const start = 'start' in slot && typeof slot.start === 'string' ? slot.start : '';
+      const end = 'end' in slot && typeof slot.end === 'string' ? slot.end : '';
+      const candidate = { end, start };
+      if (!isValidAvailabilityTimeSlot(candidate)) return [];
+      const signature = `${start}-${end}`;
+      if (seen.has(signature)) return [];
+      seen.add(signature);
+      return [candidate];
+    })
+    .sort(
+      (left, right) => left.start.localeCompare(right.start) || left.end.localeCompare(right.end),
+    );
+  return normalized;
+}
+
 export function normalizeAvailabilityTimeSlots(
   value: unknown,
   availableDates: readonly string[],
@@ -67,26 +89,7 @@ export function normalizeAvailabilityTimeSlots(
   return Object.fromEntries(
     Object.entries(value)
       .filter(([day, slots]) => dates.has(day) && Array.isArray(slots))
-      .map(([day, slots]) => {
-        const seen = new Set<string>();
-        const normalized = (slots as unknown[])
-          .flatMap((slot): AvailabilityTimeSlot[] => {
-            if (!slot || Array.isArray(slot) || typeof slot !== 'object') return [];
-            const start = 'start' in slot && typeof slot.start === 'string' ? slot.start : '';
-            const end = 'end' in slot && typeof slot.end === 'string' ? slot.end : '';
-            const candidate = { end, start };
-            if (!isValidAvailabilityTimeSlot(candidate)) return [];
-            const signature = `${start}-${end}`;
-            if (seen.has(signature)) return [];
-            seen.add(signature);
-            return [candidate];
-          })
-          .sort(
-            (left, right) =>
-              left.start.localeCompare(right.start) || left.end.localeCompare(right.end),
-          );
-        return [day, normalized] as const;
-      })
+      .map(([day, slots]) => [day, normalizeTimeSlotList(slots as unknown[])] as const)
       .filter(([, slots]) => slots.length > 0)
       .sort(([left], [right]) => left.localeCompare(right)),
   );
@@ -97,6 +100,7 @@ export function normalizeProfileAvailability(value: ProfileAvailability): Profil
   return {
     dates,
     timeSlots: normalizeAvailabilityTimeSlots(value.timeSlots, dates),
+    weekly: normalizeWeeklyAvailability(value.weekly),
   };
 }
 
@@ -108,6 +112,7 @@ export function profileAvailabilitySignature(value: ProfileAvailability): string
 export function removeAvailableDay(value: ProfileAvailability, day: string): ProfileAvailability {
   const dates = normalizeAvailableDates(value.dates.filter((candidate) => candidate !== day));
   return {
+    weekly: normalizeWeeklyAvailability(value.weekly),
     dates,
     timeSlots: normalizeAvailabilityTimeSlots(value.timeSlots, dates),
   };
@@ -115,9 +120,44 @@ export function removeAvailableDay(value: ProfileAvailability, day: string): Pro
 
 export function hasInvalidAvailabilityTimeSlots(value: ProfileAvailability): boolean {
   const dates = new Set(normalizeAvailableDates(value.dates));
-  return Object.entries(value.timeSlots).some(
-    ([day, slots]) => !dates.has(day) || slots.some((slot) => !isValidAvailabilityTimeSlot(slot)),
+  return (
+    Object.values(value.weekly ?? {}).some((slots) =>
+      slots.some((slot) => !isValidAvailabilityTimeSlot(slot)),
+    ) ||
+    Object.entries(value.timeSlots).some(
+      ([day, slots]) => !dates.has(day) || slots.some((slot) => !isValidAvailabilityTimeSlot(slot)),
+    )
   );
+}
+
+export function normalizeWeeklyAvailability(value: unknown): WeeklyAvailability {
+  if (!value || Array.isArray(value) || typeof value !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(value)
+      .flatMap(([day, slots]) => {
+        if (!/^[0-6]$/.test(day) || !Array.isArray(slots)) return [];
+        const normalized = normalizeTimeSlotList(slots);
+        // An empty array means all day; malformed windows must not become all-day availability.
+        if (slots.length && !normalized.length) return [];
+        return [[day, normalized]];
+      })
+      .sort(([a], [b]) => String(a).localeCompare(String(b))),
+  );
+}
+
+export function recurringAvailableDates(
+  weekly: WeeklyAvailability | undefined,
+  from = new Date(),
+  days = 366,
+): string[] {
+  const rules = normalizeWeeklyAvailability(weekly);
+  const dates: string[] = [];
+  const day = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 12);
+  for (let index = 0; index < days; index += 1) {
+    if (Object.hasOwn(rules, String(day.getDay()))) dates.push(availableDayKey(day));
+    day.setDate(day.getDate() + 1);
+  }
+  return dates;
 }
 
 export function localTimeValue(value: Date): string {

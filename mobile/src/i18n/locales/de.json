@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "Eine haptischere Oberfläche und fünfzehn Farbthemen, von Jazzblau bis Bordeaux.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "Ein neu gedachtes Onboarding, abgekürzte Niveaus und Alt- und Tenorsaxophon als eigenständige Instrumente.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "Nur noch Monatsabos: erweiterte Filter und Organisationsautomatik sind jetzt für alle kostenlos.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "AMR-Mitglieder: Workshops immer kostenlos, Premium von Oktober bis Ende Januar 2027 geschenkt.",
   "Thème de couleurs": "Farbthema",
   "Détails": "Details",
   "Titre, date et heure du SOS.": "Titel, Datum und Uhrzeit des SOS.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "Passkeys konnten nicht aktualisiert werden. Versuche es erneut.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "Passkey-Anmeldung fehlgeschlagen. Nutze eine andere Methode oder versuche es erneut.",
   "Se connecter avec une clé d’accès": "Mit einem Passkey anmelden",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "Erstelle auf dem iPhone einen Passkey in den Kontoeinstellungen, um dich ohne Passwort anzumelden."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "Erstelle auf dem iPhone einen Passkey in den Kontoeinstellungen, um dich ohne Passwort anzumelden.",
+  "Aucun solo défini": "Keine Solos festgelegt",
+  "Disponibilités récurrentes": "Wiederkehrende Verfügbarkeit",
+  "Chaque semaine, aux mêmes horaires.": "Jede Woche zu denselben Zeiten.",
+  "Tes disponibilités récurrentes restent actives.": "Deine wiederkehrende Verfügbarkeit bleibt aktiv.",
+  "Qui voit ton rôle dans cette école ?": "Wer sieht deine Rolle an dieser Schule?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Der Name deiner Schule ist für alle sichtbar. Diese Einstellung betrifft deine Rolle und Mitgliedschaftsdetails.",
+  "Ce groupe est lié à un atelier de ton école.": "Diese Gruppe gehört zu einem Workshop deiner Schule.",
+  "Toute la journée": "Ganztägig"
 }

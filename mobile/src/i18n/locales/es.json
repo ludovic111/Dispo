@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "Una interfaz más táctil y quince temas de color, del azul jazz al burdeos.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "Un onboarding rediseñado, niveles abreviados y los saxos alto y tenor como instrumentos propios.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "Solo planes mensuales: los filtros avanzados y la automatización de la organización pasan a ser gratis para todos.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "Miembros de la AMR: talleres siempre gratis y Premium regalado de octubre a finales de enero de 2027.",
   "Thème de couleurs": "Tema de color",
   "Détails": "Detalles",
   "Titre, date et heure du SOS.": "Título, fecha y hora del SOS.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "No se pudieron actualizar las claves de acceso. Inténtalo de nuevo.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "No se pudo iniciar sesión con la clave de acceso. Usa otro método o inténtalo de nuevo.",
   "Se connecter avec une clé d’accès": "Iniciar sesión con una clave de acceso",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "En iPhone, crea una clave de acceso en los ajustes de la cuenta para iniciar sesión sin contraseña."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "En iPhone, crea una clave de acceso en los ajustes de la cuenta para iniciar sesión sin contraseña.",
+  "Aucun solo défini": "Ningún solo definido",
+  "Disponibilités récurrentes": "Disponibilidad recurrente",
+  "Chaque semaine, aux mêmes horaires.": "Cada semana, a las mismas horas.",
+  "Tes disponibilités récurrentes restent actives.": "Tu disponibilidad recurrente sigue activa.",
+  "Qui voit ton rôle dans cette école ?": "¿Quién ve tu función en esta escuela?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "El nombre de tu escuela es visible para todos. Este ajuste se aplica a tu función y los detalles de tu afiliación.",
+  "Ce groupe est lié à un atelier de ton école.": "Este grupo está vinculado a un taller de tu escuela.",
+  "Toute la journée": "Todo el día"
 }

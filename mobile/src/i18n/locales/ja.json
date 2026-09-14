@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "より手触りのあるインターフェースと、ジャズブルーからボルドーまで15のカラーテーマ。",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "刷新されたオンボーディング、レベルの略記、アルトとテナーサックスを独立した楽器に。",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "月額プランのみに：高度なフィルターと運営の自動化は全員無料になりました。",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "AMRメンバー：ワークショップは常に無料、10月から2027年1月末までPremiumを無料提供。",
   "Thème de couleurs": "カラーテーマ",
   "Détails": "詳細",
   "Titre, date et heure du SOS.": "SOSのタイトル、日付、時刻。",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "パスキーを更新できませんでした。再試行してください。",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "パスキーでログインできませんでした。他の方法を使うか、再試行してください。",
   "Se connecter avec une clé d’accès": "パスキーでログイン",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "iPhoneでは、アカウント設定でパスキーを作成すると、パスワードなしでログインできます。"
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "iPhoneでは、アカウント設定でパスキーを作成すると、パスワードなしでログインできます。",
+  "Aucun solo défini": "ソロ未設定",
+  "Disponibilités récurrentes": "定期的な空き時間",
+  "Chaque semaine, aux mêmes horaires.": "毎週、同じ時間帯。",
+  "Tes disponibilités récurrentes restent actives.": "定期的な空き時間は引き続き有効です。",
+  "Qui voit ton rôle dans cette école ?": "この学校での役割を誰に公開しますか？",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "学校名は全員に表示されます。この設定は役割と所属の詳細に適用されます。",
+  "Ce groupe est lié à un atelier de ton école.": "このグループは学校のワークショップに関連付けられています。",
+  "Toute la journée": "終日"
 }

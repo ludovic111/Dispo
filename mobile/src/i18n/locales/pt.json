@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "Uma interface mais tátil e quinze temas de cor, do azul jazz ao bordô.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "Um onboarding repensado, níveis abreviados e os saxofones alto e tenor como instrumentos próprios.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "Apenas planos mensais: filtros avançados e automação da organização passam a ser gratuitos para todos.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "Membros da AMR: oficinas sempre gratuitas e Premium oferecido de outubro ao fim de janeiro de 2027.",
   "Thème de couleurs": "Tema de cores",
   "Détails": "Detalhes",
   "Titre, date et heure du SOS.": "Título, data e hora do SOS.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "Não foi possível atualizar as chaves de acesso. Tente novamente.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "Não foi possível entrar com a chave de acesso. Use outro método ou tente novamente.",
   "Se connecter avec une clé d’accès": "Entrar com uma chave de acesso",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "No iPhone, crie uma chave de acesso nos ajustes da conta para entrar sem senha."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "No iPhone, crie uma chave de acesso nos ajustes da conta para entrar sem senha.",
+  "Aucun solo défini": "Nenhum solo definido",
+  "Disponibilités récurrentes": "Disponibilidade recorrente",
+  "Chaque semaine, aux mêmes horaires.": "Todas as semanas, nos mesmos horários.",
+  "Tes disponibilités récurrentes restent actives.": "A tua disponibilidade recorrente continua ativa.",
+  "Qui voit ton rôle dans cette école ?": "Quem vê o teu papel nesta escola?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "O nome da tua escola é visível para todos. Esta definição aplica-se ao teu papel e aos detalhes da tua afiliação.",
+  "Ce groupe est lié à un atelier de ton école.": "Este grupo está associado a uma oficina da tua escola.",
+  "Toute la journée": "Todo o dia"
 }

@@ -669,6 +669,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             />
             {pendingSongs.map((song) => (
               <GroupSongRow
+                showSoloButton
                 cardStyle={{ borderColor: tint(palette.signal, 0.33) }}
                 key={song.id}
                 members={group.members}
@@ -753,6 +754,7 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
                   </AppText>
                   <View style={styles.flex}>
                     <GroupSongRow
+                      showSoloButton
                       members={group.members}
                       song={song}
                       onPress={() => openSong(song)}

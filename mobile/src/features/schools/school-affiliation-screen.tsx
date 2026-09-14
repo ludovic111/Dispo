@@ -223,7 +223,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
         </View>
 
         <View style={styles.section}>
-          <SectionHeader title={t('Qui voit cette affiliation ?')} />
+          <SectionHeader title={t('Qui voit ton rôle dans cette école ?')} />
           <View style={styles.visibilityChoices}>
             {schoolVisibilities.map((value) => (
               <ChoiceChip
@@ -243,7 +243,7 @@ export function SchoolAffiliationScreen({ schoolId }: { schoolId: string }) {
           </View>
           <AppText color={palette.muted} variant="caption">
             {t(
-              'L’annuaire applique ces règles côté serveur. Une affiliation privée reste visible uniquement par toi.',
+              'Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.',
             )}
           </AppText>
         </View>

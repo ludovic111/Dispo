@@ -1,3 +1,5 @@
+import { normalizeWeeklyAvailability, recurringAvailableDates } from './profile-availability-model';
+
 import { pageRange, type Page } from '@/domain/pagination';
 import type {
   ProfileDemoVideo,
@@ -16,6 +18,7 @@ type ProfileProjection = Pick<
   ProfileRow,
   | 'age'
   | 'available_dates'
+  | 'weekly_availability'
   | 'availability_places'
   | 'bio'
   | 'city'
@@ -46,7 +49,7 @@ type SchoolProjection = Pick<SchoolRow, 'id' | 'logo_url' | 'name' | 'short_name
 type ExactLocationRow = Database['public']['Tables']['profile_locations']['Row'];
 
 const profileColumns =
-  'id,name,age,photo_url,bio,instruments,instrument_levels,genres,level,available_dates,availability_places,city,country,postal_code,neighborhood,latitude,longitude,location_precision,rating_avg,rating_count,is_premium,is_demo,is_showcase,repertoire,socials,demo_videos' as const;
+  'id,name,age,photo_url,bio,instruments,instrument_levels,genres,level,available_dates,weekly_availability,availability_places,city,country,postal_code,neighborhood,latitude,longitude,location_precision,rating_avg,rating_count,is_premium,is_demo,is_showcase,repertoire,socials,demo_videos' as const;
 
 function profileAvailabilityPlaces(
   value: ProfileRow['availability_places'],
@@ -132,6 +135,7 @@ async function enrichProfiles(
     collaborationAsFirst,
     collaborationAsSecond,
     exactLocationResult,
+    commonSongsResult,
   ] = await Promise.all([
     supabase
       .from('follows')
@@ -143,12 +147,7 @@ async function enrichProfiles(
       .select('follower_id')
       .eq('following_id', userId)
       .in('follower_id', profileIds),
-    supabase
-      .from('music_school_memberships')
-      .select('profile_id,school_id,is_primary')
-      .in('profile_id', allProfileIds)
-      .eq('status', 'active')
-      .is('left_at', null),
+    supabase.rpc('profile_school_affiliations', { p_profiles: allProfileIds }),
     supabase.from('follows').select('following_id').in('following_id', profileIds),
     supabase.from('collaborations').select('a_id').in('a_id', profileIds),
     supabase.from('collaborations').select('b_id').in('b_id', profileIds),
@@ -156,6 +155,7 @@ async function enrichProfiles(
       .from('profile_locations')
       .select('user_id,latitude,longitude,updated_at')
       .in('user_id', profileIds),
+    supabase.rpc('profile_common_songs', { p_profiles: profileIds }),
   ]);
   if (outgoingResult.error) throw outgoingResult.error;
   if (incomingResult.error) throw incomingResult.error;
@@ -164,6 +164,8 @@ async function enrichProfiles(
   if (collaborationAsFirst.error) throw collaborationAsFirst.error;
   if (collaborationAsSecond.error) throw collaborationAsSecond.error;
   if (exactLocationResult.error) throw exactLocationResult.error;
+  if (commonSongsResult.error) throw commonSongsResult.error;
+  const commonSongs = new Map(commonSongsResult.data.map((row) => [row.profile_id, row]));
 
   const affiliations = affiliationResult.data as AffiliationProjection[];
   const schoolIds = [...new Set(affiliations.map((membership) => membership.school_id))];
@@ -250,7 +252,15 @@ async function enrichProfiles(
 
     return {
       age: row.age,
-      availableDates: row.available_dates,
+      availableDates: [
+        ...new Set([
+          ...row.available_dates,
+          ...recurringAvailableDates(normalizeWeeklyAvailability(row.weekly_availability)),
+        ]),
+      ].sort(),
+      weeklyAvailability: normalizeWeeklyAvailability(row.weekly_availability),
+      commonSongCount: commonSongs.get(row.id)?.song_count ?? 0,
+      commonSongTitles: commonSongs.get(row.id)?.titles ?? [],
       availabilityPlaces: profileAvailabilityPlaces(row.availability_places),
       bio: row.bio,
       city: row.city,

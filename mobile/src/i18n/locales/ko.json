@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "더 촉각적인 인터페이스와 재즈 블루부터 보르도까지 15가지 색상 테마.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "새로워진 온보딩, 레벨 약어 표기, 알토와 테너 색소폰을 독립 악기로.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "월간 요금제만 제공: 고급 필터와 운영 자동화가 모두에게 무료가 됩니다.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "AMR 회원: 워크숍은 항상 무료, 10월부터 2027년 1월 말까지 Premium 무료 제공.",
   "Thème de couleurs": "색상 테마",
   "Détails": "상세",
   "Titre, date et heure du SOS.": "SOS 제목, 날짜, 시간.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "패스키를 업데이트하지 못했습니다. 다시 시도해 주세요.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "패스키 로그인에 실패했습니다. 다른 방법을 사용하거나 다시 시도해 주세요.",
   "Se connecter avec une clé d’accès": "패스키로 로그인",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "iPhone에서는 계정 설정에서 패스키를 만들어 비밀번호 없이 로그인할 수 있습니다."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "iPhone에서는 계정 설정에서 패스키를 만들어 비밀번호 없이 로그인할 수 있습니다.",
+  "Aucun solo défini": "지정된 솔로 없음",
+  "Disponibilités récurrentes": "반복 가능 시간",
+  "Chaque semaine, aux mêmes horaires.": "매주 같은 시간에 반복됩니다.",
+  "Tes disponibilités récurrentes restent actives.": "반복 가능 시간은 계속 적용됩니다.",
+  "Qui voit ton rôle dans cette école ?": "이 학교에서의 역할을 누가 볼 수 있나요?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "학교 이름은 모든 사람에게 공개됩니다. 이 설정은 역할과 소속 세부 정보에 적용됩니다.",
+  "Ce groupe est lié à un atelier de ton école.": "이 그룹은 학교 워크숍과 연결되어 있습니다.",
+  "Toute la journée": "하루 종일"
 }

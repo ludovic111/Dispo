@@ -14,6 +14,7 @@ import {
   hasInvalidAvailabilityTimeSlots,
   isValidAvailabilityTimeSlot,
   localTimeValue,
+  normalizeWeeklyAvailability,
   normalizeAvailableDates,
   normalizeAvailabilityTimeSlots,
   profileAvailabilitySignature,
@@ -24,6 +25,7 @@ import {
 } from './profile-availability-model';
 import { fetchProfileAvailability, saveProfileAvailability } from './profile-edit-repository';
 import { profileKeys } from './profile-queries';
+import { WeeklyAvailabilityEditor } from './weekly-availability-editor';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
@@ -52,7 +54,7 @@ export function ProfileAvailabilityScreen() {
   const [errorText, setErrorText] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(Platform.OS === 'ios');
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const saved = query.data ?? { dates: [], timeSlots: {} };
+  const saved = query.data ?? { dates: [], timeSlots: {}, weekly: {} };
   const availability = draft ?? saved;
   const dates = availability.dates;
   const invalidSlots = hasInvalidAvailabilityTimeSlots(availability);
@@ -64,6 +66,7 @@ export function ProfileAvailabilityScreen() {
     const nextDates = toggleAvailableDate(dates, day);
     setCalendarDate(date);
     setDraft({
+      ...availability,
       dates: nextDates,
       timeSlots: normalizeAvailabilityTimeSlots(availability.timeSlots, nextDates),
     });
@@ -74,6 +77,7 @@ export function ProfileAvailabilityScreen() {
     const otherDays = { ...availability.timeSlots };
     delete otherDays[day];
     setDraft({
+      ...availability,
       dates,
       timeSlots: slots.length ? { ...otherDays, [day]: slots } : otherDays,
     });
@@ -87,7 +91,7 @@ export function ProfileAvailabilityScreen() {
       [
         { style: 'cancel', text: t('Annuler') },
         {
-          onPress: () => setDraft({ dates: [], timeSlots: {} }),
+          onPress: () => setDraft({ dates: [], timeSlots: {}, weekly: {} }),
           style: 'destructive',
           text: t('Tout retirer'),
         },
@@ -104,14 +108,16 @@ export function ProfileAvailabilityScreen() {
         return;
       }
       const normalized = {
+        weekly: normalizeWeeklyAvailability(availability.weekly),
         dates: normalizeAvailableDates(dates),
         timeSlots: normalizeAvailabilityTimeSlots(availability.timeSlots, dates),
       };
       await saveProfileAvailability(userId, normalized);
       queryClient.setQueryData(['profile', 'availability', userId], normalized);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: profileKeys.me(userId) }),
-        queryClient.invalidateQueries({ queryKey: profileKeys.discovery(userId) }),
+        queryClient.invalidateQueries({ queryKey: profileKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ['gigs'] }),
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
         queryClient.invalidateQueries({ queryKey: ['profile', 'edit', userId] }),
       ]);
       router.back();
@@ -170,6 +176,13 @@ export function ProfileAvailabilityScreen() {
             </AppText>
           </View>
         ) : null}
+        <WeeklyAvailabilityEditor
+          value={availability.weekly ?? {}}
+          onChange={(weekly) => {
+            setDraft({ ...availability, weekly });
+            setErrorText(null);
+          }}
+        />
         <Card style={styles.card}>
           <View style={styles.headingRow}>
             <View style={[styles.icon, { backgroundColor: tint(palette.jam, 0.09) }]}>
@@ -214,7 +227,9 @@ export function ProfileAvailabilityScreen() {
         </Card>
 
         <SectionHeader
-          {...(dates.length ? { action: { label: t('Tout retirer'), onPress: clearAll } } : {})}
+          {...(dates.length || Object.keys(availability.weekly ?? {}).length
+            ? { action: { label: t('Tout retirer'), onPress: clearAll } }
+            : {})}
           subtitle={
             dates.length === 1
               ? t('1 date cochée')
@@ -340,7 +355,11 @@ export function ProfileAvailabilityScreen() {
           ) : (
             <EmptyState
               icon="moon-outline"
-              message={t('Aucune date cochée — tu apparais comme indisponible.')}
+              message={
+                Object.keys(availability.weekly ?? {}).length
+                  ? t('Tes disponibilités récurrentes restent actives.')
+                  : t('Aucune date cochée — tu apparais comme indisponible.')
+              }
               title={t("Aucune date pour l'instant")}
             />
           )}

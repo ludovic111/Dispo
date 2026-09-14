@@ -21,7 +21,6 @@ export const patchNotes: readonly PatchNote[] = [
       'Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.',
       'Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.',
       'Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.',
-      'Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.',
     ],
   },
   {

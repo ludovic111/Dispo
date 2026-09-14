@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "Un’interfaccia più tattile e quindici temi di colore, dal blu jazz al bordeaux.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "Un onboarding ripensato, livelli abbreviati e sax contralto e tenore come strumenti a sé.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "Solo formule mensili: filtri avanzati e automazione dell’organizzazione diventano gratuiti per tutti.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "Membri AMR: laboratori sempre gratuiti e Premium in regalo da ottobre a fine gennaio 2027.",
   "Thème de couleurs": "Tema di colore",
   "Détails": "Dettagli",
   "Titre, date et heure du SOS.": "Titolo, data e ora del SOS.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "Impossibile aggiornare le passkey. Riprova.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "Accesso con passkey non riuscito. Usa un altro metodo o riprova.",
   "Se connecter avec une clé d’accès": "Accedi con una passkey",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "Su iPhone, crea una passkey nelle impostazioni dell’account per accedere senza password."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "Su iPhone, crea una passkey nelle impostazioni dell’account per accedere senza password.",
+  "Aucun solo défini": "Nessun assolo definito",
+  "Disponibilités récurrentes": "Disponibilità ricorrenti",
+  "Chaque semaine, aux mêmes horaires.": "Ogni settimana, agli stessi orari.",
+  "Tes disponibilités récurrentes restent actives.": "Le tue disponibilità ricorrenti restano attive.",
+  "Qui voit ton rôle dans cette école ?": "Chi vede il tuo ruolo in questa scuola?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Il nome della tua scuola è visibile a tutti. Questa impostazione riguarda il tuo ruolo e i dettagli della tua affiliazione.",
+  "Ce groupe est lié à un atelier de ton école.": "Questo gruppo è collegato a un laboratorio della tua scuola.",
+  "Toute la journée": "Tutto il giorno"
 }

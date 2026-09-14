@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "A more tactile interface and fifteen colour themes, from jazz blue to burgundy.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "A redesigned onboarding, abbreviated levels, and alto and tenor saxophones as instruments in their own right.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "Monthly plans only: advanced filters and organisation automation are now free for everyone.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "AMR members: workshops always free, and Premium offered from October to the end of January 2027.",
   "Thème de couleurs": "Colour theme",
   "Détails": "Details",
   "Titre, date et heure du SOS.": "Title, date and time of the SOS.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "Could not update passkeys. Try again.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "Passkey sign-in failed. Use another method or try again.",
   "Se connecter avec une clé d’accès": "Sign in with a passkey",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "On iPhone, create a passkey in account settings to sign in without a password."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "On iPhone, create a passkey in account settings to sign in without a password.",
+  "Aucun solo défini": "No solos defined",
+  "Disponibilités récurrentes": "Recurring availability",
+  "Chaque semaine, aux mêmes horaires.": "Every week, at the same times.",
+  "Tes disponibilités récurrentes restent actives.": "Your recurring availability remains active.",
+  "Qui voit ton rôle dans cette école ?": "Who can see your role at this school?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Your school name is visible to everyone. This setting applies to your role and membership details.",
+  "Ce groupe est lié à un atelier de ton école.": "This group is linked to a workshop at your school.",
+  "Toute la journée": "All day"
 }

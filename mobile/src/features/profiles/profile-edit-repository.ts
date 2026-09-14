@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 
 import {
+  normalizeWeeklyAvailability,
   normalizeAvailableDates,
   normalizeAvailabilityTimeSlots,
   normalizeProfileAvailability,
@@ -27,12 +28,15 @@ type EditProjection = Pick<
   | 'socials'
 >;
 
-type AvailabilityProjection = Pick<ProfileRow, 'availability_time_slots' | 'available_dates'>;
+type AvailabilityProjection = Pick<
+  ProfileRow,
+  'availability_time_slots' | 'available_dates' | 'weekly_availability'
+>;
 
 export async function fetchProfileAvailability(userId: string): Promise<ProfileAvailability> {
   const { data, error } = await getSupabaseClient()
     .from('profiles')
-    .select('available_dates,availability_time_slots')
+    .select('available_dates,availability_time_slots,weekly_availability')
     .eq('id', userId)
     .single();
   if (error) throw error;
@@ -40,6 +44,7 @@ export async function fetchProfileAvailability(userId: string): Promise<ProfileA
   const dates = normalizeAvailableDates(row.available_dates);
   return {
     dates,
+    weekly: normalizeWeeklyAvailability(row.weekly_availability),
     timeSlots: normalizeAvailabilityTimeSlots(row.availability_time_slots, dates),
   };
 }
@@ -54,6 +59,7 @@ export async function saveProfileAvailability(
     .update({
       availability_time_slots: normalized.timeSlots as unknown as Json,
       available_dates: normalized.dates,
+      weekly_availability: normalized.weekly as unknown as Json,
     })
     .eq('id', userId)
     .select('id')

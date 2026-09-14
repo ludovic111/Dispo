@@ -65,6 +65,9 @@ export function CompactProfileCard({
         accessibleInstruments,
         place,
         relation && t(relation),
+        profile.commonSongCount
+          ? t('{{count}} morceaux en commun', { count: profile.commonSongCount })
+          : null,
       ]
         .filter(Boolean)
         .join(', ')}
@@ -89,6 +92,13 @@ export function CompactProfileCard({
             <AppText color={palette.muted} numberOfLines={1} variant="caption">
               {place}
             </AppText>
+            {profile.commonSongCount ? (
+              <AppText color={palette.electric} variant="caption">
+                {profile.commonSongCount === 1
+                  ? t('1 morceau en commun')
+                  : t('{{count}} morceaux en commun', { count: profile.commonSongCount })}
+              </AppText>
+            ) : null}
           </View>
           {relation ? (
             <Tag color={relation === 'Ami' ? palette.jam : palette.muted} label={t(relation)} />

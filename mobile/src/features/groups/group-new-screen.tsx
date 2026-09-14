@@ -209,9 +209,7 @@ export function GroupNewScreen() {
           {workshopSchools.length > 0 ? (
             <Card style={styles.section}>
               <SectionHeader
-                subtitle={t(
-                  'Un groupe d’atelier de ton école est gratuit et ne compte pas dans ta formule.',
-                )}
+                subtitle={t('Ce groupe est lié à un atelier de ton école.')}
                 title={t('Type de groupe')}
               />
               <View style={styles.wrap}>

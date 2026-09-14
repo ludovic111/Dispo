@@ -26,6 +26,7 @@ function chain(result: unknown) {
   const builder: Record<string, jest.Mock> = {
     abortSignal: jest.fn(() => result),
     contains: jest.fn(() => builder),
+    or: jest.fn(() => builder),
     eq: jest.fn(() => builder),
     limit: jest.fn(() => builder),
     neq: jest.fn(() => builder),
@@ -94,6 +95,9 @@ describe('ressources du détail événement', () => {
 
     expect(result.guests.map((guest) => guest.musicianId)).toEqual(['guest']);
     expect(result.availableInvitees.map((profile) => profile.id)).toEqual(['candidate']);
+    expect(profiles.or).toHaveBeenCalledWith(
+      'available_dates.cs.{2026-09-12},weekly_availability.cs.{"6":[]}',
+    );
     expect(result.linkedGigs.map((gig) => gig.id)).toEqual(['gig-1']);
     expect(mockedFetchGig).toHaveBeenCalledWith('gig-1', 'leader', signal);
   });

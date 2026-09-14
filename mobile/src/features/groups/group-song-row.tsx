@@ -405,7 +405,7 @@ function SongRowSurface({
 
 /**
  * Ligne de morceau (répertoire, setlist, répertoire personnel).
- * Une seule action visible à droite : l'écoute, qui ouvre la feuille du morceau.
+ * Actions d'écoute et, dans les événements, d'accès direct à l'ordre des solos.
  * `trailing` accueille un accessoire (statut, décision) fourni par l'écran appelant.
  */
 export function GroupSongRow({
@@ -416,6 +416,7 @@ export function GroupSongRow({
   showDisclosure = true,
   showListenAction = true,
   showSoloAction = true,
+  showSoloButton = false,
   song,
   trailing,
 }: {
@@ -426,6 +427,7 @@ export function GroupSongRow({
   showDisclosure?: boolean;
   showListenAction?: boolean;
   showSoloAction?: boolean;
+  showSoloButton?: boolean;
   song: GroupSong;
   trailing?: ReactNode;
 }) {
@@ -434,6 +436,7 @@ export function GroupSongRow({
   const reduceMotion = useReducedMotion();
   const hideCovers = useHideAlbumCovers();
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [solosVisible, setSolosVisible] = useState(false);
   const promotion = hideCovers ? null : appleArtworkPromotion(song);
   const showSoloOrder = showSoloAction && songSoloOrder(song).length > 0;
   const metadata = [
@@ -478,6 +481,15 @@ export function GroupSongRow({
             ) : null}
           </Pressable>
           {trailing}
+          {showSoloButton ? (
+            <IconButton
+              accessibilityLabel={`${t('Ordre des solos')} · ${song.title}`}
+              icon="list-outline"
+              iconColor={palette.electric}
+              onPress={() => setSolosVisible(true)}
+              variant="plain"
+            />
+          ) : null}
           {showListenAction ? (
             <IconButton
               accessibilityLabel={t('Écouter ce morceau')}
@@ -495,6 +507,20 @@ export function GroupSongRow({
           </View>
         ) : null}
       </SongRowSurface>
+      {showSoloButton ? (
+        <BottomSheet
+          onClose={() => setSolosVisible(false)}
+          title={song.title}
+          visible={solosVisible}
+        >
+          <ScrollView contentContainerStyle={styles.sheetContent}>
+            <SoloOrderList members={members} song={song} />
+            {!songSoloOrder(song).length ? (
+              <AppText color={palette.muted}>{t('Aucun solo défini')}</AppText>
+            ) : null}
+          </ScrollView>
+        </BottomSheet>
+      ) : null}
       {showListenAction ? (
         <SongListenSheet
           members={members}

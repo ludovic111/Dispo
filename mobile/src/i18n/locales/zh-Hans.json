@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "更有质感的界面，以及从爵士蓝到酒红的十五种配色主题。",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "重新设计的引导流程、简写的水平标签，以及中音与次中音萨克斯各自独立。",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "仅保留月付方案：高级筛选与组织自动化对所有人免费。",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "AMR 成员：工作坊永久免费，且 10 月至 2027 年 1 月底赠送 Premium。",
   "Thème de couleurs": "配色主题",
   "Détails": "详情",
   "Titre, date et heure du SOS.": "SOS 的标题、日期和时间。",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "无法更新通行密钥，请重试。",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "通行密钥登录失败，请使用其他方式或重试。",
   "Se connecter avec une clé d’accès": "使用通行密钥登录",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "在 iPhone 的账户设置中创建通行密钥，即可无需密码登录。"
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "在 iPhone 的账户设置中创建通行密钥，即可无需密码登录。",
+  "Aucun solo défini": "尚未设置独奏",
+  "Disponibilités récurrentes": "重复空闲时间",
+  "Chaque semaine, aux mêmes horaires.": "每周同一时间。",
+  "Tes disponibilités récurrentes restent actives.": "你的重复空闲时间仍然有效。",
+  "Qui voit ton rôle dans cette école ?": "谁能看到你在这所学校的身份？",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "学校名称对所有人可见。此设置适用于你的身份和所属详情。",
+  "Ce groupe est lié à un atelier de ton école.": "此群组关联你学校的工作坊。",
+  "Toute la journée": "全天"
 }

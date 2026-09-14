@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Platform, StyleSheet, View } from 'react-native';
 
 import { subscriptionPlans } from './premium-model';
-import { SchoolGrantCard } from './school-grant-card';
 import { useSubscription } from './subscription-queries';
 import {
   loadStoreProducts,
@@ -93,7 +92,6 @@ export function SubscriptionPlans() {
         subtitle={t('Rejoindre des groupes, échanger et répondre aux SOS reste gratuit.')}
         title={t('Choisis ta formule')}
       />
-      {subscription.data ? <SchoolGrantCard subscription={subscription.data} /> : null}
       {subscription.data?.tier !== 'free' && subscription.data && !grantActive ? (
         <Card>
           <AppText variant="headline">

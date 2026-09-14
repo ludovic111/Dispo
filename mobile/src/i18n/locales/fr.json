@@ -2659,7 +2659,6 @@
   "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.": "Une interface plus tactile et quinze thèmes de couleurs, du bleu jazz au bordeaux.",
   "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.": "Un onboarding repensé, les niveaux en abrégé, et les saxophones alto et ténor à part entière.",
   "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.": "Formules mensuelles uniquement : filtres avancés et automatisation de l’organisation deviennent gratuits pour tous.",
-  "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.": "Membres AMR : ateliers toujours gratuits, et Premium offert d’octobre à fin janvier 2027.",
   "Thème de couleurs": "Thème de couleurs",
   "Détails": "Détails",
   "Titre, date et heure du SOS.": "Titre, date et heure du SOS.",
@@ -2692,5 +2691,13 @@
   "Impossible de mettre à jour les clés d’accès. Réessaie.": "Impossible de mettre à jour les clés d’accès. Réessaie.",
   "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.": "Connexion par clé d’accès impossible. Utilise une autre méthode ou réessaie.",
   "Se connecter avec une clé d’accès": "Se connecter avec une clé d’accès",
-  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe."
+  "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.": "Sur iPhone, crée une clé d’accès dans les réglages du compte pour te connecter sans mot de passe.",
+  "Aucun solo défini": "Aucun solo défini",
+  "Disponibilités récurrentes": "Disponibilités récurrentes",
+  "Chaque semaine, aux mêmes horaires.": "Chaque semaine, aux mêmes horaires.",
+  "Tes disponibilités récurrentes restent actives.": "Tes disponibilités récurrentes restent actives.",
+  "Qui voit ton rôle dans cette école ?": "Qui voit ton rôle dans cette école ?",
+  "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.",
+  "Ce groupe est lié à un atelier de ton école.": "Ce groupe est lié à un atelier de ton école.",
+  "Toute la journée": "Toute la journée"
 }

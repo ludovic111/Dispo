@@ -77,7 +77,11 @@ export function RepertoireAddScreen() {
       return id;
     },
     onSuccess: async (id) => {
-      await client.invalidateQueries({ queryKey: ['personal-repertoire'] });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['personal-repertoire'] }),
+        client.invalidateQueries({ queryKey: ['profiles'] }),
+        client.invalidateQueries({ queryKey: ['gigs'] }),
+      ]);
       router.replace({
         pathname: '/repertoire/songs/[songId]',
         params: { songId: id, profileId: session?.user.id },

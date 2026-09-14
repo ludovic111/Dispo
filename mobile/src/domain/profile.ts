@@ -1,3 +1,4 @@
+import type { WeeklyAvailability } from '@/features/profiles/profile-availability-model';
 export interface SchoolAffiliation {
   id: string;
   logoUrl: string | null;
@@ -31,6 +32,9 @@ export interface ProfileSummary {
   age?: number | null;
   availabilityPlaces?: ProfileAvailabilityPlace[];
   availableDates: string[];
+  weeklyAvailability?: WeeklyAvailability;
+  commonSongCount?: number;
+  commonSongTitles?: string[];
   bio: string;
   city: string | null;
   collaborationCount: number;

@@ -34,7 +34,12 @@ export function usePersonalRepertoireActions() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
   const client = useQueryClient();
-  const refresh = () => client.invalidateQueries({ queryKey: ['personal-repertoire', userId] });
+  const refresh = () =>
+    Promise.all([
+      client.invalidateQueries({ queryKey: ['personal-repertoire', userId] }),
+      client.invalidateQueries({ queryKey: ['profiles'] }),
+      client.invalidateQueries({ queryKey: ['gigs'] }),
+    ]);
   const visibility = useMutation({
     mutationFn: (isPublic: boolean) => setPersonalRepertoireVisibility(userId, isPublic),
     onSuccess: refresh,

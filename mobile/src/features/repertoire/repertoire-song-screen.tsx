@@ -45,7 +45,11 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
     mutationFn: () =>
       savePersonalArrangement(songId, personalArrangementChanges(original!, draft!)),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ['personal-repertoire'] });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['personal-repertoire'] }),
+        client.invalidateQueries({ queryKey: ['profiles'] }),
+        client.invalidateQueries({ queryKey: ['gigs'] }),
+      ]);
       setDraft(null);
       setOriginal(null);
     },

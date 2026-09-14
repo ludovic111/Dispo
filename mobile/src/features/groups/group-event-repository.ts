@@ -98,7 +98,9 @@ async function fetchAvailableInvitees(
   const query = getSupabaseClient()
     .from('profiles')
     .select('id,name,photo_url,instruments,available_dates')
-    .contains('available_dates', [day])
+    .or(
+      `available_dates.cs.{${day}},weekly_availability.cs.{"${new Date(`${day}T12:00:00`).getDay()}":[]}`,
+    )
     .neq('name', '')
     .order('name')
     .limit(50);

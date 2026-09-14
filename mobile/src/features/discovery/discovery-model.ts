@@ -340,7 +340,10 @@ export function profileAvailability(
 
 function isAvailableOn(profile: ProfileSummary, date: Date): boolean {
   const wanted = dateKey(date);
-  return profile.availableDates.some((value) => value.slice(0, 10) === wanted);
+  return (
+    profile.availableDates.some((value) => value.slice(0, 10) === wanted) ||
+    Object.hasOwn(profile.weeklyAvailability ?? {}, String(date.getDay()))
+  );
 }
 
 function availabilityPlaceCovers(
@@ -574,6 +577,8 @@ export function rankProfiles(
   };
   const relationDifference = relationRank(right) - relationRank(left);
   if (relationDifference !== 0) return relationDifference;
+  const songsDifference = (right.commonSongCount ?? 0) - (left.commonSongCount ?? 0);
+  if (songsDifference !== 0) return songsDifference;
   const levelDifference = (levelRank[right.level] ?? 0) - (levelRank[left.level] ?? 0);
   if (levelDifference !== 0) return levelDifference;
   const urgencyDifference =
