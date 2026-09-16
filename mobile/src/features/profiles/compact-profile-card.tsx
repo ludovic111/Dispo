@@ -17,11 +17,13 @@ import { useDispoTheme } from '@/theme/theme-context';
 import { pressedStyle, spacing } from '@/theme/tokens';
 
 export function CompactProfileCard({
+  filterMatchPercent,
   profile,
   onPress,
   primarySchool,
   referenceProfile,
 }: {
+  filterMatchPercent?: number | null | undefined;
   profile: ProfileSummary;
   onPress: () => void;
   primarySchool?: SchoolAffiliation | null | undefined;
@@ -65,8 +67,17 @@ export function CompactProfileCard({
         accessibleInstruments,
         place,
         relation && t(relation),
-        profile.commonSongCount
-          ? t('{{count}} morceaux en commun', { count: profile.commonSongCount })
+        profile.repertoireOverlapPercent != null
+          ? (profile.commonSongCount === 1
+              ? t('1 morceau en commun')
+              : t('{{count}} morceaux en commun', { count: profile.commonSongCount ?? 0 })) +
+            ', ' +
+            t('{{percent}} % de répertoire en commun', {
+              percent: profile.repertoireOverlapPercent,
+            })
+          : null,
+        filterMatchPercent != null
+          ? t('{{percent}} % match', { percent: filterMatchPercent })
           : null,
       ]
         .filter(Boolean)
@@ -92,11 +103,17 @@ export function CompactProfileCard({
             <AppText color={palette.muted} numberOfLines={1} variant="caption">
               {place}
             </AppText>
-            {profile.commonSongCount ? (
+            {profile.repertoireOverlapPercent != null ? (
               <AppText color={palette.electric} variant="caption">
                 {profile.commonSongCount === 1
                   ? t('1 morceau en commun')
-                  : t('{{count}} morceaux en commun', { count: profile.commonSongCount })}
+                  : t('{{count}} morceaux en commun', { count: profile.commonSongCount ?? 0 })}{' '}
+                · {profile.repertoireOverlapPercent} %
+              </AppText>
+            ) : null}
+            {filterMatchPercent != null ? (
+              <AppText color={palette.muted} variant="caption">
+                {t('{{percent}} % match', { percent: filterMatchPercent })}
               </AppText>
             ) : null}
           </View>

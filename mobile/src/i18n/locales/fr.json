@@ -299,7 +299,6 @@
   "Belgique": "Belgique",
   "BÊTA": "BÊTA",
   "Bêta — répétitions, remplacements et pros": "Bêta — répétitions, remplacements et pros",
-  "Bien notés": "Bien notés",
   "Bio": "Bio",
   "Bloquées dans Réglages": "Bloquées dans Réglages",
   "Bloquer": "Bloquer",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "Qui voit ton rôle dans cette école ?",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.",
   "Ce groupe est lié à un atelier de ton école.": "Ce groupe est lié à un atelier de ton école.",
-  "Toute la journée": "Toute la journée"
+  "Toute la journée": "Toute la journée",
+  "Choisir": "Choisir",
+  "{{count}} sélectionné(s)": "{{count}} sélectionné(s)",
+  "Tout effacer": "Tout effacer",
+  "Morceaux en commun": "Morceaux en commun",
+  "Match minimum": "Match minimum",
+  "Date ponctuelle": "Date ponctuelle",
+  "Disponibilité récurrente": "Disponibilité récurrente",
+  "Mois précédent": "Mois précédent",
+  "Mois suivant": "Mois suivant",
+  "{{percent}} % de répertoire en commun": "{{percent}} % de répertoire en commun",
+  "{{percent}} % match": "{{percent}} % match",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "Sélectionne un jour pour consulter ou modifier tes disponibilités.",
+  "Retirer cette date": "Retirer cette date",
+  "Ajouter cette date": "Ajouter cette date"
 }

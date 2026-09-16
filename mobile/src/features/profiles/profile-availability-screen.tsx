@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
+import { AvailabilityCalendar, availabilityForDay } from './availability-calendar';
 import { NativeDatePartField } from './native-date-part-field';
 import {
   availableDayKey,
@@ -40,7 +40,7 @@ import { elevation, keyStyle, minimumTouchTarget, radii, spacing, tint } from '@
 export function ProfileAvailabilityScreen() {
   const { session } = useAuth();
   const userId = session?.user.id ?? '';
-  const { dark, palette } = useDispoTheme();
+  const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const queryClient = useQueryClient();
@@ -52,11 +52,12 @@ export function ProfileAvailabilityScreen() {
   const [draft, setDraft] = useState<ProfileAvailability | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(Platform.OS === 'ios');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const saved = query.data ?? { dates: [], timeSlots: {}, weekly: {} };
   const availability = draft ?? saved;
   const dates = availability.dates;
+  const selectedDay = availableDayKey(calendarDate);
+  const selectedAvailability = availabilityForDay(availability, selectedDay);
   const invalidSlots = hasInvalidAvailabilityTimeSlots(availability);
   const hasUnsavedChanges =
     draft !== null && profileAvailabilitySignature(draft) !== profileAvailabilitySignature(saved);
@@ -190,40 +191,32 @@ export function ProfileAvailabilityScreen() {
             </View>
             <View style={styles.flex}>
               <SectionHeader
-                subtitle={t(
-                  'Choisis les jours où tu peux dépanner. Pour en retirer un, touche-le dans la liste.',
-                )}
+                subtitle={t('Sélectionne un jour pour consulter ou modifier tes disponibilités.')}
                 title={t('Dates de disponibilité')}
               />
             </View>
           </View>
 
-          {Platform.OS === 'ios' || calendarVisible ? (
-            <DateTimePicker
-              accentColor={palette.electric}
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              minimumDate={new Date()}
-              mode="date"
-              onDismiss={() => {
-                if (Platform.OS === 'android') setCalendarVisible(false);
-              }}
-              onValueChange={(_event, date) => {
-                if (Platform.OS === 'android') setCalendarVisible(false);
-                updateDay(date);
-              }}
-              textColor={palette.text}
-              themeVariant={dark ? 'dark' : 'light'}
-              value={calendarDate}
-            />
-          ) : (
-            <DispoButton
-              icon="calendar-outline"
-              onPress={() => setCalendarVisible(true)}
-              variant="secondary"
-            >
-              {t('Ajouter ou retirer une date')}
-            </DispoButton>
-          )}
+          <AvailabilityCalendar
+            availability={availability}
+            selectedDay={selectedDay}
+            onSelect={(day) => setCalendarDate(new Date(`${day}T12:00:00`))}
+          />
+          <DispoButton onPress={() => updateDay(calendarDate)} variant="secondary">
+            {dates.includes(selectedDay) ? t('Retirer cette date') : t('Ajouter cette date')}
+          </DispoButton>
+          {selectedAvailability.kind === 'weekly' ? (
+            <View style={styles.card}>
+              <AppText color={palette.muted}>{t('Disponibilité récurrente')}</AppText>
+              <AppText>
+                {selectedAvailability.slots.length
+                  ? selectedAvailability.slots
+                      .map((slot) => `${slot.start}–${slot.end}`)
+                      .join(' · ')
+                  : t('Toute la journée')}
+              </AppText>
+            </View>
+          ) : null}
         </Card>
 
         <SectionHeader
@@ -235,12 +228,12 @@ export function ProfileAvailabilityScreen() {
               ? t('1 date cochée')
               : t('{{count}} dates cochées', { count: dates.length })
           }
-          title={t('Jours sélectionnés')}
+          title={new Intl.DateTimeFormat(locale, { dateStyle: 'full' }).format(calendarDate)}
         />
 
         <View style={styles.dateCards}>
-          {dates.length ? (
-            dates.map((date) => {
+          {dates.includes(selectedDay) ? (
+            [selectedDay].map((date) => {
               const slots = availability.timeSlots[date] ?? [];
               return (
                 <Card key={date} padding={0}>
@@ -352,15 +345,17 @@ export function ProfileAvailabilityScreen() {
                 </Card>
               );
             })
-          ) : (
+          ) : selectedAvailability.kind === 'weekly' ? null : (
             <EmptyState
               icon="moon-outline"
               message={
-                Object.keys(availability.weekly ?? {}).length
-                  ? t('Tes disponibilités récurrentes restent actives.')
-                  : t('Aucune date cochée — tu apparais comme indisponible.')
+                dates.length
+                  ? t('Sélectionne un jour pour consulter ou modifier tes disponibilités.')
+                  : Object.keys(availability.weekly ?? {}).length
+                    ? t('Tes disponibilités récurrentes restent actives.')
+                    : t('Aucune date cochée — tu apparais comme indisponible.')
               }
-              title={t("Aucune date pour l'instant")}
+              title={t('Indisponible')}
             />
           )}
         </View>

@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
-import { ChoiceChip } from '@/components/ui/choice-chip';
+import { OptionSelector } from '@/components/ui/option-selector';
 import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { useSchoolDirectory } from '@/features/schools/school-queries';
@@ -74,22 +74,20 @@ export function GigSchoolField({
           {t('Réessayer')}
         </DispoButton>
       ) : (
-        <View style={styles.choices}>
-          {(schools.data?.pages.flatMap((page) => page.items) ?? []).map((school) => (
-            <ChoiceChip
-              key={school.id}
-              label={school.name}
-              selected={selected.includes(school.id)}
-              onPress={() =>
-                onChange(
-                  selected.includes(school.id)
-                    ? selected.filter((id) => id !== school.id)
-                    : [...selected, school.id],
-                )
-              }
-            />
-          ))}
-        </View>
+        <OptionSelector
+          label={t('Écoles de musique recherchées')}
+          value={selected}
+          onChange={onChange}
+          sections={[
+            {
+              label: '',
+              options: (schools.data?.pages.flatMap((page) => page.items) ?? []).map((school) => ({
+                value: school.id,
+                label: school.name,
+              })),
+            },
+          ]}
+        />
       )}
       {selected.length ? (
         <DispoButton onPress={() => onChange([])} size="compact" variant="ghost">

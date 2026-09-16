@@ -2,16 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { useDiscoveryState } from './discovery-context';
 
 import { AppText } from '@/components/ui/app-text';
-import { CountBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
+import { OptionSelector } from '@/components/ui/option-selector';
 import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
@@ -132,14 +131,6 @@ export function FilterScreen() {
   const schoolDirectory = useSchoolDirectory();
   const { palette } = useDispoTheme();
   const { t } = useTranslation();
-  const [expandedGenreFamilies, setExpandedGenreFamilies] = useState<Set<string>>(
-    () =>
-      new Set(
-        GIG_GENRE_GROUPS.filter((group) =>
-          group.values.some((genre) => filters.genres.includes(genre)),
-        ).map((group) => group.label),
-      ),
-  );
   const schools = schoolDirectory.data?.pages.flatMap((page) => page.items) ?? [];
   const placeDraft: PostalPlaceDraft = {
     city: filters.placeCity,
@@ -216,94 +207,25 @@ export function FilterScreen() {
               onPress={() => setFilters({ ...filters, instruments: [] })}
             />
           ) : null}
-          {instrumentCategories.map((category) => (
-            <Card key={category.label} style={styles.card}>
-              <View style={styles.categoryTitle}>
-                <Ionicons color={palette.bronze} name={category.icon} size={16} />
-                <AppText variant="subheadline" weight="semibold">
-                  {t(category.label)}
-                </AppText>
-              </View>
-              <View style={styles.choices}>
-                {category.instruments.map((instrument) => (
-                  <ChoiceChip
-                    key={instrument}
-                    label={t(instrument)}
-                    onPress={() =>
-                      setFilters({
-                        ...filters,
-                        instruments: toggle(filters.instruments, instrument),
-                      })
-                    }
-                    selected={filters.instruments.includes(instrument)}
-                  />
-                ))}
-              </View>
-            </Card>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader
-            subtitle={filters.genres.length ? `${filters.genres.length}` : t('Tous')}
-            title={t('Styles')}
+          <OptionSelector
+            label={t('Instruments')}
+            value={filters.instruments}
+            onChange={(instruments) => setFilters({ ...filters, instruments })}
+            sections={instrumentCategories.map((category) => ({
+              label: t(category.label),
+              options: category.instruments.map((value) => ({ value, label: t(value) })),
+            }))}
           />
-          {filters.genres.length > 0 ? (
-            <ClearSelectionButton
-              label={t('Effacer les styles')}
-              onPress={() => setFilters({ ...filters, genres: [] })}
-            />
-          ) : null}
-          {GIG_GENRE_GROUPS.map((group) => {
-            const expanded = expandedGenreFamilies.has(group.label);
-            const selectedCount = group.values.filter((genre) =>
-              filters.genres.includes(genre),
-            ).length;
-            return (
-              <Card key={group.label} style={styles.card}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded }}
-                  onPress={() =>
-                    setExpandedGenreFamilies((current) => {
-                      const next = new Set(current);
-                      if (next.has(group.label)) next.delete(group.label);
-                      else next.add(group.label);
-                      return next;
-                    })
-                  }
-                  style={({ pressed }) => [styles.genreHeader, pressed && pressedStyle]}
-                >
-                  <AppText style={styles.flex} variant="subheadline" weight="semibold">
-                    {t(group.label)}
-                  </AppText>
-                  <View style={styles.genreHeaderMeta}>
-                    <CountBadge count={selectedCount} />
-                    <Ionicons
-                      color={palette.muted}
-                      name={expanded ? 'chevron-up' : 'chevron-down'}
-                      size={16}
-                    />
-                  </View>
-                </Pressable>
-                {expanded ? (
-                  <View style={styles.choices}>
-                    {group.values.map((genre) => (
-                      <ChoiceChip
-                        key={genre}
-                        label={t(genre)}
-                        onPress={() =>
-                          setFilters({ ...filters, genres: toggle(filters.genres, genre) })
-                        }
-                        selected={filters.genres.includes(genre)}
-                      />
-                    ))}
-                  </View>
-                ) : null}
-              </Card>
-            );
-          })}
         </View>
+        <OptionSelector
+          label={t('Styles')}
+          value={filters.genres}
+          onChange={(genres) => setFilters({ ...filters, genres })}
+          sections={GIG_GENRE_GROUPS.map((group) => ({
+            label: t(group.label),
+            options: group.values.map((value) => ({ value, label: t(value) })),
+          }))}
+        />
 
         <View style={styles.section}>
           <SectionHeader title={t('Où')} />
@@ -409,21 +331,17 @@ export function FilterScreen() {
               </View>
             ) : schools.length > 0 ? (
               <>
-                <View style={styles.choices}>
-                  {schools.map((school) => (
-                    <ChoiceChip
-                      key={school.id}
-                      label={school.name}
-                      onPress={() =>
-                        setFilters({
-                          ...filters,
-                          schoolIds: toggle(filters.schoolIds, school.id),
-                        })
-                      }
-                      selected={filters.schoolIds.includes(school.id)}
-                    />
-                  ))}
-                </View>
+                <OptionSelector
+                  label={t('Écoles de musique')}
+                  value={filters.schoolIds}
+                  onChange={(schoolIds) => setFilters({ ...filters, schoolIds })}
+                  sections={[
+                    {
+                      label: '',
+                      options: schools.map((school) => ({ value: school.id, label: school.name })),
+                    },
+                  ]}
+                />
                 {schoolDirectory.hasNextPage ? (
                   <DispoButton
                     loading={schoolDirectory.isFetchingNextPage}
@@ -465,14 +383,28 @@ export function FilterScreen() {
               />
               <View style={[styles.divider, { backgroundColor: palette.border }]} />
               <FilterSwitch
-                label={t('Bien notés')}
-                onValueChange={(wellRated) => setFilters({ ...filters, wellRated })}
-                value={filters.wellRated}
+                label={t('Morceaux en commun')}
+                onValueChange={(commonRepertoire) => setFilters({ ...filters, commonRepertoire })}
+                value={filters.commonRepertoire}
               />
             </View>
           </Card>
         </View>
 
+        <Card style={styles.card}>
+          <SectionHeader title={t('Match minimum')} subtitle={`${filters.minimumMatchPercent} %`} />
+          <Slider
+            accessibilityLabel={t('Match minimum')}
+            minimumValue={0}
+            maximumValue={100}
+            step={5}
+            value={filters.minimumMatchPercent}
+            onValueChange={(minimumMatchPercent) => setFilters({ ...filters, minimumMatchPercent })}
+            minimumTrackTintColor={palette.electric}
+            maximumTrackTintColor={palette.inset}
+            thumbTintColor={palette.electric}
+          />
+        </Card>
         <DispoButton onPress={() => router.back()}>{t('Voir les résultats')}</DispoButton>
         <DispoButton
           onPress={() => {
@@ -489,7 +421,6 @@ export function FilterScreen() {
 
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
-  categoryTitle: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   content: { gap: spacing.lg, paddingBottom: spacing.xxl, paddingHorizontal: spacing.gutter },
   countryChoices: { flexDirection: 'row', gap: spacing.xs },
@@ -504,14 +435,6 @@ const styles = StyleSheet.create({
   },
   divider: { height: StyleSheet.hairlineWidth },
   flex: { flex: 1 },
-  genreHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'space-between',
-    minHeight: minimumTouchTarget,
-  },
-  genreHeaderMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   inlineAction: { alignSelf: 'flex-start' },
   radiusHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   schoolError: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },

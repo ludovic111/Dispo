@@ -299,7 +299,6 @@
   "Belgique": "Belgio",
   "BÊTA": "BETA",
   "Bêta — répétitions, remplacements et pros": "Beta — prove, sostituzioni e professionisti",
-  "Bien notés": "Ben valutati",
   "Bio": "Bio",
   "Bloquées dans Réglages": "Bloccate nelle Impostazioni",
   "Bloquer": "Blocca",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "Chi vede il tuo ruolo in questa scuola?",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Il nome della tua scuola è visibile a tutti. Questa impostazione riguarda il tuo ruolo e i dettagli della tua affiliazione.",
   "Ce groupe est lié à un atelier de ton école.": "Questo gruppo è collegato a un laboratorio della tua scuola.",
-  "Toute la journée": "Tutto il giorno"
+  "Toute la journée": "Tutto il giorno",
+  "Choisir": "Scegli",
+  "{{count}} sélectionné(s)": "{{count}} selezionati",
+  "Tout effacer": "Cancella tutto",
+  "Morceaux en commun": "Brani in comune",
+  "Match minimum": "Compatibilità minima",
+  "Date ponctuelle": "Data singola",
+  "Disponibilité récurrente": "Disponibilità settimanale",
+  "Mois précédent": "Mese precedente",
+  "Mois suivant": "Mese successivo",
+  "{{percent}} % de répertoire en commun": "{{percent}}% di repertorio in comune",
+  "{{percent}} % match": "{{percent}}% di compatibilità",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "Seleziona un giorno per consultare o modificare la tua disponibilità.",
+  "Retirer cette date": "Rimuovi questa data",
+  "Ajouter cette date": "Aggiungi questa data"
 }

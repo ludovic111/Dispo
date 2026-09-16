@@ -37,6 +37,7 @@ export interface GigSummary {
   fee: number | null;
   filledInstruments: string[];
   genre: string;
+  genres?: string[];
   groupId: string | null;
   hostId: string;
   /** Membre Premium (abonnement ou école) : coche bleue à côté du nom. */
@@ -77,6 +78,7 @@ export interface GigCreateInput {
   feeAmount: string;
   feeMode: FeeMode;
   genre: string;
+  genres?: string[];
   groupId?: string | null;
   hostId: string;
   latitude?: number | null;
@@ -97,6 +99,7 @@ export interface GigInsertPayload {
   event_id: string | null;
   fee: number | null;
   genre: string;
+  genres: string[];
   group_id: string | null;
   host_id: string;
   neighborhood: string;
@@ -258,7 +261,7 @@ function clean(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
 
-function uniqueClean(values: string[]): string[] {
+function uniqueClean(values: readonly string[]): string[] {
   return [...new Set(values.map(clean).filter(Boolean))];
 }
 
@@ -298,6 +301,23 @@ export function defaultGigDate(now = new Date()): { day: string; time: string } 
   return { day: local.toISOString().slice(0, 10), time: '20:00' };
 }
 
+/** Older persisted rows have only `genre`; an explicitly empty list remains invalid. */
+export function gigGenres(gig: { genre: string; genres?: readonly string[] | null }): string[] {
+  return uniqueClean(gig.genres ?? [gig.genre]);
+}
+
+export function gigGenresLabel(
+  gig: { genre: string; genres?: readonly string[] | null },
+  t: (value: string) => string,
+  limit = 2,
+): string {
+  const genres = gigGenres(gig);
+  return [
+    ...genres.slice(0, limit).map(t),
+    ...(genres.length > limit ? [`+${genres.length - limit}`] : []),
+  ].join(' · ');
+}
+
 export function validateGigCreate(input: GigCreateInput, now = new Date()): string[] {
   const errors: string[] = [];
   if (!clean(input.hostId)) errors.push('gig_host_missing');
@@ -305,7 +325,7 @@ export function validateGigCreate(input: GigCreateInput, now = new Date()): stri
   const parsed = new Date(input.date);
   if (Number.isNaN(parsed.getTime()) || parsed.getTime() < now.getTime())
     errors.push('gig_date_invalid');
-  if (!clean(input.genre)) errors.push('gig_genre_missing');
+  if (!gigGenres(input).length) errors.push('gig_genre_missing');
   if (!clean(input.countryCode) || !clean(input.postalCode) || !clean(input.city)) {
     errors.push('gig_public_area_incomplete');
   }
@@ -342,7 +362,8 @@ export function createGigWritePlan(
       description: clean(input.description),
       event_id: clean(input.eventId ?? '') || null,
       fee,
-      genre: clean(input.genre),
+      genre: gigGenres(input)[0]!,
+      genres: gigGenres(input),
       group_id: clean(input.groupId ?? '') || null,
       host_id: clean(input.hostId),
       neighborhood: area,
@@ -510,7 +531,7 @@ export interface GigMatchInfo {
   away: boolean;
   awayIn: string | null;
   commonGenres: string[];
-  commonSongs: { count: number; titles: string[] };
+  commonSongs: { count: number | null; overlapPercent?: number | null; titles: string[] };
   distanceKm: number | null;
   instruments: string[];
   levelOk: boolean;
@@ -567,7 +588,7 @@ export const EMPTY_GIG_MATCH: GigMatchInfo = {
   away: false,
   awayIn: null,
   commonGenres: [],
-  commonSongs: { count: 0, titles: [] },
+  commonSongs: { count: null, overlapPercent: null, titles: [] },
   distanceKm: null,
   instruments: [],
   levelOk: false,
@@ -591,7 +612,8 @@ export function parseGigMatch(value: unknown): GigMatchInfo {
     awayIn: optionalString(value.away_in),
     commonGenres: stringList(value.common_genres),
     commonSongs: {
-      count: typeof songs.count === 'number' ? songs.count : 0,
+      count: typeof songs.count === 'number' ? songs.count : null,
+      overlapPercent: typeof songs.overlap_percent === 'number' ? songs.overlap_percent : null,
       titles: stringList(songs.titles),
     },
     distanceKm: typeof value.distance_km === 'number' ? value.distance_km : null,
@@ -729,14 +751,17 @@ export function gigMatchChips(match: GigMatchInfo, options: GigMatchChipOptions)
   for (const genre of match.commonGenres.slice(0, 3)) {
     chips.push({ key: `genre:${genre}`, label: t(genre), tone: 'info' });
   }
-  if (match.commonSongs.count > 0) {
+  if (match.commonSongs.overlapPercent != null || (match.commonSongs.count ?? 0) > 0) {
     chips.push({
       icon: 'musical-note',
       key: 'songs',
       label:
-        match.commonSongs.count === 1
+        (match.commonSongs.count === 1
           ? t('1 morceau en commun')
-          : t('{{count}} morceaux en commun', { count: match.commonSongs.count }),
+          : t('{{count}} morceaux en commun', { count: match.commonSongs.count ?? 0 })) +
+        (match.commonSongs.overlapPercent != null
+          ? ` · ${match.commonSongs.overlapPercent} %`
+          : ''),
       tone: 'ok',
     });
   }
@@ -923,7 +948,10 @@ function availabilityRank(dates: string[], now: Date): number {
 }
 
 export function matchProfilesToGig(
-  gig: Pick<GigSummary, 'date' | 'genre' | 'hostId' | 'wantedInstruments' | 'wantedSchoolIds'>,
+  gig: Pick<
+    GigSummary,
+    'date' | 'genre' | 'genres' | 'hostId' | 'wantedInstruments' | 'wantedSchoolIds'
+  >,
   profiles: GigMatchProfile[],
   now = new Date(),
 ): GigMatch[] {
@@ -952,8 +980,8 @@ export function matchProfilesToGig(
     .filter((match): match is GigMatch => match !== null)
     .sort((a, b) => {
       if (a.dateConfirmed !== b.dateConfirmed) return a.dateConfirmed ? -1 : 1;
-      const genreA = a.genres.includes(gig.genre);
-      const genreB = b.genres.includes(gig.genre);
+      const genreA = a.genres.some((genre) => gigGenres(gig).includes(genre));
+      const genreB = b.genres.some((genre) => gigGenres(gig).includes(genre));
       if (genreA !== genreB) return genreA ? -1 : 1;
       if (a.relationRank !== b.relationRank) return b.relationRank - a.relationRank;
       const levelA = levelRanks.get(a.level) ?? -1;

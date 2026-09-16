@@ -35,7 +35,6 @@ import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
-import { VuMeter } from '@/components/ui/vu-meter';
 import { useAuth } from '@/features/auth/auth-context';
 import { AddToCalendarButton } from '@/features/calendar/add-to-calendar-button';
 import { groupEventCalendarSourceId, sessionDeepLink } from '@/features/calendar/calendar-sync';
@@ -489,16 +488,12 @@ export function GroupEventDetailScreen({ eventId, groupId }: { eventId: string; 
             subtitle={`${availableMembers.length}/${group.members.length}`}
             title={t('Ta présence')}
           />
-          <VuMeter
-            accessibilityLabel={t('{{count}} présent·es sur {{total}}', {
+          <AppText color={palette.muted} variant="caption">
+            {t('{{count}} présent·es sur {{total}}', {
               count: availableMembers.length,
               total: group.members.length,
             })}
-            label={t('Présences')}
-            segments={Math.min(12, Math.max(4, group.members.length))}
-            tone={lineup === 'complete' ? 'accent' : 'level'}
-            value={availableMembers.length / Math.max(group.members.length, 1)}
-          />
+          </AppText>
           <View style={styles.choiceRow}>
             <View style={styles.flex}>
               <ChoiceChip

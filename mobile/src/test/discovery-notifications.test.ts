@@ -3,6 +3,8 @@ import { describe, expect, it } from '@jest/globals';
 import { relationTags, socialRelationTags, type ProfileSummary } from '@/domain/profile';
 import {
   activeFilterCount,
+  scoreHomeProfile,
+  matchHomeProfiles,
   profilesForScope,
   weekendDays,
   availabilityPlaceForDate,
@@ -223,13 +225,6 @@ describe('filtres de découverte', () => {
     ).toBe(true);
   });
 
-  it('applique le filtre Bien notés à partir de quatre étoiles et trois avis', () => {
-    const filters = { ...defaultDiscoveryFilters, wellRated: true };
-    expect(matchesDiscoveryFilters(profile(), filters, null)).toBe(true);
-    expect(matchesDiscoveryFilters(profile({ ratingAverage: 3.9 }), filters, null)).toBe(false);
-    expect(matchesDiscoveryFilters(profile({ ratingCount: 2 }), filters, null)).toBe(false);
-  });
-
   it('filtre les écoles actives par identifiants réels avec une logique OU', () => {
     const filters = {
       ...defaultDiscoveryFilters,
@@ -443,4 +438,112 @@ it('limits this week to upcoming calendar days and Sunday weekend to Sunday', ()
   const monday = profile({ id: 'monday', availableDates: ['2026-09-14'] });
   expect(profilesForScope([friday, monday], 'thisWeek', now).map((p) => p.id)).toEqual(['friday']);
   expect(weekendDays(new Date('2026-09-13T12:00:00')).map((d) => d.getDate())).toEqual([13]);
+});
+
+describe('Home percentage matching', () => {
+  it('keeps instruments hard even at zero minimum and counts multi-select categories once', () => {
+    const filters = {
+      ...defaultDiscoveryFilters,
+      instruments: ['Basse'],
+      genres: ['Jazz', 'Funk'],
+      minimumMatchPercent: 0,
+    };
+    expect(scoreHomeProfile(profile(), filters, null).eligible).toBe(false);
+    expect(scoreHomeProfile(profile(), { ...filters, instruments: [] }, null)).toEqual({
+      eligible: true,
+      score: 100,
+      matchedCriteria: 1,
+      totalCriteria: 1,
+    });
+  });
+  it('requires half the selected soft criteria by default, and respects a changed threshold', () => {
+    const filters = { ...defaultDiscoveryFilters, genres: ['Jazz', 'Funk'], levels: ['Débutant'] };
+    expect(defaultDiscoveryFilters.minimumMatchPercent).toBe(50);
+    expect(scoreHomeProfile(profile(), filters, null)).toEqual({
+      eligible: true,
+      score: 50,
+      matchedCriteria: 1,
+      totalCriteria: 2,
+    });
+    expect(
+      scoreHomeProfile(profile(), { ...filters, minimumMatchPercent: 55 }, null).eligible,
+    ).toBe(false);
+    expect(
+      scoreHomeProfile(profile({ genres: [] }), { ...filters, minimumMatchPercent: 0 }, null)
+        .eligible,
+    ).toBe(true);
+  });
+  it('does not invent scores with no active soft controls, even with a known home position', () => {
+    expect(scoreHomeProfile(profile(), defaultDiscoveryFilters, profile())).toEqual({
+      eligible: true,
+      score: null,
+      matchedCriteria: 0,
+      totalCriteria: 0,
+    });
+    expect(
+      scoreHomeProfile(profile(), { ...defaultDiscoveryFilters, instruments: ['Piano'] }, null)
+        .score,
+    ).toBeNull();
+  });
+  it('requires accessible common songs and distinguishes unavailable from real zero', () => {
+    const filters = { ...defaultDiscoveryFilters, commonRepertoire: true };
+    expect(
+      scoreHomeProfile(profile({ commonSongCount: 2, repertoireOverlapPercent: 40 }), filters, null)
+        .eligible,
+    ).toBe(true);
+    for (const repertoireOverlapPercent of [null, 0])
+      expect(
+        scoreHomeProfile(profile({ commonSongCount: 0, repertoireOverlapPercent }), filters, null)
+          .eligible,
+      ).toBe(false);
+    expect(
+      scoreHomeProfile(
+        profile({ commonSongCount: 2, repertoireOverlapPercent: null }),
+        filters,
+        null,
+      ).eligible,
+    ).toBe(false);
+  });
+  it('uses OR inside schools and counts independent relationship/date/place controls', () => {
+    const filters = {
+      ...defaultDiscoveryFilters,
+      schoolIds: ['one', 'two'],
+      friendsOnly: true,
+      playedWithFriend: true,
+      sameSchoolOnly: true,
+      neededDate: '2026-09-18',
+      placeCity: 'Genève',
+    };
+    const match = scoreHomeProfile(
+      profile({
+        schools: [{ id: 'two', name: 'School', slug: 'school', shortName: null, logoUrl: null }],
+        isFriend: true,
+        weeklyAvailability: { '5': [] },
+      }),
+      filters,
+      null,
+    );
+    expect(match).toEqual({ eligible: true, score: 67, matchedCriteria: 4, totalCriteria: 6 });
+  });
+  it('sorts by score first, then preserves rankProfiles for ties', () => {
+    const friend = profile({ id: 'friend', isFriend: true, genres: [] });
+    const other = profile({ id: 'other', genres: ['Jazz'] });
+    const filters = { ...defaultDiscoveryFilters, genres: ['Jazz'], minimumMatchPercent: 0 };
+    expect(
+      matchHomeProfiles([friend, other], filters, null).map(({ profile }) => profile.id),
+    ).toEqual(['other', 'friend']);
+    expect(
+      matchHomeProfiles([other, friend], defaultDiscoveryFilters, null).map(
+        ({ profile }) => profile.id,
+      ),
+    ).toEqual(['friend', 'other']);
+  });
+  it('scores a requested radius once when the viewer has coordinates', () => {
+    const filters = { ...defaultDiscoveryFilters, radiusKm: 5 };
+    expect(scoreHomeProfile(profile(), filters, profile()).score).toBe(100);
+    expect(
+      scoreHomeProfile(profile({ latitude: null, longitude: null }), filters, profile()).score,
+    ).toBe(0);
+    expect(scoreHomeProfile(profile(), filters, null).score).toBeNull();
+  });
 });

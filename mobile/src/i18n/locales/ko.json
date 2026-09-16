@@ -299,7 +299,6 @@
   "Belgique": "대한민국",
   "BÊTA": "사이트맵",
   "Bêta — répétitions, remplacements et pros": "베타 — rehearsals, 교체 및 프로",
-  "Bien notés": "뚱 베어",
   "Bio": "제품정보",
   "Bloquées dans Réglages": "설정에서 블록",
   "Bloquer": "제품정보",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "이 학교에서의 역할을 누가 볼 수 있나요?",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "학교 이름은 모든 사람에게 공개됩니다. 이 설정은 역할과 소속 세부 정보에 적용됩니다.",
   "Ce groupe est lié à un atelier de ton école.": "이 그룹은 학교 워크숍과 연결되어 있습니다.",
-  "Toute la journée": "하루 종일"
+  "Toute la journée": "하루 종일",
+  "Choisir": "선택",
+  "{{count}} sélectionné(s)": "{{count}}개 선택됨",
+  "Tout effacer": "모두 지우기",
+  "Morceaux en commun": "공통 곡",
+  "Match minimum": "최소 매칭률",
+  "Date ponctuelle": "일회성 날짜",
+  "Disponibilité récurrente": "매주 가능한 시간",
+  "Mois précédent": "이전 달",
+  "Mois suivant": "다음 달",
+  "{{percent}} % de répertoire en commun": "공통 레퍼토리 {{percent}}%",
+  "{{percent}} % match": "매칭률 {{percent}}%",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "날짜를 선택하여 가능한 시간을 확인하거나 수정하세요.",
+  "Retirer cette date": "이 날짜 삭제",
+  "Ajouter cette date": "이 날짜 추가"
 }

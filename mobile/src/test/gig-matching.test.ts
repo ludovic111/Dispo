@@ -53,7 +53,7 @@ describe('lecture du match serveur', () => {
       away: false,
       awayIn: null,
       commonGenres: ['Jazz', 'Funk'],
-      commonSongs: { count: 2, titles: ['Blue Bossa', 'So What'] },
+      commonSongs: { count: 2, overlapPercent: null, titles: ['Blue Bossa', 'So What'] },
       distanceKm: 3,
       instruments: ['Basse'],
       levelOk: true,
@@ -240,4 +240,9 @@ describe('tri, éligibilité et erreurs serveur', () => {
     );
     expect(isGigErrorCode({ message: 'blocked' }, 'direct_request_pending')).toBe(false);
   });
+});
+
+it('preserves unavailable overlap separately from a real zero', () => {
+  expect(parseGigMatch({ common_songs: { count: null, overlap_percent: null, titles: [] } }).commonSongs).toEqual({ count: null, overlapPercent: null, titles: [] });
+  expect(parseGigMatch({ common_songs: { count: 0, overlap_percent: 0, titles: [] } }).commonSongs).toEqual({ count: 0, overlapPercent: 0, titles: [] });
 });

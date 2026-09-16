@@ -29,7 +29,8 @@ describe('cinq retours terrain ciblés', () => {
     const filter = source('src/features/discovery/filter-screen.tsx');
     const model = source('src/features/discovery/discovery-model.ts');
     expect(filter).toContain('useSchoolDirectory()');
-    expect(filter).toContain('schoolIds: toggle(filters.schoolIds, school.id)');
+    expect(filter).toContain('onChange={(schoolIds) => setFilters({ ...filters, schoolIds })}');
+    expect(filter).toContain('value: school.id, label: school.name');
     expect(model).toContain(
       'profile.schools.some((school) => filters.schoolIds.includes(school.id))',
     );

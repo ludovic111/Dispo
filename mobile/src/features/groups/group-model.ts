@@ -635,6 +635,27 @@ export function buildEventSavePayloads(
   }));
 }
 
+export function groupEventLocationChanged(
+  event: GroupEvent,
+  draft: GroupEventVenueDraft & { exactAddress?: string; clearExactAddress?: boolean },
+): boolean {
+  const parsed = parseGroupEventVenueLabel(
+    event.publicLocationLabel || event.venue,
+    event.countryCode ?? 'CH',
+  );
+  return (
+    Boolean(draft.clearExactAddress) ||
+    Boolean(
+      draft.exactAddress?.trim() && draft.exactAddress.trim() !== event.exactAddress?.trim(),
+    ) ||
+    draft.venue.trim() !== parsed.venue.trim() ||
+    draft.city.trim() !== (event.city ?? parsed.city).trim() ||
+    draft.postalCode.trim() !== (event.postalCode ?? parsed.postalCode).trim() ||
+    draft.countryCode.trim().toUpperCase() !==
+      (event.countryCode ?? parsed.countryCode).trim().toUpperCase()
+  );
+}
+
 /** Même format de stockage que `VenueDraft.label` dans l'app Swift. */
 export function groupEventVenueLabel(value: GroupEventVenueDraft): string {
   const venue = value.venue.trim();
@@ -657,11 +678,12 @@ export function parseGroupEventVenueLabel(
     return { city: '', countryCode: fallbackCountryCode, postalCode: '', venue: storageLabel };
   }
   const locality = parts.at(-2)?.trim() ?? '';
-  const [postalCode = '', ...cityParts] = locality.split(/\s+/);
+  const [first = '', ...cityParts] = locality.split(/\s+/);
+  const hasPostalCode = /^\d{4,5}$/.test(first);
   return {
-    city: cityParts.join(' '),
+    city: hasPostalCode ? cityParts.join(' ') : locality,
     countryCode: maybeCountry,
-    postalCode,
+    postalCode: hasPostalCode ? first : '',
     venue: parts.slice(0, -2).join(' · '),
   };
 }

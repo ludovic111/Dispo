@@ -15,10 +15,9 @@ import {
 import { DiscoveryHomeWelcome } from '@/features/discovery/discovery-home-welcome';
 import {
   activeFilterCount,
-  matchesDiscoveryFilters,
+  matchHomeProfiles,
   profileAvailability,
   profilesForScope,
-  rankProfiles,
 } from '@/features/discovery/discovery-model';
 import { DiscoveryProfileRow } from '@/features/discovery/discovery-profile-row';
 import { upcomingGroupEvents } from '@/features/groups/group-model';
@@ -48,11 +47,16 @@ export default function DiscoveryScreen() {
   const filtered = useMemo(() => {
     const referenceProfile = meQuery.data ?? null;
     const rankingDate = new Date();
-    return profiles
-      .filter((profile) => matchesDiscoveryFilters(profile, filters, referenceProfile))
-      .sort((left, right) => rankProfiles(left, right, referenceProfile, rankingDate));
+    return matchHomeProfiles(profiles, filters, referenceProfile, rankingDate);
   }, [filters, meQuery.data, profiles]);
-  const visible = useMemo(() => profilesForScope(filtered, scope), [filtered, scope]);
+  const visible = useMemo(
+    () =>
+      profilesForScope(
+        filtered.map(({ profile }) => profile),
+        scope,
+      ),
+    [filtered, scope],
+  );
   const unread = notificationsQuery.data ?? 0;
   const now = new Date();
   const myAvailability = meQuery.data ? profileAvailability(meQuery.data, now) : null;
@@ -178,6 +182,9 @@ export default function DiscoveryScreen() {
         }
         renderItem={({ item }) => (
           <DiscoveryProfileRow
+            filterMatchPercent={
+              filtered.find(({ profile }) => profile.id === item.id)?.match.score ?? null
+            }
             primarySchool={item.schools[0] ?? null}
             profile={item}
             referenceProfile={meQuery.data ?? null}

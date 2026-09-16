@@ -1,5 +1,5 @@
 import { shortProfileLevel, type ProfileSummary } from '@/domain/profile';
-import { GIG_GENRE_GROUPS, type GigSummary } from '@/features/gigs/gig-model';
+import { gigGenres, GIG_GENRE_GROUPS, type GigSummary } from '@/features/gigs/gig-model';
 
 export type AvailabilityScope = 'nearby' | 'today' | 'thisWeek' | 'weekend';
 
@@ -16,7 +16,8 @@ export interface DiscoveryFilters {
   radiusKm: number;
   sameSchoolOnly: boolean;
   schoolIds: string[];
-  wellRated: boolean;
+  commonRepertoire: boolean;
+  minimumMatchPercent: number;
 }
 
 export const defaultDiscoveryFilters: DiscoveryFilters = {
@@ -32,7 +33,8 @@ export const defaultDiscoveryFilters: DiscoveryFilters = {
   radiusKm: 25,
   sameSchoolOnly: false,
   schoolIds: [],
-  wellRated: false,
+  commonRepertoire: false,
+  minimumMatchPercent: 50,
 };
 
 const stopWords = new Set([
@@ -228,15 +230,18 @@ function profileWords(
 }
 
 function gigWords(gig: GigSummary, translate?: (value: string) => string): string[] {
-  const family = genreFamilyLabel(gig.genre);
+  const genres = gigGenres(gig);
   return normalizedWords([
     'sos',
     gig.title,
     gig.place,
     gig.neighborhood,
     gig.hostName,
-    ...translatedTerms(gig.genre, translate),
-    ...(family ? translatedTerms(family, translate) : []),
+    ...genres.flatMap((genre) => translatedTerms(genre, translate)),
+    ...genres.flatMap((genre) => {
+      const family = genreFamilyLabel(genre);
+      return family ? translatedTerms(family, translate) : [];
+    }),
     ...gig.wantedInstruments.flatMap((instrument) => translatedTerms(instrument, translate)),
     ...gig.wantedInstruments.flatMap((instrument) => instrumentAliases[instrument] ?? []),
   ]);
@@ -445,7 +450,8 @@ export function activeFilterCount(filters: DiscoveryFilters): number {
     filters.playedWithFriend,
     filters.sameSchoolOnly,
     filters.schoolIds.length > 0,
-    filters.wellRated,
+    filters.commonRepertoire,
+    filters.minimumMatchPercent !== 50,
     Boolean(
       filters.placeCity.trim() || filters.placePostalCode.trim() || filters.placeCountry.trim(),
     ),
@@ -547,12 +553,106 @@ export function matchesDiscoveryFilters(
     return false;
   }
   if (
-    filters.wellRated &&
-    (profile.ratingAverage === null || profile.ratingAverage < 4 || profile.ratingCount < 3)
-  ) {
+    filters.commonRepertoire &&
+    (profile.repertoireOverlapPercent == null || (profile.commonSongCount ?? 0) <= 0)
+  )
     return false;
-  }
   return true;
+}
+
+export interface HomeProfileMatch {
+  eligible: boolean;
+  score: number | null;
+  matchedCriteria: number;
+  totalCriteria: number;
+}
+
+/** Each active control contributes once; instruments are the only hard criterion. */
+export function scoreHomeProfile(
+  profile: ProfileSummary,
+  filters: DiscoveryFilters,
+  currentProfile: ProfileSummary | null,
+): HomeProfileMatch {
+  const instrumentEligible =
+    filters.instruments.length === 0 ||
+    profile.instruments.some((instrument) => filters.instruments.includes(instrument));
+  const criteria: Partial<DiscoveryFilters>[] = [];
+  if (filters.genres.length) criteria.push({ genres: filters.genres });
+  if (filters.levels.length) criteria.push({ levels: filters.levels });
+  if (filters.neededDate) criteria.push({ neededDate: filters.neededDate });
+  if (filters.placeCity.trim() || filters.placePostalCode.trim() || filters.placeCountry.trim()) {
+    criteria.push({
+      placeCity: filters.placeCity,
+      placePostalCode: filters.placePostalCode,
+      placeCountry: filters.placeCountry,
+    });
+  }
+  for (const key of [
+    'friendsOnly',
+    'playedWithFriend',
+    'sameSchoolOnly',
+    'commonRepertoire',
+  ] as const) {
+    if (filters[key]) criteria.push({ [key]: true });
+  }
+  if (filters.schoolIds.length) criteria.push({ schoolIds: filters.schoolIds });
+  const outcomes = criteria.map((criterion) =>
+    matchesDiscoveryFilters(
+      profile,
+      {
+        ...defaultDiscoveryFilters,
+        ...criterion,
+        instruments: filters.instruments,
+        // Radius is evaluated independently, so every profile has the same denominator.
+        radiusKm: Infinity,
+      },
+      null,
+    ),
+  );
+  // Travel location depends on the requested date without adding a second date criterion.
+  const placeIndex = criteria.findIndex((criterion) => 'placeCity' in criterion);
+  if (placeIndex >= 0)
+    outcomes[placeIndex] = profileMatchesPlace(
+      profile,
+      filters.placeCity,
+      filters.neededDate,
+      filters.placePostalCode,
+      filters.placeCountry,
+    );
+  if (
+    filters.radiusKm !== defaultDiscoveryFilters.radiusKm &&
+    currentProfile?.latitude != null &&
+    currentProfile.longitude != null
+  ) {
+    const distance = distanceKm(currentProfile, profile);
+    outcomes.push(distance !== null && distance <= filters.radiusKm);
+  }
+  const totalCriteria = outcomes.length;
+  const matchedCriteria = outcomes.filter(Boolean).length;
+  const percentage = totalCriteria ? (100 * matchedCriteria) / totalCriteria : null;
+  return {
+    eligible:
+      instrumentEligible && (percentage === null || percentage >= filters.minimumMatchPercent),
+    score: percentage === null ? null : Math.round(percentage),
+    matchedCriteria,
+    totalCriteria,
+  };
+}
+
+export function matchHomeProfiles(
+  profiles: readonly ProfileSummary[],
+  filters: DiscoveryFilters,
+  currentProfile: ProfileSummary | null,
+  now = new Date(),
+): { profile: ProfileSummary; match: HomeProfileMatch }[] {
+  return profiles
+    .map((profile) => ({ profile, match: scoreHomeProfile(profile, filters, currentProfile) }))
+    .filter(({ match }) => match.eligible)
+    .sort(
+      (a, b) =>
+        b.match.matchedCriteria - a.match.matchedCriteria ||
+        rankProfiles(a.profile, b.profile, currentProfile, now),
+    );
 }
 
 export function rankProfiles(

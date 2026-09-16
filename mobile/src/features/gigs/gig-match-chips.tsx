@@ -15,7 +15,6 @@ import {
 
 import { AppText } from '@/components/ui/app-text';
 import { Tag } from '@/components/ui/tag';
-import { VuMeter } from '@/components/ui/vu-meter';
 import { shortProfileLevel } from '@/domain/profile';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -36,8 +35,7 @@ export function formatGigMatchDate(value: string, locale: string): string {
 }
 
 /**
- * Score de compatibilité : VU-mètre compact (vert → ambre → rouge) et
- * pourcentage en mono. `ink` fixe la couleur du chiffre sur un billet papier.
+ * Score de compatibilité numérique. `ink` fixe la couleur du chiffre sur un billet papier.
  */
 export function GigMatchScore({ ink, score }: { ink?: string | undefined; score: number }) {
   const { palette } = useDispoTheme();
@@ -45,15 +43,9 @@ export function GigMatchScore({ ink, score }: { ink?: string | undefined; score:
   const clamped = Math.min(100, Math.max(0, Math.round(score)));
   return (
     <View style={styles.score}>
-      <VuMeter
-        accessibilityLabel={t('Match {{score}} %', { score: clamped })}
-        segments={10}
-        size="compact"
-        value={clamped / 100}
-      />
       <AppText
         color={ink ?? palette.text}
-        importantForAccessibility="no"
+        accessibilityLabel={t('Match {{score}} %', { score: clamped })}
         style={styles.scoreValue}
         variant="mono"
         weight="semibold"
@@ -111,7 +103,7 @@ export function GigMatchChips({
 }
 
 /**
- * Sur une carte du fil : VU-mètre compact, « 82 % », puis les raisons
+ * Sur une carte du fil : « 82 % », puis les raisons
  * (« Dispo ce jour-là · Ami·e »). `color` teinte les raisons, `ink` le chiffre.
  */
 export function GigMatchSummaryLine({
@@ -129,7 +121,7 @@ export function GigMatchSummaryLine({
   );
   return (
     <View style={styles.summary}>
-      <View style={styles.summaryMeter}>
+      <View>
         <GigMatchScore ink={ink} score={match.score} />
       </View>
       {reasons.length > 0 ? (
@@ -141,14 +133,10 @@ export function GigMatchSummaryLine({
   );
 }
 
-/** Largeur du rail : dix segments lisibles sans écraser le nom à côté. */
-const meterWidth = 92;
-
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  score: { alignItems: 'flex-end', gap: spacing.xxs, width: meterWidth },
+  score: { alignItems: 'flex-end' },
   scoreValue: { textAlign: 'right' },
   summary: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  summaryMeter: { width: meterWidth },
   summaryText: { flexShrink: 1 },
 });

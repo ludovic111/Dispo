@@ -9,6 +9,7 @@ import { Alert, Linking, Platform, StyleSheet, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import { GigApplicantCard } from './gig-applicant-card';
+import { gigGenresLabel } from './gig-model';
 import {
   GIG_PAYMENT_METHODS,
   eligibleApplyInstruments,
@@ -539,7 +540,7 @@ export function GigDetailContent({
           <View style={styles.ticketMain}>
             <View style={styles.chips}>
               <Tag color={palette.signal} label={gig.targetId ? t('Demande directe') : t('SOS')} />
-              <Tag color={inkMuted} label={t(gig.genre)} />
+              <Tag color={inkMuted} label={gigGenresLabel(gig, t, Infinity)} />
             </View>
             <AppText color={ink} variant="display">
               {gig.title}

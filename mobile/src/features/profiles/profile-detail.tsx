@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { AvailabilityCalendar, availabilityForDay } from './availability-calendar';
 import { MyProfileDetail } from './my-profile-detail';
 import { ProfileSocialLinks, ProfileStatsCard, type ProfileStat } from './profile-shared';
 import { canRateProfile } from './profile-social-model';
@@ -124,6 +126,33 @@ function TripRow({
   );
 }
 
+function ProfileCalendar({ profile }: { profile: ProfileSummary }) {
+  const { t } = useTranslation();
+  const [selectedDay, setSelectedDay] = useState(todayKey);
+  const availability = {
+    dates: profile.explicitAvailableDates ?? profile.availableDates,
+    timeSlots: profile.availabilityTimeSlots ?? {},
+    weekly: profile.weeklyAvailability ?? {},
+  };
+  const selected = availabilityForDay(availability, selectedDay);
+  return (
+    <View style={styles.section}>
+      <AvailabilityCalendar
+        availability={availability}
+        selectedDay={selectedDay}
+        onSelect={setSelectedDay}
+      />
+      <AppText variant="caption">
+        {selected.kind === 'none'
+          ? t('Indisponible')
+          : selected.slots.length
+            ? selected.slots.map((slot) => `${slot.start}–${slot.end}`).join(' · ')
+            : t('Toute la journée')}
+      </AppText>
+    </View>
+  );
+}
+
 export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSummary }) {
   const { palette } = useDispoTheme();
   const { i18n, t } = useTranslation();
@@ -170,11 +199,7 @@ export function ProfileAvailabilityOverview({ profile }: { profile: ProfileSumma
       {availableDates.length > 0 ? (
         <Card style={styles.section}>
           <SectionHeader title={t('Mes disponibilités')} />
-          <View style={styles.tags}>
-            {availableDates.map((date) => (
-              <AvailabilityDayKey key={date} label={formatDay(locale, date)} />
-            ))}
-          </View>
+          <ProfileCalendar profile={profile} />
         </Card>
       ) : null}
       {trips.length > 0 ? (
@@ -461,13 +486,29 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
         </AppText>
       ) : null}
 
+      {profile.repertoireOverlapPercent != null ? (
+        <Card style={styles.section}>
+          <AppText color={palette.electric}>
+            {profile.commonSongCount === 1
+              ? t('1 morceau en commun')
+              : t('{{count}} morceaux en commun', { count: profile.commonSongCount ?? 0 })}
+          </AppText>
+          <AppText>
+            {t('{{percent}} % de répertoire en commun', {
+              percent: profile.repertoireOverlapPercent,
+            })}
+          </AppText>
+          {profile.commonSongTitles?.length ? (
+            <AppText color={palette.muted} variant="caption">
+              {profile.commonSongTitles.join(' · ')}
+            </AppText>
+          ) : null}
+        </Card>
+      ) : null}
       {upcomingDates.length > 0 ? (
-        <View style={styles.tags}>
-          <Ionicons color={palette.muted} name="calendar-outline" size={14} />
-          {upcomingDates.map((date) => (
-            <AvailabilityDayKey key={date} label={formatDay(locale, date)} />
-          ))}
-        </View>
+        <Card>
+          <ProfileCalendar profile={profile} />
+        </Card>
       ) : null}
 
       {upcomingTrips.length > 0 ? (

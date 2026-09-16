@@ -1,4 +1,8 @@
-import { normalizeWeeklyAvailability, recurringAvailableDates } from './profile-availability-model';
+import {
+  normalizeAvailabilityTimeSlots,
+  normalizeWeeklyAvailability,
+  recurringAvailableDates,
+} from './profile-availability-model';
 
 import { pageRange, type Page } from '@/domain/pagination';
 import type {
@@ -18,6 +22,7 @@ type ProfileProjection = Pick<
   ProfileRow,
   | 'age'
   | 'available_dates'
+  | 'availability_time_slots'
   | 'weekly_availability'
   | 'availability_places'
   | 'bio'
@@ -49,7 +54,7 @@ type SchoolProjection = Pick<SchoolRow, 'id' | 'logo_url' | 'name' | 'short_name
 type ExactLocationRow = Database['public']['Tables']['profile_locations']['Row'];
 
 const profileColumns =
-  'id,name,age,photo_url,bio,instruments,instrument_levels,genres,level,available_dates,weekly_availability,availability_places,city,country,postal_code,neighborhood,latitude,longitude,location_precision,rating_avg,rating_count,is_premium,is_demo,is_showcase,repertoire,socials,demo_videos' as const;
+  'id,name,age,photo_url,bio,instruments,instrument_levels,genres,level,available_dates,availability_time_slots,weekly_availability,availability_places,city,country,postal_code,neighborhood,latitude,longitude,location_precision,rating_avg,rating_count,is_premium,is_demo,is_showcase,repertoire,socials,demo_videos' as const;
 
 function profileAvailabilityPlaces(
   value: ProfileRow['availability_places'],
@@ -259,7 +264,13 @@ async function enrichProfiles(
         ]),
       ].sort(),
       weeklyAvailability: normalizeWeeklyAvailability(row.weekly_availability),
-      commonSongCount: commonSongs.get(row.id)?.song_count ?? 0,
+      explicitAvailableDates: row.available_dates,
+      availabilityTimeSlots: normalizeAvailabilityTimeSlots(
+        row.availability_time_slots,
+        row.available_dates,
+      ),
+      commonSongCount: commonSongs.get(row.id)?.song_count ?? null,
+      repertoireOverlapPercent: commonSongs.get(row.id)?.overlap_percent ?? null,
       commonSongTitles: commonSongs.get(row.id)?.titles ?? [],
       availabilityPlaces: profileAvailabilityPlaces(row.availability_places),
       bio: row.bio,

@@ -105,6 +105,7 @@ export default function EditGigScreen() {
             description: item.description ?? '',
             fee: item.fee,
             genre: item.genre,
+            genres: item.genres ?? [item.genre],
             paymentMethod: item.paymentMethod,
             publicPlace: item.place,
             title: item.title,

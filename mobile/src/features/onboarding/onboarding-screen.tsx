@@ -489,6 +489,19 @@ export function OnboardingScreen() {
 
         {!loading ? (
           <OnboardingFooter {...(stepIndex > 0 ? { onBack: goBack } : {})}>
+            {step === 'school' ? (
+              <DispoButton
+                disabled={saving}
+                variant="ghost"
+                onPress={() => {
+                  setSchoolId(null);
+                  setErrorText(null);
+                  goTo(stepIndex + 1, 'forward');
+                }}
+              >
+                {t('Plus tard')}
+              </DispoButton>
+            ) : null}
             <DispoButton
               disabled={saving || uploading}
               icon={footerIcon}

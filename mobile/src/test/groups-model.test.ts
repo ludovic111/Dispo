@@ -274,6 +274,12 @@ describe('événements récurrents et line-up', () => {
       postalCode: '1201',
       venue: 'AMR',
     });
+    expect(parseGroupEventVenueLabel('Salle · Genève · CH')).toEqual({
+      city: 'Genève',
+      countryCode: 'CH',
+      postalCode: '',
+      venue: 'Salle',
+    });
     expect(parseGroupEventVenueLabel('Ancienne salle')).toEqual({
       city: '',
       countryCode: 'CH',

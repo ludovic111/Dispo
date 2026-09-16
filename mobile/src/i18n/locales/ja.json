@@ -299,7 +299,6 @@
   "Belgique": "ベルギー",
   "BÊTA": "ベータ",
   "Bêta — répétitions, remplacements et pros": "ベータ版 — リハーサル、代役、プロ",
-  "Bien notés": "高評価",
   "Bio": "自己紹介",
   "Bloquées dans Réglages": "設定でブロック中",
   "Bloquer": "ブロック",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "この学校での役割を誰に公開しますか？",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "学校名は全員に表示されます。この設定は役割と所属の詳細に適用されます。",
   "Ce groupe est lié à un atelier de ton école.": "このグループは学校のワークショップに関連付けられています。",
-  "Toute la journée": "終日"
+  "Toute la journée": "終日",
+  "Choisir": "選択",
+  "{{count}} sélectionné(s)": "{{count}}件選択済み",
+  "Tout effacer": "すべてクリア",
+  "Morceaux en commun": "共通の曲",
+  "Match minimum": "最低マッチ率",
+  "Date ponctuelle": "単発の日程",
+  "Disponibilité récurrente": "毎週の空き時間",
+  "Mois précédent": "前の月",
+  "Mois suivant": "次の月",
+  "{{percent}} % de répertoire en commun": "レパートリーの一致率 {{percent}}%",
+  "{{percent}} % match": "マッチ率 {{percent}}%",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "日付を選択して空き状況を確認・編集できます。",
+  "Retirer cette date": "この日付を削除",
+  "Ajouter cette date": "この日付を追加"
 }

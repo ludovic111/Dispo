@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import {
+  groupEventLocationChanged,
   parseGroupEventVenueLabel,
   type GroupEvent,
   type GroupEventKind,
@@ -48,10 +49,20 @@ function EventEditForm({ event, group }: { event: GroupEvent; group: MusicGroup 
   const [reminderLeadDays, setReminderLeadDays] = useState(event.reminderLeadDays ?? 2);
   const [scope, setScope] = useState<'futureOccurrences' | 'thisDate'>('thisDate');
   const [editStartedAt] = useState(Date.now);
+  const locationChanged = groupEventLocationChanged(event, {
+    venue,
+    city,
+    postalCode,
+    countryCode,
+    exactAddress,
+    clearExactAddress,
+  });
   const valid =
     venue.trim().length > 0 &&
-    city.trim().length > 0 &&
-    postalCode.trim().length > 0 &&
+    (!locationChanged ||
+      (city.trim().length > 0 &&
+        postalCode.trim().length > 0 &&
+        /^[A-Z]{2}$/.test(countryCode.trim().toUpperCase()))) &&
     !Number.isNaN(date.getTime());
   const dayChanges = date.toDateString() !== new Date(event.date).toDateString();
   const affectedCount = event.seriesId

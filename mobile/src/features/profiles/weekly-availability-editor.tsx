@@ -48,7 +48,7 @@ export function WeeklyAvailabilityEditor({
             onPress={() => {
               const next = { ...value };
               if (Object.hasOwn(next, String(day))) delete next[String(day)];
-              else next[String(day)] = [];
+              else next[String(day)] = [defaultAvailabilityTimeSlot([])];
               onChange(next);
             }}
           />

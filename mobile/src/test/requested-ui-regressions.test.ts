@@ -145,15 +145,6 @@ describe('présentation des profils', () => {
   });
 });
 
-describe('calendrier des disponibilités', () => {
-  it('synchronise le sélecteur natif avec les thèmes sombre et clair', () => {
-    const availability = source('src/features/profiles/profile-availability-screen.tsx');
-    expect(availability).toContain("themeVariant={dark ? 'dark' : 'light'}");
-    expect(availability).toContain('accentColor={palette.electric}');
-    expect(availability).toContain('textColor={palette.text}');
-  });
-});
-
 describe('création de groupe', () => {
   it('distingue limite, session, réseau et erreur inconnue', () => {
     const limit = { message: 'premium_required_for_additional_group' };

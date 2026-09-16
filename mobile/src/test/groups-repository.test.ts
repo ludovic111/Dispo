@@ -557,6 +557,63 @@ describe('mutations du repository Groupes', () => {
     });
   });
 
+  it('préserve un lieu ancien pendant une modification de titre et exige le postal si le lieu change', async () => {
+    const rpc = jest.fn(async () => ({ error: null }));
+    const inIds = jest.fn(async () => ({ error: null }));
+    mockedClient.mockReturnValue({
+      rpc,
+      from: () => ({ update: () => ({ eq: () => ({ in: inIds }) }) }),
+    } as never);
+    const event = {
+      id: 'legacy',
+      groupId: 'group',
+      title: 'Concert',
+      kind: 'Concert',
+      date: '2030-01-01T20:00:00Z',
+      venue: 'Old hall',
+      publicLocationLabel: 'Old hall',
+      setlist: [],
+      attendance: [],
+      seriesId: null,
+      recurrence: null,
+      reminderLeadDays: 2,
+      exactAddress: null,
+      privateLocationState: 'absent',
+    } as GroupEvent;
+    const input = {
+      event,
+      events: [event],
+      groupId: 'group',
+      leaderId: 'leader',
+      title: 'New title',
+      kind: 'Concert' as const,
+      date: event.date,
+      venue: event.venue,
+      city: '',
+      postalCode: '',
+      countryCode: 'CH',
+      exactAddress: '',
+      clearExactAddress: false,
+      latitude: null,
+      longitude: null,
+      reminderLeadDays: 1,
+      scope: 'thisDate' as const,
+    };
+    await updateGroupEvent(input);
+    const payload = (
+      rpc.mock.calls[0] as unknown as [string, { p_events: Record<string, unknown>[] }]
+    )[1].p_events[0]!;
+    expect(payload.title).toBe('New title');
+    expect(payload.public_location_label).toBe('Old hall');
+    expect(payload).not.toHaveProperty('postal_code');
+    await expect(updateGroupEvent({ ...input, venue: 'New hall' })).rejects.toThrow(
+      'group_event_invalid',
+    );
+    await expect(updateGroupEvent({ ...input, exactAddress: 'New street 1' })).rejects.toThrow(
+      'group_event_invalid',
+    );
+  });
+
   it('annule une série avec un seul appel et sans identifiants dupliqués', async () => {
     const rpc = jest.fn(async () => ({ error: null }));
     mockedClient.mockReturnValue({ rpc } as never);

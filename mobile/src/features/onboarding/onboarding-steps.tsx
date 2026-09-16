@@ -9,7 +9,6 @@ import {
   setDraftInstrumentLevel,
   sortSchoolsForOnboarding,
   toggleDraftInstrument,
-  toggleGenre,
   instrumentCategories,
   type MusicianLevel,
   type OnboardingDraft,
@@ -22,6 +21,7 @@ import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
 import { ListRow } from '@/components/ui/list-row';
+import { OptionSelector } from '@/components/ui/option-selector';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
@@ -143,26 +143,26 @@ export function InstrumentsStep({ draft, patch }: { draft: OnboardingDraft; patc
           ))}
         </Card>
       ) : null}
-      {instrumentCategories.map((category) => (
-        <View key={category.label} style={styles.category}>
-          <View style={styles.categoryHeader}>
-            <Ionicons color={palette.bronze} name={category.icon} size={12} />
-            <AppText color={palette.bronze} variant="label">
-              {t(category.label)}
-            </AppText>
-          </View>
-          <View style={styles.chipWrap}>
-            {category.instruments.map((instrument) => (
-              <ChoiceChip
-                key={instrument}
-                label={t(instrument)}
-                onPress={() => toggle(instrument)}
-                selected={draft.instruments.includes(instrument)}
-              />
-            ))}
-          </View>
-        </View>
-      ))}
+      <OptionSelector
+        label={t('Instruments')}
+        value={draft.instruments}
+        onChange={(instruments) => {
+          let next = draft;
+          for (const instrument of new Set([...draft.instruments, ...instruments])) {
+            if (draft.instruments.includes(instrument) !== instruments.includes(instrument))
+              next = { ...next, ...toggleDraftInstrument(next, instrument) };
+          }
+          patch({
+            instruments: next.instruments,
+            instrumentLevels: next.instrumentLevels,
+            level: next.level,
+          });
+        }}
+        sections={instrumentCategories.map((category) => ({
+          label: t(category.label),
+          options: category.instruments.map((value) => ({ value, label: t(value) })),
+        }))}
+      />
     </View>
   );
 }
@@ -179,23 +179,15 @@ export function StylesStep({ draft, patch }: { draft: OnboardingDraft; patch: Dr
             })
           : t('Facultatif, mais ça aide à te proposer les bons SOS.')}
       </AppText>
-      {GIG_GENRE_GROUPS.map((group) => (
-        <View key={group.label} style={styles.category}>
-          <AppText color={palette.bronze} variant="label">
-            {t(group.label)}
-          </AppText>
-          <View style={styles.chipWrap}>
-            {group.values.map((genre) => (
-              <ChoiceChip
-                key={genre}
-                label={t(genre)}
-                onPress={() => patch({ genres: toggleGenre(draft.genres, genre) })}
-                selected={draft.genres.includes(genre)}
-              />
-            ))}
-          </View>
-        </View>
-      ))}
+      <OptionSelector
+        label={t('Styles')}
+        value={draft.genres}
+        onChange={(genres) => patch({ genres })}
+        sections={GIG_GENRE_GROUPS.map((group) => ({
+          label: t(group.label),
+          options: group.values.map((value) => ({ value, label: t(value) })),
+        }))}
+      />
     </View>
   );
 }

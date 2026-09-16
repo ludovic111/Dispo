@@ -1,5 +1,8 @@
 -- Base locale uniquement. Toutes les fixtures sont annulées.
 begin;
+-- Structured locality for event fixtures created by this suite.
+alter table public.group_events alter column country_code set default 'CH',
+  alter column city set default 'Genève', alter column postal_code set default '1201';
 insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,confirmation_token,recovery_token,email_change,email_change_token_new)
 select '00000000-0000-0000-0000-000000000000',
  ('58000000-0000-4000-8000-00000000000'||i)::uuid,'authenticated','authenticated',

@@ -299,7 +299,6 @@
   "Belgique": "比利时",
   "BÊTA": "测试版",
   "Bêta — répétitions, remplacements et pros": "测试版 — 排练、替补与职业乐手",
-  "Bien notés": "好评",
   "Bio": "简介",
   "Bloquées dans Réglages": "已在设置中屏蔽",
   "Bloquer": "屏蔽",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "谁能看到你在这所学校的身份？",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "学校名称对所有人可见。此设置适用于你的身份和所属详情。",
   "Ce groupe est lié à un atelier de ton école.": "此群组关联你学校的工作坊。",
-  "Toute la journée": "全天"
+  "Toute la journée": "全天",
+  "Choisir": "选择",
+  "{{count}} sélectionné(s)": "已选 {{count}} 项",
+  "Tout effacer": "清空",
+  "Morceaux en commun": "共同曲目",
+  "Match minimum": "最低匹配率",
+  "Date ponctuelle": "单次日期",
+  "Disponibilité récurrente": "每周可用时间",
+  "Mois précédent": "上个月",
+  "Mois suivant": "下个月",
+  "{{percent}} % de répertoire en commun": "曲目重合率 {{percent}}%",
+  "{{percent}} % match": "匹配率 {{percent}}%",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "选择日期以查看或编辑你的空闲时间。",
+  "Retirer cette date": "移除此日期",
+  "Ajouter cette date": "添加此日期"
 }

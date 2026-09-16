@@ -1,4 +1,7 @@
 begin;
+-- Structured locality for event fixtures created by this suite.
+alter table public.group_events alter column country_code set default 'CH',
+  alter column city set default 'Genève', alter column postal_code set default '1201';
 create function pg_temp.assert_true(ok boolean, message text) returns void language plpgsql as $$
 begin if ok is distinct from true then raise exception '%', message; end if; end $$;
 insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,confirmation_token,recovery_token,email_change,email_change_token_new)

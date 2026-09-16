@@ -62,9 +62,7 @@ describe('contrôles de disponibilités et solos', () => {
     }
     const screen = await render(<Editor />);
     await fireEvent.press(screen.getByText('vendredi'));
-    expect(saved).toEqual({ '5': [] });
-    expect(screen.getByText('Toute la journée')).toBeTruthy();
-    await fireEvent.press(screen.getByText('Ajouter un créneau'));
+    expect(screen.queryByText('Toute la journée')).toBeNull();
     expect(saved).toEqual({ '5': [{ start: '09:00', end: '12:00' }] });
     await fireEvent.press(screen.getByLabelText('Supprimer ce créneau'));
     expect(saved).toEqual({ '5': [] });

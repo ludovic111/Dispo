@@ -25,6 +25,7 @@ import {
   mergeNativeDateTimePart,
   NativeDateTimeField,
 } from '@/components/ui/native-date-time-field';
+import { OptionSelector } from '@/components/ui/option-selector';
 import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { shortProfileLevel } from '@/domain/profile';
@@ -41,6 +42,7 @@ export interface GigFormInitial {
   description?: string;
   fee?: number | null;
   genre?: string;
+  genres?: string[];
   paymentMethod?: string | null;
   publicPlace?: string;
   title?: string;
@@ -158,7 +160,10 @@ export function GigForm({
     initial?.title ?? (mode === 'direct' ? directDefaultTitle : ''),
   );
   const [date, setDate] = useState(initialDate);
-  const [genre, setGenre] = useState(initial?.genre ?? defaults.genres[0] ?? 'Jazz');
+  const [genres, setGenres] = useState(
+    initial?.genres ??
+      (initial?.genre ? [initial.genre] : defaults.genres.length ? defaults.genres : ['Jazz']),
+  );
   const [publicPlace, setPublicPlace] = useState(initial?.publicPlace ?? '');
   const [countryCode, setCountryCode] = useState(defaults.countryCode || 'CH');
   const [postalCode, setPostalCode] = useState(defaults.postalCode);
@@ -190,7 +195,6 @@ export function GigForm({
     [instrumentOptions],
   );
 
-  const toggleGenre = (value: string) => setGenre(value);
   const toggleInstrument = (value: string) => {
     setWantedInstruments((current) => {
       if (mode === 'direct') return current.includes(value) ? [] : [value];
@@ -216,7 +220,8 @@ export function GigForm({
         eventId,
         feeAmount,
         feeMode: defaults.isProfessional ? feeMode : 'negotiable',
-        genre,
+        genre: genres[0] ?? '',
+        genres,
         groupId,
         hostId,
         latitude: resolvedPlace?.latitude ?? (locationChanged ? null : (initial?.latitude ?? null)),
@@ -256,7 +261,6 @@ export function GigForm({
     const picked = new Date(`${value.slice(0, 10)}T12:00:00`);
     setDate((current) => mergeNativeDateTimePart(current, picked, 'date'));
   };
-  const selectedGenre = genre ? [genre] : [];
   const feeModes: { label: string; value: FeeMode }[] = [
     { label: t('À discuter'), value: 'negotiable' },
     { label: t('Montant'), value: 'amount' },
@@ -324,15 +328,15 @@ export function GigForm({
       {mode === 'public' ? (
         <Card style={styles.section}>
           <SectionHeader title={t('Genre')} />
-          {GIG_GENRE_GROUPS.map((group) => (
-            <ChoiceSection
-              key={group.label}
-              label={group.label}
-              onToggle={toggleGenre}
-              selected={selectedGenre}
-              values={group.values}
-            />
-          ))}
+          <OptionSelector
+            label={t('Styles')}
+            value={genres}
+            onChange={setGenres}
+            sections={GIG_GENRE_GROUPS.map((group) => ({
+              label: t(group.label),
+              options: group.values.map((value) => ({ value, label: t(value) })),
+            }))}
+          />
         </Card>
       ) : null}
 
@@ -410,15 +414,15 @@ export function GigForm({
             values={directOptions}
           />
         ) : (
-          GIG_INSTRUMENT_GROUPS.map((group) => (
-            <ChoiceSection
-              key={group.label}
-              label={group.label}
-              onToggle={toggleInstrument}
-              selected={wantedInstruments}
-              values={group.values}
-            />
-          ))
+          <OptionSelector
+            label={t('Instruments')}
+            value={wantedInstruments}
+            onChange={setWantedInstruments}
+            sections={GIG_INSTRUMENT_GROUPS.map((group) => ({
+              label: t(group.label),
+              options: group.values.map((value) => ({ value, label: t(value) })),
+            }))}
+          />
         )}
       </Card>
 

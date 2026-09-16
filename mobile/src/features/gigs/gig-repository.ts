@@ -33,6 +33,7 @@ type GigProjection = Pick<
   | 'fee'
   | 'filled_instruments'
   | 'genre'
+  | 'genres'
   | 'group_id'
   | 'host_id'
   | 'id'
@@ -57,6 +58,7 @@ type HostedGigProjection = Pick<
   | 'fee'
   | 'filled_instruments'
   | 'genre'
+  | 'genres'
   | 'group_id'
   | 'host_id'
   | 'id'
@@ -85,9 +87,9 @@ type VisibleSchoolProjection = Pick<
 >;
 
 const gigColumns =
-  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,is_locked,posted_at,group_id,event_id,target_id,target_status' as const;
+  'id,host_id,title,date,genre,genres,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,is_locked,posted_at,group_id,event_id,target_id,target_status' as const;
 const hostedGigColumns =
-  'id,host_id,title,date,genre,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,posted_at,group_id,event_id,target_id,target_status' as const;
+  'id,host_id,title,date,genre,genres,place,public_location_label,neighborhood,wanted_instruments,wanted_levels,wanted_school_ids,filled_instruments,fee,payment_method,description,posted_at,group_id,event_id,target_id,target_status' as const;
 const applicationColumns = 'id,musician_id,instrument,message,status,created_at' as const;
 
 interface UntypedRpcResult {
@@ -192,6 +194,7 @@ async function mapGigs(rows: MappableGigProjection[], signal?: AbortSignal): Pro
       fee: row.fee,
       filledInstruments: row.filled_instruments ?? [],
       genre: row.genre,
+      genres: row.genres ?? [row.genre],
       groupId: row.group_id,
       hostId: row.host_id,
       hostIsPremium: host?.is_premium === true,

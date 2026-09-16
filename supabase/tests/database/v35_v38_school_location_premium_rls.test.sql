@@ -9,6 +9,9 @@
 -- Toutes les donnees et tous les changements de role sont annules a la fin.
 
 begin;
+-- Structured locality for event fixtures created by this suite.
+alter table public.group_events alter column country_code set default 'CH',
+  alter column city set default 'Genève', alter column postal_code set default '1201';
 
 -- Trois comptes isoles du seed. Le trigger auth cree leurs profils.
 insert into auth.users (
@@ -608,6 +611,7 @@ select public.save_group_events_with_locations(
     'id', '30000000-0000-4000-8000-000000000004',
     'kind', 'Répétition',
     'title', 'Creation atomique',
+    'postal_code', '1205', 'city', 'Genève',
     'public_location_label', 'Jonction',
     'date', to_jsonb(now() + interval '5 days'),
     'setlist', '[]'::jsonb,

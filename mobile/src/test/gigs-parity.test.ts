@@ -5,6 +5,9 @@ import {
   applicationDecisionParams,
   combineGigDate,
   createGigWritePlan,
+  gigGenres,
+  gigGenresLabel,
+  validateGigCreate,
   directResponseParams,
   EMPTY_GIG_MATCH,
   gigViewerAction,
@@ -100,6 +103,7 @@ describe('formulaire SOS structuré et confidentialité', () => {
       event_id: null,
       fee: 180,
       genre: 'Jazz',
+      genres: ['Jazz'],
       group_id: null,
       host_id: 'host-1',
       neighborhood: '1201 Genève · CH',
@@ -359,5 +363,19 @@ describe('SOS editing requirements', () => {
     const linked = { ...validCreate, eventId: 'event', city: '', postalCode: '' };
     expect(() => createGigWritePlan(linked, now, true)).not.toThrow();
     expect(() => createGigWritePlan({ ...linked, eventId: null }, now, true)).toThrow();
+  });
+});
+
+
+describe('SOS multi genres', () => {
+  it('loads a legacy single genre and preserves every modern selected value', () => {
+    expect(gigGenres({ genre: 'Jazz' })).toEqual(['Jazz']);
+    expect(gigGenres({ genre: 'Jazz', genres: ['Funk', ' Jazz ', 'Funk'] })).toEqual(['Funk', 'Jazz']);
+    expect(gigGenresLabel({ genre: 'Jazz', genres: ['Jazz', 'Funk', 'Blues', 'Rock'] }, (key) => key)).toBe('Jazz · Funk · +2');
+  });
+  it('requires at least one genre and serializes every selected genre for create/edit', () => {
+    expect(validateGigCreate({ ...validCreate, genres: [] }, now)).toContain('gig_genre_missing');
+    expect(validateGigCreate({ ...validCreate, genres: [' '] }, now)).toContain('gig_genre_missing');
+    expect(createGigWritePlan({ ...validCreate, genres: ['Funk', 'Jazz'] }, now).insert).toMatchObject({ genre: 'Funk', genres: ['Funk', 'Jazz'] });
   });
 });

@@ -15,7 +15,6 @@ import { Card } from '@/components/ui/card';
 import { DateTicket } from '@/components/ui/date-ticket';
 import { DispoButton } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
-import { VuMeter } from '@/components/ui/vu-meter';
 import { useAuth } from '@/features/auth/auth-context';
 import { AddToCalendarButton } from '@/features/calendar/add-to-calendar-button';
 import { sessionCalendarSourceId, sessionDeepLink } from '@/features/calendar/calendar-sync';
@@ -284,16 +283,8 @@ function LineupLine({ item }: { item: SessionItem }) {
         : { color: palette.muted, icon: 'people' as const, text: presence };
   return (
     <View style={styles.lineup}>
-      <View style={styles.lineupMeter}>
-        <VuMeter
-          accessibilityLabel={presence}
-          label={t('Line-up')}
-          segments={Math.min(12, Math.max(1, total))}
-          size="compact"
-          tone="accent"
-          value={total > 0 ? item.availableCount / total : 0}
-        />
-        <AppText color={palette.muted} importantForAccessibility="no" variant="mono">
+      <View style={styles.lineupCount}>
+        <AppText color={palette.muted} accessibilityLabel={presence} variant="mono">
           {item.availableCount}/{total}
         </AppText>
       </View>
@@ -572,7 +563,7 @@ const styles = StyleSheet.create({
   groupName: { flexShrink: 1 },
   lineup: { gap: spacing.xs, marginTop: spacing.sm },
   lineupLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.tight },
-  lineupMeter: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
+  lineupCount: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   metaLine: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxs },
   metric: { alignItems: 'center', flex: 1 },
   metrics: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },

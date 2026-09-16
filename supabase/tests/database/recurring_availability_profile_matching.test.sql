@@ -3,6 +3,9 @@
 -- candidats (ordre, exclusions), contact unique, demande directe en double,
 -- visibilité de my_gig_matches et retrait d'un SOS.
 begin;
+-- Structured locality for event fixtures created by this suite.
+alter table public.group_events alter column country_code set default 'CH',
+  alter column city set default 'Genève', alter column postal_code set default '1201';
 
 -- Personnes : 1 hôte (Piano), 2 bassiste avancée compatible, 3 bassiste
 -- débutant (niveau refusé), 4 bassiste bloqué·e par l'hôte, 5 pianiste
@@ -100,11 +103,11 @@ update public.group_events set setlist='[{"id":"59000000-0000-4000-8000-00000000
  where id='59000000-0000-4000-8000-000000000060';
 select pg_temp.assert_ok((private.gig_profile_match('59000000-0000-4000-8000-000000000040','59000000-0000-4000-8000-000000000002')->'common_songs'->>'count')::int=1, 'song duplicated across setlist and solo repertoire');
 update public.personal_repertoire set hidden=true where profile_id='59000000-0000-4000-8000-000000000002';
-select pg_temp.assert_ok((select song_count=0 from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'hidden song leaked');
+select pg_temp.assert_ok((select song_count is null from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'hidden song leaked');
 select pg_temp.assert_ok((private.gig_profile_match('59000000-0000-4000-8000-000000000040','59000000-0000-4000-8000-000000000002')->>'score')::int < (select (value->>'score')::int from before_score), 'common songs must increase score');
 update public.personal_repertoire set hidden=false where profile_id='59000000-0000-4000-8000-000000000002';
 update public.personal_repertoire_settings set is_public=false where profile_id='59000000-0000-4000-8000-000000000002';
-select pg_temp.assert_ok((select song_count=0 from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private repertoire count leaked');
+select pg_temp.assert_ok((select song_count is null from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private repertoire count leaked');
 
 -- Saving rules as the owner, then reading them after changing session.
 set local role authenticated;

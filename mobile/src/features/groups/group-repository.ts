@@ -12,6 +12,7 @@ import {
   aggregateGroupReactions,
   buildEventSavePayloads,
   groupEventVenueLabel,
+  groupEventLocationChanged,
   groupSongsFromJson,
   groupSongToJson,
   isValidGroupMessage,
@@ -202,7 +203,7 @@ const groupColumns =
   'id,name,emoji,photo_url,is_public,leader_id,repertoire,auto_sos_enabled,auto_sos_min_level,created_at,updated_at' as const;
 const memberColumns = 'group_id,profile_id,kind,role,joined_at' as const;
 const eventColumns =
-  'id,group_id,kind,title,venue,public_location_label,date,setlist,series_id,recurrence,reminder_lead_days,created_at,schedule_changed_at' as const;
+  'country_code,city,postal_code,id,group_id,kind,title,venue,public_location_label,date,setlist,series_id,recurrence,reminder_lead_days,created_at,schedule_changed_at' as const;
 const attendanceColumns = 'event_id,profile_id,status,responded_at' as const;
 const reactionColumns = 'message_id,profile_id,emoji,removed_at,created_at' as const;
 const documentColumns =
@@ -736,8 +737,8 @@ function mapEvents(
           profileId: entry.profile_id,
           status: attendanceStatus(entry.status),
         })),
-        city: location?.city || null,
-        countryCode: location?.country_code || null,
+        city: row.city || location?.city || null,
+        countryCode: row.country_code || location?.country_code || null,
         date: row.date,
         scheduleChangedAt: row.schedule_changed_at,
         exactAddress: location?.exact_address || null,
@@ -746,7 +747,7 @@ function mapEvents(
         kind: eventKind(row.kind),
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
-        postalCode: location?.postal_code || null,
+        postalCode: row.postal_code || location?.postal_code || null,
         privateLocationState,
         publicLocationLabel: row.public_location_label || row.venue,
         recurrence: recurrence(row.recurrence),
@@ -1432,13 +1433,18 @@ export async function createGroupEvents(groupId: string, draft: GroupEventDraft)
 
 export async function updateGroupEvent(input: UpdateGroupEventInput): Promise<void> {
   const title = input.title.trim();
-  const label = groupEventVenueLabel(input);
+  const locationChanged = groupEventLocationChanged(input.event, input);
+  const label = locationChanged
+    ? groupEventVenueLabel(input)
+    : input.event.publicLocationLabel || input.event.venue;
   const editedDate = new Date(input.date);
   if (
     !title ||
     !input.venue.trim() ||
-    !input.postalCode.trim() ||
-    !input.city.trim() ||
+    (locationChanged &&
+      (!input.postalCode.trim() ||
+        !input.city.trim() ||
+        !/^[A-Z]{2}$/.test(input.countryCode.trim().toUpperCase()))) ||
     Number.isNaN(editedDate.getTime())
   )
     throw new Error('group_event_invalid');
@@ -1468,17 +1474,21 @@ export async function updateGroupEvent(input: UpdateGroupEventInput): Promise<vo
     return occurrence;
   };
   const payload = effectiveTargets.map((event) => ({
-    city: input.city.trim(),
+    ...(locationChanged
+      ? {
+          city: input.city.trim(),
+          postal_code: input.postalCode.trim(),
+          country_code: input.countryCode.trim().toUpperCase(),
+        }
+      : {}),
     clear_exact_address: clearAddress,
-    country_code: input.countryCode.trim().toUpperCase() || 'CH',
     date: dateForTarget(event).toISOString(),
     exact_address: replaceAddress ? exactAddress : '',
     id: event.id,
     kind: input.kind ?? event.kind,
     latitude: input.latitude,
     longitude: input.longitude,
-    postal_code: input.postalCode.trim(),
-    public_location_label: label,
+    public_location_label: locationChanged ? label : event.publicLocationLabel || event.venue,
     reminder_lead_days: input.reminderLeadDays,
     series_id: event.seriesId,
     setlist: event.setlist.map(groupSongToJson),

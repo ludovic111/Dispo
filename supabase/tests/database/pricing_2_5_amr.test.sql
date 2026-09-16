@@ -2,6 +2,9 @@
 -- workshop groups and the AMR Premium grant window. Runs inside a transaction
 -- that is always rolled back: psql -v ON_ERROR_STOP=1 -f this-file.
 begin;
+-- Structured locality for event fixtures created by this suite.
+alter table public.group_events alter column country_code set default 'CH',
+  alter column city set default 'Genève', alter column postal_code set default '1201';
 create function pg_temp.assert_true(ok boolean,message text) returns void language plpgsql as $$ begin if ok is distinct from true then raise exception '%',message; end if; end $$;
 create function pg_temp.amr() returns uuid language sql stable as $$ select id from public.music_schools where slug='amr-geneve' $$;
 select pg_temp.assert_true(pg_temp.amr() is not null,'AMR school missing');

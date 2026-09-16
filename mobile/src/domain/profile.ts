@@ -33,7 +33,10 @@ export interface ProfileSummary {
   availabilityPlaces?: ProfileAvailabilityPlace[];
   availableDates: string[];
   weeklyAvailability?: WeeklyAvailability;
-  commonSongCount?: number;
+  explicitAvailableDates?: string[];
+  availabilityTimeSlots?: import('@/features/profiles/profile-availability-model').AvailabilityTimeSlots;
+  commonSongCount?: number | null;
+  repertoireOverlapPercent?: number | null;
   commonSongTitles?: string[];
   bio: string;
   city: string | null;

@@ -299,7 +299,6 @@
   "Belgique": "Bélgica",
   "BÊTA": "BETA",
   "Bêta — répétitions, remplacements et pros": "Beta: ensayos, sustituciones y profesionales",
-  "Bien notés": "Bien valorados",
   "Bio": "Bio",
   "Bloquées dans Réglages": "Bloqueadas en Ajustes",
   "Bloquer": "Bloquear",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "¿Quién ve tu función en esta escuela?",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "El nombre de tu escuela es visible para todos. Este ajuste se aplica a tu función y los detalles de tu afiliación.",
   "Ce groupe est lié à un atelier de ton école.": "Este grupo está vinculado a un taller de tu escuela.",
-  "Toute la journée": "Todo el día"
+  "Toute la journée": "Todo el día",
+  "Choisir": "Elegir",
+  "{{count}} sélectionné(s)": "{{count}} seleccionados",
+  "Tout effacer": "Borrar todo",
+  "Morceaux en commun": "Temas en común",
+  "Match minimum": "Coincidencia mínima",
+  "Date ponctuelle": "Fecha puntual",
+  "Disponibilité récurrente": "Disponibilidad semanal",
+  "Mois précédent": "Mes anterior",
+  "Mois suivant": "Mes siguiente",
+  "{{percent}} % de répertoire en commun": "{{percent}} % de repertorio en común",
+  "{{percent}} % match": "{{percent}} % de coincidencia",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "Selecciona un día para consultar o modificar tu disponibilidad.",
+  "Retirer cette date": "Quitar esta fecha",
+  "Ajouter cette date": "Añadir esta fecha"
 }

@@ -9,15 +9,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      profile_common_songs: {
-        Args: { p_profiles: string[] };
-        Returns: { profile_id: string; song_count: number; titles: string[] }[];
-      };
-      profile_school_affiliations: {
-        Args: { p_profiles: string[] };
-        Returns: { profile_id: string; school_id: string; is_primary: boolean }[];
-      };
-
       graphql: {
         Args: {
           extensions?: Json;
@@ -291,6 +282,7 @@ export type Database = {
           fee: number | null;
           filled_instruments: string[];
           genre: string;
+          genres: string[];
           group_id: string | null;
           host_id: string;
           id: string;
@@ -315,6 +307,7 @@ export type Database = {
           fee?: number | null;
           filled_instruments?: string[];
           genre: string;
+          genres: string[];
           group_id?: string | null;
           host_id: string;
           id?: string;
@@ -339,6 +332,7 @@ export type Database = {
           fee?: number | null;
           filled_instruments?: string[];
           genre?: string;
+          genres?: string[];
           group_id?: string | null;
           host_id?: string;
           id?: string;
@@ -445,11 +439,14 @@ export type Database = {
       };
       group_events: {
         Row: {
+          city: string | null;
+          country_code: string | null;
           created_at: string;
           date: string;
           group_id: string;
           id: string;
           kind: string;
+          postal_code: string | null;
           public_location_label: string;
           recurrence: string | null;
           reminder_lead_days: number | null;
@@ -460,11 +457,14 @@ export type Database = {
           venue: string;
         };
         Insert: {
+          city?: string | null;
+          country_code?: string | null;
           created_at?: string;
           date: string;
           group_id: string;
           id?: string;
           kind: string;
+          postal_code?: string | null;
           public_location_label?: string;
           recurrence?: string | null;
           reminder_lead_days?: number | null;
@@ -475,11 +475,14 @@ export type Database = {
           venue?: string;
         };
         Update: {
+          city?: string | null;
+          country_code?: string | null;
           created_at?: string;
           date?: string;
           group_id?: string;
           id?: string;
           kind?: string;
+          postal_code?: string | null;
           public_location_label?: string;
           recurrence?: string | null;
           reminder_lead_days?: number | null;
@@ -1126,7 +1129,6 @@ export type Database = {
           age: number | null;
           availability_places: Json;
           availability_time_slots: Json;
-          weekly_availability: Json;
           available_dates: string[];
           bio: string;
           city: string | null;
@@ -1158,12 +1160,12 @@ export type Database = {
           strikes: number;
           suspended_until: string | null;
           updated_at: string;
+          weekly_availability: Json;
         };
         Insert: {
           age?: number | null;
           availability_places?: Json;
           availability_time_slots?: Json;
-          weekly_availability?: Json;
           available_dates?: string[];
           bio?: string;
           city?: string | null;
@@ -1195,12 +1197,12 @@ export type Database = {
           strikes?: number;
           suspended_until?: string | null;
           updated_at?: string;
+          weekly_availability?: Json;
         };
         Update: {
           age?: number | null;
           availability_places?: Json;
           availability_time_slots?: Json;
-          weekly_availability?: Json;
           available_dates?: string[];
           bio?: string;
           city?: string | null;
@@ -1232,6 +1234,7 @@ export type Database = {
           strikes?: number;
           suspended_until?: string | null;
           updated_at?: string;
+          weekly_availability?: Json;
         };
         Relationships: [];
       };
@@ -1827,6 +1830,7 @@ export type Database = {
           fee: number | null;
           filled_instruments: string[] | null;
           genre: string | null;
+          genres: string[] | null;
           group_id: string | null;
           host_id: string | null;
           id: string | null;
@@ -1850,6 +1854,7 @@ export type Database = {
           fee?: never;
           filled_instruments?: string[] | null;
           genre?: string | null;
+          genres?: string[] | null;
           group_id?: string | null;
           host_id?: string | null;
           id?: string | null;
@@ -1873,6 +1878,7 @@ export type Database = {
           fee?: never;
           filled_instruments?: string[] | null;
           genre?: string | null;
+          genres?: string[] | null;
           group_id?: string | null;
           host_id?: string | null;
           id?: string | null;
@@ -1922,15 +1928,6 @@ export type Database = {
       };
     };
     Functions: {
-      profile_common_songs: {
-        Args: { p_profiles: string[] };
-        Returns: { profile_id: string; song_count: number; titles: string[] }[];
-      };
-      profile_school_affiliations: {
-        Args: { p_profiles: string[] };
-        Returns: { profile_id: string; school_id: string; is_primary: boolean }[];
-      };
-
       accept_gig_application: {
         Args: { application_id: string };
         Returns: undefined;
@@ -2260,6 +2257,17 @@ export type Database = {
         Returns: undefined;
       };
       prepare_my_message_file_cleanup: { Args: never; Returns: undefined };
+      profile_common_songs: {
+        Args: { p_profiles: string[] };
+        Returns: {
+          a_count: number;
+          b_count: number;
+          overlap_percent: number;
+          profile_id: string;
+          song_count: number;
+          titles: string[];
+        }[];
+      };
       profile_music_schools: {
         Args: { p_profile_id: string };
         Returns: {
@@ -2289,6 +2297,14 @@ export type Database = {
           member_count: number;
           name: string;
           photo_url: string;
+        }[];
+      };
+      profile_school_affiliations: {
+        Args: { p_profiles: string[] };
+        Returns: {
+          is_primary: boolean;
+          profile_id: string;
+          school_id: string;
         }[];
       };
       queue_message_file_cleanup: {

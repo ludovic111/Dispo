@@ -3,6 +3,8 @@ import { useIsFocused } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { gigGenresLabel } from './gig-model';
+
 import { AppText } from '@/components/ui/app-text';
 import { DateTicket } from '@/components/ui/date-ticket';
 import { Tag } from '@/components/ui/tag';
@@ -84,7 +86,7 @@ export function GigCard({
             <View style={styles.topline}>
               <Ionicons color={palette.signal} name="flash" size={12} />
               <AppText color={palette.signal} engraved={false} numberOfLines={1} variant="label">
-                {t(gig.genre)}
+                {gigGenresLabel(gig, t)}
               </AppText>
               {gig.isFresh ? <Tag color={palette.signal} label={t('Nouveau')} /> : null}
               {(gig.pendingApplicantCount ?? 0) > 0 ? (

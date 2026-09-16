@@ -113,7 +113,7 @@ export default function DirectGigRequestScreen() {
   const initial: GigFormInitial = {
     ...(source?.date ? { date: source.date } : {}),
     ...(source?.fee !== undefined ? { fee: source.fee } : {}),
-    ...(source?.genre ? { genre: source.genre } : {}),
+    ...(source?.genre ? { genre: source.genre, genres: source.genres ?? [source.genre] } : {}),
     ...(source?.paymentMethod !== undefined ? { paymentMethod: source.paymentMethod } : {}),
     ...(source?.place ? { publicPlace: source.place } : {}),
     title: instrumentOptions[0] ? `${t('Dépannage')} — ${t(instrumentOptions[0])}` : t('Dépannage'),

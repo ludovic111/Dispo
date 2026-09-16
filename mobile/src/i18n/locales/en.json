@@ -299,7 +299,6 @@
   "Belgique": "Belgium",
   "BÊTA": "BETA",
   "Bêta — répétitions, remplacements et pros": "Beta — rehearsals, replacements and pros",
-  "Bien notés": "Well rated",
   "Bio": "Bio",
   "Bloquées dans Réglages": "Blocked in Settings",
   "Bloquer": "Block",
@@ -2699,5 +2698,19 @@
   "Qui voit ton rôle dans cette école ?": "Who can see your role at this school?",
   "Le nom de ton école est visible par tous. Ce réglage concerne ton rôle et les détails de ton affiliation.": "Your school name is visible to everyone. This setting applies to your role and membership details.",
   "Ce groupe est lié à un atelier de ton école.": "This group is linked to a workshop at your school.",
-  "Toute la journée": "All day"
+  "Toute la journée": "All day",
+  "Choisir": "Choose",
+  "{{count}} sélectionné(s)": "{{count}} selected",
+  "Tout effacer": "Clear all",
+  "Morceaux en commun": "Songs in common",
+  "Match minimum": "Minimum match",
+  "Date ponctuelle": "One-off date",
+  "Disponibilité récurrente": "Weekly availability",
+  "Mois précédent": "Previous month",
+  "Mois suivant": "Next month",
+  "{{percent}} % de répertoire en commun": "{{percent}}% repertoire overlap",
+  "{{percent}} % match": "{{percent}}% match",
+  "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "Select a day to view or edit your availability.",
+  "Retirer cette date": "Remove this date",
+  "Ajouter cette date": "Add this date"
 }

@@ -7,11 +7,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import {
-  toggleProfileValue,
-  withCurrentInstruments,
-  type EditableProfile,
-} from './profile-edit-model';
+import { withCurrentInstruments, type EditableProfile } from './profile-edit-model';
 import {
   fetchEditableProfile,
   saveEditableProfile,
@@ -24,6 +20,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { OptionSelector } from '@/components/ui/option-selector';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen, ScreenHeader } from '@/components/ui/screen';
 import { HeaderAction, SectionHeader } from '@/components/ui/section';
@@ -62,7 +59,6 @@ export function ProfileEditScreen() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const allGenres = useMemo(() => GIG_GENRE_GROUPS.flatMap((group) => group.values), []);
   const close = <HeaderAction icon="close" label={t('Fermer')} onPress={() => router.back()} />;
 
   const update = (patch: Partial<EditableProfile>) => {
@@ -202,66 +198,54 @@ export function ProfileEditScreen() {
 
         <View style={styles.section}>
           <SectionHeader title={t('Mes instruments')} />
-          {instrumentCategories.map((category) => (
-            <Card key={category.label} style={styles.card}>
-              <AppText variant="headline">{t(category.label)}</AppText>
-              {category.instruments.map((instrument) => {
-                const selected = value.instruments.includes(instrument);
-                return (
-                  <View key={instrument} style={styles.instrumentRow}>
-                    <ChoiceChip
-                      label={t(instrument)}
-                      onPress={() => {
-                        const instruments = toggleProfileValue(value.instruments, instrument);
-                        const instrumentLevels = { ...value.instrumentLevels };
-                        if (!instruments.includes(instrument)) delete instrumentLevels[instrument];
-                        update({ instrumentLevels, instruments });
-                      }}
-                      selected={selected}
-                    />
-                    {selected ? (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View style={styles.levels}>
-                          {levelOptions.map((level) => (
-                            <ChoiceChip
-                              key={level}
-                              label={t(shortProfileLevel(level))}
-                              onPress={() =>
-                                update({
-                                  instrumentLevels: {
-                                    ...value.instrumentLevels,
-                                    [instrument]: level,
-                                  },
-                                })
-                              }
-                              selected={value.instrumentLevels[instrument] === level}
-                            />
-                          ))}
-                        </View>
-                      </ScrollView>
-                    ) : null}
-                  </View>
-                );
-              })}
+          <OptionSelector
+            label={t('Instruments')}
+            value={value.instruments}
+            onChange={(instruments) =>
+              update({
+                instruments,
+                instrumentLevels: Object.fromEntries(
+                  instruments.map((instrument) => [
+                    instrument,
+                    value.instrumentLevels[instrument] ?? 'Intermédiaire',
+                  ]),
+                ),
+              })
+            }
+            sections={instrumentCategories.map((category) => ({
+              label: t(category.label),
+              options: category.instruments.map((value) => ({ value, label: t(value) })),
+            }))}
+          />
+          {value.instruments.map((instrument) => (
+            <Card key={instrument} style={styles.card}>
+              <AppText variant="headline">{t(instrument)}</AppText>
+              <View style={styles.choices}>
+                {levelOptions.map((level) => (
+                  <ChoiceChip
+                    key={level}
+                    label={t(shortProfileLevel(level))}
+                    selected={value.instrumentLevels[instrument] === level}
+                    onPress={() =>
+                      update({
+                        instrumentLevels: { ...value.instrumentLevels, [instrument]: level },
+                      })
+                    }
+                  />
+                ))}
+              </View>
             </Card>
           ))}
         </View>
-
-        <View style={styles.section}>
-          <SectionHeader title={t('Mes genres')} />
-          <Card>
-            <View style={styles.choices}>
-              {allGenres.map((genre) => (
-                <ChoiceChip
-                  key={genre}
-                  label={t(genre)}
-                  onPress={() => update({ genres: toggleProfileValue(value.genres, genre) })}
-                  selected={value.genres.includes(genre)}
-                />
-              ))}
-            </View>
-          </Card>
-        </View>
+        <OptionSelector
+          label={t('Mes genres')}
+          value={value.genres}
+          onChange={(genres) => update({ genres })}
+          sections={GIG_GENRE_GROUPS.map((group) => ({
+            label: t(group.label),
+            options: group.values.map((value) => ({ value, label: t(value) })),
+          }))}
+        />
 
         <View style={styles.section}>
           <SectionHeader title={t('Réseaux sociaux')} />

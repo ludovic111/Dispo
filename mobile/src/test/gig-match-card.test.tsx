@@ -65,12 +65,7 @@ describe('repère de musicien compatible sur le ticket SOS', () => {
       />,
     );
     expect(view.getByRole('button').props.accessibilityLabel).toContain('Match {{score}} %');
-    // Le score est un VU-mètre (rôle progressbar), plus une pastille texte.
-    expect(view.getByRole('progressbar').props.accessibilityValue).toEqual({
-      max: 100,
-      min: 0,
-      now: 82,
-    });
+    expect(view.queryByRole('progressbar')).toBeNull();
     expect(view.getByText('82 %')).toBeTruthy();
     expect(view.getByText('Dispo ce jour-là · Ami·e')).toBeTruthy();
     await view.unmount();
