@@ -1576,3 +1576,5 @@ Les codes et fichiers d’impression restent hors Git, dans
 - IPA contrôlé : signature stricte, APNs production, Apple Sign In, Associated Domains, `get-task-allow=false`, configuration production et manifeste de scène présent. Expo Doctor 20/21 : patchs disponibles sur des dépendances hors correctif.
 - Preuves et état de livraison : `Dispo-dist/qa-20260920-crash68/` et `Dispo-dist/2.5.3/RELEASE-build68.md`. Aucun changement métier ou Supabase. Validation sur iPhone physique non effectuée ; appareil verrouillé pendant le diagnostic.
 - Pour les prochaines livraisons, conserver un lancement Release sur le dernier iOS disponible : la compilation et l’import Apple seuls ne détectaient pas ce crash.
+
+- Livraison confirmée : code `6ae0212` poussé, validation et upload Apple sans erreur, import `VALID` / `APP_STORE_ELIGIBLE`, build `001e3b80-7948-4f8a-b005-f7d73d2f8ef4` en TestFlight interne `IN_BETA_TESTING`. Retour de lien à chaud également validé. La soumission App Store de la 67 n’a pas été modifiée, accord distinct demandé.
