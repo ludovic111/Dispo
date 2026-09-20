@@ -1544,3 +1544,25 @@ Release APK/AAB/tests Gradle réussis ; signature et configuration production v�
 Migration production en attente de confirmation ; iOS/TestFlight bloqués par la
 licence Xcode à accepter manuellement. Aucun upload Apple ni déploiement production
 pour ce lot à cette étape. Rapport détaillé : `../../Dispo-dist/2.5.3/RELEASE-build67.md`.
+
+### Reprise du 20 septembre — déploiement 2.5.3 (67)
+
+Sur demande explicite de déploiement, migration répertoire gratuit appliquée en
+production : 102 migrations synchronisées, données conservées et droits/RLS
+vérifiés, aucun nouveau signalement des advisors. Licence Xcode acceptée par
+Ludovic, pods et build iOS réussis. Trois parcours XCTest iOS et relecture API
+confirment l’ajout ponctuel, la persistance après relancement, la récurrence
+préservée et l’édition du répertoire sur compte gratuit.
+
+Archive et export signés, configuration production et droits vérifiés ;
+validation et upload Apple réussis. Import VALID / APP_STORE_ELIGIBLE,
+TestFlight interne IN_BETA_TESTING et version soumise WAITING_FOR_REVIEW
+(dossier `dfdd0662-fe08-4d05-ace7-bca64adf4f6c`). Cela ne constitue pas encore
+une publication App Store. Rapport actualisé : `../../Dispo-dist/2.5.3/RELEASE-build67.md`.
+
+Campagne AMR préparée à la demande de Ludovic pour 50 bénéficiaires : codes Apple
+individuels, trois mois sans renouvellement automatique, activation avant le
+31 décembre 2026, nouveaux/anciens abonnés expirés en Suisse. Les 50 QR des PDF
+ont été décodés et vérifiés ; test d’activation sur iPhone réel restant à faire.
+Les codes et fichiers d’impression restent hors Git, dans
+`../../Dispo-dist/amr-flyers-20260920/`.
