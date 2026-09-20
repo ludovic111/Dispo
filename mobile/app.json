@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "67",
+      "buildNumber": "68",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -166,7 +166,7 @@
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 67,
+      "versionCode": 68,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"
@@ -184,6 +184,14 @@
       "favicon": "./assets/images/dispo/app-icon.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
       "expo-router",
       "expo-apple-authentication",
       "expo-notifications",

@@ -1566,3 +1566,13 @@ individuels, trois mois sans renouvellement automatique, activation avant le
 ont été décodés et vérifiés ; test d’activation sur iPhone réel restant à faire.
 Les codes et fichiers d’impression restent hors Git, dans
 `../../Dispo-dist/amr-flyers-20260920/`.
+
+
+## 2026-09-20 — 2.5.3 (68), correctif du démarrage iOS 27
+
+- Crash de la build 67 reproduit sous iOS 27 : UIKit exige `UIScene` pour les applications recompilées avec le SDK iOS 27. La build 66 utilisait encore le SDK iOS 26.5.
+- Correctif officiel Expo SDK 57 : `expo` résolu en 57.0.24, `expo-build-properties` 57.0.21 et `ios.enableSceneSupport: true`. CNG génère `UIApplicationSceneManifest` vers `EXExpoAppSceneDelegate` et confie le lancement React Native au délégué de scène. La version marketing reste 2.5.3, le build passe à 68.
+- Vérifications : TypeScript, ESLint, 95 suites / 656 tests ; CNG et pods ; build iOS Release, archive/export signés ; Android assembleRelease, bundleRelease et testReleaseUnitTest. Ouverture, relancement et reprise validés sur simulateurs iOS 26.4 / 27 et émulateur Android ; retour de lien de connexion à froid validé sous iOS 27.
+- IPA contrôlé : signature stricte, APNs production, Apple Sign In, Associated Domains, `get-task-allow=false`, configuration production et manifeste de scène présent. Expo Doctor 20/21 : patchs disponibles sur des dépendances hors correctif.
+- Preuves et état de livraison : `Dispo-dist/qa-20260920-crash68/` et `Dispo-dist/2.5.3/RELEASE-build68.md`. Aucun changement métier ou Supabase. Validation sur iPhone physique non effectuée ; appareil verrouillé pendant le diagnostic.
+- Pour les prochaines livraisons, conserver un lancement Release sur le dernier iOS disponible : la compilation et l’import Apple seuls ne détectaient pas ce crash.
