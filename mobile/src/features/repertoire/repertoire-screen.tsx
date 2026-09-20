@@ -29,8 +29,6 @@ import { DispoButton } from '@/components/ui/pressable';
 import { EmptyState, ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { useAuth } from '@/features/auth/auth-context';
 import { GroupSongRow } from '@/features/groups/group-song-row';
-import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
-import { useSubscription } from '@/features/premium/subscription-queries';
 import { hideAlbumCoversKey, useBooleanPreference } from '@/features/settings/settings-storage';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing, tint } from '@/theme/tokens';
@@ -103,8 +101,6 @@ export function RepertoireScreen({
   const Container = embedded ? Fragment : Screen;
   const { session } = useAuth();
   const self = profileId === session?.user.id;
-  const subscription = useSubscription();
-  const canEdit = subscription.data?.tier === 'premium';
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   const query = usePersonalRepertoire(profileId);
@@ -122,7 +118,7 @@ export function RepertoireScreen({
     () => visiblePersonalSongs(songs ?? [], search, style, order),
     [songs, search, style, order],
   );
-  const addSong = () => router.push(canEdit ? ('/repertoire/add' as never) : '/premium');
+  const addSong = () => router.push('/repertoire/add' as never);
   if (query.isLoading)
     return (
       <Container {...(!embedded ? { nativeHeader: true } : {})}>
@@ -180,12 +176,11 @@ export function RepertoireScreen({
           <View style={styles.header}>
             {self ? (
               <>
-                {!canEdit ? <SubscriptionAccessCard /> : null}
                 <ListRow
                   accessory={
                     <Switch
                       accessibilityLabel={t('Répertoire public')}
-                      disabled={visibility.isPending || (!canEdit && !query.data?.isPublic)}
+                      disabled={visibility.isPending}
                       value={query.data?.isPublic ?? false}
                       trackColor={{ true: palette.electric, false: palette.inset }}
                       onValueChange={(value) =>
@@ -198,9 +193,7 @@ export function RepertoireScreen({
                   leadingIcon={query.data?.isPublic ? 'globe-outline' : 'lock-closed-outline'}
                   subtitle={t(
                     query.data?.isPublic
-                      ? canEdit
-                        ? 'Visible depuis ton profil.'
-                        : 'Le partage public est suspendu sans Premium.'
+                      ? 'Visible depuis ton profil.'
                       : 'Toi seul peux le consulter.',
                   )}
                   title={t('Répertoire public')}
@@ -210,7 +203,7 @@ export function RepertoireScreen({
                     'Les morceaux de tes groupes sont ajoutés automatiquement. Ta maîtrise reste personnelle.',
                   )}
                 </AppText>
-                <DispoButton icon={canEdit ? 'add' : 'lock-closed-outline'} onPress={addSong}>
+                <DispoButton icon="add" onPress={addSong}>
                   {t('Ajouter un morceau')}
                 </DispoButton>
               </>

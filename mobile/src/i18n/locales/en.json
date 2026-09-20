@@ -2712,5 +2712,10 @@
   "{{percent}} % match": "{{percent}}% match",
   "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "Select a day to view or edit your availability.",
   "Retirer cette date": "Remove this date",
-  "Ajouter cette date": "Add this date"
+  "Ajouter cette date": "Add this date",
+  "Jusqu’à 6 groupes et 6 vidéos": "Up to 6 groups and 6 videos",
+  "La création d’un groupe, sans les vidéos supplémentaires.": "Create one group, without extra videos.",
+  "Dirige jusqu’à 6 groupes et présente jusqu’à 6 vidéos de 1 min 30.": "Lead up to 6 groups and showcase up to 6 videos of 1 min 30.",
+  "Un groupe avec Dispo Groupe, jusqu’à 6 groupes et 6 vidéos avec Premium.": "One group with Dispo Groupe, up to 6 groups and 6 videos with Premium.",
+  "Touche un jour libre pour ajouter une disponibilité ponctuelle.": "Tap an unavailable day to add a one-off availability."
 }

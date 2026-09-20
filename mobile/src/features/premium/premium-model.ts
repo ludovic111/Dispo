@@ -1,5 +1,5 @@
 /**
- * Premium capabilities, including the personal repertoire.
+ * Subscription capability identifiers.
  * Keep the raw values stable: they are product policy identifiers, not copy.
  */
 export const premiumCapabilities = [
@@ -20,6 +20,7 @@ export const freeCapabilities: readonly PremiumCapability[] = [
   'recurringEvents',
   'configurableReminders',
   'autoSOS',
+  'personalRepertoire',
 ];
 
 export type SubscriptionTier = 'free' | 'group' | 'premium';

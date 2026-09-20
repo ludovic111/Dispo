@@ -98,7 +98,7 @@ update public.personal_repertoire_settings set is_public=false where profile_id=
 select pg_temp.assert_ok((select song_count is null and overlap_percent is null and titles='{}' from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private repertoire leaked');
 update public.personal_repertoire_settings set is_public=true where profile_id='59000000-0000-4000-8000-000000000002';
 update private.subscription_state set expires_at=now()-interval '1 day' where profile_id='59000000-0000-4000-8000-000000000002';
-select pg_temp.assert_ok((select overlap_percent is null from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'expired Premium repertoire leaked');
+select pg_temp.assert_ok((select overlap_percent=100 from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'subscription expiry hid free repertoire overlap');
 select pg_temp.assert_ok(not has_function_privilege('anon','public.profile_common_songs(uuid[])','execute'), 'anonymous overlap access');
 -- Single-genre legacy inserts retain their genre; modern multi-select and old edits interoperate.
 select pg_temp.assert_ok((select genres=array['Jazz'] from public.gig_requests where id='59000000-0000-4000-8000-000000000040'), 'legacy genre lost');

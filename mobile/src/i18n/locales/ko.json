@@ -2712,5 +2712,10 @@
   "{{percent}} % match": "매칭률 {{percent}}%",
   "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "날짜를 선택하여 가능한 시간을 확인하거나 수정하세요.",
   "Retirer cette date": "이 날짜 삭제",
-  "Ajouter cette date": "이 날짜 추가"
+  "Ajouter cette date": "이 날짜 추가",
+  "Jusqu’à 6 groupes et 6 vidéos": "최대 6개 그룹 및 영상 6개",
+  "La création d’un groupe, sans les vidéos supplémentaires.": "그룹 1개 생성. 추가 영상은 포함되지 않습니다.",
+  "Dirige jusqu’à 6 groupes et présente jusqu’à 6 vidéos de 1 min 30.": "최대 6개 그룹을 이끌고, 1분 30초 영상을 최대 6개 게시하세요.",
+  "Un groupe avec Dispo Groupe, jusqu’à 6 groupes et 6 vidéos avec Premium.": "Dispo Groupe로 그룹 1개, Premium으로 최대 6개 그룹과 영상 6개.",
+  "Touche un jour libre pour ajouter une disponibilité ponctuelle.": "가능한 일정이 없는 날짜를 눌러 일회성 가능 일정을 추가하세요."
 }

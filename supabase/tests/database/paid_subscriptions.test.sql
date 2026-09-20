@@ -12,7 +12,7 @@ select pg_temp.assert_true(public.get_my_subscription()->>'tier'='free','Free de
 do $$ begin
  begin perform public.apply_revenuecat_subscription_state((select auth.uid()),'premium',now()+interval '1 day',now()); raise exception 'Client can grant purchases'; exception when insufficient_privilege then null; end;
  begin insert into public.music_groups(name,leader_id) values('Forbidden',(select auth.uid())); raise exception 'Free account can create group'; exception when insufficient_privilege then null; end;
- begin perform public.add_personal_song('{"title":"Forbidden"}'); raise exception 'Free account can add personal song'; exception when insufficient_privilege then null; end;
+ perform public.add_personal_song('{"title":"Personal arrangement","artist":"QA","form":"AABA"}');
 end $$;
 reset role;
 select public.apply_revenuecat_subscription_state('55000000-0000-4000-8000-000000000001','group',now()+interval '1 day',now()-interval '1 minute');
@@ -23,7 +23,7 @@ do $$ begin
  begin insert into public.music_groups(name,leader_id) values('Second',(select auth.uid())); raise exception 'Groupe can create second group'; exception when insufficient_privilege then null; end;
  -- Since 2.5 organisation automation (Auto-SOS) is free for every tier.
  update public.music_groups set auto_sos_enabled=true where leader_id=(select auth.uid());
- begin perform public.add_personal_song('{"title":"Forbidden"}'); raise exception 'Groupe includes personal repertoire'; exception when insufficient_privilege then null; end;
+ perform public.add_personal_song('{"title":"Personal arrangement","artist":"QA","form":"AABA"}');
 end $$;
 reset role;
 select public.apply_revenuecat_subscription_state('55000000-0000-4000-8000-000000000001','premium',now()+interval '1 day',now());
@@ -46,15 +46,15 @@ reset role;
 -- Simulate time passing without a webhook. Cached profiles.is_premium stays true.
 update private.subscription_state set expires_at=now()-interval '1 second' where profile_id='55000000-0000-4000-8000-000000000001';
 set local role authenticated;
-select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire where profile_id='55000000-0000-4000-8000-000000000001'),'Expired public repertoire still shared');
+select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire where profile_id='55000000-0000-4000-8000-000000000001'),'Subscription expiry hid the free public repertoire');
 select set_config('request.jwt.claim.sub','55000000-0000-4000-8000-000000000001',true);
 select pg_temp.assert_true(public.get_my_subscription()->>'tier'='free','Expiry depends on a webhook');
 select pg_temp.assert_true((select count(*)=2 from public.music_groups where leader_id=(select auth.uid())),'Expiry erased groups');
 select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire where profile_id=(select auth.uid())),'Expiry erased personal work');
 do $$ begin
  begin insert into public.music_groups(name,leader_id) values('Expired',(select auth.uid())); raise exception 'Expired account can create'; exception when insufficient_privilege then null; end;
- begin update public.personal_repertoire set mastery=1 where profile_id=(select auth.uid()); raise exception 'Expired account can edit mastery'; exception when insufficient_privilege then null; end;
- begin perform public.update_personal_arrangement((select id from public.personal_repertoire limit 1),'{"tempo_bpm":150}'); raise exception 'Expired account can edit arrangement'; exception when insufficient_privilege then null; end;
+ update public.personal_repertoire set mastery=1 where profile_id=(select auth.uid());
+ perform public.update_personal_arrangement((select id from public.personal_repertoire where profile_id=(select auth.uid()) limit 1),'{"tempo_bpm":150}');
 end $$;
 update public.personal_repertoire set hidden=true where profile_id=(select auth.uid());
 update public.personal_repertoire_settings set is_public=false where profile_id=(select auth.uid());

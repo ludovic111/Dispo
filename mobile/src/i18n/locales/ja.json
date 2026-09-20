@@ -2712,5 +2712,10 @@
   "{{percent}} % match": "マッチ率 {{percent}}%",
   "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "日付を選択して空き状況を確認・編集できます。",
   "Retirer cette date": "この日付を削除",
-  "Ajouter cette date": "この日付を追加"
+  "Ajouter cette date": "この日付を追加",
+  "Jusqu’à 6 groupes et 6 vidéos": "最大6グループと動画6本",
+  "La création d’un groupe, sans les vidéos supplémentaires.": "グループを1つ作成。追加動画は含まれません。",
+  "Dirige jusqu’à 6 groupes et présente jusqu’à 6 vidéos de 1 min 30.": "最大6グループを率い、1分30秒の動画を最大6本掲載。",
+  "Un groupe avec Dispo Groupe, jusqu’à 6 groupes et 6 vidéos avec Premium.": "Dispo Groupeで1グループ、Premiumで最大6グループと動画6本。",
+  "Touche un jour libre pour ajouter une disponibilité ponctuelle.": "予定が未設定の日をタップして、その日の空き時間を追加できます。"
 }

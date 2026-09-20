@@ -2,14 +2,14 @@
   "expo": {
     "name": "Dispo",
     "slug": "dispo",
-    "version": "2.5.2",
+    "version": "2.5.3",
     "orientation": "portrait",
     "icon": "./assets/images/dispo/app-icon.png",
     "scheme": "dispo",
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "ch.dispo.app",
-      "buildNumber": "66",
+      "buildNumber": "67",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "config": {
@@ -166,7 +166,7 @@
     },
     "android": {
       "package": "ch.dispo.app",
-      "versionCode": 66,
+      "versionCode": 67,
       "adaptiveIcon": {
         "backgroundColor": "#050814",
         "foregroundImage": "./assets/images/dispo/app-icon.png"

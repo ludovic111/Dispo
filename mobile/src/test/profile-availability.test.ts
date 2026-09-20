@@ -118,3 +118,15 @@ describe('weekly availability', () => {
     expect(normalizeWeeklyAvailability(original.weekly)).toEqual(original.weekly);
   });
 });
+
+it('retains unfinished windows on other days when removing a one-off date', () => {
+  const draft = {
+    dates: ['2026-09-21', '2026-09-22'],
+    timeSlots: { '2026-09-21': [{ start: '18:00', end: '12:00' }] },
+    weekly: { '5': [{ start: '18:00', end: '12:00' }] },
+  };
+  const next = removeAvailableDay(draft, '2026-09-22');
+  expect(next.timeSlots).toEqual(draft.timeSlots);
+  expect(next.weekly).toEqual(draft.weekly);
+  expect(hasInvalidAvailabilityTimeSlots(next)).toBe(true);
+});

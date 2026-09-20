@@ -25,11 +25,6 @@ import {
 
 const perks = [
   {
-    icon: 'musical-notes' as const,
-    title: 'Ton répertoire personnel',
-    text: 'Retrouve les morceaux de tes groupes, ajoute les tiens et suis ta maîtrise. Partage ton répertoire ou garde-le privé.',
-  },
-  {
     icon: 'people' as const,
     text: 'Centralise les membres, répertoires, setlists et événements de chacun de tes projets.',
     title: "Crée jusqu'à 6 groupes",
@@ -101,6 +96,7 @@ export function PremiumScreen() {
               subtitle={t("Premium n'achète ni l'accès au réseau ni ta sécurité.")}
               title={t('Toujours gratuit')}
             />
+            <FreeLine icon="musical-notes" text={t('Ton répertoire personnel')} />
             <FreeLine icon="business" text={t("Affiliation et communautés d'école")} />
             <FreeLine
               icon="shield-checkmark"
@@ -158,7 +154,7 @@ function FreeLine({
   icon,
   text,
 }: {
-  icon: 'business' | 'options' | 'people' | 'shield-checkmark';
+  icon: 'musical-notes' | 'business' | 'options' | 'people' | 'shield-checkmark';
   text: string;
 }) {
   const { palette } = useDispoTheme();

@@ -24,7 +24,6 @@ import { SectionHeader } from '@/components/ui/section';
 import { useAuth } from '@/features/auth/auth-context';
 import type { GroupSong } from '@/features/groups/group-model';
 import { SongInfoPanel } from '@/features/groups/song-info-panel';
-import { usePremiumCapability } from '@/features/premium/subscription-queries';
 import { hideAlbumCoversKey, useBooleanPreference } from '@/features/settings/settings-storage';
 import { useDispoTheme } from '@/theme/theme-context';
 import { spacing } from '@/theme/tokens';
@@ -32,8 +31,7 @@ import { spacing } from '@/theme/tokens';
 export function RepertoireSongScreen({ profileId, songId }: { profileId: string; songId: string }) {
   const { session } = useAuth();
   const self = session?.user.id === profileId;
-  const premium = usePremiumCapability('personalRepertoire');
-  const canEdit = self && premium;
+  const canEdit = self;
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
   const query = usePersonalRepertoire(profileId);

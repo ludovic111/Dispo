@@ -2712,5 +2712,10 @@
   "{{percent}} % match": "{{percent}} % Match",
   "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "Wähle einen Tag, um deine Verfügbarkeit anzusehen oder zu ändern.",
   "Retirer cette date": "Diesen Tag entfernen",
-  "Ajouter cette date": "Diesen Tag hinzufügen"
+  "Ajouter cette date": "Diesen Tag hinzufügen",
+  "Jusqu’à 6 groupes et 6 vidéos": "Bis zu 6 Gruppen und 6 Videos",
+  "La création d’un groupe, sans les vidéos supplémentaires.": "Eine Gruppe erstellen, ohne zusätzliche Videos.",
+  "Dirige jusqu’à 6 groupes et présente jusqu’à 6 vidéos de 1 min 30.": "Leite bis zu 6 Gruppen und zeige bis zu 6 Videos von 1 Min. 30 Sek.",
+  "Un groupe avec Dispo Groupe, jusqu’à 6 groupes et 6 vidéos avec Premium.": "Eine Gruppe mit Dispo Groupe, bis zu 6 Gruppen und 6 Videos mit Premium.",
+  "Touche un jour libre pour ajouter une disponibilité ponctuelle.": "Tippe auf einen nicht verfügbaren Tag, um eine einmalige Verfügbarkeit hinzuzufügen."
 }

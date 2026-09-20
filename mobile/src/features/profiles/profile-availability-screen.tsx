@@ -66,11 +66,11 @@ export function ProfileAvailabilityScreen() {
     const day = availableDayKey(date);
     const nextDates = toggleAvailableDate(dates, day);
     setCalendarDate(date);
-    setDraft({
-      ...availability,
-      dates: nextDates,
-      timeSlots: normalizeAvailabilityTimeSlots(availability.timeSlots, nextDates),
-    });
+    setDraft(
+      dates.includes(day)
+        ? removeAvailableDay(availability, day)
+        : { ...availability, dates: nextDates },
+    );
     setErrorText(null);
   };
 
@@ -191,7 +191,7 @@ export function ProfileAvailabilityScreen() {
             </View>
             <View style={styles.flex}>
               <SectionHeader
-                subtitle={t('Sélectionne un jour pour consulter ou modifier tes disponibilités.')}
+                subtitle={t('Touche un jour libre pour ajouter une disponibilité ponctuelle.')}
                 title={t('Dates de disponibilité')}
               />
             </View>
@@ -200,7 +200,11 @@ export function ProfileAvailabilityScreen() {
           <AvailabilityCalendar
             availability={availability}
             selectedDay={selectedDay}
-            onSelect={(day) => setCalendarDate(new Date(`${day}T12:00:00`))}
+            onSelect={(day) => {
+              const date = new Date(`${day}T12:00:00`);
+              if (availabilityForDay(availability, day).kind === 'none') updateDay(date);
+              else setCalendarDate(date);
+            }}
           />
           <DispoButton onPress={() => updateDay(calendarDate)} variant="secondary">
             {dates.includes(selectedDay) ? t('Retirer cette date') : t('Ajouter cette date')}

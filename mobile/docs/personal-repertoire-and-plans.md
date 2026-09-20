@@ -25,20 +25,25 @@ Les deux migrations versionnées créent les tables, RLS et triggers, puis
 transfèrent l'ancien tableau de titres de profil avant de vider son champ public.
 La seconde migration évite qu'un ancien client contourne le choix privé.
 
-## Formules (2.5)
+## Formules (2.5.3)
 
 Seules des formules **mensuelles** sont vendues dans l'app (les identifiants
 annuels restent reconnus côté serveur pour les abonnés existants).
 
 | Formule | Mensuel CHF | Groupes dirigés | Répertoire personnel | Vidéos de démo |
 | ------- | ----------: | --------------: | :------------------: | -------------: |
-| Gratuit |           — |               0 |          —           |   1 × 1 min 30 |
-| Groupe  |        2.90 |               1 |          —           |   1 × 1 min 30 |
+| Gratuit |           — |               0 |         oui          |   1 × 1 min 30 |
+| Groupe  |        2.90 |               1 |         oui          |   1 × 1 min 30 |
 | Premium |        6.90 |               6 |         oui          |   6 × 1 min 30 |
 
 Gratuit pour tout le monde depuis 2.5 : filtres avancés, dates récurrentes,
 rappels configurables et Auto-SOS (`freeCapabilities` dans `premium-model.ts`,
 triggers serveur relâchés par la migration `20260913152000_pricing_2_5_amr`).
+
+Depuis 2.5.3, le répertoire personnel est gratuit : ajouts, arrangements, maîtrise,
+styles, copie autorisée et partage public facultatif. Les répertoires restent
+privés par défaut ; les blocages et droits des groupes restent inchangés.
+Migration : `20260920103828_free_personal_repertoire`.
 
 Écoles :
 

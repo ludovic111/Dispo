@@ -112,9 +112,10 @@ export function profileAvailabilitySignature(value: ProfileAvailability): string
 export function removeAvailableDay(value: ProfileAvailability, day: string): ProfileAvailability {
   const dates = normalizeAvailableDates(value.dates.filter((candidate) => candidate !== day));
   return {
-    weekly: normalizeWeeklyAvailability(value.weekly),
+    ...value,
+    weekly: value.weekly ?? {},
     dates,
-    timeSlots: normalizeAvailabilityTimeSlots(value.timeSlots, dates),
+    timeSlots: Object.fromEntries(Object.entries(value.timeSlots).filter(([key]) => key !== day)),
   };
 }
 

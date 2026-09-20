@@ -27,8 +27,6 @@ import {
 } from '@/features/groups/song-catalog-model';
 import { SongCatalogPicker } from '@/features/groups/song-catalog-picker';
 import { SongInfoPanel } from '@/features/groups/song-info-panel';
-import { SubscriptionAccessCard } from '@/features/premium/subscription-access-card';
-import { useSubscription } from '@/features/premium/subscription-queries';
 import { hideAlbumCoversKey, useBooleanPreference } from '@/features/settings/settings-storage';
 import { spacing } from '@/theme/tokens';
 
@@ -36,7 +34,6 @@ export function RepertoireAddScreen() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const client = useQueryClient();
-  const subscription = useSubscription();
   const [draft, setDraft] = useState<GroupSong>(() =>
     emptyGroupSong(randomUUID(), session?.user.id ?? '', true),
   );
@@ -89,14 +86,6 @@ export function RepertoireAddScreen() {
     },
     onError: () => Alert.alert(t('Le morceau n’a pas pu être ajouté.')),
   });
-  if (subscription.data?.tier !== 'premium')
-    return (
-      <Screen nativeHeader>
-        <View style={styles.access}>
-          <SubscriptionAccessCard />
-        </View>
-      </Screen>
-    );
   const patch = <K extends keyof GroupSong>(key: K, value: GroupSong[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const valid =
@@ -161,7 +150,6 @@ export function RepertoireAddScreen() {
   );
 }
 const styles = StyleSheet.create({
-  access: { padding: spacing.gutter },
   content: { padding: spacing.gutter, paddingBottom: spacing.xxl, gap: spacing.sm },
   section: { gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

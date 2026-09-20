@@ -79,7 +79,7 @@ begin if ok is distinct from true then raise exception '%', message; end if; end
 insert into public.music_groups(id,name,leader_id,repertoire) values
  ('59000000-0000-4000-8000-000000000050','Matching QA','59000000-0000-4000-8000-000000000001','[]');
 insert into public.group_events(id,group_id,kind,title,venue,date,setlist) values
- ('59000000-0000-4000-8000-000000000060','59000000-0000-4000-8000-000000000050','Concert','Matching QA','Genève',now()+interval '7 days','[]');
+ ('59000000-0000-4000-8000-000000000060','59000000-0000-4000-8000-000000000050','Concert','Matching QA','Genève',((((now()+interval '7 days') at time zone 'Europe/Zurich')::date + time '20:30') at time zone 'Europe/Zurich'),'[]');
 update public.gig_requests set event_id='59000000-0000-4000-8000-000000000060'
  where id='59000000-0000-4000-8000-000000000040';
 -- Exercise both membership-only and private visibility, viewed by a non-member.

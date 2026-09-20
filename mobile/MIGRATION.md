@@ -1530,3 +1530,17 @@ livraison d’un lot fonctionnellement validé.
 - Notes de version 2.4.2 dans les neuf langues ; version 2.4.2 build 63.
 - Validation : TypeScript, ESLint sans avertissement, Prettier, 79 suites / 424 tests ; Expo Doctor 20/21 (29 écarts patch préexistants, laissés hors du lot). QA visuelle sur simulateur iPhone 17 (iOS 26.4) et émulateur Android 16 contre la pile Supabase locale avec quatre comptes fictifs : 23 écrans parcourus par lien profond sur chaque plateforme, en clair et sombre, thème, cinq défauts trouvés et corrigés (rangée d’actions du profil tronquée, espacement des segments Messages, état vide inversé dans les listes `inverted` sur les deux plateformes, tag d’école dupliqué, barres de maîtrise du répertoire). Captures hors Git dans `Dispo-dist/qa-20260913-ui-pass/`.
 - Point d’attention documenté dans la mémoire agent : Metro inlinait l’URL Supabase de production malgré `EXPO_NO_DOTENV` ; la QA locale exige d’échanger temporairement `.env.local` (restauré à l’octet près, SHA-256 identique) et de réinitialiser le trousseau du simulateur.
+
+## 2026-09-20 — 2.5.3 (67), répertoire gratuit et disponibilités ponctuelles
+
+Répertoire personnel ouvert à tous les comptes (client + migration locale
+`20260920103828_free_personal_repertoire`), droits de propriété et confidentialité
+conservés. Ajout ponctuel au toucher, consultation sans retrait, brouillons horaires
+préservés lors des changements de dates. Textes des formules adaptés dans neuf langues.
+
+Validation : 95 suites / 656 tests, TypeScript/ESLint, 20 suites SQL locales, API
+avec comptes gratuits et QA native Android de persistance. CNG et Android
+Release APK/AAB/tests Gradle réussis ; signature et configuration production vérifiées.
+Migration production en attente de confirmation ; iOS/TestFlight bloqués par la
+licence Xcode à accepter manuellement. Aucun upload Apple ni déploiement production
+pour ce lot à cette étape. Rapport détaillé : `../../Dispo-dist/2.5.3/RELEASE-build67.md`.

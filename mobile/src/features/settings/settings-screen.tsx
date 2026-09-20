@@ -317,9 +317,7 @@ export function SettingsScreen() {
       <SettingsSection title={t('Abonnements')}>
         <SettingsRow
           color={palette.electric}
-          detail={t(
-            'Un groupe avec Dispo Groupe, jusqu’à 6 groupes et le répertoire personnel avec Premium.',
-          )}
+          detail={t('Un groupe avec Dispo Groupe, jusqu’à 6 groupes et 6 vidéos avec Premium.')}
           icon="pricetags"
           onPress={() => router.push('/premium' as Href)}
           title={t('Dispo Groupe & Premium')}

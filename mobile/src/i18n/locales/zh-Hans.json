@@ -2712,5 +2712,10 @@
   "{{percent}} % match": "匹配率 {{percent}}%",
   "Sélectionne un jour pour consulter ou modifier tes disponibilités.": "选择日期以查看或编辑你的空闲时间。",
   "Retirer cette date": "移除此日期",
-  "Ajouter cette date": "添加此日期"
+  "Ajouter cette date": "添加此日期",
+  "Jusqu’à 6 groupes et 6 vidéos": "最多6个小组和6个视频",
+  "La création d’un groupe, sans les vidéos supplémentaires.": "创建1个小组，不含额外视频。",
+  "Dirige jusqu’à 6 groupes et présente jusqu’à 6 vidéos de 1 min 30.": "管理最多6个小组，并展示最多6个1分30秒的视频。",
+  "Un groupe avec Dispo Groupe, jusqu’à 6 groupes et 6 vidéos avec Premium.": "Dispo Groupe可管理1个小组，Premium可管理最多6个小组并展示6个视频。",
+  "Touche un jour libre pour ajouter une disponibilité ponctuelle.": "点击尚未设为可用的日期，添加一次性可用时间。"
 }

@@ -7,7 +7,6 @@ begin if ok is distinct from true then raise exception '%', message; end if; end
 insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at,confirmation_token,recovery_token,email_change,email_change_token_new)
 select '00000000-0000-0000-0000-000000000000', ('54000000-0000-4000-8000-00000000000'||i)::uuid,'authenticated','authenticated',
 'repertoire-sqlqa-'||i||'@local.test','',now(),'{"provider":"email","providers":["email"]}',jsonb_build_object('name','Repertoire QA '||i),now(),now(),'','','','' from generate_series(1,3) i;
-insert into private.subscription_state(profile_id,tier,expires_at,checked_at) select id,'premium',now()+interval '1 day',now() from public.profiles where id::text like '54000000-%';
 update public.profiles set name='Repertoire QA', instruments=array['Piano'] where id::text like '54000000-%';
 insert into public.music_groups(id,name,leader_id,repertoire) values
 ('54000000-0000-4000-8000-000000000010','Library QA','54000000-0000-4000-8000-000000000001','[{"id":"54000000-0000-4000-8000-000000000030","title":"Blue Bossa","artist":"Kenny Dorham","is_approved":true,"solos":["private-member"],"chords":"private notes"},{"id":"54000000-0000-4000-8000-000000000031","title":"Pending song","is_approved":false}]');

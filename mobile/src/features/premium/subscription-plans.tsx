@@ -133,14 +133,14 @@ export function SubscriptionPlans() {
                   {t(
                     tier === 'group'
                       ? 'Création d’un seul groupe'
-                      : 'Jusqu’à 6 groupes, répertoire personnel et 6 vidéos',
+                      : 'Jusqu’à 6 groupes et 6 vidéos',
                   )}
                 </AppText>
                 <AppText color={palette.muted} variant="footnote">
                   {t(
                     tier === 'group'
-                      ? 'La création d’un groupe, sans le répertoire personnel ni les vidéos supplémentaires.'
-                      : 'Dirige jusqu’à 6 groupes, garde ton répertoire personnel et présente jusqu’à 6 vidéos de 1 min 30.',
+                      ? 'La création d’un groupe, sans les vidéos supplémentaires.'
+                      : 'Dirige jusqu’à 6 groupes et présente jusqu’à 6 vidéos de 1 min 30.',
                   )}
                 </AppText>
                 <DispoButton

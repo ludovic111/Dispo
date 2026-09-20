@@ -23,17 +23,21 @@ describe('2.5 pricing rights', () => {
   });
   it('opens filters, recurrence, reminders and Auto-SOS to every tier', () => {
     expect([...freeCapabilities].sort()).toEqual(
-      ['advancedFilters', 'autoSOS', 'configurableReminders', 'recurringEvents'].sort(),
+      [
+        'advancedFilters',
+        'autoSOS',
+        'configurableReminders',
+        'recurringEvents',
+        'personalRepertoire',
+      ].sort(),
     );
     for (const capability of freeCapabilities)
       for (const tier of ['free', 'group', 'premium'] as const)
         expect(subscriptionCanUse(tier, capability)).toBe(true);
   });
-  it('keeps extra groups, the portfolio and the personal repertoire Premium-only', () => {
+  it('keeps extra groups and the portfolio Premium-only', () => {
     const premiumOnly = premiumCapabilities.filter((cap) => !freeCapabilities.includes(cap));
-    expect([...premiumOnly].sort()).toEqual(
-      ['expandedPortfolio', 'leadAdditionalGroup', 'personalRepertoire'].sort(),
-    );
+    expect([...premiumOnly].sort()).toEqual(['expandedPortfolio', 'leadAdditionalGroup'].sort());
     for (const capability of premiumOnly) {
       expect(subscriptionCanUse('free', capability)).toBe(false);
       expect(subscriptionCanUse('group', capability)).toBe(false);
