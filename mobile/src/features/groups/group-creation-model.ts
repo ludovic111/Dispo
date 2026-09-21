@@ -51,6 +51,8 @@ export function groupCreationErrorKind(error: unknown): GroupCreationErrorKind {
 }
 
 export function groupCreationErrorMessage(error: unknown): string {
+  if (errorField(error, 'message') === 'group_repertoire_private')
+    return 'Un répertoire est devenu privé. Désactive le répertoire commun ou actualise la sélection.';
   const contentMessage = communityContentMessage(error, '');
   if (contentMessage) return contentMessage;
   switch (groupCreationErrorKind(error)) {

@@ -106,6 +106,7 @@ export function RepertoireScreen({
   const query = usePersonalRepertoire(profileId);
   const { visibility } = usePersonalRepertoireActions();
   const [search, setSearch] = useState('');
+  const [privacyExpanded, setPrivacyExpanded] = useState(false);
   const [style, setStyle] = useState('');
   const [order, setOrder] = useState<RepertoireOrder>('title');
   const [hideArtwork] = useBooleanPreference(hideAlbumCoversKey);
@@ -177,27 +178,36 @@ export function RepertoireScreen({
             {self ? (
               <>
                 <ListRow
-                  accessory={
-                    <Switch
-                      accessibilityLabel={t('Répertoire public')}
-                      disabled={visibility.isPending}
-                      value={query.data?.isPublic ?? false}
-                      trackColor={{ true: palette.electric, false: palette.inset }}
-                      onValueChange={(value) =>
-                        visibility.mutate(value, {
-                          onError: () => Alert.alert(t('La visibilité n’a pas pu être modifiée.')),
-                        })
-                      }
-                    />
-                  }
-                  leadingIcon={query.data?.isPublic ? 'globe-outline' : 'lock-closed-outline'}
-                  subtitle={t(
-                    query.data?.isPublic
-                      ? 'Visible depuis ton profil.'
-                      : 'Toi seul peux le consulter.',
-                  )}
-                  title={t('Répertoire public')}
+                  leadingIcon="options-outline"
+                  title={t('Confidentialité du répertoire')}
+                  accessibilityState={{ expanded: privacyExpanded }}
+                  onPress={() => setPrivacyExpanded((value) => !value)}
                 />
+                {privacyExpanded ? (
+                  <ListRow
+                    accessory={
+                      <Switch
+                        accessibilityLabel={t('Répertoire public')}
+                        disabled={visibility.isPending}
+                        value={query.data?.isPublic ?? true}
+                        trackColor={{ true: palette.electric, false: palette.inset }}
+                        onValueChange={(value) =>
+                          visibility.mutate(value, {
+                            onError: () =>
+                              Alert.alert(t('La visibilité n’a pas pu être modifiée.')),
+                          })
+                        }
+                      />
+                    }
+                    leadingIcon={query.data?.isPublic ? 'globe-outline' : 'lock-closed-outline'}
+                    subtitle={t(
+                      query.data?.isPublic
+                        ? 'Visible depuis ton profil.'
+                        : 'Les titres sont privés. Le score et le nombre de morceaux en commun restent visibles.',
+                    )}
+                    title={t('Répertoire public')}
+                  />
+                ) : null}
                 <AppText variant="caption" color={palette.muted}>
                   {t(
                     'Les morceaux de tes groupes sont ajoutés automatiquement. Ta maîtrise reste personnelle.',

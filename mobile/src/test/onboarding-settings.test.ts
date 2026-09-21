@@ -99,10 +99,10 @@ describe('settings parity helpers', () => {
     expect(privacyPage('de')).toBe('https://dispoapp.net/privacy-en');
   });
 
-  it('marks the current Swift patch-note version', () => {
+  it('keeps current release notes and the historical versions', () => {
     expect(normalizeMarketingVersion('2.4.0')).toBe('2.4');
-    expect(patchNotes).toHaveLength(33);
-    expect(patchNotes[0]?.version).toBe('2.5.0');
+    expect(patchNotes).toHaveLength(34);
+    expect(patchNotes[0]?.version).toBe('2.5.4');
     expect(patchNotes.at(-1)?.version).toBe('0.1.0');
   });
 });

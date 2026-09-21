@@ -8,6 +8,7 @@ import { File } from 'expo-file-system';
 
 import { openDocumentPreview } from '../../../modules/dispo-document-preview';
 
+import { initialGroupRepertoire } from './group-common-repertoire';
 import {
   aggregateGroupReactions,
   buildEventSavePayloads,
@@ -143,6 +144,7 @@ interface SongCatalogRpcRow {
 }
 
 export interface CreateGroupInput {
+  withCommonRepertoire?: boolean;
   emoji: string;
   memberIds: string[];
   name: string;
@@ -1104,9 +1106,15 @@ export async function createGroup(
   if (!name || memberIds.length === 0) throw new Error('group_invalid');
   const supabase = getSupabaseClient();
   const groupId = randomUUID().toLowerCase();
-  const created = await supabase
-    .from('music_groups')
-    .insert({ emoji: input.emoji || '🎶', id: groupId, leader_id: userId, name });
+  const created = await supabase.from('music_groups').insert({
+    emoji: input.emoji || '🎶',
+    id: groupId,
+    leader_id: userId,
+    name,
+    ...(input.withCommonRepertoire
+      ? { repertoire: await initialGroupRepertoire(memberIds, userId) }
+      : {}),
+  });
   if (created.error) throw created.error;
   // Comme Swift, le groupe reste utilisable si une invitation individuelle
   // échoue : on tente les autres et l'écran annonce honnêtement le résultat.

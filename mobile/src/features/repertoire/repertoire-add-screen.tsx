@@ -38,6 +38,8 @@ export function RepertoireAddScreen() {
     emptyGroupSong(randomUUID(), session?.user.id ?? '', true),
   );
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
+  const hasSelection = manualEntry || draft.catalogId !== null;
   const [hideArtwork] = useBooleanPreference(hideAlbumCoversKey);
   const request = useRef(0);
   useEffect(
@@ -47,6 +49,7 @@ export function RepertoireAddScreen() {
     [],
   );
   const choose = (item: SongCatalogResult) => {
+    setManualEntry(false);
     const id = ++request.current;
     setDraft((current) => selectCatalogSong(current, item));
     setLoadingMetadata(true);
@@ -89,6 +92,7 @@ export function RepertoireAddScreen() {
   const patch = <K extends keyof GroupSong>(key: K, value: GroupSong[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const valid =
+    hasSelection &&
     Boolean(draft.title.trim() && session?.user.id) &&
     draft.title.length <= 200 &&
     draft.artist.length <= 200 &&
@@ -115,36 +119,47 @@ export function RepertoireAddScreen() {
       >
         <SongCatalogPicker
           onSelect={choose}
+          onManual={() => {
+            if (manualEntry) return;
+            request.current += 1;
+            setLoadingMetadata(false);
+            setDraft(emptyGroupSong(draft.id, session?.user.id ?? '', true));
+            setManualEntry(true);
+          }}
           selectedId={draft.catalogId}
           loadingMetadata={loadingMetadata}
         />
-        <SongInfoPanel
-          draft={hideArtwork ? withoutSongArtwork(draft) : draft}
-          canEdit={!add.isPending}
-          patch={patch}
-          subtitle={t('Mon répertoire')}
-          arrangementSubtitle={t(
-            'Tes repères personnels ne modifient pas les morceaux de tes groupes.',
-          )}
-        />
-        <Card style={styles.section}>
-          <SectionHeader title={t('Style')} />
-          <View style={styles.chips}>
-            {repertoireStyles.map((style) => (
-              <ChoiceChip
-                key={style}
-                label={t(style)}
-                selected={draft.genre === style}
-                onPress={() =>
-                  setDraft((current) => ({ ...current, genre: style, genres: [style] }))
-                }
-              />
-            ))}
-          </View>
-        </Card>
-        <DispoButton disabled={!valid} loading={add.isPending} onPress={() => add.mutate()}>
-          {t('Ajouter à mon répertoire')}
-        </DispoButton>
+        {hasSelection ? (
+          <>
+            <SongInfoPanel
+              draft={hideArtwork ? withoutSongArtwork(draft) : draft}
+              canEdit={!add.isPending}
+              patch={patch}
+              subtitle={t('Mon répertoire')}
+              arrangementSubtitle={t(
+                'Tes repères personnels ne modifient pas les morceaux de tes groupes.',
+              )}
+            />
+            <Card style={styles.section}>
+              <SectionHeader title={t('Style')} />
+              <View style={styles.chips}>
+                {repertoireStyles.map((style) => (
+                  <ChoiceChip
+                    key={style}
+                    label={t(style)}
+                    selected={draft.genre === style}
+                    onPress={() =>
+                      setDraft((current) => ({ ...current, genre: style, genres: [style] }))
+                    }
+                  />
+                ))}
+              </View>
+            </Card>
+            <DispoButton disabled={!valid} loading={add.isPending} onPress={() => add.mutate()}>
+              {t('Ajouter à mon répertoire')}
+            </DispoButton>
+          </>
+        ) : null}
       </ScrollView>
     </Screen>
   );

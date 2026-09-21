@@ -7,6 +7,16 @@ export interface PatchNote {
 /** Release notes, newest first. Historical versions remain available below. */
 export const patchNotes: readonly PatchNote[] = [
   {
+    version: '2.5.4',
+    title: 'Vos rencontres, vos morceaux en commun',
+    points: [
+      'La déclaration « On a joué ensemble » fonctionne et les profils montrent les musiciens concernés.',
+      'Le répertoire est public par défaut. En privé, seuls le score et le nombre de morceaux en commun restent visibles.',
+      'À la création du groupe, choisissez de commencer avec vos morceaux en commun.',
+      'Ajoutez vos morceaux depuis le catalogue musical ; la saisie manuelle reste disponible si nécessaire.',
+    ],
+  },
+  {
     version: '2.5.0',
     title: 'Le match, les groupes, et une nouvelle peau',
     points: [

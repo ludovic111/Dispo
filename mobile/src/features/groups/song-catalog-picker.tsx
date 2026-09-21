@@ -10,16 +10,19 @@ import { SongArtwork, SongStoreBadge } from './group-song-row';
 import { AppText } from '@/components/ui/app-text';
 import { Card } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
+import { DispoButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { useDispoTheme } from '@/theme/theme-context';
 import { minimumTouchTarget, pressedStyle, radii, spacing } from '@/theme/tokens';
 
 export function SongCatalogPicker({
   onSelect,
+  onManual,
   selectedId,
   loadingMetadata = false,
 }: {
   onSelect: (song: SongCatalogResult) => void;
+  onManual: () => void;
   selectedId: string | null;
   loadingMetadata?: boolean;
 }) {
@@ -35,6 +38,7 @@ export function SongCatalogPicker({
     queryKey: ['song-catalog-search', term],
     enabled: term.length >= 2,
     queryFn: ({ signal }) => searchSongCatalog(term, signal),
+    retry: 1,
   });
   return (
     <Card style={styles.card}>
@@ -50,6 +54,11 @@ export function SongCatalogPicker({
       {query.isError ? (
         <AppText variant="caption" color={palette.muted}>
           {t('Catalogue indisponible. Tu peux ajouter le morceau manuellement.')}
+        </AppText>
+      ) : null}
+      {term.length >= 2 && !query.isFetching && query.data?.length === 0 ? (
+        <AppText variant="caption" color={palette.muted}>
+          {t('Aucun morceau trouvé. Essaie un autre titre ou artiste.')}
         </AppText>
       ) : null}
       {search.trim().length >= 2 &&
@@ -88,6 +97,11 @@ export function SongCatalogPicker({
             />
           </Pressable>
         ))}
+      {term.length >= 2 && !query.isFetching && term === search.trim() ? (
+        <DispoButton onPress={onManual} size="compact" variant="ghost">
+          {t('Morceau introuvable ? Ajouter manuellement')}
+        </DispoButton>
+      ) : null}
       {loadingMetadata ? (
         <View accessibilityLiveRegion="polite" style={styles.analysis}>
           <ActivityIndicator color={palette.electric} size="small" />

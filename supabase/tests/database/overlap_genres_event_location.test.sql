@@ -95,7 +95,7 @@ update public.personal_repertoire set hidden=false where profile_id='59000000-00
 update public.personal_repertoire set hidden=true where profile_id='59000000-0000-4000-8000-000000000001' and song->>'canonical_song_id' is null;
 select pg_temp.assert_ok((select song_count=1 and overlap_percent=100 from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'identical repertoires must be 100');
 update public.personal_repertoire_settings set is_public=false where profile_id='59000000-0000-4000-8000-000000000002';
-select pg_temp.assert_ok((select song_count is null and overlap_percent is null and titles='{}' from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private repertoire leaked');
+select pg_temp.assert_ok((select song_count=1 and overlap_percent=100 and titles='{}' from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private repertoire leaked');
 update public.personal_repertoire_settings set is_public=true where profile_id='59000000-0000-4000-8000-000000000002';
 update private.subscription_state set expires_at=now()-interval '1 day' where profile_id='59000000-0000-4000-8000-000000000002';
 select pg_temp.assert_ok((select overlap_percent=100 from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'subscription expiry hid free repertoire overlap');

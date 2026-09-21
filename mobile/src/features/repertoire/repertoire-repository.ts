@@ -50,7 +50,7 @@ export async function fetchPersonalRepertoire(
     }
     if (result.data.length < 200) break;
   }
-  return { isPublic: settings.data?.is_public ?? false, songs };
+  return { isPublic: settings.data?.is_public ?? true, songs };
 }
 export async function addPersonalSong(song: GroupSong): Promise<string> {
   const result = await getSupabaseClient().rpc('add_personal_song', {

@@ -107,7 +107,7 @@ select pg_temp.assert_ok((select song_count is null from public.profile_common_s
 select pg_temp.assert_ok((private.gig_profile_match('59000000-0000-4000-8000-000000000040','59000000-0000-4000-8000-000000000002')->>'score')::int < (select (value->>'score')::int from before_score), 'common songs must increase score');
 update public.personal_repertoire set hidden=false where profile_id='59000000-0000-4000-8000-000000000002';
 update public.personal_repertoire_settings set is_public=false where profile_id='59000000-0000-4000-8000-000000000002';
-select pg_temp.assert_ok((select song_count is null from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private repertoire count leaked');
+select pg_temp.assert_ok((select song_count=1 and titles='{}' from public.profile_common_songs(array['59000000-0000-4000-8000-000000000002']::uuid[])), 'private matching totals lost or titles leaked');
 
 -- Saving rules as the owner, then reading them after changing session.
 set local role authenticated;

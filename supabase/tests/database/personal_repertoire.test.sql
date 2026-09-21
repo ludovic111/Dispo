@@ -8,6 +8,8 @@ insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_co
 select '00000000-0000-0000-0000-000000000000', ('54000000-0000-4000-8000-00000000000'||i)::uuid,'authenticated','authenticated',
 'repertoire-sqlqa-'||i||'@local.test','',now(),'{"provider":"email","providers":["email"]}',jsonb_build_object('name','Repertoire QA '||i),now(),now(),'','','','' from generate_series(1,3) i;
 update public.profiles set name='Repertoire QA', instruments=array['Piano'] where id::text like '54000000-%';
+-- These fixtures deliberately opt out of the new public default.
+insert into public.personal_repertoire_settings(profile_id,is_public) values ('54000000-0000-4000-8000-000000000001',false),('54000000-0000-4000-8000-000000000002',false);
 insert into public.music_groups(id,name,leader_id,repertoire) values
 ('54000000-0000-4000-8000-000000000010','Library QA','54000000-0000-4000-8000-000000000001','[{"id":"54000000-0000-4000-8000-000000000030","title":"Blue Bossa","artist":"Kenny Dorham","is_approved":true,"solos":["private-member"],"chords":"private notes"},{"id":"54000000-0000-4000-8000-000000000031","title":"Pending song","is_approved":false}]');
 insert into public.group_members(group_id,profile_id,kind) values('54000000-0000-4000-8000-000000000010','54000000-0000-4000-8000-000000000002','permanent');
@@ -19,7 +21,7 @@ select pg_temp.assert_true((select count(*)=0 from public.personal_repertoire wh
 select set_config('request.jwt.claim.sub','54000000-0000-4000-8000-000000000002',true);
 select pg_temp.assert_true((select count(*)=1 from public.personal_repertoire where profile_id=auth.uid()),'Owner cannot read own songs');
 update public.personal_repertoire set mastery=3,style='Jazz latin',hidden=true where profile_id=(select auth.uid());
-insert into public.personal_repertoire_settings(profile_id,is_public) values ((select auth.uid()),true);
+insert into public.personal_repertoire_settings(profile_id,is_public) values ((select auth.uid()),true) on conflict(profile_id) do update set is_public=excluded.is_public;
 do $$ begin
   begin update public.personal_repertoire set profile_id='54000000-0000-4000-8000-000000000003'; raise exception 'Owner can reassign rows'; exception when insufficient_privilege then null; end;
   begin delete from public.personal_repertoire; raise exception 'Owner can delete exclusions'; exception when insufficient_privilege then null; end;

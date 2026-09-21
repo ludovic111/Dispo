@@ -8,6 +8,7 @@ import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { AvailabilityCalendar, availabilityForDay } from './availability-calendar';
 import { MyProfileDetail } from './my-profile-detail';
+import { ProfileCollaboratorsCard } from './profile-collaborators-card';
 import { ProfileSocialLinks, ProfileStatsCard, type ProfileStat } from './profile-shared';
 import { canRateProfile } from './profile-social-model';
 import {
@@ -41,6 +42,7 @@ import {
 import { useAuth } from '@/features/auth/auth-context';
 import { GigDirectRequestButton } from '@/features/gigs/gig-direct-request-button';
 import { ensureDirectConversation } from '@/features/messages/message-repository';
+import { usePersonalRepertoire } from '@/features/repertoire/repertoire-queries';
 import { PersonalRepertoireLink } from '@/features/repertoire/repertoire-screen';
 import { formatSwiftPlaceholders } from '@/i18n/format';
 import { useDispoTheme } from '@/theme/theme-context';
@@ -235,6 +237,7 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const social = useProfileSocialState(profile.id);
+  const repertoire = usePersonalRepertoire(profile.id);
   const following = useSetProfileFollowing(profile.id);
   const collaboration = useSetProfileCollaboration(profile.id);
   const rating = useSetProfileRating(profile.id);
@@ -416,6 +419,8 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
         <ProfileStatsCard stats={stats} />
       </Card>
 
+      <ProfileCollaboratorsCard profileId={profile.id} name={firstName} />
+
       <View style={styles.identity}>
         {profile.playedWithFriend ? (
           <Tag color={palette.jam} label={t('A joué avec un ami')} />
@@ -487,23 +492,38 @@ function PublicProfileDetail({ profile }: { profile: ProfileSummary }) {
       ) : null}
 
       {profile.repertoireOverlapPercent != null ? (
-        <Card style={styles.section}>
-          <AppText color={palette.electric}>
-            {profile.commonSongCount === 1
-              ? t('1 morceau en commun')
-              : t('{{count}} morceaux en commun', { count: profile.commonSongCount ?? 0 })}
-          </AppText>
-          <AppText>
-            {t('{{percent}} % de répertoire en commun', {
-              percent: profile.repertoireOverlapPercent,
-            })}
-          </AppText>
-          {profile.commonSongTitles?.length ? (
-            <AppText color={palette.muted} variant="caption">
-              {profile.commonSongTitles.join(' · ')}
+        <Pressable
+          accessibilityRole={repertoire.data?.isPublic ? 'button' : undefined}
+          accessibilityLabel={t('Répertoire musical')}
+          disabled={!repertoire.data?.isPublic}
+          onPress={() => router.push(`/repertoire/${profile.id}` as never)}
+          style={({ pressed }) => pressed && pressedStyle}
+        >
+          <Card style={styles.section}>
+            <AppText color={palette.electric}>
+              {profile.commonSongCount === 1
+                ? t('1 morceau en commun')
+                : t('{{count}} morceaux en commun', { count: profile.commonSongCount ?? 0 })}
             </AppText>
-          ) : null}
-        </Card>
+            <AppText>
+              {t('{{percent}} % de répertoire en commun', {
+                percent: profile.repertoireOverlapPercent,
+              })}
+            </AppText>
+            {repertoire.data?.isPublic && profile.commonSongTitles?.length ? (
+              <AppText color={palette.muted} variant="caption">
+                {profile.commonSongTitles.join(' · ')}
+              </AppText>
+            ) : null}
+            {repertoire.data ? (
+              <AppText color={palette.muted} variant="caption">
+                {repertoire.data.isPublic
+                  ? t('Voir le répertoire')
+                  : t('Répertoire privé · les titres restent masqués')}
+              </AppText>
+            ) : null}
+          </Card>
+        </Pressable>
       ) : null}
       {upcomingDates.length > 0 ? (
         <Card>

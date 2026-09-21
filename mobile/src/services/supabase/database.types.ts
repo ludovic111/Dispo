@@ -1928,6 +1928,7 @@ export type Database = {
       };
     };
     Functions: {
+      group_common_repertoire: { Args: { p_profiles: string[] }; Returns: Json };
       accept_gig_application: {
         Args: { application_id: string };
         Returns: undefined;

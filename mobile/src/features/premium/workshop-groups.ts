@@ -2,6 +2,7 @@ import { randomUUID } from 'expo-crypto';
 
 import type { WorkshopSchool } from './subscription-service';
 
+import { initialGroupRepertoire } from '@/features/groups/group-common-repertoire';
 import { getSupabaseClient } from '@/services/supabase/client';
 import type { Database } from '@/services/supabase/database.types';
 
@@ -12,6 +13,7 @@ type MusicGroupInsert = Database['public']['Tables']['music_groups']['Insert'] &
 };
 
 export interface WorkshopGroupInput {
+  withCommonRepertoire?: boolean;
   emoji: string;
   memberIds: string[];
   name: string;
@@ -53,6 +55,9 @@ export async function createWorkshopGroup(
     leader_id: userId,
     name,
     school_id: input.schoolId,
+    ...(input.withCommonRepertoire
+      ? { repertoire: await initialGroupRepertoire(memberIds, userId) }
+      : {}),
   };
   const created = await supabase
     .from('music_groups')

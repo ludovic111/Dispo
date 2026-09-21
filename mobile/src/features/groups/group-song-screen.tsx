@@ -129,6 +129,7 @@ export function GroupSongScreen({
 }) {
   const { session } = useAuth();
   const { t } = useTranslation();
+  const [manualEntry, setManualEntry] = useState(false);
   const { palette } = useDispoTheme();
   const query = useGroup(groupId);
   const saveRepertoire = useSaveGroupRepertoire();
@@ -288,6 +289,7 @@ export function GroupSongScreen({
         : { ...(current ?? baseDraft), [key]: value },
     );
   const chooseCatalog = (item: SongCatalogResult) => {
+    setManualEntry(false);
     const catalogRequest = ++catalogRequestRef.current;
     setDraftOverride((current) => selectCatalogSong(current ?? baseDraft, item));
     setCatalogLoadingMetadata(true);
@@ -470,19 +472,28 @@ export function GroupSongScreen({
             {isNew ? (
               <SongCatalogPicker
                 onSelect={chooseCatalog}
+                onManual={() => {
+                  if (manualEntry) return;
+                  catalogRequestRef.current += 1;
+                  setCatalogLoadingMetadata(false);
+                  setDraftOverride(baseDraft);
+                  setManualEntry(true);
+                }}
                 selectedId={draft.catalogId}
                 loadingMetadata={catalogLoadingMetadata}
               />
             ) : null}
-            <SongInfoPanel
-              draft={draft}
-              canEdit={canEdit}
-              leaderId={group.leaderId}
-              members={group.members}
-              patch={patch}
-              subtitle={group.name}
-              arrangementSubtitle={t('Arrangement partagé avec le groupe')}
-            />
+            {!isNew || manualEntry || draft.catalogId !== null ? (
+              <SongInfoPanel
+                draft={draft}
+                canEdit={canEdit}
+                leaderId={group.leaderId}
+                members={group.members}
+                patch={patch}
+                subtitle={group.name}
+                arrangementSubtitle={t('Arrangement partagé avec le groupe')}
+              />
+            ) : null}
           </>
         ) : null}
         {!isNew && activeTab === 'solos' ? (

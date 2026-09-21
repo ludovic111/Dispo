@@ -1578,3 +1578,15 @@ Les codes et fichiers d’impression restent hors Git, dans
 - Pour les prochaines livraisons, conserver un lancement Release sur le dernier iOS disponible : la compilation et l’import Apple seuls ne détectaient pas ce crash.
 
 - Livraison confirmée : code `6ae0212` poussé, validation et upload Apple sans erreur, import `VALID` / `APP_STORE_ELIGIBLE`, build `001e3b80-7948-4f8a-b005-f7d73d2f8ef4` en TestFlight interne `IN_BETA_TESTING`. Retour de lien à chaud également validé. La soumission App Store de la 67 n’a pas été modifiée, accord distinct demandé.
+
+
+## 2026-09-21 — 2.5.4 (69), collaborations et répertoires
+
+- Déclaration de collaboration idempotente sans privilège UPDATE ; aperçu des collaborateurs sous les profils et accès à la liste puis aux profils.
+- Répertoires publics par défaut sans écraser les choix privés existants. En privé, score et nombre communs restent visibles, mais aucun titre ni contenu n'est renvoyé. La carte de morceaux communs ouvre un répertoire public.
+- Création de groupes classiques et d'ateliers : option pour reprendre les morceaux communs à tous les participants sélectionnés. Les répertoires privés des invités ne sont pas copiés ; les invitations gardent leur validation habituelle.
+- Ajout de morceaux personnels, de groupe et d'événement : recherche catalogue en premier, saisie manuelle secondaire ; les modifications de morceaux existants restent inchangées.
+- Neuf catalogues de langues contrôlés (clés, valeurs, variables et textes nouveaux) ; corrections de libellés existants, notamment coréens et portugais.
+- Validation : TypeScript, ESLint, 96 suites / 662 tests ; 22 scripts SQL PostgreSQL exécutés sans erreur, avec contrôles de confidentialité, blocages, dédoublonnage et droits. CNG/pods, builds natifs iOS/Android, tests unitaires Android, archive et signature iOS réussis. Expo Doctor : 20/21, seul l'avertissement de versions de correctifs disponibles reste présent, dépendances inchangées pour ce lot.
+- Migration `20260921175738_social_repertoire_sharing` appliquée localement et en production, historique/défaut/privilèges relus ; advisors identiques avant/après. Aucun choix privé existant réécrit.
+- Livraison et preuves détaillées : `../../Dispo-dist/2.5.4/RELEASE-build69.md` et `../../Dispo-dist/qa-20260921-social-repertoire/`.

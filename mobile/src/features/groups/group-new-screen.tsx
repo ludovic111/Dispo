@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useRef, useState } from 'react';
@@ -10,10 +11,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   View,
 } from 'react-native';
 
 import { GroupAvatar } from './group-avatar';
+import { fetchGroupCommonRepertoire } from './group-common-repertoire';
 import {
   acquireGroupCreationLock,
   groupCreationDiagnostic,
@@ -27,6 +30,7 @@ import { CountBadge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ChoiceChip } from '@/components/ui/choice-chip';
 import { FormField } from '@/components/ui/form-field';
+import { ListRow } from '@/components/ui/list-row';
 import { DispoButton } from '@/components/ui/pressable';
 import { ErrorState, LoadingState, Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section';
@@ -56,6 +60,19 @@ export function GroupNewScreen() {
   const [emoji, setEmoji] = useState('🎶');
   const [search, setSearch] = useState('');
   const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
+  const [withCommonRepertoire, setWithCommonRepertoire] = useState(false);
+  const selectedIds = [...memberIds].sort();
+  const common = useQuery({
+    queryKey: ['group-common-repertoire', session?.user.id, selectedIds],
+    enabled: Boolean(session?.user.id && selectedIds.length),
+    queryFn: ({ signal }) => fetchGroupCommonRepertoire(selectedIds, signal),
+    staleTime: 0,
+  });
+  const commonAvailable =
+    !common.isFetching &&
+    !common.isError &&
+    common.data?.unavailableCount === 0 &&
+    common.data.songs.length > 0;
   const submitLock = useRef(false);
   const locale = i18n.resolvedLanguage ?? i18n.language ?? 'fr';
   const needle = search.trim().toLocaleLowerCase(locale);
@@ -120,6 +137,7 @@ export function GroupNewScreen() {
     );
 
   const toggle = (profileId: string) => {
+    setWithCommonRepertoire(false);
     setMemberIds((current) => {
       const next = new Set(current);
       if (next.has(profileId)) next.delete(profileId);
@@ -131,7 +149,12 @@ export function GroupNewScreen() {
   const creationError = workshopSchool ? createWorkshop.error : create.error;
   const submit = () => {
     if (!acquireGroupCreationLock(submitLock)) return;
-    const input = { emoji, memberIds: [...memberIds], name };
+    const input = {
+      emoji,
+      memberIds: [...memberIds],
+      name,
+      withCommonRepertoire: withCommonRepertoire && commonAvailable,
+    };
     const mutate = workshopSchool
       ? (options: Parameters<typeof create.mutate>[1]) =>
           createWorkshop.mutate({ ...input, schoolId: workshopSchool.schoolId }, options)
@@ -291,6 +314,45 @@ export function GroupNewScreen() {
               );
             })}
           </Card>
+          {memberIds.size > 0 ? (
+            <Card style={styles.section}>
+              <ListRow
+                tone="plain"
+                title={t('Créer le répertoire commun')}
+                titleLines={2}
+                subtitle={t('Commencer avec les morceaux que vous avez tous en commun.')}
+                accessory={
+                  <Switch
+                    accessibilityLabel={t('Créer le répertoire commun')}
+                    disabled={!commonAvailable || pending}
+                    value={withCommonRepertoire && commonAvailable}
+                    onValueChange={setWithCommonRepertoire}
+                    trackColor={{ true: palette.electric, false: palette.inset }}
+                  />
+                }
+              />
+              <AppText color={palette.muted} variant="caption">
+                {common.isFetching
+                  ? t('Recherche des morceaux en commun…')
+                  : common.isError
+                    ? t('Impossible de charger les morceaux en commun.')
+                    : common.data?.unavailableCount
+                      ? t(
+                          'Tous les répertoires invités doivent être publics pour créer cette liste.',
+                        )
+                      : common.data?.songs.length
+                        ? t('{{count}} morceaux prêts à jouer ensemble', {
+                            count: common.data.songs.length,
+                          })
+                        : t('Vous n’avez pas encore de morceaux en commun.')}
+              </AppText>
+              {common.isError ? (
+                <DispoButton size="compact" variant="ghost" onPress={() => void common.refetch()}>
+                  {t('Réessayer')}
+                </DispoButton>
+              ) : null}
+            </Card>
+          ) : null}
           {creationError ? (
             <AppText color={palette.error} style={styles.error} variant="caption">
               {t(groupCreationErrorMessage(creationError))}

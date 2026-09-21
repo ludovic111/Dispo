@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { ProfileCollaboratorsCard } from './profile-collaborators-card';
 import { profileCompletion } from './profile-completion';
 import { ProfileSocialLinks, ProfileStatsCard, type ProfileStat } from './profile-shared';
 
@@ -155,6 +156,8 @@ export function MyProfileDetail({ profile }: { profile: ProfileSummary }) {
         </View>
         <ProfileStatsCard stats={stats} />
       </Card>
+
+      <ProfileCollaboratorsCard profileId={profile.id} name={firstName} />
 
       {profile.bio.trim() ? (
         <AppText variant="subheadline">

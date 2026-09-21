@@ -167,7 +167,7 @@ export async function setProfileCollaboration(
     if (rating.error) throw rating.error;
   }
   const result = played
-    ? await table.upsert(pair)
+    ? await table.upsert(pair, { onConflict: 'a_id,b_id', ignoreDuplicates: true })
     : await table.delete().eq('a_id', pair.a_id).eq('b_id', pair.b_id);
   if (result.error) throw result.error;
 }

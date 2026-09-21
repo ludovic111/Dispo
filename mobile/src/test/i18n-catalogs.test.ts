@@ -48,21 +48,28 @@ function literalTranslationUses(): TranslationUse[] {
     );
     const uses: TranslationUse[] = [];
 
+    function addArgument(node: ts.Expression): void {
+      if (ts.isConditionalExpression(node)) {
+        addArgument(node.whenTrue);
+        addArgument(node.whenFalse);
+      } else if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+        uses.push({
+          file: path.relative(process.cwd(), file),
+          key: node.text,
+          line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+        });
+      }
+    }
+
     function visit(node: ts.Node): void {
       const firstArgument = ts.isCallExpression(node) ? node.arguments[0] : undefined;
       if (
         ts.isCallExpression(node) &&
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === 't' &&
-        firstArgument &&
-        (ts.isStringLiteral(firstArgument) || ts.isNoSubstitutionTemplateLiteral(firstArgument))
+        ((ts.isIdentifier(node.expression) && node.expression.text === 't') ||
+          (ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 't')) &&
+        firstArgument
       ) {
-        uses.push({
-          file: path.relative(process.cwd(), file),
-          key: firstArgument.text,
-          line:
-            sourceFile.getLineAndCharacterOfPosition(firstArgument.getStart(sourceFile)).line + 1,
-        });
+        addArgument(firstArgument);
       }
       ts.forEachChild(node, visit);
     }
@@ -119,6 +126,7 @@ function visibleLiteralUses(): VisibleLiteralUse[] {
     'src/features/portfolio',
     'src/features/premium',
     'src/features/profiles',
+    'src/features/repertoire',
     'src/features/schools',
     'src/features/sessions',
     'src/features/settings',
@@ -232,6 +240,22 @@ function visibleLiteralUses(): VisibleLiteralUse[] {
 }
 
 describe('i18n catalogs', () => {
+  it('preserves interpolation variables and keeps every translation non-empty', () => {
+    const variables = (value: string) =>
+      (value.match(/\{\{[^}]+\}\}|%(?:\d+\$)?(?:@|lld|ld|d|s|(?:\.\d+)?f)/g) ?? [])
+        .map((token) => token.replace(/%\d+\$/, '%'))
+        .sort();
+    const invalid = Object.entries(catalogs).flatMap(([locale, catalog]) =>
+      Object.entries(catalog).flatMap(([key, value]) => {
+        const source = fr[key as keyof typeof fr];
+        return !value.trim() ||
+          (source && JSON.stringify(variables(source)) !== JSON.stringify(variables(value)))
+          ? [`${locale}: ${key}`]
+          : [];
+      }),
+    );
+    expect(invalid).toEqual([]);
+  });
   it('contains every literal t(...) key used by the Expo source', () => {
     const missing = literalTranslationUses()
       .filter(({ key }) => !(key in fr))
