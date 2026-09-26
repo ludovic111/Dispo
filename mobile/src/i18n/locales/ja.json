@@ -2742,5 +2742,6 @@
   "{{count}} morceaux prêts à jouer ensemble_one": "一緒に演奏できる曲が{{count}}曲",
   "{{count}} morceaux prêts à jouer ensemble_other": "一緒に演奏できる曲が{{count}}曲",
   "{{names}} et {{count}} autres_one": "{{names}}、ほか{{count}}人",
-  "{{names}} et {{count}} autres_other": "{{names}}、ほか{{count}}人"
+  "{{names}} et {{count}} autres_other": "{{names}}、ほか{{count}}人",
+  "Ouvrir dans Songsterr": "Songsterrで開く"
 }

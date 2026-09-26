@@ -2742,5 +2742,6 @@
   "{{count}} morceaux prêts à jouer ensemble_one": "{{count}} brano pronto da suonare insieme",
   "{{count}} morceaux prêts à jouer ensemble_other": "{{count}} brani pronti da suonare insieme",
   "{{names}} et {{count}} autres_one": "{{names}} e {{count}} altro",
-  "{{names}} et {{count}} autres_other": "{{names}} e altri {{count}}"
+  "{{names}} et {{count}} autres_other": "{{names}} e altri {{count}}",
+  "Ouvrir dans Songsterr": "Apri in Songsterr"
 }

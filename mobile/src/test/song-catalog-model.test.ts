@@ -29,6 +29,14 @@ const partial: SongCatalogResult = {
 };
 
 describe('recording selection and partial enrichment', () => {
+  it('preserves a chosen genre when delayed catalog metadata arrives', () => {
+    expect(
+      mergeCatalogEnrichment(
+        { ...song, genre: 'Rock' },
+        { ...partial, genre: 'Jazz', genres: ['Jazz'] },
+      ).genre,
+    ).toBe('Rock');
+  });
   it('keeps known artwork, album, genres, links and personal edits when enrichment is incomplete', () => {
     expect(mergeCatalogEnrichment(song, partial)).toMatchObject({
       title: song.title,

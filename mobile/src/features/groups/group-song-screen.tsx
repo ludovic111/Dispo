@@ -486,6 +486,13 @@ export function GroupSongScreen({
             {!isNew || manualEntry || draft.catalogId !== null ? (
               <SongInfoPanel
                 draft={draft}
+                onGenreChange={(genre) =>
+                  setDraftOverride((current) => ({
+                    ...(current ?? baseDraft),
+                    genre,
+                    genres: [genre],
+                  }))
+                }
                 canEdit={canEdit}
                 leaderId={group.leaderId}
                 members={group.members}

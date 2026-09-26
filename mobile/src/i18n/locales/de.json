@@ -2742,5 +2742,6 @@
   "{{count}} morceaux prêts à jouer ensemble_one": "{{count}} Stück zum gemeinsamen Spielen",
   "{{count}} morceaux prêts à jouer ensemble_other": "{{count}} Stücke zum gemeinsamen Spielen",
   "{{names}} et {{count}} autres_one": "{{names}} und {{count}} weitere Person",
-  "{{names}} et {{count}} autres_other": "{{names}} und {{count}} weitere"
+  "{{names}} et {{count}} autres_other": "{{names}} und {{count}} weitere",
+  "Ouvrir dans Songsterr": "In Songsterr öffnen"
 }

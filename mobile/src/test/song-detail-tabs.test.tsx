@@ -82,8 +82,8 @@ function mockSong(id: string, isApproved = true): GroupSong {
     composer: null,
     durationMilliseconds: null,
     form: null,
-    genre: null,
-    genres: [],
+    genre: 'Jazz',
+    genres: ['Jazz'],
     id,
     irealDisabled: false,
     irealUrl: null,
@@ -116,6 +116,9 @@ describe('song detail tabs', () => {
     await fireEvent.changeText(view.getByDisplayValue('a'), 'Edited title');
     await fireEvent.changeText(view.getByDisplayValue('120'), '132');
     expect(view.getByText('Ouvrir dans iReal Pro')).toBeTruthy();
+    await fireEvent.press(view.getByRole('button', { name: /^Rock$/ }));
+    expect(view.queryByText('Ouvrir dans iReal Pro')).toBeNull();
+    expect(view.getByText('Ouvrir dans Songsterr')).toBeTruthy();
     await fireEvent.press(view.getByRole('tab', { name: 'Solos' }));
     await fireEvent.press(view.getByText('Ajouter un solo'));
     await fireEvent.press(view.getAllByText('Piano')[0]!);
@@ -138,7 +141,13 @@ describe('song detail tabs', () => {
     expect(mockSave).toHaveBeenCalledWith(
       expect.objectContaining({
         desired: [
-          expect.objectContaining({ title: 'Edited title', tempoBpm: 132, solos: ['leader'] }),
+          expect.objectContaining({
+            title: 'Edited title',
+            tempoBpm: 132,
+            solos: ['leader'],
+            genre: 'Rock',
+            genres: ['Rock'],
+          }),
         ],
       }),
       expect.any(Object),

@@ -21,6 +21,7 @@ export function mergeCatalogEnrichment(song: GroupSong, item: SongCatalogResult)
   return {
     ...song,
     ...availableMetadata,
+    genre: song.genre?.trim() ? song.genre : item.genre,
     platformIds: { ...song.platformIds, ...item.platformIds },
     platformLinks: { ...song.platformLinks, ...item.platformLinks },
     key: song.key?.trim() ? song.key : item.key,

@@ -2742,5 +2742,6 @@
   "{{count}} morceaux prêts à jouer ensemble_one": "有{{count}}首曲目可以一起演奏",
   "{{count}} morceaux prêts à jouer ensemble_other": "有{{count}}首曲目可以一起演奏",
   "{{names}} et {{count}} autres_one": "{{names}}及其他{{count}}人",
-  "{{names}} et {{count}} autres_other": "{{names}}及其他{{count}}人"
+  "{{names}} et {{count}} autres_other": "{{names}}及其他{{count}}人",
+  "Ouvrir dans Songsterr": "在 Songsterr 中打开"
 }

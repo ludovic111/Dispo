@@ -14,7 +14,7 @@ import { FormField } from '@/components/ui/form-field';
 import { DispoButton, IconButton } from '@/components/ui/pressable';
 import { SectionHeader } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
-import { irealDestination } from '@/domain/song';
+import { irealDestination, sheetMusicProvider, songsterrSearchUrl } from '@/domain/song';
 import { useDispoTheme } from '@/theme/theme-context';
 import { radii, spacing } from '@/theme/tokens';
 
@@ -32,6 +32,8 @@ export function SongInfoPanel({
   patch,
   subtitle,
   arrangementSubtitle,
+  songStyle,
+  onGenreChange,
 }: {
   draft: GroupSong;
   canEdit: boolean;
@@ -42,6 +44,8 @@ export function SongInfoPanel({
   patch: <K extends keyof GroupSong>(key: K, value: GroupSong[K]) => void;
   subtitle: string;
   arrangementSubtitle: string;
+  songStyle?: string;
+  onGenreChange?: (genre: string) => void;
 }) {
   const { t } = useTranslation();
   const { palette } = useDispoTheme();
@@ -61,7 +65,17 @@ export function SongInfoPanel({
     draft.releaseYear?.toString(),
     durationLabel(draft.durationMilliseconds),
   ].filter((value): value is string => Boolean(value));
-  const ireal = irealDestination(draft);
+  const provider = sheetMusicProvider(draft, songStyle);
+  const ireal = provider === 'ireal' ? irealDestination(draft) : null;
+  const songsterr = provider === 'songsterr' ? songsterrSearchUrl(draft) : null;
+  const openSongsterr = async () => {
+    if (!songsterr) return;
+    try {
+      await Linking.openURL(songsterr);
+    } catch {
+      Alert.alert(t('Ce lien n’a pas pu être ouvert.'));
+    }
+  };
   const openIReal = async () => {
     if (!ireal) return;
     try {
@@ -141,6 +155,23 @@ export function SongInfoPanel({
             />
           </View>
         ) : null}
+        {canEdit && onGenreChange ? (
+          <View style={styles.editorFields}>
+            <AppText color={palette.muted} variant="label">
+              {t('Style')}
+            </AppText>
+            <View style={styles.wrap}>
+              {(['Jazz', 'Rock'] as const).map((genre) => (
+                <ChoiceChip
+                  key={genre}
+                  label={t(genre)}
+                  selected={draft.genre === genre}
+                  onPress={() => onGenreChange(genre)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
       </Card>
       <SongListenSheet
         onClose={() => setListenVisible(false)}
@@ -191,9 +222,15 @@ export function SongInfoPanel({
           value={draft.form ?? ''}
         />
       </Card>
-      <DispoButton disabled={!ireal} icon="open-outline" onPress={() => void openIReal()}>
-        {t('Ouvrir dans iReal Pro')}
-      </DispoButton>
+      {ireal ? (
+        <DispoButton icon="open-outline" onPress={() => void openIReal()}>
+          {t('Ouvrir dans iReal Pro')}
+        </DispoButton>
+      ) : songsterr ? (
+        <DispoButton icon="open-outline" onPress={() => void openSongsterr()}>
+          {t('Ouvrir dans Songsterr')}
+        </DispoButton>
+      ) : null}
     </>
   );
 }

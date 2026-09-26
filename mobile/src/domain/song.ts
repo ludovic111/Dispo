@@ -275,6 +275,39 @@ export function irealDestination(song: IRealSong): IRealDestination | null {
   return search ? { kind: 'search', url: search } : null;
 }
 
+export type SheetMusicProvider = 'ireal' | 'songsterr';
+
+function genreSheetMusicProvider(genre: string): SheetMusicProvider | null {
+  const normalized = normalizeSongText(genre);
+  if (/\b(jazz|bebop|bop|swing|bossa nova|dixieland|big band)\b/.test(normalized)) return 'ireal';
+  if (/\b(rock|metal|punk|grunge)\b/.test(normalized)) return 'songsterr';
+  return null;
+}
+
+/** The musician's chosen style takes precedence over catalog metadata. */
+export function sheetMusicProvider(
+  song: { genre: string | null; genres: readonly string[] },
+  style?: string,
+): SheetMusicProvider | null {
+  if (style?.trim()) return genreSheetMusicProvider(style);
+  const primary = song.genre?.trim();
+  if (primary) return genreSheetMusicProvider(primary);
+  for (const genre of song.genres) {
+    const provider = genreSheetMusicProvider(genre);
+    if (provider) return provider;
+  }
+  return null;
+}
+
+export function songsterrSearchUrl(song: { artist: string; title: string }): string | null {
+  if (!song.title.trim()) return null;
+  const query = [song.artist.trim(), song.title.trim()]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ');
+  return `https://www.songsterr.com/?pattern=${encodeURIComponent(query)}`;
+}
+
 export function sortedSongDestinations(destinations: SongDestination[]): SongDestination[] {
   return [...destinations].sort((a, b) => {
     if (!a.date && !b.date) return a.name.localeCompare(b.name);

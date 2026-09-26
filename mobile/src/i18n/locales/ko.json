@@ -2742,5 +2742,6 @@
   "{{count}} morceaux prêts à jouer ensemble_one": "함께 연주할 수 있는 곡 {{count}}개",
   "{{count}} morceaux prêts à jouer ensemble_other": "함께 연주할 수 있는 곡 {{count}}개",
   "{{names}} et {{count}} autres_one": "{{names}} 외 {{count}}명",
-  "{{names}} et {{count}} autres_other": "{{names}} 외 {{count}}명"
+  "{{names}} et {{count}} autres_other": "{{names}} 외 {{count}}명",
+  "Ouvrir dans Songsterr": "Songsterr에서 열기"
 }
