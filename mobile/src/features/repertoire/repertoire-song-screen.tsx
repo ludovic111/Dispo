@@ -131,7 +131,7 @@ export function RepertoireSongScreen({ profileId, songId }: { profileId: string;
         contentContainerStyle={styles.content}
       >
         <SongInfoPanel
-          songStyle={personalSongStyle(item)}
+          songStyle={item.style}
           draft={hideArtwork ? withoutSongArtwork(song) : song}
           canEdit={canEdit && !save.isPending}
           patch={patch}
